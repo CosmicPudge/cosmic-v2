@@ -1,0 +1,6 @@
+/**
+ * routes
+ * Placeholder
+ */
+
+export {};

@@ -1,0 +1,6 @@
+/**
+ * useSchool
+ * Placeholder
+ */
+
+export {};

@@ -1,0 +1,6 @@
+/**
+ * useGarage
+ * Placeholder
+ */
+
+export {};

@@ -1,0 +1,6 @@
+/**
+ * school
+ * Placeholder
+ */
+
+export {};

@@ -1,0 +1,6 @@
+/**
+ * notificationService
+ * Placeholder
+ */
+
+export {};

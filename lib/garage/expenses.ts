@@ -1,0 +1,6 @@
+/**
+ * expenses
+ * Placeholder
+ */
+
+export {};

@@ -1,0 +1,6 @@
+/**
+ * garage
+ * Placeholder
+ */
+
+export {};

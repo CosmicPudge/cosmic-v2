@@ -1,0 +1,6 @@
+/**
+ * windows
+ * Placeholder
+ */
+
+export {};

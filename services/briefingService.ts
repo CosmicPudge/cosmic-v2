@@ -1,0 +1,6 @@
+/**
+ * briefingService
+ * Placeholder
+ */
+
+export {};

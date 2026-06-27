@@ -1,0 +1,6 @@
+/**
+ * weatherStore
+ * Placeholder
+ */
+
+export {};

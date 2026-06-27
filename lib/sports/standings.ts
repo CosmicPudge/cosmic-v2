@@ -1,0 +1,6 @@
+/**
+ * standings
+ * Placeholder
+ */
+
+export {};

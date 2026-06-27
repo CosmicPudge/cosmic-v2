@@ -1,0 +1,6 @@
+/**
+ * useSearch
+ * Placeholder
+ */
+
+export {};

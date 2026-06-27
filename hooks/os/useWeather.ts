@@ -1,0 +1,6 @@
+/**
+ * useWeather
+ * Placeholder
+ */
+
+export {};

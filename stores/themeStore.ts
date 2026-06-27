@@ -1,0 +1,6 @@
+/**
+ * themeStore
+ * Placeholder
+ */
+
+export {};

@@ -1,0 +1,6 @@
+/**
+ * garageService
+ * Placeholder
+ */
+
+export {};

@@ -1,0 +1,6 @@
+/**
+ * assistantService
+ * Placeholder
+ */
+
+export {};

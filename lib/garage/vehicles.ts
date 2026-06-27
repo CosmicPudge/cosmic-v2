@@ -1,0 +1,6 @@
+/**
+ * vehicles
+ * Placeholder
+ */
+
+export {};

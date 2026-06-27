@@ -1,0 +1,6 @@
+/**
+ * mail
+ * Placeholder
+ */
+
+export {};

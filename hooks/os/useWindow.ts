@@ -1,0 +1,6 @@
+/**
+ * useWindow
+ * Placeholder
+ */
+
+export {};

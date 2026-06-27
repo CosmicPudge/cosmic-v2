@@ -1,0 +1,6 @@
+/**
+ * outlookService
+ * Placeholder
+ */
+
+export {};

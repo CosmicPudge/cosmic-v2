@@ -1,0 +1,6 @@
+/**
+ * windowStore
+ * Placeholder
+ */
+
+export {};

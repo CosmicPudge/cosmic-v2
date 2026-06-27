@@ -1,0 +1,25 @@
+{
+  "core": [],
+  "layout": [],
+  "effects": [],
+  "animations": [],
+  "ui": [],
+  "widgets": [],
+  "windows": [],
+  "hooks": [],
+  "stores": [],
+  "services": [],
+  "lib": {
+    "ai": [],
+    "auth": [],
+    "microsoft": [],
+    "weather": [],
+    "sports": [],
+    "school": [],
+    "garage": [],
+    "notifications": []
+  },
+  "types": [],
+  "styles": [],
+  "utils": []
+}

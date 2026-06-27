@@ -1,0 +1,6 @@
+/**
+ * briefing
+ * Placeholder
+ */
+
+export {};

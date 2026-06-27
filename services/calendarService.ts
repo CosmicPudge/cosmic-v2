@@ -1,0 +1,6 @@
+/**
+ * calendarService
+ * Placeholder
+ */
+
+export {};

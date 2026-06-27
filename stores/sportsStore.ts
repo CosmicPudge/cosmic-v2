@@ -1,0 +1,6 @@
+/**
+ * sportsStore
+ * Placeholder
+ */
+
+export {};

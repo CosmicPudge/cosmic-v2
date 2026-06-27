@@ -1,0 +1,6 @@
+/**
+ * sportsService
+ * Placeholder
+ */
+
+export {};

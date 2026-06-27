@@ -1,0 +1,6 @@
+/**
+ * layoutStore
+ * Placeholder
+ */
+
+export {};

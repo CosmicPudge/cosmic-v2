@@ -1,0 +1,6 @@
+/**
+ * assistantStore
+ * Placeholder
+ */
+
+export {};

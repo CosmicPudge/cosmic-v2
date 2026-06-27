@@ -1,0 +1,6 @@
+/**
+ * diagnostics
+ * Placeholder
+ */
+
+export {};

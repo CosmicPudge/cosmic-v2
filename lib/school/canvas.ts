@@ -1,0 +1,6 @@
+/**
+ * canvas
+ * Placeholder
+ */
+
+export {};
