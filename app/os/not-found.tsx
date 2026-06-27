@@ -1,7 +1,3 @@
-export default function not-found() {
-    return (
-        <div>
-            not-found
-        </div>
-    );
+export default function NotFound() {
+  return <div>404 - Page Not Found</div>;
 }

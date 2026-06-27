@@ -1,7 +1,13 @@
-export default function layout() {
-    return (
-        <div>
-            layout
-        </div>
-    );
+import type { ReactNode } from "react";
+
+interface LayoutProps {
+  children: ReactNode;
+}
+
+export default function Layout({ children }: LayoutProps) {
+  return (
+    <div className="min-h-screen bg-black text-white">
+      {children}
+    </div>
+  );
 }
