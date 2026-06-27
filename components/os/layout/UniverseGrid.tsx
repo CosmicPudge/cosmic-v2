@@ -1,12 +1,13 @@
 "use client";
+import WeatherWidget from "../widgets/WeatherWidget";
 
 export default function UniverseGrid() {
   return (
     <div className="grid grid-cols-12 gap-6">
 
-      <div className="col-span-4 h-64 rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl">
-        Weather Widget
-      </div>
+      <div className="col-span-4">
+    <WeatherWidget />
+</div>
 
       <div className="col-span-4 h-64 rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl">
         Assistant Widget
