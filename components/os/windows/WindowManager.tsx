@@ -1,16 +1,26 @@
 "use client";
 
-import WeatherWindow from "./WeatherWindow";
 import { useWindowStore } from "@/stores/windowStore";
+import { windowRegistry } from "@/config/os/windowRegistry";
 
 export default function WindowManager() {
-  const weather = useWindowStore(
-    (state) => state.windows.weather
-  );
+  const windows = useWindowStore((state) => state.windows);
 
   return (
     <>
-      {weather.open && <WeatherWindow />}
+      {Object.entries(windows).map(([id, window]) => {
+        if (!window.open) return null;
+
+        const WindowComponent = windowRegistry[window.id];
+
+        if (!WindowComponent) return null;
+
+        return (
+          <WindowComponent
+            key={id}
+          />
+        );
+      })}
     </>
   );
 }

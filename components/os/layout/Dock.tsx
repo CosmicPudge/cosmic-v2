@@ -24,10 +24,11 @@ export default function Dock() {
         </button>
 
         <button
-          className="flex h-14 w-14 items-center justify-center rounded-2xl text-3xl transition-all duration-200 hover:scale-110 hover:bg-white/10"
-        >
-          📅
-        </button>
+  onClick={() => openWindow("calendar")}
+  className="flex h-14 w-14 items-center justify-center rounded-2xl text-3xl transition-all duration-200 hover:scale-110 hover:bg-white/10"
+>
+  📅
+</button>
 
         <button
           className="flex h-14 w-14 items-center justify-center rounded-2xl text-3xl transition-all duration-200 hover:scale-110 hover:bg-white/10"
@@ -36,16 +37,18 @@ export default function Dock() {
         </button>
 
         <button
-          className="flex h-14 w-14 items-center justify-center rounded-2xl text-3xl transition-all duration-200 hover:scale-110 hover:bg-white/10"
-        >
-          🚗
-        </button>
+  onClick={() => openWindow("garage")}
+  className="flex h-14 w-14 items-center justify-center rounded-2xl text-3xl transition-all duration-200 hover:scale-110 hover:bg-white/10"
+>
+  🚗
+</button>
 
         <button
-          className="flex h-14 w-14 items-center justify-center rounded-2xl text-3xl transition-all duration-200 hover:scale-110 hover:bg-white/10"
-        >
-          ⚙️
-        </button>
+  onClick={() => openWindow("settings")}
+  className="flex h-14 w-14 items-center justify-center rounded-2xl text-3xl transition-all duration-200 hover:scale-110 hover:bg-white/10"
+>
+  ⚙️
+</button>
 
       </GlassPanel>
     </div>

@@ -10,7 +10,9 @@ export type WindowId =
   | "projects"
   | "outlook"
   | "assistant"
-  | "settings";
+  | "settings"
+  | "music"
+  | "files";
 
 export interface WindowState {
   id: WindowId;
@@ -27,8 +29,11 @@ export interface WindowState {
 interface WindowStore {
   windows: Record<WindowId, WindowState>;
 
+  focusedWindow: WindowId | null;
+
   openWindow: (id: WindowId) => void;
   closeWindow: (id: WindowId) => void;
+  focusWindow: (id: WindowId) => void;
 }
 
 const defaultWindow = (
@@ -59,7 +64,11 @@ export const useWindowStore = create<WindowStore>((set) => ({
     outlook: defaultWindow("outlook", 530, 330),
     assistant: defaultWindow("assistant", 570, 360),
     settings: defaultWindow("settings", 610, 390),
+    music: defaultWindow("music", 650, 420),
+files: defaultWindow("files", 690, 450),
   },
+
+  focusedWindow: null,
 
   openWindow: (id) =>
     set((state) => ({
@@ -82,4 +91,19 @@ export const useWindowStore = create<WindowStore>((set) => ({
         },
       },
     })),
+
+    focusWindow: (id) =>
+  set((state) => ({
+    focusedWindow: id,
+
+    windows: Object.fromEntries(
+      Object.entries(state.windows).map(([key, window]) => [
+        key,
+        {
+          ...window,
+          zIndex: key === id ? 100 : 1,
+        },
+      ])
+    ) as Record<WindowId, WindowState>,
+  })),
 }));

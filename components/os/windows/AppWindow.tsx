@@ -2,17 +2,19 @@
 
 "use client";
 
+import { useWindowStore } from "@/stores/windowStore";
+
 import { ReactNode } from "react";
 
 import GlassPanel from "@/components/os/ui/GlassPanel";
 import { useOS } from "@/components/os/core/OSProvider";
 import useWindow from "@/hooks/os/useWindow";
 
-type WindowName = "weather";
+import { WindowId } from "@/stores/windowStore";
 
 interface AppWindowProps {
     title: string;
-    windowName: WindowName;
+    windowName: WindowId;
     children: ReactNode;
 }
 
@@ -25,12 +27,19 @@ export default function AppWindow({
 
     const window = useWindow();
 
+    const focusWindow = useWindowStore((state) => state.focusWindow);
+    const windowState = useWindowStore(
+        (state) => state.windows[windowName]
+    );
+
     return (
         <div
-            className="absolute z-40 w-[700px] max-w-[90vw]"
+            onMouseDown={() => focusWindow(windowName)}
+            className="absolute w-[700px] max-w-[90vw]"
             style={{
                 left: window.position.x,
                 top: window.position.y,
+                zIndex: windowState.zIndex,
             }}
         >
             <GlassPanel className="overflow-hidden p-0">
