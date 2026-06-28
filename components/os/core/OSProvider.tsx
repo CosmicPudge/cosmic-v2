@@ -1,36 +1,22 @@
 "use client";
 
-import { createContext, useContext, useState, ReactNode } from "react";
-
-type WindowName = "weather";
+import { createContext, useContext, ReactNode } from "react";
+import { useWindowStore, WindowId } from "@/stores/windowStore";
 
 interface OSContextType {
-  openWindows: WindowName[];
-  openWindow: (name: WindowName) => void;
-  closeWindow: (name: WindowName) => void;
+  openWindow: (name: WindowId) => void;
+  closeWindow: (name: WindowId) => void;
 }
 
 const OSContext = createContext<OSContextType | null>(null);
 
 export function OSProvider({ children }: { children: ReactNode }) {
-  const [openWindows, setOpenWindows] = useState<WindowName[]>([]);
-
-  function openWindow(name: WindowName) {
-    setOpenWindows((prev) =>
-      prev.includes(name) ? prev : [...prev, name]
-    );
-  }
-
-  function closeWindow(name: WindowName) {
-    setOpenWindows((prev) =>
-      prev.filter((window) => window !== name)
-    );
-  }
+  const openWindow = useWindowStore((state) => state.openWindow);
+  const closeWindow = useWindowStore((state) => state.closeWindow);
 
   return (
     <OSContext.Provider
       value={{
-        openWindows,
         openWindow,
         closeWindow,
       }}

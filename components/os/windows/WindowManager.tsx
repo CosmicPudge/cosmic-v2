@@ -1,17 +1,16 @@
 "use client";
 
-import { useOS } from "../core/OSProvider";
-
 import WeatherWindow from "./WeatherWindow";
+import { useWindowStore } from "@/stores/windowStore";
 
 export default function WindowManager() {
-  const { openWindows } = useOS();
+  const weather = useWindowStore(
+    (state) => state.windows.weather
+  );
 
   return (
     <>
-      {openWindows.includes("weather") && (
-        <WeatherWindow />
-      )}
+      {weather.open && <WeatherWindow />}
     </>
   );
 }
