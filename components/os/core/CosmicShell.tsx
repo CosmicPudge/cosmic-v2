@@ -6,8 +6,21 @@ import Sidebar from "../layout/Sidebar";
 import UniverseGrid from "../layout/UniverseGrid";
 import Dock from "../layout/Dock";
 import StatusBar from "../layout/StatusBar";
+import WindowManager from "../windows/WindowManager";
+
+import { OSProvider, useOS } from "../core/OSProvider";
 
 export default function CosmicShell() {
+  return (
+    <OSProvider>
+      <Desktop />
+    </OSProvider>
+  );
+}
+
+function Desktop() {
+  const { openWindows } = useOS();
+
   return (
     <div className="relative h-screen w-screen overflow-hidden bg-black text-white">
       <AnimatedBackground />
@@ -23,6 +36,7 @@ export default function CosmicShell() {
           </main>
         </div>
 
+        <WindowManager />
         <Dock />
         <StatusBar />
       </div>

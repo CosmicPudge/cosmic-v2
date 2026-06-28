@@ -1,7 +1,15 @@
+"use client";
+
+import AppWindow from "./AppWindow";
+import WeatherWidget from "../widgets/WeatherWidget";
+
 export default function WeatherWindow() {
-    return (
-        <div>
-            WeatherWindow
-        </div>
-    );
+  return (
+    <AppWindow
+      title="Weather"
+      windowName="weather"
+    >
+      <WeatherWidget />
+    </AppWindow>
+  );
 }
