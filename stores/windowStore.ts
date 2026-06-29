@@ -34,6 +34,7 @@ interface WindowStore {
   openWindow: (id: WindowId) => void;
   closeWindow: (id: WindowId) => void;
   focusWindow: (id: WindowId) => void;
+  closeAllWindows: () => void;
 
   moveWindow: (
     id: WindowId,
@@ -125,5 +126,17 @@ moveWindow: (id, x, y) =>
         y,
       },
     },
+  })),
+  closeAllWindows: () =>
+  set((state) => ({
+    windows: Object.fromEntries(
+      Object.entries(state.windows).map(([key, window]) => [
+        key,
+        {
+          ...window,
+          open: false,
+        },
+      ])
+    ) as Record<WindowId, WindowState>,
   })),
 }));

@@ -1,7 +1,25 @@
+"use client";
+
+import GlassPanel from "../ui/GlassPanel";
+
 export default function BriefingWidget() {
-    return (
+  return (
+    <GlassPanel className="h-full p-6">
+      <div className="flex h-full flex-col justify-between">
         <div>
-            BriefingWidget
+          <h2 className="text-xl font-semibold">
+            Daily Briefing
+          </h2>
+
+          <p className="mt-2 text-sm text-white/60">
+            Your personalized summary of today.
+          </p>
         </div>
-    );
+
+        <div className="text-xs text-white/40">
+          Coming in Alpha 0.2
+        </div>
+      </div>
+    </GlassPanel>
+  );
 }

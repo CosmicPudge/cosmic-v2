@@ -1,7 +1,22 @@
+"use client";
+
+import GlassPanel from "../ui/GlassPanel";
+
 export default function NotesWidget() {
-    return (
+  return (
+    <GlassPanel className="h-full p-6">
+      <div className="flex h-full flex-col justify-between">
         <div>
-            NotesWidget
+          <h2 className="text-xl font-semibold">Notes</h2>
+          <p className="mt-2 text-sm text-white/60">
+            Quick notes, reminders, and ideas.
+          </p>
         </div>
-    );
+
+        <div className="text-xs text-white/40">
+          Coming in Alpha 0.2
+        </div>
+      </div>
+    </GlassPanel>
+  );
 }
