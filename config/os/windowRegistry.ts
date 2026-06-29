@@ -1,3 +1,4 @@
+import React from "react";
 import AssistantWindow from "@/components/os/windows/AssistantWindow";
 import CalendarWindow from "@/components/os/windows/CalendarWindow";
 import FilesWindow from "@/components/os/windows/FilesWindow";

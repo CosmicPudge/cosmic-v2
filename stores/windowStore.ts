@@ -34,7 +34,15 @@ interface WindowStore {
   openWindow: (id: WindowId) => void;
   closeWindow: (id: WindowId) => void;
   focusWindow: (id: WindowId) => void;
+
+  moveWindow: (
+    id: WindowId,
+    x: number,
+    y: number
+  ) => void;
 }
+
+
 
 const defaultWindow = (
   id: WindowId,
@@ -105,5 +113,17 @@ files: defaultWindow("files", 690, 450),
         },
       ])
     ) as Record<WindowId, WindowState>,
+  })),
+
+moveWindow: (id, x, y) =>
+  set((state) => ({
+    windows: {
+      ...state.windows,
+      [id]: {
+        ...state.windows[id],
+        x,
+        y,
+      },
+    },
   })),
 }));
