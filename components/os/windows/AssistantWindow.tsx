@@ -2,6 +2,7 @@
 
 import AppWindow from "./AppWindow";
 
+
 export default function AssistantWindow() {
   return (
     <AppWindow

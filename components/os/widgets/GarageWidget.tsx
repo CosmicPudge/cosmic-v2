@@ -1,6 +1,7 @@
 "use client";
 
 import GlassPanel from "../ui/GlassPanel";
+import StatusBadge from "../ui/StatusBadge";
 
 export default function GarageWidget() {
   return (
@@ -8,14 +9,16 @@ export default function GarageWidget() {
       <div className="flex h-full flex-col justify-between">
         <div>
           <h2 className="text-xl font-semibold">Garage</h2>
-          <p className="mt-2 text-sm text-white/60">
-            Vehicle maintenance, fuel, and diagnostics.
+
+          <p className="mt-2 text-white/60">
+            Vehicle maintenance overview.
           </p>
         </div>
 
-        <div className="text-xs text-white/40">
-          Coming in Alpha 0.2
-        </div>
+        <StatusBadge
+          color="yellow"
+          label="Maintenance Due"
+        />
       </div>
     </GlassPanel>
   );

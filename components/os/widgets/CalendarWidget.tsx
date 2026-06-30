@@ -1,6 +1,7 @@
 "use client";
 
 import GlassPanel from "../ui/GlassPanel";
+import StatusBadge from "../ui/StatusBadge";
 
 export default function CalendarWidget() {
   return (
@@ -8,14 +9,16 @@ export default function CalendarWidget() {
       <div className="flex h-full flex-col justify-between">
         <div>
           <h2 className="text-xl font-semibold">Calendar</h2>
-          <p className="mt-2 text-sm text-white/60">
-            Upcoming events, reminders, and schedule.
+
+          <p className="mt-2 text-white/60">
+            Upcoming events and reminders.
           </p>
         </div>
 
-        <div className="text-xs text-white/40">
-          Coming in Alpha 0.2
-        </div>
+        <StatusBadge
+          color="gray"
+          label="No Events"
+        />
       </div>
     </GlassPanel>
   );
