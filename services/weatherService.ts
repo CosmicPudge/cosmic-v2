@@ -6,6 +6,8 @@ export interface HourlyForecast {
 export interface WeatherData {
   city: string;
 
+  icon: string;
+
   temp: number;
   feelsLike: number;
 
@@ -13,10 +15,15 @@ export interface WeatherData {
   low: number;
 
   humidity: number;
-  wind: number;
+  windSpeed: number;
+windDirection: number;
+precipitation24h: number;
 
   condition: string;
   description: string;
+
+  sunrise: number;
+  sunset: number;
 
   hourlyForecast: HourlyForecast[];
 

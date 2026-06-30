@@ -1,7 +1,15 @@
-export default function Skeleton() {
-    return (
-        <div>
-            Skeleton
-        </div>
-    );
+"use client";
+
+interface SkeletonProps {
+  className?: string;
+}
+
+export default function Skeleton({
+  className = "",
+}: SkeletonProps) {
+  return (
+    <div
+      className={`animate-pulse rounded-xl bg-white/10 ${className}`}
+    />
+  );
 }

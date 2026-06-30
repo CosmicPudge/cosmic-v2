@@ -1,10 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
-
+import WeatherIcon from "@/components/os/ui/WeatherIcon";
 import AppWindow from "./AppWindow";
-
+import { formatWeather } from "@/utils/os/formatWeather";
+import { formatTime } from "@/utils/os/formatTime";
 import useLocation from "@/hooks/os/useLocation";
+import Skeleton from "@/components/os/ui/Skeleton";
+import { formatUnixTime } from "@/utils/os/formatUnixTime";
+import {
+  degreesToCompass,
+} from "@/utils/os/degreesToCompass";
+
 
 import {
   getWeather,
@@ -38,14 +45,36 @@ export default function WeatherWindow() {
       }
     }
 
+    // Load immediately
     loadWeather();
+
+    // Refresh every 15 minutes
+    const interval = setInterval(loadWeather, 15 * 60 * 1000);
+
+    return () => clearInterval(interval);
   }, [location]);
 
   if (loading) {
     return (
-      <AppWindow title="Weather" windowName="weather">
-        <div className="flex h-64 items-center justify-center">
-          Loading weather...
+      <AppWindow
+        title="Weather"
+        windowName="weather"
+      >
+        <div className="space-y-6">
+
+          <Skeleton className="h-20 w-48" />
+
+          <div className="grid grid-cols-2 gap-4">
+            <Skeleton className="h-24" />
+            <Skeleton className="h-24" />
+            <Skeleton className="h-24" />
+            <Skeleton className="h-24" />
+          </div>
+
+          <Skeleton className="h-52" />
+
+          <Skeleton className="h-20" />
+
         </div>
       </AppWindow>
     );
@@ -70,18 +99,20 @@ export default function WeatherWindow() {
 
         {/* Header */}
 
-        <div>
-          <h1 className="text-5xl font-bold">
-            {weather.temp}°
-          </h1>
+        <div className="flex items-center gap-6">
+          <WeatherIcon icon={weather.icon} />
 
-          <p className="text-xl text-white/80">
-            {weather.description}
-          </p>
+          <div>
+            <h1 className="text-5xl font-bold">
+              {weather.temp}°
+            </h1>
 
-          <p className="text-sm text-white/50">
-            {weather.city}
-          </p>
+            {formatWeather(weather.description)}
+
+            <p className="text-white/60">
+              {weather.city}, UT
+            </p>
+          </div>
         </div>
 
         {/* Stats */}
@@ -99,8 +130,20 @@ export default function WeatherWindow() {
           />
 
           <StatCard
+            title="Wind"
+            value={`${degreesToCompass(
+              weather.windDirection
+            )} • ${weather.windSpeed} mph`}
+          />
+
+          <StatCard
             title="High"
             value={`${weather.high}°`}
+          />
+
+          <StatCard
+            title="24h Precip."
+            value={`${weather.precipitation24h}"`}
           />
 
           <StatCard
@@ -109,6 +152,19 @@ export default function WeatherWindow() {
           />
 
         </div>
+        <SectionCard title="Sun">
+
+          <InfoRow
+            label="🌅 Sunrise"
+            value={formatUnixTime(weather.sunrise)}
+          />
+
+          <InfoRow
+            label="🌇 Sunset"
+            value={formatUnixTime(weather.sunset)}
+          />
+
+        </SectionCard>
 
         {/* Hourly Forecast */}
 
@@ -140,7 +196,7 @@ export default function WeatherWindow() {
             />
 
             <span className="text-sm text-white/50">
-              Updated just now
+              Updated {formatTime(weather.lastUpdated)}
             </span>
 
           </div>

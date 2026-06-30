@@ -29,13 +29,23 @@ export async function GET(request: Request) {
 
   const todaysForecasts = forecastData.list.slice(0, 8);
 
-const high = Math.round(
-  Math.max(...todaysForecasts.map((item: any) => item.main.temp_max))
+  const precipitation24h = todaysForecasts.reduce(
+  (total: number, item: any) => {
+    const rain = item.rain?.["3h"] ?? 0;
+    const snow = item.snow?.["3h"] ?? 0;
+
+    return total + rain + snow;
+  },
+  0
 );
 
-const low = Math.round(
-  Math.min(...todaysForecasts.map((item: any) => item.main.temp_min))
-);
+  const high = Math.round(
+    Math.max(...todaysForecasts.map((item: any) => item.main.temp_max))
+  );
+
+  const low = Math.round(
+    Math.min(...todaysForecasts.map((item: any) => item.main.temp_min))
+  );
 
   const hourlyForecast = forecastData.list
     .slice(0, 5)
@@ -48,8 +58,8 @@ const low = Math.round(
 
   return Response.json({
     lastUpdated:
-  new Date().toISOString(),
-  
+      new Date().toISOString(),
+
     temp: Math.round(currentData.main.temp),
 
     feelsLike: Math.round(
@@ -65,12 +75,20 @@ const low = Math.round(
     description:
       currentData.weather[0].description,
 
+    icon: currentData.weather[0].icon,
+
     humidity:
       currentData.main.humidity,
 
-    wind: Math.round(
-      currentData.wind.speed
-    ),
+    windSpeed: Math.round(currentData.wind.speed),
+windDirection: currentData.wind.deg,
+
+precipitation24h: Number(
+  precipitation24h.toFixed(2)
+),
+
+    sunrise: currentData.sys.sunrise,
+    sunset: currentData.sys.sunset,
 
     city: currentData.name,
 
