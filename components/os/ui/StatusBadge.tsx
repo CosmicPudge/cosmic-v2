@@ -6,11 +6,23 @@ interface StatusBadgeProps {
 }
 
 const colors = {
-  green: "bg-green-500",
-  yellow: "bg-yellow-400",
-  red: "bg-red-500",
-  blue: "bg-blue-500",
-  gray: "bg-gray-400",
+  green:
+    "bg-green-500/15 text-green-400 border-green-500/30 shadow-[0_0_18px_rgba(34,197,94,0.25)]",
+
+  yellow:
+    "bg-yellow-500/15 text-yellow-300 border-yellow-500/30",
+
+  blue:
+    "bg-sky-500/15 text-sky-300 border-sky-500/30",
+
+  orange:
+    "bg-orange-500/15 text-orange-300 border-orange-500/30",
+
+  red:
+    "bg-red-500/15 text-red-400 border-red-500/30",
+
+  gray:
+    "bg-gray-500/15 text-gray-300 border-gray-500/30",
 };
 
 export default function StatusBadge({
