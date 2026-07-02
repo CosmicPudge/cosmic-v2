@@ -2,9 +2,11 @@
 
 import GlassPanel from "../ui/GlassPanel";
 import StatusBadge from "../ui/StatusBadge";
+import WidgetCard from "./WidgetCard";
 
 export default function SportsWidget() {
   return (
+    <WidgetCard route="/sports">
     <GlassPanel className="h-full p-6">
       <div className="flex h-full flex-col justify-between">
         <div>
@@ -23,5 +25,6 @@ export default function SportsWidget() {
         />
       </div>
     </GlassPanel>
+    </WidgetCard>
   );
 }

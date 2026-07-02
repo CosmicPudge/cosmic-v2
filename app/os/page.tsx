@@ -1,4 +1,4 @@
-import CosmicShell from "@/components/os/core/CosmicShell";
+import CosmicShell from "@/components/os/core/OperatingSystem";
 
 export default function Page() {
   return <CosmicShell />;

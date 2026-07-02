@@ -1,9 +1,11 @@
 "use client";
 
 import GlassPanel from "../ui/GlassPanel";
+import WidgetCard from "./WidgetCard";
 
 export default function WeatherWidget() {
   return (
+    <WidgetCard route="/weather">
     <GlassPanel>
 
       <div className="flex items-center justify-between">
@@ -31,5 +33,6 @@ export default function WeatherWidget() {
       </div>
 
     </GlassPanel>
+    </WidgetCard>
   );
 }
