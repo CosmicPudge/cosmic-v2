@@ -1,97 +1,39 @@
-export async function GET(request: Request) {
-  const key = process.env.OPENWEATHER_API_KEY;
+import { getEnvironment } from "@/engines/environment";
 
+export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
 
   const lat = searchParams.get("lat");
   const lon = searchParams.get("lon");
 
   if (!lat || !lon) {
-    return Response.json({
-      error: "Missing coordinates",
-    });
+    return Response.json(
+      {
+        error: "Missing coordinates",
+      },
+      {
+        status: 400,
+      }
+    );
   }
 
-  // Current weather
-  const currentResponse = await fetch(
-    `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${key}&units=imperial`
-  );
+  try {
+    const weather = await getEnvironment(
+      Number(lat),
+      Number(lon)
+    );
 
-  const currentData = await currentResponse.json();
+    return Response.json(weather);
+  } catch (error) {
+    console.error("Environment Engine Error:", error);
 
-  // Forecast data
-  const forecastResponse = await fetch(
-    `https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&appid=${key}&units=imperial`
-  );
-
-  const forecastData = await forecastResponse.json();
-  console.log(forecastData);
-
-  const todaysForecasts = forecastData.list.slice(0, 8);
-
-  const precipitation24h = todaysForecasts.reduce(
-  (total: number, item: any) => {
-    const rain = item.rain?.["3h"] ?? 0;
-    const snow = item.snow?.["3h"] ?? 0;
-
-    return total + rain + snow;
-  },
-  0
-);
-
-  const high = Math.round(
-    Math.max(...todaysForecasts.map((item: any) => item.main.temp_max))
-  );
-
-  const low = Math.round(
-    Math.min(...todaysForecasts.map((item: any) => item.main.temp_min))
-  );
-
-  const hourlyForecast = forecastData.list
-    .slice(0, 5)
-    .map((item: any) => ({
-      time: new Date(item.dt * 1000).toLocaleTimeString([], {
-        hour: "numeric",
-      }),
-      temp: Math.round(item.main.temp),
-    }));
-
-  return Response.json({
-    lastUpdated:
-      new Date().toISOString(),
-
-    temp: Math.round(currentData.main.temp),
-
-    feelsLike: Math.round(
-      currentData.main.feels_like
-    ),
-
-    high,
-    low,
-
-    condition:
-      currentData.weather[0].main,
-
-    description:
-      currentData.weather[0].description,
-
-    icon: currentData.weather[0].icon,
-
-    humidity:
-      currentData.main.humidity,
-
-    windSpeed: Math.round(currentData.wind.speed),
-windDirection: currentData.wind.deg,
-
-precipitation24h: Number(
-  precipitation24h.toFixed(2)
-),
-
-    sunrise: currentData.sys.sunrise,
-    sunset: currentData.sys.sunset,
-
-    city: currentData.name,
-
-    hourlyForecast,
-  });
+    return Response.json(
+      {
+        error: "Failed to fetch weather.",
+      },
+      {
+        status: 500,
+      }
+    );
+  }
 }

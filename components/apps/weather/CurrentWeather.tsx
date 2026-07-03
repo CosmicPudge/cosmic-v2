@@ -3,7 +3,7 @@
 import WeatherIcon from "@/components/os/ui/WeatherIcon";
 import SectionCard from "@/components/os/ui/SectionCard";
 
-import { WeatherData } from "@/services/weatherService";
+import type { WeatherData } from "@/engines/environment";
 import { formatWeather } from "@/utils/os/formatWeather";
 import { formatTime } from "@/utils/os/formatTime";
 

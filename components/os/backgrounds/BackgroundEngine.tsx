@@ -1,6 +1,6 @@
 "use client";
 
-import { BackgroundEngineProps, BackgroundApp } from "./types";
+import type { BackgroundEngineProps } from "./types";
 
 import DashboardScene from "./scenes/DashboardScene";
 import WeatherScene from "./scenes/WeatherScene";
@@ -11,12 +11,7 @@ import AssistantScene from "./scenes/AssistantScene";
 import SchoolScene from "./scenes/SchoolScene";
 import DefaultScene from "./scenes/DefaultScene";
 
-import { ComponentType } from "react";
-
-const sceneMap: Record<
-  BackgroundApp,
-  ComponentType<{ context?: unknown }>
-> = {
+const sceneMap = {
   dashboard: DashboardScene,
   weather: WeatherScene,
   sports: SportsScene,
@@ -36,9 +31,7 @@ export default function BackgroundEngine({
   app,
   context,
 }: BackgroundEngineProps) {
-  const Scene =
-    sceneMap[app] ?? DefaultScene;
-    <BackgroundEngine app="weather" />
+  const Scene = sceneMap[app] ?? DefaultScene;
 
-  return <Scene context={context} />;
+  return <Scene context={context as never} />;
 }

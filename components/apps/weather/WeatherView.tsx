@@ -1,16 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import BackgroundEngine from "@/components/os/backgrounds/BackgroundEngine";
 
 import useLocation from "@/hooks/os/useLocation";
+import AppGrid from "@/components/os/ui/AppGrid";
+import { getWeather } from "@/services/weatherService";
 
-import {
-    getWeather,
-    WeatherData,
-} from "@/services/weatherService";
+import type { WeatherData } from "@/engines/environment";
 
-import CurrentWeather from "./CurrentWeather";
+import WeatherHero from "./WeatherHero";
 import HourlyForecast from "./HourlyForecast";
 import DailyForecast from "./DailyForecast";
 import ConditionsGrid from "./ConditionsGrid";
@@ -82,22 +80,48 @@ export default function WeatherView() {
         );
     }
 
-   return (
-  <div className="relative min-h-screen overflow-hidden">
+    return (
+        <div className="space-y-10">
 
-    <BackgroundEngine
-      app="weather"
-      context={weather}
-    />
+            <WeatherHero weather={weather} />
 
-    <div className="relative z-10 space-y-8">
+            <AppGrid>
 
-      <CurrentWeather weather={weather} />
+                {/* Left Column */}
+                <div className="col-span-12 lg:col-span-6">
+                    <HourlyForecast weather={weather} />
+                </div>
 
-      <RadarCard />
+                {/* Right Column */}
+                <div className="col-span-12 lg:col-span-6">
+                    <RadarCard />
+                </div>
 
-    </div>
+                {/* Full Width */}
+                <div className="col-span-12">
+                    <ConditionsGrid weather={weather} />
+                </div>
 
-  </div>
-);
+                {/* Split */}
+                <div className="col-span-12 lg:col-span-6">
+                    <SunMoonCard />
+                </div>
+
+                <div className="col-span-12 lg:col-span-6">
+                    <AirQualityCard />
+                </div>
+
+                {/* Full Width */}
+                <div className="col-span-12">
+                    <DailyForecast weather={weather} />
+                </div>
+
+                <div className="col-span-12">
+                    <WeatherAlerts />
+                </div>
+
+            </AppGrid>
+
+        </div>
+    );
 }

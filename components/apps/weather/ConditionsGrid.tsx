@@ -3,11 +3,12 @@
 import StatCard from "@/components/os/ui/StatCard";
 import GridSurface from "@/components/os/ui/surfaces/GridSurface";
 
-import { WeatherData } from "@/services/weatherService";
+import type { WeatherData } from "@/engines/environment";
 import { degreesToCompass } from "@/utils/os/degreesToCompass";
 
 interface ConditionsGridProps {
   weather: WeatherData;
+  
 }
 
 export default function ConditionsGrid({
@@ -37,7 +38,7 @@ export default function ConditionsGrid({
         title="High"
         value={`${weather.high}°`}
       />
-      
+
       <StatCard
         title="24h Rain"
         value={`${weather.precipitation24h}"`}

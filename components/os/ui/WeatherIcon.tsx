@@ -1,5 +1,8 @@
+"use client";
+
 interface WeatherIconProps {
   icon: string;
+  className?: string;
 }
 
 const icons: Record<string, string> = {
@@ -33,9 +36,10 @@ const icons: Record<string, string> = {
 
 export default function WeatherIcon({
   icon,
+  className = "",
 }: WeatherIconProps) {
   return (
-    <div className="text-7xl">
+    <div className={`text-6xl ${className}`}>
       {icons[icon] ?? "🌤️"}
     </div>
   );
