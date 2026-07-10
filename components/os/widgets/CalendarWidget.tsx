@@ -5,21 +5,39 @@ import StatusBadge from "../ui/StatusBadge";
 
 export default function CalendarWidget() {
   return (
-    <GlassPanel className="h-full p-6">
-      <div className="flex h-full flex-col justify-between">
-        <div>
-          <h2 className="text-xl font-semibold">Calendar</h2>
+    <GlassPanel className="flex h-full flex-col justify-between">
 
-          <p className="mt-2 text-white/60">
-            Upcoming events and reminders.
-          </p>
-        </div>
+  <div>
 
-        <StatusBadge
-          color="gray"
-          label="No Events"
-        />
-      </div>
-    </GlassPanel>
+    <p className="text-xs uppercase tracking-[0.3em] text-white/50">
+      Calendar
+    </p>
+
+    <h2 className="mt-4 text-3xl font-bold">
+      July 9
+    </h2>
+
+    <p className="text-white/60">
+      Wednesday
+    </p>
+
+  </div>
+
+  <div>
+
+    <p className="text-white/70">
+      No events today
+    </p>
+
+    <div className="mt-4">
+      <StatusBadge
+        color="gray"
+        label="You're all caught up"
+      />
+    </div>
+
+  </div>
+
+</GlassPanel>
   );
 }

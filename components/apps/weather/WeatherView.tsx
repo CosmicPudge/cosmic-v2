@@ -1,13 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-
-import useLocation from "@/hooks/os/useLocation";
+import useWeather from "@/hooks/os/useWeather";
 import AppGrid from "@/components/os/ui/AppGrid";
-import type { WeatherData } from "@/engines/environment";
-import {
-    getWeather,
-} from "@/services/weatherService";
 import WeatherRadar from "./radar/WeatherRadar";
 import MoonCard from "./MoonCard";
 import WeatherHero from "./WeatherHero";
@@ -21,41 +15,11 @@ import WeatherAlerts from "./WeatherAlerts";
 import Skeleton from "@/components/os/ui/Skeleton";
 
 export default function WeatherView() {
-    const location = useLocation();
-
-    const [weather, setWeather] =
-        useState<WeatherData | null>(null);
-
-    const [loading, setLoading] =
-        useState(true);
-
-    useEffect(() => {
-        if (!location) return;
-
-        const { lat, lon } = location;
-
-        async function loadWeather() {
-            try {
-                const data = await getWeather(lat, lon);
-
-                setWeather(data);
-            } catch (error) {
-                console.error(error);
-            } finally {
-                setLoading(false);
-            }
-        }
-
-        loadWeather();
-
-        const interval = setInterval(
-            loadWeather,
-            15 * 60 * 1000
-        );
-
-        return () => clearInterval(interval);
-
-    }, [location]);
+    const {
+    weather,
+    loading,
+    error,
+} = useWeather();
 
     if (loading) {
         return (
@@ -73,13 +37,21 @@ export default function WeatherView() {
         );
     }
 
-    if (!weather) {
-        return (
-            <div className="text-center text-white/60">
-                Unable to load weather.
-            </div>
-        );
-    }
+   if (error) {
+    return (
+        <div className="text-center text-red-400">
+            {error}
+        </div>
+    );
+}
+
+if (!weather) {
+    return (
+        <div className="text-center text-white/60">
+            Weather unavailable.
+        </div>
+    );
+}
 
     return (
         <div className="space-y-10">

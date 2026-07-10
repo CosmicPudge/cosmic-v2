@@ -2,11 +2,25 @@
 
 import GlassPanel from "../ui/GlassPanel";
 import WidgetCard from "./WidgetCard";
+import useWeather from "@/hooks/os/useWeather";
+import WeatherIcon from "@/components/os/ui/WeatherIcon";
 
 export default function WeatherWidget() {
+  const {
+  weather,
+  loading,
+} = useWeather();
   return (
     <WidgetCard route="/weather">
-    <GlassPanel>
+  <GlassPanel>
+
+    {loading || !weather ? (
+
+      <div className="py-8 text-center text-white/50">
+        Loading weather...
+      </div>
+
+    ) : (
 
       <div className="flex items-center justify-between">
 
@@ -17,22 +31,29 @@ export default function WeatherWidget() {
           </p>
 
           <h2 className="mt-2 text-6xl font-bold">
-            72°
+            {weather.temp}°
           </h2>
 
           <p className="text-lg text-white/70">
-            Clear Sky
+            {weather.description}
+          </p>
+
+          <p className="mt-2 text-sm text-white/40">
+            H {weather.high}° • L {weather.low}°
           </p>
 
         </div>
 
-        <div className="text-7xl">
-          ☀️
-        </div>
+        <WeatherIcon
+          icon={weather.icon}
+          className="h-20 w-20"
+        />
 
       </div>
 
-    </GlassPanel>
-    </WidgetCard>
+    )}
+
+  </GlassPanel>
+</WidgetCard>
   );
 }
