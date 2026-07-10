@@ -1,16 +1,10 @@
-import type {
-  DailyForecast,
-  HourlyForecast,
-} from "../models/types";
+import type { ForecastData } from "../models/types";
+import { weatherCodeToIcon } from "../utils/weatherCodeToIcon";
 
 export async function getOpenMeteo(
   lat: number,
   lon: number
-): Promise<{
-  hourlyForecast: HourlyForecast[];
-  dailyForecast: DailyForecast[];
-}> {
-
+): Promise<ForecastData> {
   const response = await fetch(
     `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,relative_humidity_2m,cloud_cover,precipitation_probability,wind_speed_10m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=auto`
   );
@@ -21,61 +15,102 @@ export async function getOpenMeteo(
 
   const data = await response.json();
 
-  console.log(data);
+  const now = new Date();
 
-  const hourlyForecast = data.hourly.time
-  .slice(0, 12)
+// Round down to the current hour
+now.setMinutes(0, 0, 0);
+
+const currentIndex = data.hourly.time.findIndex(
+  (time: string) => new Date(time).getTime() >= now.getTime()
+);
+
+const startIndex = Math.max(currentIndex, 0);
+
+const hourlyForecast = data.hourly.time
+  .slice(startIndex, startIndex + 24)
   .map((time: string, index: number) => ({
-    time: new Date(time).toLocaleTimeString([], {
-      hour: "numeric",
-    }),
+    time:
+      index === 0
+        ? "Now"
+        : new Date(time).toLocaleTimeString([], {
+            hour: "numeric",
+          }),
 
     temp: Math.round(
-      data.hourly.temperature_2m[index]
+      data.hourly.temperature_2m[startIndex + index]
     ),
 
-    icon: "01d",
+    icon: weatherCodeToIcon(
+      data.hourly.weather_code[startIndex + index]
+    ),
 
     precipitationChance:
-      data.hourly.precipitation_probability[index],
+      data.hourly.precipitation_probability[
+        startIndex + index
+      ],
 
-    windSpeed:
-      Math.round(
-        data.hourly.wind_speed_10m[index]
-      ),
+    windSpeed: Math.round(
+      data.hourly.wind_speed_10m[startIndex + index]
+    ),
 
     humidity:
-      data.hourly.relative_humidity_2m[index],
+      data.hourly.relative_humidity_2m[
+        startIndex + index
+      ],
 
     cloudCover:
-      data.hourly.cloud_cover[index],
+      data.hourly.cloud_cover[startIndex + index],
   }));
 
-const dailyForecast = data.daily.time
+  const dailyForecast = data.daily.time
   .slice(0, 7)
-  .map((day: string, index: number) => ({
-    day: new Date(day).toLocaleDateString([], {
-      weekday: "short",
-    }),
+  .map((day: string, index: number) => {
+    const [year, month, date] = day.split("-").map(Number);
 
-    high:
-      Math.round(
+    const localDate = new Date(
+      year,
+      month - 1,
+      date
+    );
+
+    // Make the first two days friendlier
+    let dayLabel = localDate.toLocaleDateString([], {
+      weekday: "short",
+    });
+
+    if (index === 0) {
+      dayLabel = "Today";
+    } else if (index === 1) {
+      dayLabel = "Tomorrow";
+    }
+
+    return {
+      day: dayLabel,
+
+      date: localDate.toLocaleDateString([], {
+        month: "short",
+        day: "numeric",
+      }),
+
+      high: Math.round(
         data.daily.temperature_2m_max[index]
       ),
 
-    low:
-      Math.round(
+      low: Math.round(
         data.daily.temperature_2m_min[index]
       ),
 
-    icon: "01d",
+      icon: weatherCodeToIcon(
+        data.daily.weather_code[index]
+      ),
 
-    precipitationChance:
-      data.daily.precipitation_probability_max[index],
-  }));
+      precipitationChance:
+        data.daily.precipitation_probability_max[index],
+    };
+  });
 
-return {
-  hourlyForecast,
-  dailyForecast,
-};
+  return {
+    hourlyForecast,
+    dailyForecast,
+  };
 }

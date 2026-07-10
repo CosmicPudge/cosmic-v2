@@ -4,10 +4,12 @@ import { useEffect, useState } from "react";
 
 import useLocation from "@/hooks/os/useLocation";
 import AppGrid from "@/components/os/ui/AppGrid";
-import { getWeather } from "@/services/weatherService";
-
 import type { WeatherData } from "@/engines/environment";
-
+import {
+    getWeather,
+} from "@/services/weatherService";
+import WeatherRadar from "./radar/WeatherRadar";
+import MoonCard from "./MoonCard";
 import WeatherHero from "./WeatherHero";
 import HourlyForecast from "./HourlyForecast";
 import DailyForecast from "./DailyForecast";
@@ -15,7 +17,6 @@ import ConditionsGrid from "./ConditionsGrid";
 import SunMoonCard from "./SunMoonCard";
 import AirQualityCard from "./AirQualityCard";
 import WeatherAlerts from "./WeatherAlerts";
-import RadarCard from "./RadarCard";
 
 import Skeleton from "@/components/os/ui/Skeleton";
 
@@ -94,7 +95,10 @@ export default function WeatherView() {
 
                 {/* Right Column */}
                 <div className="col-span-12 lg:col-span-6">
-                    <RadarCard />
+                    <WeatherRadar
+                        lat={weather.lat}
+                        lon={weather.lon}
+                    />
                 </div>
 
                 {/* Full Width */}
@@ -103,12 +107,16 @@ export default function WeatherView() {
                 </div>
 
                 {/* Split */}
-                <div className="col-span-12 lg:col-span-6">
-                    <SunMoonCard />
+                <div className="col-span-12 lg:col-span-4">
+                    <SunMoonCard weather={weather} />
                 </div>
 
-                <div className="col-span-12 lg:col-span-6">
-                    <AirQualityCard />
+                <div className="col-span-12 lg:col-span-4">
+                    <MoonCard weather={weather} />
+                </div>
+
+                <div className="col-span-12 lg:col-span-4">
+                    <AirQualityCard weather={weather} />
                 </div>
 
                 {/* Full Width */}
@@ -117,7 +125,7 @@ export default function WeatherView() {
                 </div>
 
                 <div className="col-span-12">
-                    <WeatherAlerts />
+                    <WeatherAlerts weather={weather} />
                 </div>
 
             </AppGrid>

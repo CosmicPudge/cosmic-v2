@@ -1,11 +1,11 @@
-import type { WeatherData } from "../models/types";
+import type { CurrentWeather } from "../models/types";
 
 const API_KEY = process.env.OPENWEATHER_API_KEY!;
 
 export async function getOpenWeather(
   lat: number,
   lon: number
-): Promise<WeatherData> {
+): Promise<CurrentWeather & { daylightProgress: number }> {
 
   // Current Weather
   const currentResponse = await fetch(
@@ -68,28 +68,46 @@ export async function getOpenWeather(
     )
   );
 
+  const sunrise = current.sys.sunrise;
+  const sunset = current.sys.sunset;
+
+  const daylightSeconds = sunset - sunrise;
+
+  const hours = Math.floor(daylightSeconds / 3600);
+  const minutes = Math.floor((daylightSeconds % 3600) / 60);
+
+  const dayLength = `${hours}h ${minutes}m`;
+
+  const now = Math.floor(Date.now() / 1000);
+
+  let daylightProgress = 0;
+
+  if (now <= sunrise) {
+    daylightProgress = 0;
+  } else if (now >= sunset) {
+    daylightProgress = 100;
+  } else {
+    daylightProgress =
+      ((now - sunrise) / (sunset - sunrise)) * 100;
+  }
+
   return {
     city: current.name,
-
-    dailyForecast: [],
+    lat,
+    lon,
 
     icon: current.weather[0].icon,
 
     temp: Math.round(current.main.temp),
 
-    feelsLike: Math.round(
-      current.main.feels_like
-    ),
+    feelsLike: Math.round(current.main.feels_like),
 
     high,
-
     low,
 
     humidity: current.main.humidity,
 
-    windSpeed: Math.round(
-      current.wind.speed
-    ),
+    windSpeed: Math.round(current.wind.speed),
 
     windDirection: current.wind.deg,
 
@@ -97,29 +115,16 @@ export async function getOpenWeather(
       precipitation24h.toFixed(2)
     ),
 
-    condition:
-      current.weather[0].main,
+    condition: current.weather[0].main,
 
-    description:
-      current.weather[0].description,
+    description: current.weather[0].description,
 
-    sunrise: current.sys.sunrise,
+    sunrise,
+    sunset,
 
-    sunset: current.sys.sunset,
+    dayLength,
+    daylightProgress,
 
-    hourlyForecast: forecast.list
-      .slice(0, 8)
-      .map((hour: any) => ({
-        time: new Date(
-          hour.dt * 1000
-        ).toLocaleTimeString([], {
-          hour: "numeric",
-        }),
-
-        temp: Math.round(hour.main.temp),
-      })),
-
-    lastUpdated:
-      new Date().toISOString(),
+    lastUpdated: new Date().toISOString(),
   };
 }

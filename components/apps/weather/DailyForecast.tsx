@@ -27,7 +27,15 @@ export default function DailyForecast({
               />
 
               <span className="font-medium">
-                {day.day}
+                <div>
+                  <div className="font-semibold">
+                    {day.day}
+                  </div>
+
+                  <div className="text-sm text-white/50">
+                    {day.date}
+                  </div>
+                </div>
               </span>
             </div>
 

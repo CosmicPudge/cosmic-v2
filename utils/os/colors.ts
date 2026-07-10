@@ -1,6 +1,0 @@
-/**
- * colors
- * Placeholder
- */
-
-export {};

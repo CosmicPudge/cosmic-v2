@@ -1,0 +1,374 @@
+/* ===========================================================
+   COSMIC WEATHER ICON ANIMATIONS
+   Version 1.0
+   =========================================================== */
+
+/* ===========================================================
+   SUN
+   =========================================================== */
+
+@keyframes cosmic-sun-spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes cosmic-sun-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+
+  50% {
+    transform: scale(1.03);
+    filter: brightness(1.08);
+  }
+}
+
+.cosmic-sun-rays {
+  animation:
+    cosmic-sun-spin 60s linear infinite;
+  transform-origin: center;
+}
+
+.cosmic-sun-core {
+  animation:
+    cosmic-sun-breathe 6s ease-in-out infinite;
+}
+
+/* ===========================================================
+   CLOUDS
+   =========================================================== */
+
+@keyframes cosmic-cloud-drift {
+
+  0%,
+  100% {
+    transform:
+      translateX(0px)
+      translateY(0px);
+  }
+
+  50% {
+    transform:
+      translateX(4px)
+      translateY(-2px);
+  }
+
+}
+
+.cosmic-cloud {
+  animation:
+    cosmic-cloud-drift 9s ease-in-out infinite;
+}
+
+/* ===========================================================
+   MOON
+   =========================================================== */
+
+@keyframes cosmic-moon-float {
+
+  0%,
+  100% {
+    transform:
+      translateY(0px);
+  }
+
+  50% {
+    transform:
+      translateY(-2px);
+  }
+
+}
+
+@keyframes cosmic-moon-glow {
+
+  0%,
+  100% {
+    filter:
+      drop-shadow(0 0 4px rgba(255,255,230,.25));
+  }
+
+  50% {
+    filter:
+      drop-shadow(0 0 10px rgba(255,255,230,.5));
+  }
+
+}
+
+.cosmic-moon {
+
+  animation:
+
+    cosmic-moon-float 8s ease-in-out infinite,
+
+    cosmic-moon-glow 6s ease-in-out infinite;
+
+}
+
+/* ===========================================================
+   STARS
+   =========================================================== */
+
+@keyframes cosmic-star-twinkle {
+
+  0%,
+  100% {
+    opacity: .35;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+
+}
+
+.cosmic-star {
+
+  animation:
+    cosmic-star-twinkle 4s ease-in-out infinite;
+
+}
+
+/* ===========================================================
+   RAIN
+   =========================================================== */
+
+@keyframes cosmic-rain {
+
+  0% {
+    transform:
+      translateY(-2px);
+
+    opacity: 0;
+  }
+
+  20% {
+    opacity: 1;
+  }
+
+  100% {
+
+    transform:
+      translateY(14px);
+
+    opacity: 0;
+
+  }
+
+}
+
+.cosmic-raindrop {
+
+  animation:
+    cosmic-rain 1s linear infinite;
+
+}
+
+/* ===========================================================
+   SNOW
+   =========================================================== */
+
+@keyframes cosmic-snow {
+
+  0% {
+
+    transform:
+      translateY(0px)
+      translateX(0px)
+      rotate(0deg);
+
+  }
+
+  25% {
+
+    transform:
+      translateY(4px)
+      translateX(-2px)
+      rotate(45deg);
+
+  }
+
+  50% {
+
+    transform:
+      translateY(8px)
+      translateX(2px)
+      rotate(90deg);
+
+  }
+
+  75% {
+
+    transform:
+      translateY(12px)
+      translateX(-2px)
+      rotate(180deg);
+
+  }
+
+  100% {
+
+    transform:
+      translateY(16px)
+      translateX(0px)
+      rotate(360deg);
+
+  }
+
+}
+
+.cosmic-snowflake {
+
+  animation:
+    cosmic-snow 3s linear infinite;
+
+}
+
+/* ===========================================================
+   LIGHTNING
+   =========================================================== */
+
+@keyframes cosmic-lightning {
+
+  0%,
+  91%,
+  100% {
+    opacity: 0;
+  }
+
+  92% {
+    opacity: 1;
+  }
+
+  93% {
+    opacity: .3;
+  }
+
+  94% {
+    opacity: 1;
+  }
+
+  95% {
+    opacity: 0;
+  }
+
+}
+
+.cosmic-lightning {
+
+  animation:
+    cosmic-lightning 6s infinite;
+
+}
+
+/* ===========================================================
+   WIND
+   =========================================================== */
+
+@keyframes cosmic-wind {
+
+  from {
+
+    transform:
+      translateX(-2px);
+
+  }
+
+  to {
+
+    transform:
+      translateX(4px);
+
+  }
+
+}
+
+.cosmic-wind {
+
+  animation:
+    cosmic-wind 2s ease-in-out infinite alternate;
+
+}
+
+/* ===========================================================
+   FOG
+   =========================================================== */
+
+@keyframes cosmic-fog {
+
+  from {
+
+    transform:
+      translateX(-2px);
+
+    opacity: .65;
+
+  }
+
+  to {
+
+    transform:
+      translateX(4px);
+
+    opacity: .9;
+
+  }
+
+}
+
+.cosmic-fog {
+
+  animation:
+    cosmic-fog 7s ease-in-out infinite alternate;
+
+}
+
+/* ===========================================================
+   HOVER EFFECT
+   =========================================================== */
+
+.cosmic-weather-icon {
+
+  transition:
+    transform .35s ease;
+
+}
+
+.cosmic-weather-icon:hover {
+
+  transform:
+    scale(1.08);
+
+}
+
+/* ===========================================================
+   REDUCED MOTION
+   =========================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+
+  .cosmic-weather-icon *,
+  .cosmic-sun-rays,
+  .cosmic-sun-core,
+  .cosmic-cloud,
+  .cosmic-moon,
+  .cosmic-star,
+  .cosmic-raindrop,
+  .cosmic-snowflake,
+  .cosmic-lightning,
+  .cosmic-wind,
+  .cosmic-fog {
+
+    animation: none !important;
+
+  }
+
+}

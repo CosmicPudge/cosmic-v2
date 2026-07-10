@@ -9,10 +9,12 @@ import { formatTime } from "@/utils/os/formatTime";
 
 interface CurrentWeatherProps {
   weather: WeatherData;
+  daylightProgress: number;
 }
 
 export default function CurrentWeather({
   weather,
+  daylightProgress,
 }: CurrentWeatherProps) {
   return (
     <SectionCard title="Current Weather">
