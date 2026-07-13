@@ -1,6 +1,0 @@
-/**
- * widgets
- * Placeholder
- */
-
-export {};

@@ -6,12 +6,14 @@ interface Props {
   children: ReactNode;
   size?: number;
   className?: string;
+  viewBox?: string;
 }
 
 export default function IconCanvas({
   children,
   size = 64,
   className = "",
+  viewBox = "0 0 100 100",
 }: Props) {
   return (
     <div
@@ -24,12 +26,12 @@ export default function IconCanvas({
       }}
     >
       <svg
-        viewBox="0 0 100 100"
+        viewBox={viewBox}
         width="100%"
         height="100%"
         overflow="visible"
       >
-        {children}
+        {children}  
       </svg>
     </div>
   );

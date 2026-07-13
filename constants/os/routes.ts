@@ -1,6 +1,0 @@
-/**
- * routes
- * Placeholder
- */
-
-export {};

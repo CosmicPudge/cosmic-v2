@@ -324,3 +324,530 @@ Is this the simplest way to present the information?
 3.
 
 Does it feel like it belongs inside Cosmic?
+
+
+# 🌌 Cosmic Design System
+Version: 1.0
+Project: Cosmic
+Last Updated: July 2026
+
+---
+
+# Philosophy
+
+Cosmic is not a website.
+
+Cosmic is a desktop operating system.
+
+Every interaction should feel intentional, premium, and calm.
+
+Design inspiration comes from:
+
+- visionOS
+- Apple Weather
+- Arc Browser
+- Nothing OS
+- Linear
+- Raycast
+
+The goal is not to copy any one product.
+
+The goal is to create a cohesive operating system with its own identity.
+
+---
+
+# Design Principles
+
+## 1. Calm
+
+Nothing should fight for attention.
+
+Motion is subtle.
+
+Colors are soft.
+
+Spacing is generous.
+
+---
+
+## 2. Information First
+
+Every widget answers a question.
+
+Weather
+→ Should I take a jacket?
+
+Garage
+→ Is my car okay?
+
+Calendar
+→ Am I busy today?
+
+Sports
+→ Is my team playing?
+
+---
+
+## 3. Reusable Systems
+
+Never build one-off components.
+
+Always ask:
+
+Can this become reusable?
+
+Examples:
+
+✓ Weather primitives
+
+✓ WidgetCard
+
+✓ GlassPanel
+
+✓ AppShell
+
+✓ Button
+
+---
+
+## 4. Consistency
+
+Every app should feel like it belongs to the same operating system.
+
+Never redesign the same pattern twice.
+
+---
+
+# Layout
+
+Dashboard uses a 12-column grid.
+
+Widgets snap to this grid.
+
+Standard spacing:
+
+24px
+
+Large spacing:
+
+40px
+
+Card padding:
+
+24px
+
+App padding:
+
+32px
+
+---
+
+# Border Radius
+
+Cards
+
+24px
+
+Buttons
+
+18px
+
+Inputs
+
+18px
+
+Launcher
+
+28px
+
+Never use sharp corners.
+
+---
+
+# Glass
+
+Standard Glass Panel
+
+Background
+
+white / 4%
+
+Border
+
+white / 10%
+
+Blur
+
+24px
+
+Hover
+
+white / 8%
+
+Shadow
+
+0 8px 32px rgba(0,0,0,.35)
+
+---
+
+# Typography
+
+Font
+
+Geist
+
+---
+
+Page Title
+
+48–56px
+
+Bold
+
+---
+
+Widget Title
+
+12px
+
+Uppercase
+
+Letter spacing:
+
+0.3em
+
+Opacity:
+
+50%
+
+---
+
+Primary Value
+
+32–64px
+
+Bold
+
+---
+
+Supporting Text
+
+16px
+
+Opacity:
+
+60%
+
+---
+
+Muted Text
+
+14px
+
+Opacity:
+
+40%
+
+---
+
+# Colors
+
+Dark Theme First
+
+Primary Background
+
+Near Black
+
+Glass
+
+White 4%
+
+Borders
+
+White 10%
+
+Primary Text
+
+White
+
+Secondary
+
+White 60%
+
+Muted
+
+White 40%
+
+Accent
+
+Sky Blue
+
+---
+
+# Motion
+
+Motion should never attract attention.
+
+It should reinforce interaction.
+
+Preferred duration
+
+150–250ms
+
+Hover
+
+Scale
+
+1.01
+
+Maximum
+
+1.03
+
+Never bounce.
+
+Never overshoot.
+
+Never use elastic animations.
+
+---
+
+# Weather
+
+Weather uses its own icon system.
+
+Folder
+
+components/icons/weather
+
+Icons are built from reusable primitives.
+
+Sun
+
+Moon
+
+Cloud
+
+Stars
+
+Rain
+
+Lightning
+
+Snow
+
+Wind
+
+Scenes compose primitives.
+
+---
+
+# Cosmic Glyphs
+
+The operating system uses its own glyph library.
+
+Folder
+
+components/icons/cosmic
+
+ViewBox
+
+64x64
+
+Stroke Width
+
+2.75
+
+Linecap
+
+Round
+
+Linejoin
+
+Round
+
+Padding
+
+8px
+
+Static first.
+
+Animation later.
+
+---
+
+# Buttons
+
+Buttons should feel soft.
+
+Hover
+
+Slight lift
+
+Slight brighten
+
+Press
+
+Scale 0.99
+
+Never bounce.
+
+---
+
+# Widgets
+
+Every widget follows the same hierarchy.
+
+1.
+
+Section Label
+
+2.
+
+Primary Content
+
+3.
+
+Supporting Content
+
+4.
+
+Status
+
+Widgets answer one question.
+
+Apps answer everything.
+
+---
+
+# Launcher
+
+⌘K
+
+Opens Cosmic Launcher.
+
+Launcher is the primary navigation system.
+
+Eventually supports:
+
+Apps
+
+Commands
+
+Files
+
+Settings
+
+AI
+
+---
+
+# Sidebar
+
+Sidebar displays applications.
+
+Eventually uses Cosmic Glyphs.
+
+No emoji after v1.
+
+---
+
+# Dashboard Philosophy
+
+The Dashboard is the home screen.
+
+It should answer:
+
+What time is it?
+
+What's the weather?
+
+What's next?
+
+Anything important?
+
+The Dashboard should be glanceable in under five seconds.
+
+---
+
+# Architecture
+
+Every feature follows the same pattern.
+
+Service
+
+↓
+
+Store
+
+↓
+
+Hook
+
+↓
+
+View
+
+Views never fetch data directly.
+
+---
+
+# Component Rules
+
+If a component can be reused:
+
+Extract it.
+
+If two components look the same:
+
+Share them.
+
+If logic is duplicated:
+
+Move it.
+
+---
+
+# Definition of Done
+
+A feature is complete when:
+
+✓ No placeholder text
+
+✓ Uses shared components
+
+✓ Uses shared design language
+
+✓ Uses shared architecture
+
+✓ Handles loading
+
+✓ Handles empty state
+
+✓ Handles errors
+
+Only then is it considered finished.
+
+---
+
+# Future
+
+After v1:
+
+Window Manager
+
+Themes
+
+Dock
+
+Voice
+
+AI
+
+Particles
+
+Wallpaper Engine
+
+Cosmic Glyph Animations
+
+Weather Engine V2

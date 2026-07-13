@@ -1,36 +1,60 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
-import useLocation from "./useLocation";
-import { useWeatherStore } from "@/stores/weatherStore";
+import { cosmic } from "@/core/CosmicCore";
+import useLocation from "@/hooks/os/useLocation";
+
+import type { WeatherData } from "@/engines/environment";
 
 export default function useWeather() {
   const location = useLocation();
 
-  const weather = useWeatherStore((state) => state.weather);
-  const loading = useWeatherStore((state) => state.loading);
-  const error = useWeatherStore((state) => state.error);
-  const lastUpdated = useWeatherStore((state) => state.lastUpdated);
-  const refresh = useWeatherStore((state) => state.refresh);
+  const [weather, setWeather] =
+    useState<WeatherData | null>(null);
 
-  useEffect(() => {
-    if (!location) return;
+  const [loading, setLoading] =
+    useState(true);
 
-    refresh(location.lat, location.lon);
+  const [error, setError] =
+    useState<string | null>(null);
 
-    const interval = setInterval(() => {
-      refresh(location.lat, location.lon);
-    }, 15 * 60 * 1000);
+ useEffect(() => {
+  if (!location) return;
 
-    return () => clearInterval(interval);
-  }, [location]);
+  const { lat, lon } = location;
+
+  async function load() {
+    try {
+      if (!cosmic.weather.isReady()) {
+        await cosmic.weather.initialize({
+          lat,
+          lon,
+        });
+      } else {
+        await cosmic.weather.refresh();
+      }
+
+      setWeather(
+        await cosmic.weather.getSnapshot()
+      );
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Unknown weather error"
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  load();
+}, [location]);
 
   return {
     weather,
     loading,
     error,
-    lastUpdated,
-    refresh,
   };
 }

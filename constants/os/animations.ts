@@ -1,6 +1,0 @@
-/**
- * animations
- * Placeholder
- */
-
-export {};
