@@ -1,0 +1,27 @@
+"use client";
+
+import type { ReactNode } from "react";
+
+import AnimatedBackground from "../effects/AnimatedBackground";
+
+interface Props {
+  children: ReactNode;
+}
+
+export default function AmbientShell({
+  children,
+}: Props) {
+  return (
+    <div className="relative h-screen w-screen overflow-hidden bg-black">
+
+      <AnimatedBackground />
+
+      <div className="absolute inset-0 bg-black/35 backdrop-blur-sm" />
+
+      <main className="relative z-10 flex h-full items-center justify-center p-10">
+        {children}
+      </main>
+
+    </div>
+  );
+}

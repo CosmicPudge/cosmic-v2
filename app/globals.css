@@ -207,3 +207,40 @@ body {
 .cosmic-lightning {
   animation: cosmic-lightning-flash 7s infinite;
 }
+@keyframes cosmic-logo {
+
+  0% {
+    opacity: .75;
+    transform: scale(.985);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  100% {
+    opacity: .75;
+    transform: scale(.985);
+  }
+
+}
+
+.animate-cosmic-logo{
+    animation: cosmic-logo 4s ease-in-out infinite;
+}
+
+@keyframes cosmic-progress {
+  from {
+    transform: scaleX(0);
+  }
+
+  to {
+    transform: scaleX(1);
+  }
+}
+
+.animate-cosmic-progress {
+  transform-origin: left;
+  animation: cosmic-progress 5s linear forwards;
+}

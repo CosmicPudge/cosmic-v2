@@ -6,6 +6,7 @@ import Sidebar from "../layout/Sidebar";
 import UniverseGrid from "../layout/DashboardGrid";
 import StatusBar from "../layout/StatusBar";
 import { useEffect, useState } from "react";
+import { CosmicBoot } from "@/components/os/boot";
 
 import CosmicLauncher from "../launcher/CosmicLauncher";
 
@@ -14,7 +15,9 @@ import { OSProvider, useOS } from "./OSProvider";
 export default function CosmicShell() {
   return (
     <OSProvider>
-      <Desktop />
+      <CosmicBoot>
+        <Desktop />
+      </CosmicBoot>
     </OSProvider>
   );
 }
