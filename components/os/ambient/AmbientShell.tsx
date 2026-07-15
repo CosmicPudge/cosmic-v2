@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 
-import AnimatedBackground from "../effects/AnimatedBackground";
+import CosmicBackground from "../background/CosmicBackground";
 
 interface Props {
   children: ReactNode;
@@ -14,7 +14,7 @@ export default function AmbientShell({
   return (
     <div className="relative h-screen w-screen overflow-hidden bg-black">
 
-      <AnimatedBackground />
+      <CosmicBackground />
 
       <div className="absolute inset-0 bg-black/35 backdrop-blur-sm" />
 

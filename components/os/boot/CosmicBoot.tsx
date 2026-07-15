@@ -20,40 +20,83 @@ const defaultMessages = [
   "Welcome.",
 ];
 
+const BOOT_TIME = 15000; // 15 seconds
+
 export default function CosmicBoot({
   children,
   subtitle,
   messages,
 }: Props) {
   const bootMessages = messages ?? defaultMessages;
-const [step, setStep] = useState(0);
-const [bootComplete, setBootComplete] = useState(false);
 
+  const [progress, setProgress] = useState(0);
+  const [step, setStep] = useState(0);
+  const [bootComplete, setBootComplete] = useState(false);
 
-useEffect(() => {
-  const timers = [
-    setTimeout(() => setStep(1), 1200),
-    setTimeout(() => setStep(2), 2600),
-    setTimeout(() => setStep(3), 4300),
-    setTimeout(() => setBootComplete(true), 5000),
-  ];
+  //
+  // Smooth progress animation
+  //
+  useEffect(() => {
+    const start = performance.now();
 
-  return () => timers.forEach(clearTimeout);
-}, []);
+    let animationFrame: number;
+
+    function animate(now: number) {
+      const elapsed = now - start;
+
+      const percent = Math.min(
+        (elapsed / BOOT_TIME) * 100,
+        100
+      );
+
+      setProgress(percent);
+
+      if (percent < 100) {
+        animationFrame = requestAnimationFrame(animate);
+      } else {
+        setBootComplete(true);
+      }
+    }
+
+    animationFrame = requestAnimationFrame(animate);
+
+    return () => cancelAnimationFrame(animationFrame);
+  }, []);
+
+  //
+  // Boot messages
+  //
+  useEffect(() => {
+    const interval = BOOT_TIME / bootMessages.length;
+
+    const timers = bootMessages
+      .slice(1)
+      .map((_, index) =>
+        setTimeout(() => {
+          setStep(index + 1);
+        }, interval * (index + 1))
+      );
+
+    return () => timers.forEach(clearTimeout);
+  }, [bootMessages]);
 
   return (
     <>
-      {/* Desktop is always mounted */}
+      {/* Desktop stays mounted */}
       {children}
 
-      {/* Boot Screen */}
+      {/* Boot Overlay */}
       <div
         className={`
           fixed inset-0 z-[9999]
-          transition-opacity duration-1000 ease-in-out
+
+          transition-opacity
+          duration-1000
+          ease-in-out
+
           ${
             bootComplete
-              ? "opacity-0 pointer-events-none"
+              ? "pointer-events-none opacity-0"
               : "opacity-100"
           }
         `}
@@ -61,13 +104,17 @@ useEffect(() => {
         <BootBackground>
           <div className="flex flex-col items-center">
 
-            <BootLogo subtitle={subtitle} />
+            <BootLogo
+              subtitle={subtitle}
+            />
 
             <BootMessage
-  message={bootMessages[step]}
-/>
+              message={bootMessages[step]}
+            />
 
-             <BootProgress start />
+            <BootProgress
+              progress={progress}
+            />
 
           </div>
         </BootBackground>

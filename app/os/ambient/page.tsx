@@ -1,3 +1,6 @@
+"use client";
+
+import {useEffect} from "react";
 import { CosmicBoot } from "@/components/os/boot";
 
 import AmbientShell from "@/components/os/ambient/AmbientShell";
@@ -13,6 +16,19 @@ import AmbientGreeting from "@/components/os/ambient/AmbientGreeting";
 import AmbientSection from "@/components/os/ambient/AmbientSection";
 
 export default function AmbientPage() {
+  useEffect(() => {
+  const refreshed = sessionStorage.getItem("ambient-refresh");
+
+  if (!refreshed) {
+    sessionStorage.setItem("ambient-refresh", "true");
+
+    const timer = setTimeout(() => {
+      window.location.reload();
+    }, 8000);
+
+    return () => clearTimeout(timer);
+  }
+}, []);
   return (
     <CosmicBoot
       subtitle="Ambient"

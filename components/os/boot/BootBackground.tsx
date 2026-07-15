@@ -1,8 +1,8 @@
 "use client";
 
 import type { ReactNode } from "react";
-import AnimatedBackground from "../effects/AnimatedBackground";
 import Stars from "@/components/icons/primitives/Stars";
+import CosmicBackground from "../background/CosmicBackground";
 
 interface Props {
   children: ReactNode;
@@ -14,11 +14,15 @@ export default function BootBackground({
   return (
     <div className="fixed inset-0 overflow-hidden bg-black">
 
-      <AnimatedBackground />
+      <CosmicBackground />
 
-      <div className="absolute inset-0 opacity-80">
-        <Stars density="dense" />
-      </div>
+      <svg
+  className="absolute inset-0 h-full w-full opacity-80"
+  viewBox="0 0 100 100"
+  preserveAspectRatio="none"
+>
+  <Stars density="dense" />
+</svg>
 
       {/* Soft vignette */}
       <div className="absolute inset-0 bg-black/30" />

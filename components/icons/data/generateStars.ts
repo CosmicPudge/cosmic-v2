@@ -16,9 +16,9 @@ export interface Star {
 }
 
 const STAR_COUNTS = {
-  sparse: 8,
-  normal: 14,
-  dense: 22,
+  sparse: 80,
+  normal: 140,
+  dense: 240,
 } as const;
 
 export function generateStars({
@@ -41,7 +41,20 @@ export function generateStars({
       y = random(8, 46);
     }
 
-    const radius = random(0.7, 2.1);
+    let radius: number;
+
+const chance = random(0, 100);
+
+if (chance < 85) {
+  // Tiny stars
+  radius = random(0.08, 0.18);
+} else if (chance < 98) {
+  // Medium stars
+  radius = random(0.2, 0.35);
+} else {
+  // Bright stars
+  radius = random(0.45, 0.7);
+}
 
     return {
       x,
@@ -49,13 +62,13 @@ export function generateStars({
 
       radius,
 
-      opacity: random(0.35, 1),
+      opacity: random(0.2, 0.8),
 
-      glowRadius: radius * random(2.5, 4),
+      glowRadius: radius * random(1.5, 2.2),
 
       phase: random(0, Math.PI * 2),
 
-      speed: random(2, 6),
+      speed: random(0.2, 0.8),
     };
   });
 }

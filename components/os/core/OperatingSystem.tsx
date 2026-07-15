@@ -1,6 +1,5 @@
 "use client";
 
-import AnimatedBackground from "../effects/AnimatedBackground";
 import Header from "../layout/Header";
 import Sidebar from "../layout/Sidebar";
 import UniverseGrid from "../layout/DashboardGrid";
@@ -11,14 +10,18 @@ import { CosmicBoot } from "@/components/os/boot";
 import CosmicLauncher from "../launcher/CosmicLauncher";
 
 import { OSProvider, useOS } from "./OSProvider";
+import ModeManager from "./ModeManager";
+import CosmicBackground from "../background/CosmicBackground";
 
 export default function CosmicShell() {
   return (
     <OSProvider>
+      <ModeManager />
       <CosmicBoot>
         <Desktop />
       </CosmicBoot>
     </OSProvider>
+    
   );
 }
 
@@ -51,7 +54,7 @@ function Desktop() {
   open={launcherOpen}
   onClose={() => setLauncherOpen(false)}
 />
-    <AnimatedBackground />
+    <CosmicBackground />
 
     <div className="relative z-10 flex h-full flex-col">
       <Header />

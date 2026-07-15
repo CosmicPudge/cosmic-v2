@@ -242,5 +242,108 @@ body {
 
 .animate-cosmic-progress {
   transform-origin: left;
-  animation: cosmic-progress 5s linear forwards;
+  animation: cosmic-progress 10s linear forwards;
+}
+/* -------------------------- */
+/* Cosmic Nebula Background   */
+/* -------------------------- */
+
+.cosmic-nebula {
+
+    position:absolute;
+
+    width:120vmax;
+    height:120vmax;
+
+    border-radius:58% 42% 63% 37%;
+
+    filter:blur(170px);
+
+    opacity:.22;
+
+    transform-origin:center;
+
+    animation:
+        cosmic-orbit 3600s linear infinite,
+        cosmic-breathe 90s ease-in-out infinite;
+}
+
+.cosmic-nebula-blue{
+
+    left:-30%;
+    top:-20%;
+
+    background:
+    radial-gradient(circle,
+        rgba(45,90,255,.55),
+        transparent 70%);
+}
+
+.cosmic-nebula-purple{
+
+    right:-25%;
+    top:5%;
+
+    background:
+    radial-gradient(circle,
+        rgba(122,60,255,.45),
+        transparent 70%);
+
+    animation-delay:-20s;
+}
+
+.cosmic-nebula-cyan{
+
+    left:10%;
+    bottom:-30%;
+
+    background:
+    radial-gradient(circle,
+        rgba(40,170,255,.35),
+        transparent 70%);
+
+    animation-delay:-40s;
+}
+
+.cosmic-nebula-violet{
+
+    right:-15%;
+    bottom:-25%;
+
+    background:
+    radial-gradient(circle,
+        rgba(190,70,255,.28),
+        transparent 70%);
+
+    animation-delay:-60s;
+}
+
+@keyframes cosmic-orbit{
+
+    from{
+        transform:rotate(0deg) scale(1);
+    }
+
+    to{
+        transform:rotate(360deg) scale(1);
+    }
+
+}
+
+@keyframes cosmic-breathe{
+
+    0%,100%{
+
+        opacity:.20;
+
+        scale:1;
+    }
+
+    50%{
+
+        opacity:.26;
+
+        scale:1.03;
+    }
+
 }
