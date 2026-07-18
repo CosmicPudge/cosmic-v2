@@ -21,7 +21,6 @@ export default function BootBackground({
   viewBox="0 0 100 100"
   preserveAspectRatio="none"
 >
-  <Stars density="dense" />
 </svg>
 
       {/* Soft vignette */}

@@ -1,6 +1,6 @@
-/**
- * schedule
- * Placeholder
- */
+import { getSchoolOverview } from "./overview";
+import type { SchoolClass } from "./types";
 
-export {};
+export async function getTodayClasses(): Promise<SchoolClass[]> {
+  return (await getSchoolOverview()).classes;
+}

@@ -1,24 +1,54 @@
-import AppShell from "@/components/os/app/AppShell";
-import AppHeader from "@/components/os/app/AppHeader";
-import AppContent from "@/components/os/app/AppContent";
+import DashboardGrid from "@/components/school/layout/DashboardGrid";
+import DashboardItem from "@/components/school/layout/DashboardItem";
+import SchoolDashboard from "@/components/school/layout/SchoolDashboard";
+import SchoolHero from "@/components/school/hero/SchoolHero"
+import {heroData} from "@/lib/school/mock/hero"
+
+
+function Placeholder({ title }: { title: string }) {
+  return (
+    <div className="flex h-40 items-center justify-center rounded-3xl border border-white/10 bg-white/5 text-white">
+      {title}
+    </div>
+  );
+}
 
 export default function SchoolPage() {
   return (
-    <AppShell>
-      <AppHeader
-        title="School"
-        subtitle="School application"
-      />
+    <SchoolDashboard>
+      <DashboardGrid>
+        <DashboardItem span={{ lg: 12 }}>
+          <SchoolHero data={heroData} />
+        </DashboardItem>
 
-      <AppContent>
-        <div className="space-y-4">
-          <h2 className="text-2xl font-bold">School</h2>
+        <DashboardItem span={{ lg: 5 }}>
+          <Placeholder title="Focus" />
+        </DashboardItem>
 
-          <p className="text-white/60">
-            School is currently under development.
-          </p>
-        </div>
-      </AppContent>
-    </AppShell>
+        <DashboardItem span={{ lg: 7 }}>
+          <Placeholder title="Timeline" />
+        </DashboardItem>
+
+        <DashboardItem span={{ lg: 4 }}>
+          <Placeholder title="Academics" />
+        </DashboardItem>
+
+        <DashboardItem span={{ lg: 4 }}>
+          <Placeholder title="AFROTC" />
+        </DashboardItem>
+
+        <DashboardItem span={{ lg: 4 }}>
+          <Placeholder title="Deadlines" />
+        </DashboardItem>
+
+        <DashboardItem span={{ lg: 8 }}>
+          <Placeholder title="AI Coach" />
+        </DashboardItem>
+
+        <DashboardItem span={{ lg: 4 }}>
+          <Placeholder title="Quick Actions" />
+        </DashboardItem>
+      </DashboardGrid>
+    </SchoolDashboard>
   );
 }

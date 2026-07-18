@@ -1,6 +1,6 @@
-/**
- * grades
- * Placeholder
- */
+import { getSchoolOverview } from "./overview";
+import type { SchoolGrade } from "./types";
 
-export {};
+export async function getRecentGrades(): Promise<SchoolGrade[]> {
+  return (await getSchoolOverview()).grades;
+}

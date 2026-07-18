@@ -2,6 +2,7 @@
 
 import BackgroundEngine from "@/components/os/backgrounds/BackgroundEngine";
 import { BackgroundApp } from "@/components/os/backgrounds/types";
+import CosmicBackground from "../background/CosmicBackground";
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -34,7 +35,7 @@ export default function AppShell({
         {children}
 
       </div>
-
+        <CosmicBackground /> 
     </main>
   );
 }

@@ -32,8 +32,10 @@ export default function Stars({
           key={index}
           className={twinkle ? "cosmic-star" : ""}
           style={{
-            opacity: star.opacity * opacity,
-          }}
+  opacity: star.opacity * opacity,
+  animationDelay: `-${star.phase}s`,
+  animationDuration: `${star.speed}s`,
+}}
         >
           {/* Glow */}
           <circle

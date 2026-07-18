@@ -1,13 +1,28 @@
 "use client";
 
-import NebulaLayer from "./NebulaLayer";
+import type { PropsWithChildren } from "react";
+import BackgroundCanvas from "./BackgroundCanvas";
 
-export default function CosmicBackground() {
+const containerStyle = {
+  position: "relative",
+  width: "100%",
+  height: "100%",
+  overflow: "hidden",
+  backgroundColor: "#050712",
+} as const;
+
+const contentStyle = {
+  position: "relative",
+  zIndex: 1,
+  width: "100%",
+  height: "100%",
+} as const;
+
+export default function CosmicBackground({ children }: PropsWithChildren) {
   return (
-    <div className="absolute inset-0 overflow-hidden bg-black">
-
-      <NebulaLayer />
-
+    <div style={containerStyle}>
+      <BackgroundCanvas />
+      <div style={contentStyle}>{children}</div>
     </div>
   );
 }

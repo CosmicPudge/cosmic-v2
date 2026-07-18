@@ -76,4 +76,25 @@ export const Colors = {
       "#4ADE80",
     ],
   },
+  cosmic: {
+    background: {
+      black: "#020204",
+      space: "#05070D",
+      deepBlue: "#091225",
+    },
+
+    nebula: {
+      blue: "#2B63FF",
+      indigo: "#4452E6",
+      purple: "#6E47FF",
+      cyan: "#42C5FF",
+      magenta: "#B46BFF",
+    },
+
+    stars: {
+      dim: "#BFC8E6",
+      normal: "#EAEFFF",
+      bright: "#FFFFFF",
+    },
+  },
 } as const;
