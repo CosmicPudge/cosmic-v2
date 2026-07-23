@@ -1,10 +1,18 @@
 "use client";
 
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+
 import { apps } from "@/config/apps";
+import { useBoot } from "@/components/os/boot/BootManager";
 
 export default function Sidebar() {
   const router = useRouter();
+  const { complete } = useBoot();
+
+  useEffect(() => {
+    complete("sidebar");
+  }, [complete]);
 
   return (
     <aside className="w-20 border-r border-white/10 bg-white/5 backdrop-blur-xl">

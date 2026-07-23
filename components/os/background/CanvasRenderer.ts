@@ -1,11 +1,6 @@
 import { Camera } from "./Camera";
 import { Universe } from "./Universe";
-import { drawNebula } from "./drawNebula";
-import { drawStar } from "./drawStar";
-import { generateNebula } from "./generateNebula";
-import { generateSky } from "./generateSky";
 import type { GeneratedUniverse, ScreenPoint, Viewport } from "./types";
-import { isScreenCircleVisible, worldToScreen } from "./worldToScreen";
 
 /**
  * Owns the canvas render loop and coordinates the world-to-screen pipeline.
@@ -15,7 +10,6 @@ export class CanvasRenderer {
   private readonly canvas: HTMLCanvasElement;
   private readonly context: CanvasRenderingContext2D;
   private readonly camera: Camera;
-  private readonly universe: GeneratedUniverse;
   private readonly viewport: Viewport;
   private readonly starScreenPoint: ScreenPoint;
   private readonly nebulaScreenPoint: ScreenPoint;
@@ -36,10 +30,16 @@ export class CanvasRenderer {
     this.canvas = canvas;
     this.context = context;
     this.camera = new Camera();
-    this.universe = {
-      sky: generateSky(),
-      nebula: generateNebula(),
-    };
+    console.time("generateSky");
+
+
+console.timeEnd("generateSky");
+
+console.time("generateNebula");
+
+
+console.timeEnd("generateNebula");
+
     this.viewport = {
       width: 0,
       height: 0,
@@ -126,7 +126,6 @@ export class CanvasRenderer {
     this.camera.update(elapsedMilliseconds);
     this.clearFrame();
     this.renderNebula();
-    this.renderStars(elapsedMilliseconds);
 
     this.context.globalAlpha = 1;
     this.context.shadowBlur = 0;
@@ -142,80 +141,9 @@ export class CanvasRenderer {
   }
 
   private renderNebula(): void {
-    const wisps = this.universe.nebula.wisps;
     const nebulaParallaxStrength = Universe.rendering.nebulaParallaxStrength;
 
     this.context.globalCompositeOperation = "screen";
 
-    for (let wispIndex = 0; wispIndex < wisps.length; wispIndex += 1) {
-      const wisp = wisps[wispIndex];
-
-      worldToScreen(
-        wisp,
-        this.camera.state,
-        this.viewport,
-        nebulaParallaxStrength,
-        this.nebulaScreenPoint,
-      );
-
-      const cullingRadius =
-        wisp.radius * wisp.stretch * this.nebulaScreenPoint.scale +
-        wisp.blur * this.nebulaScreenPoint.scale;
-
-      if (
-        !isScreenCircleVisible(
-          this.nebulaScreenPoint,
-          cullingRadius,
-          this.viewport,
-        )
-      ) {
-        continue;
-      }
-
-      drawNebula(this.context, wisp, this.nebulaScreenPoint);
-    }
-
-    this.context.shadowBlur = 0;
-  }
-
-  private renderStars(elapsedMilliseconds: number): void {
-    const stars = this.universe.sky.stars;
-    const starParallaxStrength = Universe.rendering.depthParallaxStrength;
-
-    this.context.globalCompositeOperation = "lighter";
-
-    for (let starIndex = 0; starIndex < stars.length; starIndex += 1) {
-      const star = stars[starIndex];
-
-      worldToScreen(
-        star,
-        this.camera.state,
-        this.viewport,
-        starParallaxStrength,
-        this.starScreenPoint,
-      );
-
-      const cullingRadius =
-        star.radius *
-        this.starScreenPoint.scale *
-        Universe.rendering.heroStarGlowMultiplier;
-
-      if (
-        !isScreenCircleVisible(
-          this.starScreenPoint,
-          cullingRadius,
-          this.viewport,
-        )
-      ) {
-        continue;
-      }
-
-      drawStar(
-        this.context,
-        star,
-        this.starScreenPoint,
-        elapsedMilliseconds,
-      );
-    }
-  }
+}
 }

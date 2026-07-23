@@ -1,28 +1,33 @@
 "use client";
 
-import type { PropsWithChildren } from "react";
+import { type PropsWithChildren, useEffect } from "react";
 import BackgroundCanvas from "./BackgroundCanvas";
+import { useBoot } from "@/components/os/boot/BootManager";
 
-const containerStyle = {
-  position: "relative",
-  width: "100%",
-  height: "100%",
-  overflow: "hidden",
-  backgroundColor: "#050712",
-} as const;
+export default function CosmicBackground({
+  children,
+}: PropsWithChildren) {
+  const { complete } = useBoot();
 
-const contentStyle = {
-  position: "relative",
-  zIndex: 1,
-  width: "100%",
-  height: "100%",
-} as const;
+  useEffect(() => {
+    complete("background");
+  }, [complete]);
 
-export default function CosmicBackground({ children }: PropsWithChildren) {
   return (
-    <div style={containerStyle}>
-      <BackgroundCanvas />
-      <div style={contentStyle}>{children}</div>
-    </div>
+    <>
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          overflow: "hidden",
+          backgroundColor: "#050712",
+          zIndex: 0,
+        }}
+      >
+        <BackgroundCanvas />
+      </div>
+
+      {children}
+    </>
   );
 }
