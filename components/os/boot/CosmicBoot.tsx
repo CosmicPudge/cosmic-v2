@@ -10,8 +10,9 @@ import BootProgress from "./BootProgress";
 import { useBoot } from "./BootManager";
 
 interface Props {
+  subtitle: string;
+  messages?: string[];
   children: React.ReactNode;
-  subtitle?: string;
 }
 
 const MIN_BOOT_DURATION = 1200;
