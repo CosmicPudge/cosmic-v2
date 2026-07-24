@@ -371,3 +371,30 @@ body {
 .school-ambient-orb-delayed { animation: school-ambient-drift 22s ease-in-out -8s infinite; }
 .school-hero-light { animation: school-hero-light 12s ease-in-out infinite; }
 .school-number-enter { animation: school-number-enter 180ms ease-out both; }
+@keyframes galaxy-clouds {
+  0% {
+    transform: translate3d(0px, 0px, 0px) scale(1);
+  }
+
+  25% {
+    transform: translate3d(-0.25%, 0.15%, 0px) scale(1.003);
+  }
+
+  50% {
+    transform: translate3d(0.15%, 0.35%, 0px) scale(1.006);
+  }
+
+  75% {
+    transform: translate3d(0.30%, -0.15%, 0px) scale(1.003);
+  }
+
+  100% {
+    transform: translate3d(0px, 0px, 0px) scale(1);
+  }
+}
+
+.animate-galaxy-clouds {
+  animation: galaxy-clouds 80s ease-in-out infinite;
+  transform-origin: center;
+  will-change: transform;
+}

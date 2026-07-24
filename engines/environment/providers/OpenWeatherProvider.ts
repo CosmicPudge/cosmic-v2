@@ -1,6 +1,12 @@
 import type { CurrentWeather } from "../models/types";
 
-const API_KEY = process.env.OPENWEATHER_API_KEY!;
+const API_KEY = process.env.OPENWEATHER_API_KEY;
+
+if (!API_KEY) {
+  throw new Error(
+    "OPENWEATHER_API_KEY is not configured."
+  );
+}
 
 export async function getOpenWeather(
   lat: number,
