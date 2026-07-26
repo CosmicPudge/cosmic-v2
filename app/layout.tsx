@@ -1,10 +1,11 @@
-import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 
 import "./globals.css";
 import "leaflet/dist/leaflet.css";
 
 import { PerformanceProvider } from "@/components/os/performance";
+import { OSProvider } from "@/components/os/core/OSProvider";
+import { DisplayProvider } from "@/components/os/display";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -36,7 +37,11 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         <PerformanceProvider>
-          {children}
+          <OSProvider>
+            <DisplayProvider>
+              {children}
+            </DisplayProvider>
+          </OSProvider>
         </PerformanceProvider>
       </body>
     </html>

@@ -2,7 +2,10 @@
 
 import { motion } from "framer-motion";
 
+import { useDisplay } from "@/components/os/display";
+
 import type { DashboardWidget } from "@/config/widgets";
+
 interface Props {
   widget: DashboardWidget;
 }
@@ -10,7 +13,30 @@ interface Props {
 export default function GridItem({
   widget,
 }: Props) {
+  const { profile } = useDisplay();
+
   const Widget = widget.component;
+
+  let cols = widget.cols;
+  let rows = widget.rows;
+
+  switch (profile) {
+    case "pocket":
+      cols = 1;
+      break;
+
+    case "compact":
+      cols = Math.min(widget.cols, 3);
+      break;
+
+    case "comfortable":
+      cols = widget.cols;
+      break;
+
+    case "expanded":
+      cols = widget.cols;
+      break;
+  }
 
   return (
     <motion.div
@@ -31,8 +57,8 @@ export default function GridItem({
         duration: 0.25,
       }}
       style={{
-        gridColumn: `span ${widget.cols}`,
-        gridRow: `span ${widget.rows}`,
+        gridColumn: `span ${cols}`,
+        gridRow: `span ${rows}`,
         minWidth: 0,
       }}
       data-widget-id={widget.id}

@@ -2,6 +2,8 @@
 
 import clsx from "clsx";
 
+import { useDisplay } from "@/components/os/display";
+
 import type { WidgetAccent } from "./types";
 
 interface Props {
@@ -61,6 +63,8 @@ const BACKGROUNDS: Record<WidgetAccent, string> = {
 export default function WidgetBackground({
   accent,
 }: Props) {
+  const { tokens } = useDisplay();
+
   return (
     <>
       {/* Main Accent */}
@@ -75,38 +79,32 @@ export default function WidgetBackground({
       <div
         className="
           absolute
-
           -left-24
           -top-24
-
           h-72
           w-72
-
           rounded-full
-
           bg-white/10
-
-          blur-3xl
         "
+        style={{
+          filter: `blur(${tokens.blur * 2}px)`,
+        }}
       />
 
       {/* Secondary Glow */}
       <div
         className="
           absolute
-
           bottom-0
           right-0
-
           h-56
           w-56
-
           rounded-full
-
           bg-white/[0.04]
-
-          blur-3xl
         "
+        style={{
+          filter: `blur(${tokens.blur * 2}px)`,
+        }}
       />
 
       {/* Ambient Highlight */}
@@ -114,9 +112,7 @@ export default function WidgetBackground({
         className="
           absolute
           inset-0
-
           bg-gradient-to-b
-
           from-white/[0.08]
           via-transparent
           to-transparent
@@ -128,9 +124,7 @@ export default function WidgetBackground({
         className="
           absolute
           inset-0
-
           bg-gradient-to-t
-
           from-black/10
           via-transparent
           to-transparent

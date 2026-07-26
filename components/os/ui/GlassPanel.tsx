@@ -1,14 +1,21 @@
 "use client";
 
 import clsx from "clsx";
+import type { CSSProperties, ReactNode } from "react";
 
-type GlassVariant = "hero" | "default" | "subtle" | "elevated";
+type GlassVariant =
+  | "hero"
+  | "default"
+  | "subtle"
+  | "elevated";
 
 interface GlassPanelProps {
-  children: React.ReactNode;
+  children: ReactNode;
   className?: string;
   variant?: GlassVariant;
   hover?: boolean;
+
+  style?: CSSProperties;
 }
 
 const variants: Record<GlassVariant, string> = {
@@ -45,9 +52,11 @@ export default function GlassPanel({
   className,
   variant = "default",
   hover = false,
+  style,
 }: GlassPanelProps) {
   return (
     <div
+      style={style}
       className={clsx(
         "relative overflow-hidden rounded-[36px] border transition-all duration-300",
 

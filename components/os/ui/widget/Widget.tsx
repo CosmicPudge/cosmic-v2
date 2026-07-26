@@ -1,17 +1,20 @@
+"use client";
+
 import { motion } from "framer-motion";
 import clsx from "clsx";
-import WidgetBackground from "./WidgetBackground";
+
+import { useDisplay } from "@/components/os/display";
+
 import GlassPanel from "@/components/os/ui/GlassPanel";
+import WidgetBackground from "./WidgetBackground";
 
 import type {
-  WidgetBaseProps,
   WidgetAccent,
+  WidgetBaseProps,
 } from "./types";
 
-import {
-  WIDGET_ACCENTS,
-  WIDGET_TRANSITION,
-} from "./constants";
+import { WIDGET_TRANSITION } from "./constants";
+
 interface Props extends WidgetBaseProps {
   hover?: boolean;
   accent?: WidgetAccent;
@@ -23,6 +26,8 @@ export default function Widget({
   hover = true,
   accent = "default",
 }: Props) {
+  const { tokens } = useDisplay();
+
   return (
     <motion.div
       whileHover={
@@ -40,23 +45,19 @@ export default function Widget({
     >
       <GlassPanel
         hover={hover}
-        className="
-          relative
-          h-full
-          overflow-hidden
-
-          rounded-[40px]
-
-          p-7
-        "
+        className="relative h-full overflow-hidden"
+        style={{
+          borderRadius: tokens.radius.xl,
+          padding: tokens.spacing.lg,
+          backdropFilter: `blur(${tokens.blur}px)`,
+        }}
       >
-       <WidgetBackground accent={accent} />
+        <WidgetBackground accent={accent} />
 
         <div
           className="
             relative
             z-10
-
             flex
             h-full
             flex-col

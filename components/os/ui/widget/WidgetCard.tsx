@@ -3,6 +3,8 @@
 import clsx from "clsx";
 import type { ReactNode } from "react";
 
+import { useDisplay } from "@/components/os/display";
+
 interface WidgetCardProps {
   children: ReactNode;
   className?: string;
@@ -12,6 +14,8 @@ export default function WidgetCard({
   children,
   className,
 }: WidgetCardProps) {
+  const { tokens } = useDisplay();
+
   return (
     <div
       className={clsx(
@@ -19,21 +23,20 @@ export default function WidgetCard({
         relative
         overflow-hidden
 
-        rounded-[30px]
-
         border
         border-white/10
 
         bg-white/[0.05]
 
-        backdrop-blur-2xl
-
         shadow-[0_12px_40px_rgba(0,0,0,.22)]
-
-        p-5
         `,
         className
       )}
+      style={{
+        borderRadius: tokens.radius.lg,
+        padding: tokens.spacing.md,
+        backdropFilter: `blur(${tokens.blur}px)`,
+      }}
     >
       {/* Top Highlight */}
       <div
