@@ -66,25 +66,31 @@ export function BootProvider({
   const progress = useMemo(() => {
     const completeCount = Object.values(state).filter(Boolean).length;
 
-    return (completeCount / Object.keys(state).length) * 100;
+    return (
+      (completeCount / Object.keys(state).length) * 100
+    );
   }, [state]);
 
-  // Only these are required before removing the boot overlay.
+  // Only these tasks are required before removing
+  // the boot overlay.
   const ready =
     state.desktop &&
     state.background &&
     state.header &&
     state.sidebar;
 
+  const value = useMemo(
+    () => ({
+      state,
+      complete,
+      progress,
+      ready,
+    }),
+    [state, complete, progress, ready]
+  );
+
   return (
-    <BootContext.Provider
-      value={{
-        state,
-        complete,
-        progress,
-        ready,
-      }}
-    >
+    <BootContext.Provider value={value}>
       {children}
     </BootContext.Provider>
   );
@@ -93,11 +99,10 @@ export function BootProvider({
 export function useBoot() {
   const context = useContext(BootContext);
 
-  console.log("BootContext =", context);
-
   if (!context) {
-    console.trace("BootContext is null");
-    throw new Error("useBoot must be used inside BootProvider");
+    throw new Error(
+      "useBoot must be used within a BootProvider"
+    );
   }
 
   return context;

@@ -17,15 +17,7 @@ export default function ModeManager() {
   const setMode = useModeStore(
     (state) => state.setMode
   );
-
-  useIdle({
-    timeout: 1000 * 60 * 5,
-
-    onIdle: () => {
-      setMode("ambient");
-    },
-  });
-
+  
   useEffect(() => {
     switch (mode) {
       case "desktop":

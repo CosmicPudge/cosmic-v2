@@ -31,16 +31,6 @@ export default function AmbientPage() {
   }, []);
 
   return (
-    <BootProvider>
-      <CosmicBoot
-        subtitle="Ambient"
-        messages={[
-          "Initializing Ambient...",
-          "Loading Environment...",
-          "Preparing Display...",
-          "Welcome.",
-        ]}
-      >
         <AmbientShell>
           <AmbientCard>
             <div className="grid grid-cols-12 gap-6">
@@ -82,7 +72,5 @@ export default function AmbientPage() {
             </div>
           </AmbientCard>
         </AmbientShell>
-      </CosmicBoot>
-    </BootProvider>
   );
 }
