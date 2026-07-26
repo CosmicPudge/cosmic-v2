@@ -398,3 +398,21 @@ body {
   transform-origin: center;
   will-change: transform;
 }
+@keyframes cloudDrift {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(140vw);
+  }
+}
+@keyframes cosmic-rain {
+  from {
+    transform: translateY(-10vh);
+  }
+
+  to {
+    transform: translateY(120vh);
+  }
+}

@@ -1,6 +1,0 @@
-/**
- * weather
- * Placeholder
- */
-
-export {};

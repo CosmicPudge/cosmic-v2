@@ -1,6 +1,5 @@
 "use client";
 
-import { ReactNode } from "react";
 import clsx from "clsx";
 
 type GlassVariant = "hero" | "default" | "subtle" | "elevated";
@@ -50,7 +49,7 @@ export default function GlassPanel({
   return (
     <div
       className={clsx(
-        "rounded-3xl border transition-all duration-300",
+        "relative overflow-hidden rounded-[36px] border transition-all duration-300",
 
         variants[variant],
 
@@ -63,7 +62,47 @@ export default function GlassPanel({
         className
       )}
     >
-      {children}
+      {/* Ambient light */}
+      <div
+        className="
+          pointer-events-none
+          absolute
+          inset-0
+          bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,.12),transparent_60%)]
+        "
+      />
+
+      {/* Soft top highlight */}
+      <div
+        className="
+          pointer-events-none
+          absolute
+          inset-0
+          bg-gradient-to-b
+          from-white/[0.06]
+          via-transparent
+          to-transparent
+        "
+      />
+
+      {/* Bottom depth */}
+      <div
+        className="
+          pointer-events-none
+          absolute
+          inset-x-0
+          bottom-0
+          h-24
+          bg-gradient-to-t
+          from-black/10
+          to-transparent
+        "
+      />
+
+      {/* Content */}
+      <div className="relative z-10 h-full">
+        {children}
+      </div>
     </div>
   );
 }

@@ -67,7 +67,7 @@ if (roll < 92) {
 
       phase: random(0, Math.PI * 2),
 
-      speed: random(0.00001, 0.00005),
+      speed: random(5, 14),
     };
   });
 }

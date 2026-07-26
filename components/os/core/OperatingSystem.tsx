@@ -3,7 +3,8 @@
 import ModeManager from "./ModeManager";
 import { OSProvider } from "./OSProvider";
 import { BootProvider } from "@/components/os/boot/BootManager";
-import DashboardGrid from "@/components/os/layout/DashboardGrid";
+import { Dashboard } from "@/components/dashboard";
+import AnimatedBackground from "../background/AnimatedBackground";
 // import CosmicBackground from "../background/CosmicBackground";
 
 export default function CosmicShell() {
@@ -19,21 +20,11 @@ export default function CosmicShell() {
 
 function Desktop() {
   return (
-    <div
-      className="w-screen h-screen overflow-hidden bg-slate-950 text-white"
-      style={{ position: "relative" }}
-    >
-      {/* Background temporarily disabled */}
-      {/* <CosmicBackground /> */}
+    <div className="relative h-screen w-screen overflow-hidden text-white">
+      <AnimatedBackground />
 
-      <div
-        className="w-full h-full p-6"
-        style={{
-          position: "relative",
-          zIndex: 10,
-        }}
-      >
-        <DashboardGrid />
+      <div className="relative z-10 h-full overflow-y-auto p-6">
+        <Dashboard />
       </div>
     </div>
   );
