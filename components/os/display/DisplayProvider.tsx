@@ -44,32 +44,15 @@ export function DisplayProvider({
 }: {
   children: ReactNode;
 }) {
-  const [metrics, setMetrics] = useState(() => {
-    const width =
-      typeof window === "undefined"
-        ? 1920
-        : window.innerWidth;
+  const [metrics, setMetrics] = useState({
+    width: 1920,
+    height: 1080,
 
-    const height =
-      typeof window === "undefined"
-        ? 1080
-        : window.innerHeight;
+    aspectRatio: 1920 / 1080,
 
-    const profile = getProfile(width, height);
+    touch: false,
 
-    return {
-      width,
-      height,
-
-      aspectRatio: width / height,
-
-      touch:
-        typeof window === "undefined"
-          ? false
-          : navigator.maxTouchPoints > 0,
-
-      profile,
-    };
+    profile: "expanded" as DisplayProfile,
   });
 
   useEffect(() => {

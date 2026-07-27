@@ -2,18 +2,28 @@
 
 import { motion } from "framer-motion";
 
+import { useDisplay } from "@/components/os/display";
 import GlassPanel from "@/components/os/ui/GlassPanel";
 import useWeather from "@/hooks/os/useWeather";
 
 import HeroBackground from "./HeroBackground";
-import HeroGreeting from "./HeroGreeting";
 import HeroClock from "./HeroClock";
-import HeroWeather from "./HeroWeather";
 import HeroDetails from "./HeroDetails";
+import HeroGreeting from "./HeroGreeting";
+import { HERO_LAYOUTS } from "./heroLayouts";
 import HeroSun from "./HeroSun";
+import HeroWeather from "./HeroWeather";
 
 export default function DashboardHero() {
   const { weather, loading } = useWeather();
+
+  const { profile, tokens } = useDisplay();
+
+  const hero = HERO_LAYOUTS[profile];
+
+  const stack =
+    profile === "pocket" ||
+    profile === "compact";
 
   return (
     <motion.section
@@ -25,12 +35,32 @@ export default function DashboardHero() {
       }}
       className="w-full"
     >
-      <GlassPanel className="relative min-h-[360px] overflow-hidden rounded-[36px] p-10">
+      <GlassPanel
+        className="relative overflow-hidden"
+        style={{
+          minHeight: hero.minHeight,
+          padding: hero.padding,
+          borderRadius: tokens.radius.xl,
+        }}
+      >
         <HeroBackground weather={weather} />
 
-        <div className="relative z-10 flex h-full justify-between gap-12">
+        <div
+          className="relative z-10 flex h-full"
+          style={{
+            gap: hero.gap,
+            flexDirection: stack
+              ? "column"
+              : "row",
+          }}
+        >
           {/* LEFT COLUMN */}
-          <div className="flex max-w-3xl flex-1 flex-col justify-between">
+          <div
+            className="flex min-w-0 flex-1 flex-col justify-between"
+            style={{
+              gap: hero.gap,
+            }}
+          >
             <HeroGreeting />
 
             <HeroSun
@@ -40,7 +70,26 @@ export default function DashboardHero() {
           </div>
 
           {/* RIGHT COLUMN */}
-          <div className="flex w-[420px] flex-col items-end justify-between text-right">
+          <div
+            className="flex flex-col"
+            style={{
+              gap: hero.gap,
+              flexBasis: stack
+                ? "100%"
+                : hero.rightColumnWidth,
+              maxWidth: stack
+                ? "100%"
+                : hero.rightColumnWidth,
+              alignItems: stack
+                ? "stretch"
+                : "flex-end",
+              textAlign: stack
+                ? "left"
+                : "right",
+              flexShrink: 1,
+              minWidth: 0,
+            }}
+          >
             <HeroClock />
 
             <HeroWeather

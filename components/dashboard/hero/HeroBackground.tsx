@@ -2,7 +2,11 @@
 
 import { motion } from "framer-motion";
 
+import { useDisplay } from "@/components/os/display";
+
 import type { WeatherData } from "@/engines/environment";
+
+import { HERO_LAYOUTS } from "./heroLayouts";
 
 interface Props {
   weather: WeatherData | null;
@@ -11,6 +15,10 @@ interface Props {
 export default function HeroBackground({
   weather,
 }: Props) {
+  const { profile } = useDisplay();
+
+  const hero = HERO_LAYOUTS[profile];
+
   const condition =
     weather?.condition.toLowerCase() ?? "";
 
@@ -42,13 +50,23 @@ export default function HeroBackground({
     secondary = "rgba(180,220,255,0.06)";
   }
 
+  const glowScale =
+    hero.minHeight / 360;
+
+  const noiseSize =
+    Math.round(22 * glowScale);
+
   return (
     <>
-      {/* Large ambient glow */}
       <motion.div
         className="absolute inset-0"
         animate={{
           opacity: [0.85, 1, 0.85],
+          scale: [
+            1,
+            1.02 * glowScale,
+            1,
+          ],
         }}
         transition={{
           duration: 12,
@@ -66,11 +84,15 @@ export default function HeroBackground({
         }}
       />
 
-      {/* Secondary glow */}
       <motion.div
         className="absolute inset-0"
         animate={{
           opacity: [0.6, 0.85, 0.6],
+          scale: [
+            1,
+            1.015 * glowScale,
+            1,
+          ],
         }}
         transition={{
           duration: 16,
@@ -88,7 +110,6 @@ export default function HeroBackground({
         }}
       />
 
-      {/* Soft vignette */}
       <div
         className="absolute inset-0"
         style={{
@@ -97,7 +118,6 @@ export default function HeroBackground({
         }}
       />
 
-      {/* Noise overlay */}
       <div
         className="
           absolute
@@ -106,10 +126,9 @@ export default function HeroBackground({
           mix-blend-soft-light
         "
         style={{
-          backgroundImage: `
-            radial-gradient(circle, white 1px, transparent 1px)
-          `,
-          backgroundSize: "22px 22px",
+          backgroundImage:
+            "radial-gradient(circle, white 1px, transparent 1px)",
+          backgroundSize: `${noiseSize}px ${noiseSize}px`,
         }}
       />
     </>
