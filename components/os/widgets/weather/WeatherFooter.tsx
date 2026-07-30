@@ -5,6 +5,7 @@ import type { WeatherData } from "@/engines/environment";
 interface Props {
   weather: WeatherData | null;
   error: string | null;
+  dense?: boolean;
 }
 
 function formatUpdated(time?: string) {
@@ -21,6 +22,7 @@ function formatUpdated(time?: string) {
 export default function WeatherFooter({
   weather,
   error,
+  dense = false,
 }: Props) {
   if (error) {
     return (
@@ -51,13 +53,13 @@ export default function WeatherFooter({
   const alerts = weather.weatherAlerts.length;
 
   return (
-    <div className="flex items-center justify-between text-sm">
-      <span className="text-white/55">
+    <div className={`flex items-center justify-between ${dense ? "text-[8px]" : "text-sm"}`}>
+      <span className="truncate text-white/55">
         Updated {formatUpdated(weather.lastUpdated)}
       </span>
 
-      <div className="flex items-center gap-3">
-        <div className="rounded-full border border-white/10 bg-white/5 px-3 py-1">
+      <div className={`flex shrink-0 items-center ${dense ? "gap-1" : "gap-3"}`}>
+        <div className={`rounded-full border border-white/10 bg-white/5 ${dense ? "px-1.5 py-0.5" : "px-3 py-1"}`}>
           AQI {weather.airQuality.aqi}
         </div>
 

@@ -39,13 +39,19 @@ export default function Widget({
       }
       transition={WIDGET_TRANSITION}
       className={clsx(
-        "relative h-full",
+        // Added min-h-0
+        "relative h-full min-h-0",
         className
       )}
     >
       <GlassPanel
         hover={hover}
-        className="relative h-full overflow-hidden"
+        className="
+          relative
+          h-full
+          min-h-0
+          overflow-hidden
+        "
         style={{
           borderRadius: tokens.radius.xl,
           padding: tokens.spacing.lg,
@@ -58,8 +64,11 @@ export default function Widget({
           className="
             relative
             z-10
+
             flex
             h-full
+            min-h-0
+
             flex-col
           "
         >

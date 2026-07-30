@@ -1,0 +1,3 @@
+export {
+  useExpandedWidget,
+} from "./ExpandedWidgetProvider";

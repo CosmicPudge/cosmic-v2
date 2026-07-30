@@ -1,18 +1,26 @@
 "use client";
 
+import "@/apps";
+
 import ModeManager from "./ModeManager";
 import { OSProvider } from "./OSProvider";
 import { BootProvider } from "@/components/os/boot/BootManager";
-import { Dashboard } from "@/components/dashboard";
-import AnimatedBackground from "../background/AnimatedBackground";
-// import CosmicBackground from "../background/CosmicBackground";
+import { WindowProvider } from "@/components/os/window";
 
-export default function CosmicShell() {
+
+import { Dashboard } from "@/components/dashboard";
+
+import AnimatedBackground from "../background/AnimatedBackground";
+import WindowManager from "../window/WindowManager";
+
+export default function OperatingSystem() {
   return (
     <OSProvider>
       <BootProvider>
-        <ModeManager />
-        <Desktop />
+        <WindowProvider>
+          <ModeManager />
+          <Desktop />
+        </WindowProvider>
       </BootProvider>
     </OSProvider>
   );
@@ -26,6 +34,8 @@ function Desktop() {
       <div className="relative z-10 h-full overflow-y-auto p-6">
         <Dashboard />
       </div>
+
+      <WindowManager />
     </div>
   );
 }

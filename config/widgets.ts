@@ -23,6 +23,20 @@ export interface WidgetSize {
 
 export interface DashboardWidget {
   id: string;
+
+  /**
+   * Optional application identifier.
+   *
+   * During the migration to the new App SDK this will
+   * gradually replace `component`.
+   */
+  appId?: string;
+
+  /**
+   * Legacy widget component.
+   * This remains until every widget has migrated
+   * to the new AppRenderer architecture.
+   */
   component: ComponentType;
 
   cols: number;
@@ -56,8 +70,10 @@ export const dashboardWidgets: DashboardWidget[] = [
     movable: true,
     resizable: true,
   },
+
   {
     id: "weather",
+    appId: "weather",
     component: WeatherWidget,
     cols: 3,
     rows: 2,
@@ -70,6 +86,7 @@ export const dashboardWidgets: DashboardWidget[] = [
     movable: true,
     resizable: true,
   },
+
   {
     id: "calendar",
     component: CalendarWidget,
@@ -79,6 +96,7 @@ export const dashboardWidgets: DashboardWidget[] = [
     movable: true,
     resizable: true,
   },
+
   {
     id: "notifications",
     component: NotificationsWidget,
@@ -88,6 +106,7 @@ export const dashboardWidgets: DashboardWidget[] = [
     movable: true,
     resizable: true,
   },
+
   {
     id: "cosmic",
     component: CosmicWidget,
@@ -102,6 +121,7 @@ export const dashboardWidgets: DashboardWidget[] = [
     movable: true,
     resizable: true,
   },
+
   {
     id: "briefing",
     component: BriefingWidget,
@@ -111,6 +131,7 @@ export const dashboardWidgets: DashboardWidget[] = [
     movable: true,
     resizable: true,
   },
+
   {
     id: "search",
     component: SearchWidget,
@@ -120,6 +141,7 @@ export const dashboardWidgets: DashboardWidget[] = [
     movable: true,
     resizable: true,
   },
+
   {
     id: "system",
     component: SystemWidget,
@@ -129,6 +151,7 @@ export const dashboardWidgets: DashboardWidget[] = [
     movable: true,
     resizable: true,
   },
+
   {
     id: "sports",
     component: SportsWidget,
@@ -138,6 +161,7 @@ export const dashboardWidgets: DashboardWidget[] = [
     movable: true,
     resizable: true,
   },
+
   {
     id: "garage",
     component: GarageWidget,
@@ -147,6 +171,7 @@ export const dashboardWidgets: DashboardWidget[] = [
     movable: true,
     resizable: true,
   },
+
   {
     id: "school",
     component: SchoolWidget,
@@ -156,6 +181,7 @@ export const dashboardWidgets: DashboardWidget[] = [
     movable: true,
     resizable: true,
   },
+
   {
     id: "projects",
     component: ProjectsWidget,
@@ -165,6 +191,7 @@ export const dashboardWidgets: DashboardWidget[] = [
     movable: true,
     resizable: true,
   },
+
   {
     id: "notes",
     component: NotesWidget,
@@ -174,6 +201,7 @@ export const dashboardWidgets: DashboardWidget[] = [
     movable: true,
     resizable: true,
   },
+
   {
     id: "outlook",
     component: OutlookWidget,
@@ -183,6 +211,7 @@ export const dashboardWidgets: DashboardWidget[] = [
     movable: true,
     resizable: true,
   },
+
   {
     id: "music",
     component: MusicWidget,

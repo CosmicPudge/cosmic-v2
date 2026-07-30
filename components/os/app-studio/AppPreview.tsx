@@ -1,0 +1,19 @@
+"use client";
+
+import { AnimatePresence, motion } from "framer-motion";
+import { Monitor } from "lucide-react";
+
+import { AppRenderer, isImplementedStudioApp } from "@/apps/core";
+
+import type { AppPresentation, StudioAppDefinition, WidgetFootprint } from "@/apps/core";
+
+import ComingSoonPreview from "./ComingSoonPreview";
+
+function dimensions(footprint: WidgetFootprint) { return { width: footprint.cols * 158 + (footprint.cols - 1) * 12, height: footprint.rows * 196 + (footprint.rows - 1) * 12 }; }
+
+interface Props { app: StudioAppDefinition; presentation: AppPresentation; footprint: WidgetFootprint; scale: number; showGrid: boolean; previewKey: number; }
+
+export default function AppPreview({ app, presentation, footprint, scale, showGrid, previewKey }: Props) {
+  const size = dimensions(footprint);
+  return <section className="flex min-w-0 flex-col rounded-[28px] border border-white/10 bg-white/[0.045] p-3 shadow-[0_18px_60px_rgba(0,0,0,0.2)] backdrop-blur-2xl sm:p-5"><div className="mb-4 flex items-center justify-between gap-3 px-2"><div><p className="text-sm font-medium text-white/90">Live preview</p><p className="mt-0.5 text-xs text-white/45">{app.title} · {presentation} · {footprint.cols} × {footprint.rows}</p></div><span className="rounded-full border border-sky-300/20 bg-sky-300/10 px-3 py-1 text-xs font-medium text-sky-100">{app.status === "implemented" ? "Live props" : "Preview ready"}</span></div><div className="relative min-h-[620px] flex-1 overflow-hidden rounded-[22px] border border-white/10 bg-[#09101d] p-5 sm:p-8"><div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_12%,rgba(56,189,248,0.2),transparent_28%),radial-gradient(circle_at_85%_80%,rgba(129,140,248,0.18),transparent_32%),linear-gradient(135deg,#07101d,#111329)]" />{showGrid && <div className="pointer-events-none absolute inset-0 opacity-30 [background-image:linear-gradient(rgba(255,255,255,.08)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.08)_1px,transparent_1px)] [background-size:32px_32px]" />}<div className="pointer-events-none absolute left-5 top-5 flex items-center gap-2 text-[10px] font-medium uppercase tracking-[0.16em] text-white/35"><Monitor size={12} />Cosmic desktop canvas</div><div className="relative grid min-h-[580px] place-items-center pt-8"><AnimatePresence mode="wait"><motion.div key={`${app.id}-${presentation}-${previewKey}`} initial={{ opacity: 0, scale: 0.96, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.98, y: -8 }} transition={{ duration: 0.24, ease: "easeOut" }} className={presentation === "widget" ? "" : "w-full max-w-[980px]"}>{isImplementedStudioApp(app) ? presentation === "widget" ? <motion.div animate={{ width: size.width * scale, height: size.height * scale }} transition={{ type: "spring", stiffness: 260, damping: 28 }} className="rounded-[28px] border border-white/15 bg-black/20 shadow-[0_26px_70px_rgba(0,0,0,0.5)]"><div style={{ width: size.width, height: size.height, transform: `scale(${scale})`, transformOrigin: "top left" }}><AppRenderer app={app} presentation={presentation} footprint={footprint} /></div></motion.div> : <div className={`overflow-hidden border border-white/15 bg-black/30 shadow-[0_30px_90px_rgba(0,0,0,0.5)] ${presentation === "window" ? "rounded-[28px]" : "rounded-[18px]"}`}>{presentation === "window" && <div className="flex h-11 items-center gap-2 border-b border-white/10 bg-white/[0.055] px-4"><i className="size-2.5 rounded-full bg-red-400/80" /><i className="size-2.5 rounded-full bg-amber-300/80" /><i className="size-2.5 rounded-full bg-emerald-400/80" /><span className="ml-2 text-xs text-white/45">{app.title}</span></div>}<div className={presentation === "window" ? "h-[510px]" : "h-[570px]"}><AppRenderer app={app} presentation={presentation} footprint={footprint} /></div></div> : <ComingSoonPreview app={app} />}</motion.div></AnimatePresence></div></div></section>;
+}

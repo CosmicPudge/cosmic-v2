@@ -102,6 +102,8 @@ export interface CurrentWeather {
 export interface ForecastData {
   hourlyForecast: HourlyForecast[];
   dailyForecast: DailyForecast[];
+  /** Current local UV index supplied by the forecast provider. */
+  uvIndex: number;
 }
 
 /*
@@ -119,6 +121,7 @@ export interface WeatherData extends CurrentWeather {
   dayLength: string;
   daylightProgress: number;
   airQuality: AirQuality;
+  uvIndex: number;
   lat: number;
   lon: number;
   astronomy: AstronomyData;

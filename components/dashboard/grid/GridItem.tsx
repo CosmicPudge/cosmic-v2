@@ -2,9 +2,12 @@
 
 import { motion } from "framer-motion";
 
+import { AppRenderer, getApp } from "@/apps/core";
+
 import { useDisplay } from "@/components/os/display";
 
 import type { DashboardWidget } from "@/config/widgets";
+import type { WidgetFootprint } from "@/apps/core";
 
 interface Props {
   widget: DashboardWidget;
@@ -15,10 +18,8 @@ export default function GridItem({
 }: Props) {
   const { profile } = useDisplay();
 
-  const Widget = widget.component;
-
   let cols = widget.cols;
-  let rows = widget.rows;
+  const rows = widget.rows;
 
   switch (profile) {
     case "pocket":
@@ -30,13 +31,36 @@ export default function GridItem({
       break;
 
     case "comfortable":
-      cols = widget.cols;
-      break;
-
     case "expanded":
       cols = widget.cols;
       break;
   }
+
+  cols = Math.min(cols, 4) as 1 | 2 | 3 | 4;
+
+  const footprint: WidgetFootprint = {
+    cols: cols as WidgetFootprint["cols"],
+    rows: rows as WidgetFootprint["rows"],
+  };
+
+  const app =
+    widget.appId != null
+      ? getApp(widget.appId)
+      : undefined;
+
+  const content =
+    app != null ? (
+      <AppRenderer
+        app={app}
+        presentation="widget"
+        footprint={footprint}
+      />
+    ) : (
+      (() => {
+        const Widget = widget.component;
+        return <Widget />;
+      })()
+    );
 
   return (
     <motion.div
@@ -65,7 +89,7 @@ export default function GridItem({
       data-resizable={widget.resizable}
       data-movable={widget.movable}
     >
-      <Widget />
+      {content}
     </motion.div>
   );
 }

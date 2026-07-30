@@ -19,6 +19,8 @@ export function mergeEnvironment(
 
     hourlyForecast: forecast.hourlyForecast,
 
+    uvIndex: forecast.uvIndex,
+
     dailyForecast: forecast.dailyForecast,
     daylightProgress: current.daylightProgress,
     astronomy,

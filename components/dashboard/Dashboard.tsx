@@ -1,6 +1,12 @@
 "use client";
 
 import DashboardHero from "@/components/dashboard/hero/DashboardHero";
+import { DASHBOARD_LAYOUTS } from "@/components/dashboard/layout/dashboardLayouts";
+import DashboardRegion from "@/components/dashboard/layout/DashboardRegion";
+import {
+  ExpandedWidgetProvider,
+} from "@/components/dashboard/expanded";
+import ExpandedWidgetOverlay from "@/components/dashboard/expanded/ExpandedWidgetOverlay";
 
 import AssistantDock from "./assistant/AssistantDock";
 import WidgetGrid from "./grid/WidgetGrid";
@@ -12,34 +18,35 @@ import { useDisplay } from "@/components/os/display";
 function DashboardContent() {
   useDashboardShortcuts();
 
-  const { tokens, profile } = useDisplay();
+  const { profile } = useDisplay();
 
-  const maxWidth =
-    profile === "expanded"
-      ? 2200
-      : profile === "comfortable"
-        ? 1800
-        : profile === "compact"
-          ? 1400
-          : "100%";
+  const layout = DASHBOARD_LAYOUTS[profile];
 
   return (
     <main
       className="mx-auto flex h-full flex-col"
       style={{
-        maxWidth,
-        gap: tokens.widgetGap,
-        paddingInline: tokens.spacing.sm,
-        paddingBottom: tokens.spacing.lg,
+        maxWidth: layout.maxWidth,
+        gap: layout.sectionGap,
+        paddingInline: layout.paddingInline,
+        paddingBottom: layout.paddingBottom,
       }}
     >
-      <DashboardHero />
+      <DashboardRegion>
+        <DashboardHero />
+      </DashboardRegion>
 
-      <WidgetGrid />
+      <DashboardRegion>
+        <WidgetGrid />
+      </DashboardRegion>
 
-      <div className="mt-auto">
+      <DashboardRegion
+        style={{
+          marginTop: layout.dockMarginTop,
+        }}
+      >
         <AssistantDock />
-      </div>
+      </DashboardRegion>
     </main>
   );
 }
@@ -47,7 +54,10 @@ function DashboardContent() {
 export default function Dashboard() {
   return (
     <DashboardProvider>
-      <DashboardContent />
-    </DashboardProvider>
+  <ExpandedWidgetProvider>
+    <DashboardContent />
+    <ExpandedWidgetOverlay />
+  </ExpandedWidgetProvider>
+</DashboardProvider>
   );
 }

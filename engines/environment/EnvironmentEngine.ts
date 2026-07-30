@@ -42,6 +42,7 @@ export async function getEnvironment(
       : {
         hourlyForecast: [],
         dailyForecast: [],
+        uvIndex: 0,
       };
 
   const airQuality: AirQuality =
