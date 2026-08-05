@@ -18,6 +18,14 @@ import { WIDGET_TRANSITION } from "./constants";
 interface Props extends WidgetBaseProps {
   hover?: boolean;
   accent?: WidgetAccent;
+
+  /**
+   * Controls whether the widget content receives
+   * the standard Cosmic padding.
+   *
+   * Backgrounds always fill the entire widget.
+   */
+  contentPadding?: boolean;
 }
 
 export default function Widget({
@@ -25,6 +33,7 @@ export default function Widget({
   className,
   hover = true,
   accent = "default",
+  contentPadding = true,
 }: Props) {
   const { tokens } = useDisplay();
 
@@ -39,7 +48,6 @@ export default function Widget({
       }
       transition={WIDGET_TRANSITION}
       className={clsx(
-        // Added min-h-0
         "relative h-full min-h-0",
         className
       )}
@@ -54,12 +62,13 @@ export default function Widget({
         "
         style={{
           borderRadius: tokens.radius.xl,
-          padding: tokens.spacing.lg,
           backdropFilter: `blur(${tokens.blur}px)`,
         }}
       >
+        {/* Full widget background */}
         <WidgetBackground accent={accent} />
 
+        {/* Widget content */}
         <div
           className="
             relative
@@ -68,9 +77,11 @@ export default function Widget({
             flex
             h-full
             min-h-0
-
             flex-col
           "
+          style={{
+            padding: contentPadding ? tokens.spacing.lg : 0,
+          }}
         >
           {children}
         </div>

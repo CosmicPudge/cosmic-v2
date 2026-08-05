@@ -39,19 +39,19 @@ export default function DashboardHero() {
         className="relative overflow-hidden"
         style={{
           minHeight: hero.minHeight,
-          padding: hero.padding,
           borderRadius: tokens.radius.xl,
         }}
       >
+        {/* Full-bleed weather background */}
         <HeroBackground weather={weather} />
 
+        {/* Content */}
         <div
           className="relative z-10 flex h-full"
           style={{
             gap: hero.gap,
-            flexDirection: stack
-              ? "column"
-              : "row",
+            padding: hero.padding,
+            flexDirection: stack ? "column" : "row",
           }}
         >
           {/* LEFT COLUMN */}
