@@ -7,6 +7,7 @@ import { PresenceEngine } from "@/engines/presence";
 import { DayEngine } from "@/engines/day";
 import { AssistantEngine } from "@/engines/assistant";
 import { modes } from "./modes";
+import { TestCalendarProvider } from "@/services/calendar/testCalendarProvider";
 
 class CosmicCore {
   readonly modes = modes;
@@ -26,6 +27,14 @@ class CosmicCore {
   readonly day = new DayEngine();
 
   readonly assistant = new AssistantEngine();
+
+  constructor() {
+    this.calendar.setProvider(
+      new TestCalendarProvider()
+    );
+
+    void this.calendar.initialize();
+  }
 }
 
 export const cosmic = new CosmicCore();
