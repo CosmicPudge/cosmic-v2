@@ -1,6 +1,1 @@
-/**
- * useSchool
- * Placeholder
- */
-
-export {};
+export { useSchoolData as default } from "@/components/school/hooks/useSchoolData";

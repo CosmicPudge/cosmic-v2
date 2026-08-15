@@ -17,7 +17,7 @@ export default function AppHeader({
     const router = useRouter();
     
   return (
-    <header className="mb-10 flex items-center justify-between">
+    <header className="mb-6 flex items-center justify-between sm:mb-10">
 
       <div>
 
@@ -29,12 +29,12 @@ export default function AppHeader({
   Dashboard
 </button>
 
-        <h1 className="text-5xl font-black tracking-tight">
+        <h1 className="text-4xl font-black tracking-tight sm:text-5xl">
           {title}
         </h1>
 
         {subtitle && (
-          <p className="mt-2 text-lg text-white/50">
+          <p className="mt-2 text-base text-white/50 sm:text-lg">
             {subtitle}
           </p>
         )}

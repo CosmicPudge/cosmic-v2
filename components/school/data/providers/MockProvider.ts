@@ -4,7 +4,7 @@ import { buildDashboard } from "../engine/engine";
 
 export class MockProvider implements SchoolProvider {
   refresh(): Promise<void> {
-      throw new Error("Method not implemented.");
+      return Promise.resolve();
   }
   async getDashboardData(): Promise<SchoolDashboardData> {
     return buildDashboard([]);

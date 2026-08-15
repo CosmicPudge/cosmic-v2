@@ -6,6 +6,7 @@ import Widget from "@/components/os/ui/widget/Widget";
 import WidgetHeader from "@/components/os/ui/widget/WidgetHeader";
 import WidgetBody from "@/components/os/ui/widget/WidgetBody";
 import WidgetFooter from "@/components/os/ui/widget/WidgetFooter";
+import { useWidgetContext } from "@/components/os/ui/widget/WidgetContext";
 
 import WeatherCurrent from "./WeatherCurrent";
 import WeatherHourly from "./WeatherHourly";
@@ -13,6 +14,7 @@ import WeatherStats from "./WeatherStats";
 import WeatherFooter from "./WeatherFooter";
 
 export default function WeatherWidget() {
+  const { size } = useWidgetContext();
   const {
     weather,
     loading,
@@ -28,21 +30,15 @@ export default function WeatherWidget() {
         subtitle={weather?.city}
       />
 
-      <WidgetBody>
+      <WidgetBody scrollable={size === "large"}>
   <WeatherCurrent
     weather={weather}
     loading={loading}
   />
 
-  <WeatherStats
-    weather={weather}
-    loading={loading}
-  />
+  {size !== "small" && <WeatherStats weather={weather} loading={loading} />}
 
-  <WeatherHourly
-    weather={weather}
-    loading={loading}
-  />
+  {size === "large" && <WeatherHourly weather={weather} loading={loading} />}
 </WidgetBody>
       <WidgetFooter>
         <WeatherFooter

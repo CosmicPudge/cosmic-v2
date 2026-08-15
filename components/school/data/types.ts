@@ -8,6 +8,17 @@ export type SchoolEventType =
   | "announcement"
   | "other";
 
+export type {
+  AcademicGoal,
+  Assignment,
+  AssignmentStatus,
+  Course,
+  CourseMeeting,
+  Grade,
+  SchoolResource,
+  SchoolTerm,
+} from "@/core/contracts/School";
+
 export interface SchoolEvent {
   id: string;
   title: string;

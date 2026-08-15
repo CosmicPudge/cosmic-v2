@@ -1,25 +1,13 @@
 "use client";
-
+import { useEffect } from "react";
+import { useMusic } from "@/hooks/os/useMusic";
 export default function MusicView() {
-  return (
-    <div className="space-y-6">
-
-      <div>
-        <h1 className="text-3xl font-bold">
-          Music
-        </h1>
-
-        <p className="text-white/60">
-          Music is currently under development.
-        </p>
-      </div>
-
-      <div className="rounded-3xl border border-white/10 bg-white/5 p-8">
-        <p className="text-white/50">
-          Future Music features will appear here.
-        </p>
-      </div>
-
-    </div>
-  );
+  const m = useMusic();
+  if (m.loading) return <p className="text-white/60">Loading music…</p>;
+  if (!m.configured) return <section className="rounded-3xl border border-white/15 bg-white/[.07] p-8"><h2 className="text-2xl">Spotify is not configured</h2><p className="mt-2 text-white/60">Cosmic Music is ready for an official Spotify provider once server credentials are configured.</p></section>;
+  if (!m.connected) return <section className="rounded-3xl border border-white/15 bg-white/[.07] p-8"><h2 className="text-2xl">{m.reconnectRequired ? "Reconnect Spotify" : "Connect Spotify"}</h2><p className="mt-2 text-white/60">{m.reconnectRequired ? "Spotify authorization needs to be renewed to continue using Cosmic Music." : "Connect your account to see real Now Playing and playback controls."}</p><a className="mt-4 inline-block rounded-xl bg-cyan-300/20 px-4 py-2" href="/api/auth/spotify">{m.reconnectRequired ? "Reconnect Spotify" : "Connect Spotify"}</a></section>;
+  const track = m.playback?.track;
+  if (!track) return <section className="rounded-3xl border border-white/15 bg-white/[.07] p-8"><h2 className="text-2xl">Nothing playing</h2><p className="mt-2 text-white/60">Spotify is connected, but no active playback is available.</p></section>;
+  const capabilities = m.capabilities;
+  return <section className="rounded-3xl border border-white/15 bg-white/[.07] p-6"><div className="flex gap-4"><div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white/10">{track.artworkUrl ? <img src={track.artworkUrl} alt="" className="h-full w-full object-cover" /> : "♫"}</div><div><p className="text-sm text-white/55">{m.playback?.playing ? "Playing" : "Paused"}</p><h2 className="text-2xl">{track.title}</h2><p className="text-white/60">{track.artists.join(", ")}{track.album ? ` · ${track.album}` : ""}</p>{m.playback?.deviceName && <p className="mt-2 text-sm text-white/45">Playing on {m.playback.deviceName}</p>}</div></div><div className="mt-5 flex gap-3">{capabilities?.canSkipPrevious && <button aria-label="Previous" disabled={m.actionLoading} onClick={m.previous}>Previous</button>}{m.playback?.playing ? capabilities?.canPause && <button aria-label="Pause" disabled={m.actionLoading} onClick={m.pause}>Pause</button> : capabilities?.canPlay && <button aria-label="Play" disabled={m.actionLoading} onClick={m.play}>Play</button>}{capabilities?.canSkipNext && <button aria-label="Next" disabled={m.actionLoading} onClick={m.next}>Next</button>}</div>{m.actionError && <p className="mt-3 text-sm text-red-200">{m.actionError}</p>}</section>;
 }

@@ -19,6 +19,15 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
+html[data-cosmic-reduced-effects="true"] *,
+html[data-cosmic-reduced-effects="true"] *::before,
+html[data-cosmic-reduced-effects="true"] *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  scroll-behavior: auto !important;
+  transition-duration: 0.001ms !important;
+}
+
 @keyframes cosmic-gradient {
   0% {
     background-position: 0% 50%;
@@ -399,6 +408,29 @@ body {
   transform-origin: center;
   will-change: transform;
 }
+
+@keyframes ambient-enter {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.ambient-enter {
+  animation: ambient-enter 280ms ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ambient-enter {
+    animation: none;
+  }
+}
+
 @keyframes cloudDrift {
   from {
     transform: translateX(0);

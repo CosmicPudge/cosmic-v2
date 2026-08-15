@@ -10,10 +10,12 @@ import { WindowProvider } from "@/components/os/window";
 
 import { Dashboard } from "@/components/dashboard";
 
-import AnimatedBackground from "../background/AnimatedBackground";
+import useIdleAmbient from "@/hooks/os/useIdleAmbient";
 import WindowManager from "../window/WindowManager";
 
 export default function OperatingSystem() {
+  useIdleAmbient();
+
   return (
     <OSProvider>
       <BootProvider>
@@ -29,9 +31,7 @@ export default function OperatingSystem() {
 function Desktop() {
   return (
     <div className="relative h-screen w-screen overflow-hidden text-white">
-      <AnimatedBackground />
-
-      <div className="relative z-10 h-full overflow-y-auto p-6">
+      <div className="relative z-10 h-full overflow-y-auto pl-[max(1.5rem,env(safe-area-inset-left))] pr-[max(1.5rem,env(safe-area-inset-right))] pt-[max(1.5rem,env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))]">
         <Dashboard />
       </div>
 

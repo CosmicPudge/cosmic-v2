@@ -2,9 +2,69 @@
 
 import { useEffect, useState } from "react";
 
-import { cosmic } from "@/core/CosmicCore";
+import type {
+  CalendarEvent,
+  CalendarSnapshot,
+} from "@/core/contracts";
 
-import type { CalendarSnapshot } from "@/core/contracts";
+interface CalendarResponse {
+  today: Array<Omit<CalendarEvent, "start" | "end"> & {
+    start: string;
+    end: string;
+  }>;
+
+  upcoming: Array<
+    Omit<CalendarEvent, "start" | "end"> & {
+      start: string;
+      end: string;
+    }
+  >;
+
+  currentEvent?: Omit<CalendarEvent, "start" | "end"> & {
+    start: string;
+    end: string;
+  };
+
+  nextEvent?: Omit<CalendarEvent, "start" | "end"> & {
+    start: string;
+    end: string;
+  };
+}
+
+function hydrateEvent(
+  event: CalendarResponse["today"][number]
+): CalendarEvent {
+  return {
+    ...event,
+    start: new Date(event.start),
+    end: new Date(event.end),
+  };
+}
+
+function hydrateSnapshot(
+  snapshot: CalendarResponse
+): CalendarSnapshot {
+  return {
+    today: snapshot.today.map(hydrateEvent),
+    upcoming: snapshot.upcoming.map(hydrateEvent),
+    ...(snapshot.currentEvent
+      ? {
+          currentEvent: hydrateEvent(
+            snapshot.currentEvent
+          ),
+        }
+      : {}),
+    ...(snapshot.nextEvent
+      ? {
+          nextEvent: hydrateEvent(
+            snapshot.nextEvent
+          ),
+        }
+      : {}),
+  };
+}
+
+const REFRESH_INTERVAL_MS = 5 * 60 * 1000;
 
 export default function useCalendar() {
   const [calendar, setCalendar] =
@@ -19,17 +79,33 @@ export default function useCalendar() {
   useEffect(() => {
     let cancelled = false;
 
-    async function loadCalendar() {
+    async function loadCalendar(
+      showLoading = false
+    ) {
       try {
-        setLoading(true);
+        if (showLoading) {
+          setLoading(true);
+        }
+
         setError(null);
 
-        if (!cosmic.calendar.isReady()) {
-          await cosmic.calendar.initialize();
+        const response = await fetch(
+          "/api/calendar",
+          {
+            cache: "no-store",
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(
+            "Calendar is temporarily unavailable."
+          );
         }
 
         const snapshot =
-          await cosmic.calendar.getSnapshot();
+          hydrateSnapshot(
+            await response.json()
+          );
 
         if (!cancelled) {
           setCalendar(snapshot);
@@ -43,16 +119,27 @@ export default function useCalendar() {
           );
         }
       } finally {
-        if (!cancelled) {
+        if (
+          !cancelled &&
+          showLoading
+        ) {
           setLoading(false);
         }
       }
     }
 
-    loadCalendar();
+    void loadCalendar(true);
+
+    const interval = window.setInterval(
+      () => {
+        void loadCalendar(false);
+      },
+      REFRESH_INTERVAL_MS
+    );
 
     return () => {
       cancelled = true;
+      window.clearInterval(interval);
     };
   }, []);
 

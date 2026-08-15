@@ -1,6 +1,0 @@
-/**
- * searchService
- * Placeholder
- */
-
-export {};

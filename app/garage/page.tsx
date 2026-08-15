@@ -1,6 +1,7 @@
 import AppShell from "@/components/os/app/AppShell";
 import AppHeader from "@/components/os/app/AppHeader";
 import AppContent from "@/components/os/app/AppContent";
+import GarageView from "@/components/apps/garage/GarageView";
 
 export default function GaragePage() {
   return (
@@ -11,13 +12,7 @@ export default function GaragePage() {
       />
 
       <AppContent>
-        <div className="space-y-4">
-          <h2 className="text-2xl font-bold">Garage</h2>
-
-          <p className="text-white/60">
-            Garage is currently under development.
-          </p>
-        </div>
+        <GarageView />
       </AppContent>
     </AppShell>
   );

@@ -1,20 +1,31 @@
-import type { Engine } from "@/core/contracts/Engine";
 import type { SportsSnapshot } from "@/core/contracts";
+import type { Engine } from "@/core/contracts/Engine";
+import { getSportsSnapshot } from "@/services/sports/snapshot";
 
 export class SportsEngine implements Engine<SportsSnapshot> {
-  async initialize(): Promise<void> {}
+  private snapshot: SportsSnapshot | null = null;
+  private lastUpdated: Date | null = null;
 
-  async refresh(): Promise<void> {}
+  async initialize(): Promise<void> {
+    await this.refresh();
+  }
+
+  async refresh(): Promise<void> {
+    this.snapshot = await getSportsSnapshot();
+    this.lastUpdated = this.snapshot.lastUpdated;
+  }
 
   async getSnapshot(): Promise<SportsSnapshot> {
-    throw new Error("SportsEngine not implemented.");
+    if (!this.snapshot) await this.refresh();
+    if (!this.snapshot) throw new Error("Sports snapshot is unavailable.");
+    return this.snapshot;
   }
 
   isReady(): boolean {
-    return false;
+    return this.snapshot !== null;
   }
 
   getLastUpdated(): Date | null {
-    return null;
+    return this.lastUpdated;
   }
 }

@@ -1,5 +1,3 @@
-"use client";
-
 import type { ReactNode } from "react";
 
 interface AmbientSectionProps {
@@ -15,20 +13,11 @@ export default function AmbientSection({
 }: AmbientSectionProps) {
   return (
     <section
-      className={`
-        h-full
-        rounded-3xl
-        border border-white/10
-        bg-white/5
-        p-6
-        backdrop-blur-xl
-        ${className}
-      `}
+      className={`rounded-2xl border border-white/10 bg-black/20 p-4 shadow-xl shadow-black/10 backdrop-blur-xl sm:p-5 ${className}`}
     >
-      <h2 className="mb-4 text-xs uppercase tracking-[0.3em] text-white/50">
+      <h2 className="mb-3 text-[0.65rem] uppercase tracking-[0.28em] text-cyan-100/42">
         {title}
       </h2>
-
       {children}
     </section>
   );

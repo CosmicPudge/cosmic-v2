@@ -5,7 +5,7 @@ import { buildDashboard } from "../engine/engine";
 
 export class CanvasCalendarProvider implements SchoolProvider {
   refresh(): Promise<void> {
-      throw new Error("Method not implemented.");
+      return Promise.resolve();
   }
   async getDashboardData(): Promise<SchoolDashboardData> {
     const url = process.env.CANVAS_CALENDAR_URL;

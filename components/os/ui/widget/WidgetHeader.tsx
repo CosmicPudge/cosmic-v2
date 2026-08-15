@@ -1,6 +1,7 @@
 "use client";
 
 import clsx from "clsx";
+import { useWidgetContext } from "./WidgetContext";
 
 interface WidgetHeaderProps {
   /**
@@ -45,10 +46,14 @@ export default function WidgetHeader({
   action,
   className,
 }: WidgetHeaderProps) {
+  const { size } = useWidgetContext();
   return (
     <header
       className={clsx(
-        "mb-8 flex items-start justify-between gap-6",
+        "shrink-0",
+        size === "small"
+          ? "mb-4 flex items-start justify-between gap-3"
+          : "mb-6 flex items-start justify-between gap-4",
         className
       )}
     >
@@ -91,13 +96,10 @@ export default function WidgetHeader({
           )}
 
           <h2
-            className="
-              truncate
-              text-xl
-              font-semibold
-              tracking-[-0.02em]
-              text-white
-            "
+            className={clsx(
+              "truncate font-semibold tracking-[-0.02em] text-white",
+              size === "small" ? "text-base" : "text-xl"
+            )}
           >
             {title}
           </h2>

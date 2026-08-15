@@ -25,7 +25,5 @@ export interface DashboardState {
 
   assistantOpen: boolean;
 
-  searchOpen: boolean;
-
   notifications: DashboardNotification[];
 }

@@ -19,10 +19,6 @@ interface DashboardContextValue
 
   closeAssistant(): void;
 
-  openSearch(): void;
-
-  closeSearch(): void;
-
   setActiveWidget(
     id: string | null
   ): void;
@@ -65,8 +61,6 @@ export function DashboardProvider({
 
       assistantOpen: false,
 
-      searchOpen: false,
-
       notifications: [],
     });
 
@@ -91,20 +85,6 @@ export function DashboardProvider({
     useCallback(() => {
       update({
         assistantOpen: false,
-      });
-    }, [update]);
-
-  const openSearch =
-    useCallback(() => {
-      update({
-        searchOpen: true,
-      });
-    }, [update]);
-
-  const closeSearch =
-    useCallback(() => {
-      update({
-        searchOpen: false,
       });
     }, [update]);
 
@@ -179,9 +159,6 @@ export function DashboardProvider({
       openAssistant,
       closeAssistant,
 
-      openSearch,
-      closeSearch,
-
       setActiveWidget,
       setFocusedWidget,
 
@@ -196,9 +173,6 @@ export function DashboardProvider({
 
       openAssistant,
       closeAssistant,
-
-      openSearch,
-      closeSearch,
 
       setActiveWidget,
       setFocusedWidget,

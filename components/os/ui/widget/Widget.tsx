@@ -48,7 +48,7 @@ export default function Widget({
       }
       transition={WIDGET_TRANSITION}
       className={clsx(
-        "relative h-full min-h-0",
+        "relative h-full w-full min-h-0",
         className
       )}
     >

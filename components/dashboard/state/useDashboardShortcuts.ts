@@ -6,12 +6,9 @@ import { useDashboard } from "./DashboardContext";
 
 export function useDashboardShortcuts() {
   const {
-    openSearch,
-    closeSearch,
     openAssistant,
     closeAssistant,
     toggleEditMode,
-    searchOpen,
     assistantOpen,
     editMode,
   } = useDashboard();
@@ -28,23 +25,6 @@ export function useDashboardShortcuts() {
         target?.isContentEditable;
 
       if (isTyping) {
-        return;
-      }
-
-      // /
-      if (event.key === "/") {
-        event.preventDefault();
-        openSearch();
-        return;
-      }
-
-      // Cmd/Ctrl + K
-      if (
-        (event.metaKey || event.ctrlKey) &&
-        event.key.toLowerCase() === "k"
-      ) {
-        event.preventDefault();
-        openSearch();
         return;
       }
 
@@ -71,10 +51,6 @@ export function useDashboardShortcuts() {
 
       // Escape
       if (event.key === "Escape") {
-        if (searchOpen) {
-          closeSearch();
-        }
-
         if (assistantOpen) {
           closeAssistant();
         }
@@ -97,12 +73,9 @@ export function useDashboardShortcuts() {
       );
     };
   }, [
-    openSearch,
-    closeSearch,
     openAssistant,
     closeAssistant,
     toggleEditMode,
-    searchOpen,
     assistantOpen,
     editMode,
   ]);

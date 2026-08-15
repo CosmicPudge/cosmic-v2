@@ -1,35 +1,38 @@
 "use client";
 
+import WeatherIcon from "@/components/icons/weather/WeatherIcon";
+import mapWeatherCondition from "@/components/icons/weather/mapWeatherCondition";
 import useWeather from "@/hooks/os/useWeather";
 
 export default function AmbientWeather() {
-  const { weather, loading } = useWeather();
+  const { weather, loading, error } = useWeather();
 
-  if (loading || !weather) {
-    return (
-      <div className="flex h-full items-center justify-end">
-        <p className="text-white/50">
-          Loading...
-        </p>
-      </div>
-    );
+  if (loading) {
+    return <p className="text-sm text-white/40">Locating current conditions…</p>;
   }
 
+  if (error || !weather) {
+    return <p className="text-sm text-white/40">Weather is unavailable.</p>;
+  }
+
+  const isDay = weather.daylightProgress > 0 && weather.daylightProgress < 100;
+
   return (
-    <div className="flex h-full flex-col items-end justify-center">
-
-      <div className="text-6xl">
-        ☀️
+    <div className="flex items-center gap-4">
+      <WeatherIcon
+        condition={mapWeatherCondition(weather.condition)}
+        isDay={isDay}
+        size={58}
+      />
+      <div>
+        <div className="flex items-baseline gap-3">
+          <p className="text-4xl font-light">{Math.round(weather.temp)}°</p>
+          <p className="text-sm text-white/55">{weather.condition}</p>
+        </div>
+        <p className="mt-1 text-xs text-white/38">
+          {weather.city} · H {Math.round(weather.high)}° / L {Math.round(weather.low)}°
+        </p>
       </div>
-
-      <h2 className="mt-4 text-6xl font-light">
-        {Math.round(weather.temp)}°
-      </h2>
-
-      <p className="mt-2 text-xl text-white/60 capitalize">
-        {weather.description}
-      </p>
-
     </div>
   );
 }

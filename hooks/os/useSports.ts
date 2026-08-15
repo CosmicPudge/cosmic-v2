@@ -1,6 +1,102 @@
-/**
- * useSports
- * Placeholder
- */
+"use client";
 
-export {};
+import { useCallback, useEffect, useState } from "react";
+import type { SportKind, SportsEvent, SportsEventStatus, SportsSnapshot } from "@/core/contracts/Sports";
+
+type SportsHookOptions = { sport?: SportKind; refreshMs?: number };
+type SportsWireEvent = Omit<SportsEvent, "start" | "end"> & { start: string; end?: string };
+type SportsWireSnapshot = Omit<SportsSnapshot, "live" | "upcoming" | "recent" | "featured" | "lastUpdated"> & {
+  live: SportsWireEvent[];
+  upcoming: SportsWireEvent[];
+  recent: SportsWireEvent[];
+  featured: SportsWireEvent[];
+  lastUpdated: string;
+};
+
+const pendingRequests = new Map<string, Promise<SportsSnapshot>>();
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isSportKind(value: string): value is SportKind {
+  return value === "mlb" || value === "nfl" || value === "f1" || value === "nascar" || value === "college-football";
+}
+
+function isStatus(value: string): value is SportsEventStatus {
+  return ["scheduled", "pregame", "live", "delayed", "final", "postponed", "cancelled"].includes(value);
+}
+
+function hydrateEvent({ start, end, ...event }: SportsWireEvent): SportsEvent {
+  return { ...event, start: new Date(start), ...(end ? { end: new Date(end) } : {}) };
+}
+
+function hydrateSnapshot(snapshot: SportsWireSnapshot): SportsSnapshot {
+  return {
+    ...snapshot,
+    live: snapshot.live.map(hydrateEvent),
+    upcoming: snapshot.upcoming.map(hydrateEvent),
+    recent: snapshot.recent.map(hydrateEvent),
+    featured: snapshot.featured.map(hydrateEvent),
+    lastUpdated: new Date(snapshot.lastUpdated),
+  };
+}
+
+function isWireEvent(value: unknown): value is SportsWireEvent {
+  if (!isRecord(value)) return false;
+  const event = value;
+  return typeof event.id === "string" && typeof event.title === "string" && typeof event.start === "string" && typeof event.sport === "string" && isSportKind(event.sport) && typeof event.status === "string" && isStatus(event.status);
+}
+
+function isWireSnapshot(value: unknown): value is SportsWireSnapshot {
+  if (!isRecord(value)) return false;
+  const snapshot = value;
+  return typeof snapshot.lastUpdated === "string"
+    && isRecord(snapshot.standings)
+    && Array.isArray(snapshot.providerErrors)
+    && Array.isArray(snapshot.sources)
+    && [snapshot.live, snapshot.upcoming, snapshot.recent, snapshot.featured].every((items) => Array.isArray(items) && items.every(isWireEvent));
+}
+
+async function requestSnapshot(sport?: SportKind): Promise<SportsSnapshot> {
+  const key = sport ?? "all";
+  const pendingRequest = pendingRequests.get(key);
+  if (pendingRequest) return pendingRequest;
+  const query = sport ? `?sport=${encodeURIComponent(sport)}` : "";
+  const request = fetch(`/api/sports${query}`, { cache: "no-store" })
+    .then(async (response) => {
+      if (!response.ok) throw new Error("Sports data is temporarily unavailable.");
+      const payload: unknown = await response.json();
+      if (!isWireSnapshot(payload)) throw new Error("Sports response was invalid.");
+      return hydrateSnapshot(payload);
+    })
+    .finally(() => { pendingRequests.delete(key); });
+  pendingRequests.set(key, request);
+  return request;
+}
+
+export function useSports(options: SportsHookOptions = {}) {
+  const { sport, refreshMs = 60_000 } = options;
+  const [data, setData] = useState<SportsSnapshot | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const refresh = useCallback(async () => {
+    try {
+      setError(null);
+      setData(await requestSnapshot(sport));
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Sports data is temporarily unavailable.");
+    } finally {
+      setLoading(false);
+    }
+  }, [sport]);
+
+  useEffect(() => {
+    const initial = window.setTimeout(() => { void refresh(); }, 0);
+    const interval = window.setInterval(() => { void refresh(); }, refreshMs);
+    return () => { window.clearTimeout(initial); window.clearInterval(interval); };
+  }, [refresh, refreshMs]);
+
+  return { data, loading, error, refresh };
+}

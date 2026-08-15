@@ -7,8 +7,11 @@ import {
   SchoolIntelligence,
   buildSchoolIntelligence,
 } from "../data/intelligence";
+import { hydrateSchoolDashboard } from "../data/normalize";
+import { useLocalSchoolRepository } from "../data/localRepository";
 
 export function useSchoolData() {
+  const local = useLocalSchoolRepository();
   const [data, setData] = useState<SchoolDashboardData | null>(null);
 
   const [loading, setLoading] = useState(true);
@@ -24,7 +27,9 @@ export function useSchoolData() {
           throw new Error("Unable to load school data.");
         }
 
-        const json: SchoolDashboardData = await res.json();
+        const json = hydrateSchoolDashboard(
+          await res.json()
+        );
 
         setData(json);
       } catch (err) {
@@ -56,5 +61,7 @@ export function useSchoolData() {
     loading,
 
     error,
+
+    local,
   };
 }

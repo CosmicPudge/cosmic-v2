@@ -18,6 +18,8 @@ export type WidgetAccent =
   | "briefing"
   | "clock";
 
+export type WidgetSize = "small" | "medium" | "large";
+
 export interface WidgetBaseProps {
   children?: ReactNode;
   className?: string;

@@ -1,0 +1,16 @@
+import type { MailAnalysis, MailMessage } from "@/core/contracts";
+export const DEFAULT_MEETING_DURATION_MS = 30 * 60 * 1000;
+const weekdays = ["sunday","monday","tuesday","wednesday","thursday","friday","saturday"];
+export function analyzeMail(message: MailMessage, now = new Date()): MailAnalysis {
+  const text = `${message.subject}\n${message.bodyText}`;
+  const scheduling = /\b(meet|available|availability|work for you|stop by)\b/i.test(text);
+  const base = { messageId: message.id, summary: message.subject || "Message received", requiresResponse: /\?|\b(can you|would you|please|let me know)\b/i.test(text), confidence: scheduling ? 0.8 : 0.6 };
+  if (!scheduling) return { ...base, intent: /\?$/.test(text.trim()) ? "question" : "information" };
+  const match = text.match(/\b(tomorrow|(?:sunday|monday|tuesday|wednesday|thursday|friday|saturday)|(?:january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{1,2})\s+(?:at\s+)?(\d{1,2})(?::(\d{2}))?\s*(a\.?(?:m\.?)|p\.?(?:m\.?))?\b/i);
+  if (!match || !match[4]) return { ...base, intent: "scheduling", schedulingRequest: { requestedTimeText: match?.[0], resolved: false }, confidence: 0.5 };
+  const start = resolveDate(match[1], Number(match[2]), Number(match[3] ?? 0), match[4], now);
+  if (!start) return { ...base, intent: "scheduling", schedulingRequest: { requestedTimeText: match[0], resolved: false }, confidence: 0.5 };
+  return { ...base, intent: "scheduling", schedulingRequest: { requestedStart: start, requestedEnd: new Date(start.getTime() + DEFAULT_MEETING_DURATION_MS), requestedTimeText: match[0], resolved: true } };
+}
+function resolveDate(token: string, hour: number, minute: number, meridiem: string, now: Date): Date | null { let date = new Date(now); date.setHours(0,0,0,0); const lower = token.toLowerCase(); if (lower === "tomorrow") date.setDate(date.getDate()+1); else if (weekdays.includes(lower)) { const delta = (weekdays.indexOf(lower) - date.getDay() + 7) % 7 || 7; date.setDate(date.getDate()+delta); } else { const parsed = new Date(`${token}, ${now.getFullYear()}`); if (Number.isNaN(parsed.getTime())) return null; date = new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate()); if (date < new Date(now.getFullYear(), now.getMonth(), now.getDate())) date.setFullYear(date.getFullYear()+1); } const pm = /^p/i.test(meridiem); if (hour < 1 || hour > 12 || minute > 59) return null; date.setHours((hour % 12) + (pm ? 12 : 0), minute, 0, 0); return date > now ? date : null; }
+export function getSuggestedReply(analysis: MailAnalysis, available?: boolean, alternative?: Date): string | null { const request = analysis.schedulingRequest; if (analysis.intent !== "scheduling") return null; if (!request?.resolved) return "Could you let me know what time you had in mind?"; const label = request.requestedStart!.toLocaleDateString("en-US", { weekday: "long", hour: "numeric", minute: "2-digit" }); if (available) return `${label} works for me. Thank you!`; if (alternative) return `Unfortunately I’m unavailable ${label}. Would ${alternative.toLocaleDateString("en-US", { weekday: "long", hour: "numeric", minute: "2-digit" })} work instead?`; return `Unfortunately I’m unavailable ${label}. Is there another time that works for you?`; }

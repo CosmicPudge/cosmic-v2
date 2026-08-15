@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
+import SchoolSection from "@/components/school/SchoolSection";
 
 export default function SchoolAssignmentsPage() {
-  redirect("/school");
+  return <SchoolSection section="Assignments" />;
 }

@@ -6,12 +6,14 @@ interface WidgetBodyProps {
   children: React.ReactNode;
   className?: string;
   centered?: boolean;
+  scrollable?: boolean;
 }
 
 export default function WidgetBody({
   children,
   className,
   centered = false,
+  scrollable = false,
 }: WidgetBodyProps) {
   return (
     <div className="relative min-h-0 flex-1">
@@ -51,7 +53,7 @@ export default function WidgetBody({
           `
             h-full
             min-h-0
-            overflow-visible
+            ${scrollable ? "overflow-y-auto overscroll-contain" : "overflow-hidden"}
           `,
           centered
             ? "flex items-center justify-center"

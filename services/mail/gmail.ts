@@ -1,0 +1,46 @@
+import "server-only";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
+import { dirname, join } from "path";
+import type { MailAddress, MailMessage } from "@/core/contracts";
+import type { MailProviderAdapter } from "@/engines/mail";
+
+interface GmailToken { access_token: string; refresh_token?: string; expires_at?: number; token_type?: string; scope?: string; }
+interface GmailPart { mimeType?: string; body?: { data?: string; attachmentId?: string }; parts?: GmailPart[]; filename?: string; headers?: Array<{ name: string; value: string }>; }
+interface GmailMessage { id: string; threadId?: string; labelIds?: string[]; payload?: GmailPart; internalDate?: string; }
+
+const TOKEN_KEY = "COSMIC_GMAIL_TOKEN";
+let developmentToken: GmailToken | null = null;
+const tokenPath = join(process.cwd(), ".cosmic", "gmail-token.json");
+export function isGmailConfigured(): boolean { return Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET && process.env.GOOGLE_REDIRECT_URI); }
+export function getGmailToken(): GmailToken | null { if (developmentToken) return developmentToken; try { if (existsSync(tokenPath)) return JSON.parse(readFileSync(tokenPath, "utf8")) as GmailToken; const value = process.env[TOKEN_KEY]; return value ? JSON.parse(value) as GmailToken : null; } catch { return null; } }
+export function storeGmailToken(token: GmailToken): void { const previous = getGmailToken(); developmentToken = { ...previous, ...token, ...(token.refresh_token ? { refresh_token: token.refresh_token } : {}) }; mkdirSync(dirname(tokenPath), { recursive: true }); writeFileSync(tokenPath, JSON.stringify(developmentToken), { mode: 0o600 }); }
+export function getGoogleAuthorizationUrl(state: string): string {
+  if (!isGmailConfigured()) throw new Error("Gmail OAuth is not configured.");
+  const query = new URLSearchParams({ client_id: process.env.GOOGLE_CLIENT_ID!, redirect_uri: process.env.GOOGLE_REDIRECT_URI!, response_type: "code", scope: "https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.send", access_type: "offline", prompt: "consent", state });
+  return `https://accounts.google.com/o/oauth2/v2/auth?${query}`;
+}
+export async function exchangeGoogleCode(code: string): Promise<GmailToken> {
+  const response = await fetch("https://oauth2.googleapis.com/token", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ code, client_id: process.env.GOOGLE_CLIENT_ID!, client_secret: process.env.GOOGLE_CLIENT_SECRET!, redirect_uri: process.env.GOOGLE_REDIRECT_URI!, grant_type: "authorization_code" }) });
+  if (!response.ok) throw new Error("Google OAuth token exchange failed.");
+  const token = await response.json() as GmailToken & { expires_in?: number };
+  return { ...token, expires_at: token.expires_in ? Date.now() + token.expires_in * 1000 : undefined };
+}
+async function refreshGmailToken(token: GmailToken): Promise<GmailToken> { if (!token.refresh_token) throw new Error("Gmail reconnect required."); const response = await fetch("https://oauth2.googleapis.com/token", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ refresh_token: token.refresh_token, client_id: process.env.GOOGLE_CLIENT_ID!, client_secret: process.env.GOOGLE_CLIENT_SECRET!, grant_type: "refresh_token" }) }); if (!response.ok) throw new Error("Gmail reconnect required."); const refreshed = await response.json() as GmailToken & { expires_in?: number }; const next = { ...token, ...refreshed, refresh_token: refreshed.refresh_token ?? token.refresh_token, expires_at: refreshed.expires_in ? Date.now() + refreshed.expires_in * 1000 : token.expires_at }; storeGmailToken(next); return next; }
+export class GmailProvider implements MailProviderAdapter {
+  constructor(private token: GmailToken, private readonly accountId = process.env.GOOGLE_GMAIL_ACCOUNT_ID) {}
+  async getMessages(options: { limit?: number; unreadOnly?: boolean } = {}): Promise<MailMessage[]> {
+    const query = new URLSearchParams({ maxResults: String(options.limit ?? 20), ...(options.unreadOnly ? { q: "is:unread" } : {}) });
+    const list = await this.request<{ messages?: Array<{ id: string }> }>(`/messages?${query}`);
+    return Promise.all((list.messages ?? []).map(({ id }) => this.getMessage(id)));
+  }
+  async getMessage(id: string): Promise<MailMessage> { const message = await this.request<GmailMessage>(`/messages/${encodeURIComponent(id)}?format=full`); return normalizeGmailMessage(message, this.accountId); }
+  private async request<T>(path: string): Promise<T> { if (this.token.expires_at && this.token.expires_at <= Date.now() + 60_000) this.token = await refreshGmailToken(this.token); const response = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me${path}`, { headers: { Authorization: `Bearer ${this.token.access_token}` } }); if (response.status === 401) { this.token = await refreshGmailToken(this.token); return this.request(path); } if (!response.ok) throw new Error("Gmail request failed."); return response.json() as Promise<T>; }
+}
+export function canSendGmail(token = getGmailToken()): boolean { return Boolean(token?.scope?.split(" ").includes("https://www.googleapis.com/auth/gmail.send")); }
+export async function sendGmailReply(original: MailMessage, bodyText: string): Promise<{ id: string; threadId?: string; provider: "gmail"; sentAt: Date }> { const token = getGmailToken(); if (!token || !canSendGmail(token)) throw new Error("Reconnect Gmail to enable sending."); if (!bodyText.trim() || bodyText.length > 10_000) throw new Error("Reply must contain 1–10,000 characters."); if (/\b(no-?reply|do-?not-?reply)\b/i.test(original.from.email)) throw new Error("This sender does not accept replies."); const subject = /^re:/i.test(original.subject) ? original.subject : `Re: ${original.subject}`; const referenceIds = Array.from(new Set([...(original.references ?? []), ...(original.messageIdHeader ? [original.messageIdHeader] : [])])); const raw = Buffer.from([`To: ${original.from.email}`, `Subject: ${subject}`, ...(original.messageIdHeader ? [`In-Reply-To: ${original.messageIdHeader}`] : []), ...(referenceIds.length ? [`References: ${referenceIds.join(" ")}`] : []), "Content-Type: text/plain; charset=UTF-8", "", bodyText].join("\r\n"), "utf8").toString("base64url"); const response = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/messages/send", { method: "POST", headers: { Authorization: `Bearer ${token.access_token}`, "Content-Type": "application/json" }, body: JSON.stringify({ raw, ...(original.threadId ? { threadId: original.threadId } : {}) }) }); if (!response.ok) throw new Error("Gmail could not send the reply."); const sent = await response.json() as { id: string; threadId?: string }; return { id: sent.id, ...(sent.threadId ? { threadId: sent.threadId } : {}), provider: "gmail", sentAt: new Date() }; }
+function decode(value?: string): string { return value ? Buffer.from(value.replace(/-/g, "+").replace(/_/g, "/"), "base64").toString("utf8") : ""; }
+function headers(part?: GmailPart) { return new Map((part?.headers ?? []).map(({ name, value }) => [name.toLowerCase(), value])); }
+function body(part?: GmailPart, wanted = "text/plain"): string { if (!part) return ""; if (part.mimeType === wanted) return decode(part.body?.data); for (const child of part.parts ?? []) { const result = body(child, wanted); if (result) return result; } return ""; }
+function address(value?: string): MailAddress { const match = value?.match(/^(.*?)\s*<([^>]+)>$/); return match ? { name: match[1].replace(/^"|"$/g, "").trim() || undefined, email: match[2] } : { email: value?.trim() || "unknown" }; }
+function addresses(value?: string): MailAddress[] { return value ? value.split(/,(?![^<]*>)/).map(address) : []; }
+function normalizeGmailMessage(message: GmailMessage, accountId?: string): MailMessage { const h = headers(message.payload); const plain = body(message.payload); const html = body(message.payload, "text/html"); const references = h.get("references")?.match(/<[^>]+>/g); return { id: message.id, provider: "gmail", ...(accountId ? { accountId } : {}), ...(message.threadId ? { threadId: message.threadId } : {}), ...(h.get("message-id") ? { messageIdHeader: h.get("message-id") } : {}), ...(references?.length ? { references } : {}), from: address(h.get("from")), to: addresses(h.get("to")), ...(h.get("cc") ? { cc: addresses(h.get("cc")) } : {}), subject: h.get("subject") ?? "(No subject)", bodyText: plain || html.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim(), ...(html ? { bodyHtml: html } : {}), receivedAt: new Date(Number(message.internalDate ?? Date.now())), unread: message.labelIds?.includes("UNREAD") ?? false, hasAttachments: Boolean(message.payload?.parts?.some((part) => part.filename || part.body?.attachmentId)) }; }

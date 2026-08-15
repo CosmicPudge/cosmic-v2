@@ -5,6 +5,8 @@ import { motion } from "framer-motion";
 import { AppRenderer, getApp } from "@/apps/core";
 
 import { useDisplay } from "@/components/os/display";
+import { WidgetProvider } from "@/components/os/ui/widget/WidgetContext";
+import { getWidgetSize } from "@/components/dashboard/layout/widgetLayouts";
 
 import type { DashboardWidget } from "@/config/widgets";
 import type { WidgetFootprint } from "@/apps/core";
@@ -42,6 +44,11 @@ export default function GridItem({
     cols: cols as WidgetFootprint["cols"],
     rows: rows as WidgetFootprint["rows"],
   };
+
+  const size = getWidgetSize({
+    colSpan: footprint.cols,
+    rowSpan: footprint.rows,
+  });
 
   const app =
     widget.appId != null
@@ -89,7 +96,9 @@ export default function GridItem({
       data-resizable={widget.resizable}
       data-movable={widget.movable}
     >
-      {content}
+      <WidgetProvider size={size}>
+        {content}
+      </WidgetProvider>
     </motion.div>
   );
 }

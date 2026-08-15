@@ -2,6 +2,7 @@ export { default as Widget } from "./Widget";
 export { default as WidgetHeader } from "./WidgetHeader";
 export { default as WidgetBody } from "./WidgetBody";
 export { default as WidgetFooter } from "./WidgetFooter";
+export { useWidgetContext } from "./WidgetContext";
 
 export { default as WidgetSection } from "./WidgetSection";
 export { default as WidgetDivider } from "./WidgetDivider";

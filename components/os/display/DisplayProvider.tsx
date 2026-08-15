@@ -3,12 +3,11 @@
 import {
   createContext,
   useContext,
-  useEffect,
   useMemo,
-  useState,
   type ReactNode,
 } from "react";
 
+import { useSystem } from "@/components/os/system/SystemProvider";
 import { DISPLAY_PROFILES } from "./displayProfiles";
 import type {
   DisplayContextValue,
@@ -18,83 +17,32 @@ import type {
 const DisplayContext =
   createContext<DisplayContextValue | null>(null);
 
-function getProfile(
-  width: number,
-  height: number
-): DisplayProfile {
-  const shortest = Math.min(width, height);
-
-  if (shortest < 600) {
-    return "pocket";
-  }
-
-  if (width < 1280) {
-    return "compact";
-  }
-
-  if (width < 2000) {
-    return "comfortable";
-  }
-
-  return "expanded";
-}
-
 export function DisplayProvider({
   children,
 }: {
   children: ReactNode;
 }) {
-  const [metrics, setMetrics] = useState({
-    width: 1920,
-    height: 1080,
-
-    aspectRatio: 1920 / 1080,
-
-    touch: false,
-
-    profile: "expanded" as DisplayProfile,
-  });
-
-  useEffect(() => {
-    function updateDisplay() {
-      const width = window.innerWidth;
-      const height = window.innerHeight;
-
-      setMetrics({
-        width,
-        height,
-
-        aspectRatio: width / height,
-
-        touch: navigator.maxTouchPoints > 0,
-
-        profile: getProfile(width, height),
-      });
-    }
-
-    updateDisplay();
-
-    window.addEventListener(
-      "resize",
-      updateDisplay
-    );
-
-    return () => {
-      window.removeEventListener(
-        "resize",
-        updateDisplay
-      );
-    };
-  }, []);
+  const { snapshot } = useSystem();
+  const width = snapshot.display.viewportWidth ?? 1920;
+  const height = snapshot.display.viewportHeight ?? 1080;
+  const profile: DisplayProfile = snapshot.display.profile === "compact"
+    ? "pocket"
+    : snapshot.display.profile === "regular"
+      ? "compact"
+      : snapshot.display.profile === "display"
+        ? "expanded"
+        : "comfortable";
 
   const value = useMemo<DisplayContextValue>(
     () => ({
-      ...metrics,
-
-      tokens:
-        DISPLAY_PROFILES[metrics.profile],
+      width,
+      height,
+      aspectRatio: width / height,
+      touch: snapshot.input.touch,
+      profile,
+      tokens: DISPLAY_PROFILES[profile],
     }),
-    [metrics]
+    [height, profile, snapshot.input.touch, width]
   );
 
   return (

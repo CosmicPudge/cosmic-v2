@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
+import SchoolSection from "@/components/school/SchoolSection";
 
 export default function SchoolAfrotcPage() {
-  redirect("/school");
+  return <SchoolSection section="AFROTC" />;
 }

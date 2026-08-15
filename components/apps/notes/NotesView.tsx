@@ -1,25 +1,6 @@
 "use client";
-
-export default function NotesView() {
-  return (
-    <div className="space-y-6">
-
-      <div>
-        <h1 className="text-3xl font-bold">
-          Notes
-        </h1>
-
-        <p className="text-white/60">
-          Notes is currently under development.
-        </p>
-      </div>
-
-      <div className="rounded-3xl border border-white/10 bg-white/5 p-8">
-        <p className="text-white/50">
-          Future Notes features will appear here.
-        </p>
-      </div>
-
-    </div>
-  );
-}
+import { useMemo, useState } from "react";
+import type { Note } from "@/core/contracts/Notes";
+import { useNotes } from "@/hooks/os/useNotes";
+const id=()=>crypto.randomUUID(); const preview=(v:string)=>v.replace(/\s+/g," ").trim().slice(0,110); const tags=(v:string)=>[...new Map(v.split(",").map(x=>x.trim()).filter(Boolean).map(x=>[x.toLowerCase(),x])).values()]; const updated=(v:string)=>{const d=Date.now()-new Date(v).getTime();if(d<3600000)return `Updated ${Math.max(1,Math.floor(d/60000))}m ago`;if(d<86400000)return `Updated ${Math.floor(d/3600000)}h ago`;if(d<172800000)return "Updated yesterday";return `Updated ${new Date(v).toLocaleDateString(undefined,{month:"short",day:"numeric"})}`};
+export default function NotesView(){const {notes,loading,save,remove}=useNotes();const [selected,setSelected]=useState<Note|null>(null);const [filter,setFilter]=useState("notes");const [query,setQuery]=useState("");const [draft,setDraft]=useState<Note|null>(null);const list=useMemo(()=>notes.filter(n=>(filter==="archived"?n.archived:filter==="pinned"?!n.archived&&n.pinned:!n.archived)&&`${n.title} ${n.body} ${n.tags.join(" ")}`.toLowerCase().includes(query.trim().toLowerCase())),[notes,filter,query]);const current=draft??selected;const dirty=Boolean(current&&selected&&(current.title!==selected.title||current.body!==selected.body||current.tags.join(",")!==selected.tags.join(",")));const create=()=>{const now=new Date().toISOString();const n={id:id(),title:"",body:"",tags:[],pinned:false,archived:false,createdAt:now,updatedAt:now};setSelected(null);setDraft(n)};if(loading)return <p>Loading notes…</p>;return <div className="grid gap-4 lg:grid-cols-[.8fr_1.2fr]"><section className="rounded-3xl border border-white/15 bg-white/[.07] p-4"><button onClick={create}>+ New Note</button><div className="mt-2 flex gap-3 text-sm">{["notes","pinned","archived"].map(x=><button key={x} onClick={()=>setFilter(x)}>{x}</button>)}</div><input aria-label="Search notes" className="mt-3 w-full rounded-xl bg-black/20 p-2" value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search title, body, tags"/><div className="mt-3 space-y-2">{list.map(n=><button key={n.id} onClick={()=>{setSelected(n);setDraft({...n})}} className="w-full rounded-xl border border-white/10 p-3 text-left"><p>{n.pinned?"Pinned · ":""}{n.title||"Untitled Note"}</p><p className="text-sm text-white/55">{preview(n.body)||"Empty note"}</p><small className="text-white/40">{updated(n.updatedAt)}</small></button>)}{!list.length&&<p className="py-6 text-sm text-white/55">{query.trim()?"No notes match this search.":`No ${filter} notes yet.`}</p>}</div></section><section className="rounded-3xl border border-white/15 bg-white/[.07] p-4">{current?<><label>Title<input className="w-full bg-transparent text-2xl" value={current.title} onChange={e=>setDraft({...current,title:e.target.value})}/></label><label>Tags<input className="mt-3 w-full rounded-xl bg-black/20 p-2" value={current.tags.join(", ")} onChange={e=>setDraft({...current,tags:tags(e.target.value)})}/></label><label>Body<textarea className="mt-3 min-h-72 w-full rounded-xl bg-black/20 p-3" value={current.body} onChange={e=>setDraft({...current,body:e.target.value})}/></label><p className="mt-2 text-xs text-white/55">{dirty?"Unsaved changes":"Saved"}</p><div className="mt-3 flex flex-wrap gap-3"><button onClick={()=>{const n={...current,title:current.title||"Untitled Note",updatedAt:new Date().toISOString()};save(n);setSelected(n);setDraft(n)}}>Save</button><button onClick={()=>{const n={...current,pinned:!current.pinned,updatedAt:new Date().toISOString()};save(n);setSelected(n);setDraft(n)}}>{current.pinned?"Unpin":"Pin"}</button><button onClick={()=>{const n={...current,archived:!current.archived,updatedAt:new Date().toISOString()};save(n);setSelected(null);setDraft(null)}}>{current.archived?"Unarchive":"Archive"}</button><button className="text-red-200" onClick={()=>window.confirm("Permanently delete this local note?")&&(remove(current.id),setSelected(null),setDraft(null))}>Delete</button></div></>:<p className="text-white/55">Create or select a note.</p>}</section></div>}

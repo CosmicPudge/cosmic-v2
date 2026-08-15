@@ -7,9 +7,10 @@ import { PresenceEngine } from "@/engines/presence";
 import { DayEngine } from "@/engines/day";
 import { AssistantEngine } from "@/engines/assistant";
 import { modes } from "./modes";
+import type { CalendarProvider } from "@/engines/calendar";
 import { TestCalendarProvider } from "@/services/calendar/testCalendarProvider";
 
-class CosmicCore {
+export class CosmicCore {
   readonly modes = modes;
 
   readonly weather = new WeatherEngine();
@@ -28,12 +29,22 @@ class CosmicCore {
 
   readonly assistant = new AssistantEngine();
 
-  constructor() {
-    this.calendar.setProvider(
+  constructor(
+    calendarProvider: CalendarProvider =
       new TestCalendarProvider()
+  ) {
+    this.calendar.setProvider(
+      calendarProvider
     );
 
-    void this.calendar.initialize();
+    void this.calendar.initialize().catch((error) => {
+      console.error(
+        "Cosmic calendar initialization failed:",
+        error instanceof Error
+          ? error.message
+          : "Unknown calendar error"
+      );
+    });
   }
 }
 

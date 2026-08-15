@@ -5,6 +5,10 @@ import CalendarWindow from "./apps/CalendarWindow";
 import FilesWindow from "./apps/FilesWindow";
 import GarageWindow from "./apps/GarageWindow";
 import AssistantWindow from "./apps/AssistantWindow";
+import MusicWindow from "./apps/MusicWindow";
+import ClockWindow from "./apps/ClockWindow";
+import SettingsWindow from "./apps/SettingsWindow";
+import SystemWindow from "./apps/SystemWindow";
 
 interface Props {
   id: string;
@@ -14,6 +18,9 @@ export default function WindowRegistry({
   id,
 }: Props) {
   switch (id) {
+    case "clock":
+      return <ClockWindow />;
+
     case "weather":
       return <WeatherWindow />;
 
@@ -28,6 +35,15 @@ export default function WindowRegistry({
 
     case "assistant":
       return <AssistantWindow />;
+
+    case "music":
+      return <MusicWindow />;
+
+    case "settings":
+      return <SettingsWindow />;
+
+    case "system":
+      return <SystemWindow />;
 
     default:
       return (

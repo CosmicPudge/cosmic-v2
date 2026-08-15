@@ -1,9 +1,11 @@
 "use client";
 
-export default function WeatherWindow() {
+import GarageView from "@/components/apps/garage/GarageView";
+
+export default function GarageWindow() {
   return (
-    <div className="flex h-full items-center justify-center">
-      Weather Application
+    <div className="h-full overflow-y-auto p-5">
+      <GarageView />
     </div>
   );
 }

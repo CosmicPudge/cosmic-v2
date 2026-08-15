@@ -1,44 +1,22 @@
 "use client";
 
-import { useEffect, useState } from "react";
-
-function formatTime(date: Date) {
-  return date.toLocaleTimeString([], {
-    hour: "numeric",
-    minute: "2-digit",
-  });
-}
-
-function formatDate(date: Date) {
-  return date.toLocaleDateString([], {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-  });
-}
+import useClock from "@/hooks/os/useClock";
+import { formatAmbientDate, formatClockTime } from "@/services/clock/time";
 
 export default function AmbientClock() {
-  const [now, setNow] = useState(new Date());
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setNow(new Date());
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, []);
+  const now = useClock();
 
   return (
-    <div className="flex h-full flex-col justify-center">
-
-      <h1 className="text-8xl font-extralight leading-none">
-        {formatTime(now)}
-      </h1>
-
-      <p className="mt-4 text-3xl text-white/60">
-        {formatDate(now)}
+    <div className="flex flex-col justify-end">
+      <p className="text-xs uppercase tracking-[0.36em] text-cyan-100/50">
+        Local time
       </p>
-
+      <h1 className="mt-4 text-[clamp(4.8rem,14vw,13rem)] font-extralight leading-[0.78] tracking-[-0.075em] text-white">
+        {now ? formatClockTime(now, "system") : "--:--"}
+      </h1>
+      <p className="mt-7 text-[clamp(1.2rem,2.2vw,2.2rem)] font-light text-white/58">
+        {now ? formatAmbientDate(now) : "Synchronizing date"}
+      </p>
     </div>
   );
 }

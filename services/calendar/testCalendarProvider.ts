@@ -4,7 +4,12 @@ import type { CalendarProvider } from "@/engines/calendar";
 export class TestCalendarProvider
   implements CalendarProvider
 {
-  async getEvents(): Promise<CalendarEvent[]> {
+  async getEvents(
+  _range?: {
+    start: Date;
+    end: Date;
+  }
+): Promise<CalendarEvent[]> {
     const now = new Date();
 
     const todayAt = (

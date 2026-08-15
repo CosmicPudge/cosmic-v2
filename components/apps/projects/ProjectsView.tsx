@@ -1,25 +1,6 @@
 "use client";
-
-export default function ProjectsView() {
-  return (
-    <div className="space-y-6">
-
-      <div>
-        <h1 className="text-3xl font-bold">
-          Projects
-        </h1>
-
-        <p className="text-white/60">
-          Projects is currently under development.
-        </p>
-      </div>
-
-      <div className="rounded-3xl border border-white/10 bg-white/5 p-8">
-        <p className="text-white/50">
-          Future Projects features will appear here.
-        </p>
-      </div>
-
-    </div>
-  );
-}
+import { useState } from "react";
+import type { Project } from "@/core/contracts/Projects";
+import { localDate, useProjects } from "@/hooks/os/useProjects";
+const id = () => crypto.randomUUID();
+export default function ProjectsView() { const p = useProjects(); const [selected, setSelected] = useState<Project | null>(null); const [task, setTask] = useState(""); const [filter, setFilter] = useState("active"); if (p.loading) return <p className="text-white/60">Loading projects…</p>; const current = selected ?? p.selectedProject; const tasks = current ? p.data.tasks.filter((x) => x.projectId === current.id).sort((a, b) => a.order - b.order) : []; const milestones = current ? p.data.milestones.filter((x) => x.projectId === current.id) : []; const projects = p.data.projects.filter((x) => filter === "all" || filter === "active" ? x.status === "active" : filter === "archived" ? x.status === "archived" : x.status === "completed"); return <div className="grid gap-4 lg:grid-cols-[.8fr_1.2fr]"><section className="rounded-3xl border border-white/15 bg-white/[.07] p-4"><button className="rounded-xl bg-cyan-300/20 px-3 py-2 text-sm" onClick={() => { const n = new Date().toISOString(); setSelected({ id: id(), title: "", status: "planning", priority: "normal", tags: [], createdAt: n, updatedAt: n }); }}>+ New Project</button><div className="mt-3 flex gap-2 text-xs">{["active","all","completed","archived"].map(x => <button key={x} onClick={() => setFilter(x)}>{x}</button>)}</div><div className="mt-3 space-y-2">{projects.map((x) => <button key={x.id} onClick={() => { p.selectProject(x.id); setSelected(null); }} className="w-full rounded-xl border border-white/10 p-3 text-left"><p>{x.title}</p><p className="text-sm text-white/55">{x.status} · {x.priority}{x.dueDate ? ` · due ${x.dueDate}` : ""}</p></button>)}</div></section><section className="rounded-3xl border border-white/15 bg-white/[.07] p-4">{current ? <><form onSubmit={(e) => { e.preventDefault(); const f = new FormData(e.currentTarget); const n = new Date().toISOString(); p.saveProject({ ...current, title: String(f.get("title") || "Untitled Project"), description: String(f.get("description") || "") || undefined, status: String(f.get("status")) as Project["status"], priority: String(f.get("priority")) as Project["priority"], dueDate: String(f.get("dueDate") || "") || undefined, tags: String(f.get("tags") || "").split(",").map((v) => v.trim()).filter(Boolean), updatedAt: n }); setSelected(null); }}><input name="title" defaultValue={current.title} className="w-full bg-transparent text-2xl font-semibold outline-none"/><textarea name="description" defaultValue={current.description} className="mt-3 w-full rounded-xl bg-black/20 p-3"/><div className="mt-3 grid gap-2 sm:grid-cols-2"><select name="status" defaultValue={current.status}><option>planning</option><option>active</option><option>paused</option><option>completed</option><option>archived</option></select><select name="priority" defaultValue={current.priority}><option>low</option><option>normal</option><option>high</option></select><input name="dueDate" type="date" defaultValue={current.dueDate}/><input name="tags" defaultValue={current.tags.join(", ")}/></div><button className="mt-3 rounded-xl bg-cyan-300/20 px-3 py-2">Save</button><button type="button" className="ml-2 text-red-200" onClick={() => window.confirm("Delete this project and local tasks/milestones?") && p.removeProject(current.id)}>Delete</button></form><div className="mt-5 border-t border-white/10 pt-4"><h2>Tasks · {tasks.filter((x) => x.completed).length}/{tasks.length} ({tasks.length ? Math.round(tasks.filter((x) => x.completed).length / tasks.length * 100) : 0}%)</h2><form className="mt-2 flex flex-wrap gap-2" onSubmit={(e) => { e.preventDefault(); if (!task.trim()) return; const f=new FormData(e.currentTarget); const n = new Date().toISOString(); p.saveTask({ id:id(),projectId:current.id,title:task.trim(),completed:false,priority:String(f.get("priority")) as "low"|"normal"|"high",dueDate:String(f.get("due")||"")||undefined,order:tasks.length,createdAt:n,updatedAt:n});setTask(""); }}><input value={task} onChange={(e)=>setTask(e.target.value)} placeholder="Add task"/><select name="priority"><option>normal</option><option>high</option><option>low</option></select><input name="due" type="date"/><button>Add</button></form>{tasks.map(x=><div key={x.id}><label><input type="checkbox" checked={x.completed} onChange={()=>p.saveTask({...x,completed:!x.completed,updatedAt:new Date().toISOString()})}/>{x.title} · {x.priority} · {x.dueDate??"No due date"}</label><button onClick={()=>{const title=window.prompt("Task title",x.title);if(title)p.saveTask({...x,title,updatedAt:new Date().toISOString()})}}>Edit</button><button onClick={()=>window.confirm("Delete task?")&&p.removeTask(x.id)}>Delete</button></div>)}</div><div className="mt-5 border-t border-white/10 pt-4"><h2>Milestones</h2><button onClick={()=>{const title=window.prompt("Milestone title");if(title){const n=new Date().toISOString();p.saveMilestone({id:id(),projectId:current.id,title,completed:false,createdAt:n,updatedAt:n})}}}>+ Add milestone</button>{milestones.map(x=><div key={x.id}><label><input type="checkbox" checked={x.completed} onChange={()=>p.saveMilestone({...x,completed:!x.completed,updatedAt:new Date().toISOString()})}/>{x.title}</label><button onClick={()=>window.confirm("Delete milestone?")&&p.removeMilestone(x.id)}>Delete</button></div>)}</div></> : <p>Create or select a project.</p>}</section></div>; }

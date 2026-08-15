@@ -1,4 +1,5 @@
-import { WindowId } from "@/stores/windowStore";
+import { apps as appMetadata } from "@/config/apps";
+import type { WindowId } from "@/stores/windowStore";
 
 export interface CosmicApp {
   id: WindowId;
@@ -8,18 +9,18 @@ export interface CosmicApp {
   widget: boolean;
 }
 
-export const apps: CosmicApp[] = [
-  { id: "weather",   name: "Weather",   icon: "🌤️", dock: true,  widget: true },
-  { id: "calendar",  name: "Calendar",  icon: "📅", dock: true,  widget: true },
-  { id: "sports",    name: "Sports",    icon: "⚾", dock: true,  widget: true },
-  { id: "garage",    name: "Garage",    icon: "🚗", dock: true,  widget: true },
-  { id: "settings",  name: "Settings",  icon: "⚙️", dock: true,  widget: false },
+const windowIds = new Set<string>([
+  "clock", "weather", "calendar", "garage", "sports", "school", "notes",
+  "projects", "outlook", "assistant", "settings", "music", "files",
+  "system",
+] satisfies WindowId[]);
+const dockIds = new Set<WindowId>(["clock", "weather", "calendar", "sports", "garage", "settings", "system"]);
+const widgetIds = new Set<WindowId>(["clock", "weather", "calendar", "garage", "sports", "school", "notes", "projects", "outlook", "assistant", "music", "system"]);
 
-  { id: "assistant", name: "Assistant", icon: "🤖", dock: false, widget: true },
-  { id: "school",    name: "School",    icon: "🎓", dock: false, widget: true },
-  { id: "notes",     name: "Notes",     icon: "📝", dock: false, widget: true },
-  { id: "projects",  name: "Projects",  icon: "📂", dock: false, widget: true },
-  { id: "outlook",   name: "Outlook",   icon: "✉️", dock: false, widget: true },
-  { id: "music",     name: "Music",     icon: "🎵", dock: false, widget: true },
-  { id: "files",     name: "Files",     icon: "📁", dock: false, widget: false },
-];
+/** Window flags layered onto the canonical app route metadata. */
+export const apps: CosmicApp[] = appMetadata
+  .filter((app) => windowIds.has(app.id))
+  .map((app) => {
+    const id = app.id as WindowId;
+    return { id, name: app.name, icon: app.icon, dock: dockIds.has(id), widget: widgetIds.has(id) };
+  });

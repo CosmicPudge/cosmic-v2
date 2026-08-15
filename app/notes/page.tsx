@@ -1,6 +1,7 @@
 import AppShell from "@/components/os/app/AppShell";
 import AppHeader from "@/components/os/app/AppHeader";
 import AppContent from "@/components/os/app/AppContent";
+import NotesView from "@/components/apps/notes/NotesView";
 
 export default function NotesPage() {
   return (
@@ -11,13 +12,7 @@ export default function NotesPage() {
       />
 
       <AppContent>
-        <div className="space-y-4">
-          <h2 className="text-2xl font-bold">Notes</h2>
-
-          <p className="text-white/60">
-            Notes is currently under development.
-          </p>
-        </div>
+        <NotesView />
       </AppContent>
     </AppShell>
   );

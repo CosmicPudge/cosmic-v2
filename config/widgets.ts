@@ -65,6 +65,7 @@ export const dashboardWidgets: DashboardWidget[] = [
     supportedSizes: [
       { cols: 2, rows: 1 },
       { cols: 2, rows: 2 },
+      { cols: 4, rows: 2 },
     ],
     priority: 1,
     movable: true,
@@ -137,6 +138,11 @@ export const dashboardWidgets: DashboardWidget[] = [
     component: SearchWidget,
     cols: 6,
     rows: 2,
+    supportedSizes: [
+      { cols: 2, rows: 1 },
+      { cols: 3, rows: 2 },
+      { cols: 4, rows: 2 },
+    ],
     priority: 7,
     movable: true,
     resizable: true,
@@ -147,6 +153,11 @@ export const dashboardWidgets: DashboardWidget[] = [
     component: SystemWidget,
     cols: 3,
     rows: 2,
+    supportedSizes: [
+      { cols: 2, rows: 1 },
+      { cols: 3, rows: 2 },
+      { cols: 4, rows: 2 },
+    ],
     priority: 8,
     movable: true,
     resizable: true,

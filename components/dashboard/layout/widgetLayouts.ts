@@ -1,8 +1,26 @@
 import type { DisplayProfile } from "@/components/os/display";
+import type { WidgetSize } from "@/components/os/ui/widget";
 
 export interface WidgetLayout {
   colSpan: number;
   rowSpan: number;
+}
+
+export function getWidgetSize(layout: WidgetLayout): WidgetSize {
+  if (
+    !Number.isFinite(layout.colSpan) ||
+    !Number.isFinite(layout.rowSpan) ||
+    layout.colSpan < 1 ||
+    layout.rowSpan < 1
+  ) {
+    return "medium";
+  }
+
+  // Dashboard app footprints are currently constrained to 1–4 columns and
+  // 1–2 rows. Resolve semantic sizes from those final, rendered dimensions.
+  if (layout.colSpan >= 4 && layout.rowSpan >= 2) return "large";
+  if (layout.colSpan >= 3 || layout.rowSpan >= 2) return "medium";
+  return "small";
 }
 
 export type WidgetLayoutMap = Record<
@@ -14,6 +32,13 @@ export const WIDGET_LAYOUTS: Record<
   string,
   WidgetLayoutMap
 > = {
+  clock: {
+    expanded: { colSpan: 2, rowSpan: 1 },
+    comfortable: { colSpan: 2, rowSpan: 1 },
+    compact: { colSpan: 3, rowSpan: 2 },
+    pocket: { colSpan: 12, rowSpan: 2 },
+  },
+
   weather: {
     expanded: { colSpan: 4, rowSpan: 4 },
     comfortable: { colSpan: 4, rowSpan: 4 },

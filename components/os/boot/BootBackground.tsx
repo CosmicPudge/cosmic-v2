@@ -1,8 +1,6 @@
 "use client";
 
 import type { ReactNode } from "react";
-import Stars from "@/components/icons/primitives/Stars";
-import CosmicBackground from "../background/CosmicBackground";
 
 interface Props {
   children: ReactNode;
@@ -12,10 +10,7 @@ export default function BootBackground({
   children,
 }: Props) {
   return (
-    <div className="fixed inset-0 overflow-hidden bg-black">
-
-      <CosmicBackground />
-
+    <div className="fixed inset-0 overflow-hidden bg-black/70">
       <svg
   className="absolute inset-0 h-full w-full opacity-80"
   viewBox="0 0 100 100"

@@ -1,16 +1,28 @@
 import type { CalendarEvent } from "@/core/contracts";
+import { WidgetEmpty, WidgetError, WidgetLoading } from "@/components/os/ui/widget";
 
 interface CalendarAgendaProps {
   events: CalendarEvent[];
+  currentEvent?: CalendarEvent;
   loading: boolean;
   error: string | null;
 }
 
 export default function CalendarAgenda({
   events,
+  currentEvent,
   loading,
   error,
 }: CalendarAgendaProps) {
+  const agendaEvents = events
+    .filter((event) => event.id !== currentEvent?.id)
+    .sort(
+      (first, second) =>
+        getPriorityRank(first) -
+          getPriorityRank(second) ||
+        first.start.getTime() - second.start.getTime()
+    );
+
   return (
     <div className="h-full min-h-0 overflow-hidden rounded-xl border border-white/10 bg-white/5 px-3 py-2">
       <p className="text-[9px] uppercase tracking-[0.18em] text-white/50">
@@ -18,47 +30,75 @@ export default function CalendarAgenda({
       </p>
 
       {loading ? (
-        <p className="mt-1 text-xs text-white/50">
-          Loading...
-        </p>
+        <WidgetLoading compact className="mt-1 justify-start" />
       ) : error ? (
-        <p className="mt-1 truncate text-xs text-red-300">
-          {error}
-        </p>
+        <WidgetError compact title="Calendar unavailable" message={error} />
       ) : events.length === 0 ? (
-        <p className="mt-1 text-xs text-white/50">
-          Your day is clear.
-        </p>
+        <WidgetEmpty compact title="Your day is clear." description="" />
       ) : (
         <div className="mt-1 space-y-1">
-          {events.slice(0, 3).map((event) => (
-            <div
-              key={event.id}
-              className="
-                flex
-                h-8
-                min-w-0
-                items-center
-                gap-3
-                rounded-lg
-                bg-white/5
-                px-2
-              "
-            >
-              <span className="w-16 shrink-0 text-[10px] text-white/45">
-                {event.start.toLocaleTimeString("en-US", {
-                  hour: "numeric",
-                  minute: "2-digit",
-                })}
-              </span>
+          {currentEvent && (
+            <CalendarAgendaEvent
+              event={currentEvent}
+              label="Now"
+            />
+          )}
 
-              <span className="min-w-0 truncate text-xs font-medium text-white">
-                {event.title}
-              </span>
-            </div>
+          {agendaEvents.slice(0, currentEvent ? 2 : 3).map((event) => (
+            <CalendarAgendaEvent
+              key={event.id}
+              event={event}
+            />
           ))}
         </div>
       )}
     </div>
   );
+}
+
+function CalendarAgendaEvent({
+  event,
+  label,
+}: {
+  event: CalendarEvent;
+  label?: string;
+}) {
+  return (
+    <div
+      className="
+        flex
+        h-8
+        min-w-0
+        items-center
+        gap-3
+        rounded-lg
+        bg-white/5
+        px-2
+      "
+    >
+      <span className="w-16 shrink-0 text-[10px] text-white/45">
+        {label ??
+          event.start.toLocaleTimeString("en-US", {
+            hour: "numeric",
+            minute: "2-digit",
+          })}
+      </span>
+
+      <span className="min-w-0 truncate text-xs font-medium text-white">
+        {event.title}
+      </span>
+    </div>
+  );
+}
+
+function getPriorityRank(event: CalendarEvent): number {
+  if (event.priority === "high") {
+    return 0;
+  }
+
+  if (event.priority === "low") {
+    return 2;
+  }
+
+  return 1;
 }

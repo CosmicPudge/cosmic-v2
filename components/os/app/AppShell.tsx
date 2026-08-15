@@ -1,8 +1,6 @@
 "use client";
 
-import BackgroundEngine from "@/components/os/backgrounds/BackgroundEngine";
-import { BackgroundApp } from "@/components/os/backgrounds/types";
-// import CosmicBackground from "../background/CosmicBackground";
+import type { BackgroundApp } from "@/components/os/backgrounds/types";
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -12,25 +10,14 @@ interface AppShellProps {
 
 export default function AppShell({
   children,
-  app,
-  context,
 }: AppShellProps) {
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[#09090b] text-white">
-      {app && (
-        <BackgroundEngine
-          app={app}
-          context={context}
-        />
-      )}
+    <main className="relative min-h-screen overflow-hidden bg-black/15 text-white">
+      <div className="absolute inset-0 bg-black/25 pointer-events-none" />
 
-      <div className="absolute inset-0 bg-black/35" />
-
-      <div className="relative z-10 h-screen overflow-y-auto px-12 py-10">
+      <div className="relative z-10 h-screen overflow-y-auto pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] pt-[max(1.25rem,env(safe-area-inset-top))] pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:px-8 sm:py-8 lg:px-12 lg:py-10">
         {children}
       </div>
-
-      {/* <CosmicBackground /> */}
     </main>
   );
 }

@@ -1,76 +1,39 @@
-"use client";
-
-import { useEffect } from "react";
-
-import { BootProvider } from "@/components/os/boot/BootManager";
-import { CosmicBoot } from "@/components/os/boot";
-
-import AmbientShell from "@/components/os/ambient/AmbientShell";
-import AmbientCard from "@/components/os/ambient/AmbientCard";
-import AmbientHeader from "@/components/os/ambient/AmbientHeader";
-import AmbientClock from "@/components/os/ambient/AmbientClock";
-import AmbientWeather from "@/components/os/ambient/AmbientWeather";
 import AmbientCalendar from "@/components/os/ambient/AmbientCalendar";
-import AmbientLeave from "@/components/os/ambient/AmbientLeave";
-import AmbientSports from "@/components/os/ambient/AmbientSports";
-import AmbientGreeting from "@/components/os/ambient/AmbientGreeting";
+import AmbientClock from "@/components/os/ambient/AmbientClock";
+import AmbientHeader from "@/components/os/ambient/AmbientHeader";
+import AmbientMusic from "@/components/os/ambient/AmbientMusic";
 import AmbientSection from "@/components/os/ambient/AmbientSection";
+import AmbientShell from "@/components/os/ambient/AmbientShell";
+import AmbientSports from "@/components/os/ambient/AmbientSports";
+import AmbientWeather from "@/components/os/ambient/AmbientWeather";
+
 export default function AmbientPage() {
-  useEffect(() => {
-    const refreshed = sessionStorage.getItem("ambient-refresh");
-
-    if (!refreshed) {
-      sessionStorage.setItem("ambient-refresh", "true");
-
-      const timer = setTimeout(() => {
-        window.location.reload();
-      }, 8000);
-
-      return () => clearTimeout(timer);
-    }
-  }, []);
-
   return (
-        <AmbientShell>
-          <AmbientCard>
-            <div className="grid grid-cols-12 gap-6">
-              <div className="col-span-12">
-                <AmbientHeader />
-              </div>
+    <AmbientShell>
+      <div className="grid w-full gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,25rem)] lg:gap-12">
+        <div className="flex min-h-[55svh] flex-col justify-between gap-16">
+          <AmbientHeader />
+          <AmbientClock />
+        </div>
 
-              <div className="col-span-7">
-                <AmbientClock />
-              </div>
+        <aside className="grid content-end gap-3 sm:grid-cols-2 lg:grid-cols-1">
+          <AmbientSection title="Weather">
+            <AmbientWeather />
+          </AmbientSection>
 
-              <div className="col-span-5">
-                <AmbientWeather />
-              </div>
+          <AmbientSection title="Calendar">
+            <AmbientCalendar />
+          </AmbientSection>
 
-              <div className="col-span-6">
-                <AmbientSection title="Next Event">
-                  <AmbientCalendar />
-                </AmbientSection>
-              </div>
+          <AmbientSection title="Music">
+            <AmbientMusic />
+          </AmbientSection>
 
-              <div className="col-span-6">
-                <AmbientSection title="Leave In">
-                  <AmbientLeave />
-                </AmbientSection>
-              </div>
-
-              <div className="col-span-6">
-                <AmbientSection title="Sports">
-                  <AmbientSports />
-                </AmbientSection>
-              </div>
-
-              <div className="col-span-6">
-                <AmbientSection title="Today">
-                  <AmbientGreeting />
-                </AmbientSection>
-              </div>
-            </div>
-          </AmbientCard>
-        </AmbientShell>
+          <AmbientSection title="Followed sports">
+            <AmbientSports />
+          </AmbientSection>
+        </aside>
+      </div>
+    </AmbientShell>
   );
 }

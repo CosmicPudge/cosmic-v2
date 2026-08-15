@@ -1,36 +1,32 @@
 "use client";
 
-import Widget from "@/components/os/ui/widget/Widget";
-import WidgetHeader from "@/components/os/ui/widget/WidgetHeader";
-import WidgetBody from "@/components/os/ui/widget/WidgetBody";
-import WidgetFooter from "@/components/os/ui/widget/WidgetFooter";
+import Link from "next/link";
+import { ArrowUpRight, MonitorCog } from "lucide-react";
 
-import SystemOverview from "./SystemOverview";
-import SystemPerformance from "./SystemPerformance";
-import SystemStorage from "./SystemStorage";
-import SystemFooter from "./SystemFooter";
+import { useSystem } from "@/components/os/system/SystemProvider";
+import { formatBytes } from "@/services/system/browser";
+import { Widget, WidgetBody, WidgetHeader, useWidgetContext } from "@/components/os/ui/widget";
 
 export default function SystemWidget() {
-  return (
-    <Widget
-      accent="system"
-    >
-      <WidgetHeader
-        title="System"
-        subtitle="Device Status"
-      />
+  const { size } = useWidgetContext();
+  const { snapshot } = useSystem();
+  const priority = !snapshot.network.online
+    ? "Offline"
+    : snapshot.power.effective === "reduced"
+      ? "Reduced profile"
+      : snapshot.install.installable
+        ? "Install available"
+        : "Ready";
 
-      <WidgetBody>
-        <SystemOverview />
+  return <Widget accent="system">
+    <WidgetHeader title="System" subtitle={size === "small" ? undefined : `${snapshot.device.deviceClass} · ${snapshot.display.profile}`} icon={<MonitorCog size={18} />} action={<Link href="/system" aria-label="Open System" className="rounded-xl p-2 text-white/45 transition hover:bg-white/8 hover:text-white focus-visible:outline-2 focus-visible:outline-cyan-200"><ArrowUpRight size={17} /></Link>} />
+    <WidgetBody className={size === "small" ? "gap-2" : "gap-3"}>
+      <div className="flex items-center justify-between gap-3 rounded-xl border border-white/8 bg-black/15 px-3 py-2.5"><div><p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-white/34">Connection</p><p className={`mt-1 text-sm font-semibold ${snapshot.network.online ? "text-emerald-100/80" : "text-amber-100"}`}>{snapshot.network.online ? "Online" : "Offline"}</p></div><span className="rounded-full border border-white/9 bg-white/[0.045] px-2.5 py-1 text-[11px] text-white/55">{priority}</span></div>
+      {size !== "small" ? <div className="grid grid-cols-2 gap-2"><Metric label="Performance" value={snapshot.power.effective} /><Metric label="Mode" value={snapshot.install.mode} />{size === "large" ? <><Metric label="Storage" value={snapshot.storage.estimateAvailable ? formatBytes(snapshot.storage.usageBytes) : "Unavailable"} /><Metric label="Battery" value={snapshot.power.battery.supported ? `${Math.round((snapshot.power.battery.level ?? 0) * 100)}%` : "Unavailable"} /></> : null}</div> : null}
+    </WidgetBody>
+  </Widget>;
+}
 
-        <SystemPerformance />
-
-        <SystemStorage />
-      </WidgetBody>
-
-      <WidgetFooter>
-        <SystemFooter />
-      </WidgetFooter>
-    </Widget>
-  );
+function Metric({ label, value }: { label: string; value: string }) {
+  return <div className="min-w-0 rounded-xl border border-white/8 bg-white/[0.03] px-3 py-2"><p className="text-[9px] font-semibold uppercase tracking-[0.18em] text-white/30">{label}</p><p className="mt-1 truncate text-xs capitalize text-white/66">{value}</p></div>;
 }

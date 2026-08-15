@@ -1,12 +1,24 @@
 "use client";
 
-export default function WidgetLoading() {
+import clsx from "clsx";
+
+interface WidgetLoadingProps {
+  className?: string;
+  label?: string;
+  compact?: boolean;
+}
+
+export default function WidgetLoading({
+  className,
+  label = "Loading...",
+  compact = false,
+}: WidgetLoadingProps) {
   return (
-    <div className="flex flex-1 items-center justify-center">
-      <div className="flex items-center gap-3">
-        <div className="h-2 w-2 animate-pulse rounded-full bg-white/70" />
-        <span className="text-sm text-white/60">
-          Loading...
+    <div className={clsx("flex flex-1 items-center justify-center", className)}>
+      <div className={clsx("flex items-center", compact ? "gap-2" : "gap-3")}>
+        <div className={clsx("animate-pulse rounded-full bg-white/70", compact ? "h-1.5 w-1.5" : "h-2 w-2")} />
+        <span className={clsx("text-white/60", compact ? "text-xs" : "text-sm")}>
+          {label}
         </span>
       </div>
     </div>
