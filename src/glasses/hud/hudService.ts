@@ -1029,24 +1029,31 @@ export class CosmicHudService {
   // --------------------------------------------------
 
   private async updateText(
-    id: number,
-    name: string,
-    content: string,
-  ) {
+  id: number,
+  name: string,
+  content: string,
+) {
+  const success =
     await this.bridge
       .textContainerUpgrade(
-        new TextContainerUpgrade(
-          {
-            containerID: id,
-            containerName: name,
-            contentOffset: 0,
-            contentLength:
-              2000,
-            content,
-          },
-        ),
+        new TextContainerUpgrade({
+          containerID: id,
+          containerName: name,
+          contentOffset: 0,
+          contentLength: 0,
+          content,
+        }),
       );
-  }
+
+  console.log(
+    "TEXT UPDATE:",
+    {
+      name,
+      success,
+      content,
+    },
+  );
+}
 
   // --------------------------------------------------
   // CLOCK
@@ -1076,15 +1083,20 @@ export class CosmicHudService {
   // NORMAL 8 SECOND DISMISS
   // --------------------------------------------------
 
-  private resetDismissTimer() {
-    if (this.dismissTimer) {
-      clearTimeout(
-        this.dismissTimer,
-      );
-
-      this.dismissTimer = null;
-    }
+  private resetDismissTimer(
+  timeoutMs = 10_000,
+) {
+  if (this.dismissTimer) {
+    clearTimeout(
+      this.dismissTimer,
+    );
   }
+
+  this.dismissTimer =
+    setTimeout(() => {
+      void this.dismissCard();
+    }, timeoutMs);
+}
 
   async dismissCard() {
     if (this.dismissTimer) {
