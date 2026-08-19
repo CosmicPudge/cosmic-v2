@@ -1,0 +1,24 @@
+{
+  "package_id": "com.cosmicpudge.cosmicglasses",
+  "edition": "202601",
+  "name": "Cosmic Glasses",
+  "version": "0.1.0",
+  "min_sdk_version": "0.0.13",
+  "entrypoint": "index.html",
+  "permissions": [
+    {
+      "name": "location",
+      "desc": "Uses your phone location for live turn-by-turn navigation."
+    },
+    {
+      "name": "network",
+      "desc": "Connects to Cosmic OS for weather, calendar, sports, music, and navigation.",
+      "whitelist": [
+        "http://localhost:3000"
+      ]
+    }
+  ],
+  "supported_languages": [
+    "en"
+  ]
+}
