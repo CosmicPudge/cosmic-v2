@@ -1,7 +1,6 @@
 import {
   CreateStartUpPageContainer,
   OsEventTypeList,
-  RebuildPageContainer,
   TextContainerProperty,
   TextContainerUpgrade,
   waitForEvenAppBridge,
@@ -37,14 +36,17 @@ export class CosmicHudService {
         typeof waitForEvenAppBridge
       >
     >;
-
-    private statusText = "--°";
-
-private lastCardContent = "";
-
+  private lastSportsContent = "";
+  private lastStatusContent = "";
   private currentView = 0;
-
+  private lastMusicRefresh = 0;
+  private lastMusicContent = "";
+  private lastSportsRefresh = 0;
+  private lastCalendarRefresh = 0;
   private isCardVisible = false;
+  private sportsRefreshInterval = 30_000;
+  private lastRenderedContent:
+    Record<string, string> = {};
 
   private activePriority:
     HudPriority = "passive";
@@ -52,6 +54,16 @@ private lastCardContent = "";
   private dismissTimer:
     | ReturnType<typeof setTimeout>
     | null = null;
+  private currentCalendarEvent:
+    | {
+      title: string;
+      start: string;
+      location?: string | null;
+    }
+    | null = null;
+
+  private lastCalendarCountdownMinute:
+    number | null = null;
 
   private constructor(
     bridge: Awaited<
@@ -128,19 +140,37 @@ private lastCardContent = "";
         containerName:
           "cosmic-card",
         content: "",
+        isEventCapture: 0,
+      });
+    const inputContainer =
+      new TextContainerProperty({
+        xPosition: 0,
+        yPosition: 0,
+        width: 1,
+        height: 1,
+        borderWidth: 0,
+        borderColor: 5,
+        paddingLength: 0,
+        containerID: 99,
+        containerName: "cosmic-input",
+        content: " ",
         isEventCapture: 1,
       });
+    setInterval(() => {
+      void this.updateCalendarCountdown();
+    }, 10_000);
 
     await this.bridge
       .createStartUpPageContainer(
         new CreateStartUpPageContainer(
           {
-            containerTotalNum: 3,
+            containerTotalNum: 4,
 
             textObject: [
               timeContainer,
               statusContainer,
               cardContainer,
+              inputContainer,
             ],
           },
         ),
@@ -161,8 +191,8 @@ private lastCardContent = "";
 
     // Start live card refreshes.
     setInterval(() => {
-  void this.runLiveRefresh();
-}, 2000);
+      void this.runLiveRefresh();
+    }, 2000);
 
     console.log(
       "Cosmic HUD service initialized",
@@ -178,26 +208,52 @@ private lastCardContent = "";
       const status =
         await getCosmicStatus();
 
-      this.statusText =
-  `${Math.round(
-    status.weather.temperature,
-  )}°\n${status.weather.condition}`;
+      const content =
+        `${Math.round(
+          status.weather.temperature,
+        )}°\n${status.weather.condition}`;
 
-await this.updateText(
-  HUD.statusId,
-  "cosmic-status",
-  this.statusText,
-);
+      if (
+        content ===
+        this.lastStatusContent
+      ) {
+        return;
+      }
+
+      this.lastStatusContent =
+        content;
+
+      await this.updateText(
+        HUD.statusId,
+        "cosmic-status",
+        content,
+      );
+
+      console.log(
+        "LIVE HUD UPDATED: weather",
+      );
     } catch (error) {
       console.error(
         "Failed to fetch Cosmic status:",
         error,
       );
-this.statusText = "--°";
+
+      const fallback = "--°";
+
+      if (
+        fallback ===
+        this.lastStatusContent
+      ) {
+        return;
+      }
+
+      this.lastStatusContent =
+        fallback;
+
       await this.updateText(
         HUD.statusId,
         "cosmic-status",
-        "--°",
+        fallback,
       );
     }
   }
@@ -213,6 +269,11 @@ this.statusText = "--°";
         await getNextCalendarEvent();
 
       if (!calendar.nextEvent) {
+        this.currentCalendarEvent =
+          null;
+
+        this.lastCalendarCountdownMinute =
+          null;
         return {
           id: "calendar",
           title: "CALENDAR",
@@ -225,6 +286,13 @@ this.statusText = "--°";
 
       const event =
         calendar.nextEvent;
+
+      this.currentCalendarEvent = {
+        title: event.title,
+        start: event.start,
+        location:
+          event.location ?? null,
+      };
 
       let timeText: string;
 
@@ -240,7 +308,7 @@ this.statusText = "--°";
         const hours =
           Math.floor(
             event.minutesUntil /
-              60,
+            60,
           );
 
         const minutes =
@@ -303,6 +371,108 @@ this.statusText = "--°";
     }
   }
 
+  private async updateCalendarCountdown() {
+    if (
+      !this.isCardVisible ||
+      hudViews[this.currentView]?.id !==
+      "calendar" ||
+      !this.currentCalendarEvent
+    ) {
+      return;
+    }
+
+    const start =
+      new Date(
+        this.currentCalendarEvent.start,
+      ).getTime();
+
+    const now = Date.now();
+
+    const minutesUntil =
+      Math.max(
+        0,
+        Math.ceil(
+          (start - now) / 60_000,
+        ),
+      );
+
+    if (
+      minutesUntil ===
+      this.lastCalendarCountdownMinute
+    ) {
+      return;
+    }
+
+    this.lastCalendarCountdownMinute =
+      minutesUntil;
+
+    let timeText: string;
+
+    if (minutesUntil < 60) {
+      timeText =
+        `${minutesUntil} min`;
+    } else if (
+      minutesUntil <
+      24 * 60
+    ) {
+      const hours =
+        Math.floor(
+          minutesUntil / 60,
+        );
+
+      const minutes =
+        minutesUntil % 60;
+
+      timeText =
+        minutes > 0
+          ? `${hours}h ${minutes}m`
+          : `${hours}h`;
+    } else {
+      timeText =
+        new Intl.DateTimeFormat(
+          "en-US",
+          {
+            weekday: "short",
+            hour: "numeric",
+            minute: "2-digit",
+          },
+        ).format(
+          new Date(
+            this.currentCalendarEvent.start,
+          ),
+        );
+    }
+
+    const bodyParts = [
+      this.currentCalendarEvent
+        .title,
+      timeText,
+    ];
+
+    if (
+      this.currentCalendarEvent
+        .location
+    ) {
+      bodyParts.push(
+        this.currentCalendarEvent
+          .location,
+      );
+    }
+
+    const view: HudView = {
+      id: "calendar",
+      title: "CALENDAR",
+      body:
+        bodyParts.join("\n"),
+      priority: "glance",
+      timeoutMs: 8000,
+    };
+
+    await this.refreshVisibleView(
+      view,
+    );
+  }
+
   // --------------------------------------------------
   // SPORTS
   // --------------------------------------------------
@@ -312,6 +482,23 @@ this.statusText = "--°";
     try {
       const sports =
         await getCosmicSports();
+      if (!sports.game) {
+        this.sportsRefreshInterval =
+          5 * 60_000;
+      } else if (
+        sports.game.state === "live"
+      ) {
+        this.sportsRefreshInterval =
+          3000;
+      } else if (
+        sports.game.state === "pregame"
+      ) {
+        this.sportsRefreshInterval =
+          30_000;
+      } else {
+        this.sportsRefreshInterval =
+          5 * 60_000;
+      }
 
       if (!sports.game) {
         return {
@@ -341,17 +528,16 @@ this.statusText = "--°";
 
         const inningText =
           live?.inning &&
-          live?.inningHalf
+            live?.inningHalf
             ? `${live.inningHalf.toUpperCase()} ${live.inning}`
             : "LIVE";
 
         const outsText =
           live
-            ? `${live.outs} OUT${
-                live.outs === 1
-                  ? ""
-                  : "S"
-              }`
+            ? `${live.outs} OUT${live.outs === 1
+              ? ""
+              : "S"
+            }`
             : "";
 
         const countText =
@@ -605,16 +791,16 @@ this.statusText = "--°";
     const arrival =
       navigation.arrivalTime
         ? new Intl.DateTimeFormat(
-            "en-US",
-            {
-              hour: "numeric",
-              minute: "2-digit",
-            },
-          ).format(
-            new Date(
-              navigation.arrivalTime,
-            ),
-          )
+          "en-US",
+          {
+            hour: "numeric",
+            minute: "2-digit",
+          },
+        ).format(
+          new Date(
+            navigation.arrivalTime,
+          ),
+        )
         : `${navigation.etaMinutes} min`;
 
     return {
@@ -635,7 +821,7 @@ this.statusText = "--°";
 
       priority:
         maneuver.distanceMeters <=
-        130
+          130
           ? "critical"
           : "attention",
 
@@ -686,194 +872,158 @@ this.statusText = "--°";
   // LIVE HUD REFRESH
   // --------------------------------------------------
 
- private async runLiveRefresh() {
-  console.log(
-    "LIVE TICK:",
-    {
-      visible:
-        this.isCardVisible,
-      view:
-        hudViews[
-          this.currentView
-        ]?.id,
-    },
-  );
+  private async runLiveRefresh() {
+    if (!this.isCardVisible) {
+      return;
+    }
 
-  if (!this.isCardVisible) {
-    return;
+    const current =
+      hudViews[this.currentView];
+
+    const now = Date.now();
+
+    try {
+      switch (current.id) {
+        case "music": {
+          if (
+            now -
+            this.lastMusicRefresh <
+            2000
+          ) {
+            return;
+          }
+
+          this.lastMusicRefresh = now;
+
+          const view =
+            await this.getMusicCard();
+
+          const content =
+            `${view.title}\n\n${view.body}`;
+
+          if (
+            content ===
+            this.lastMusicContent
+          ) {
+            return;
+          }
+
+          this.lastMusicContent =
+            content;
+
+          await this.refreshVisibleView(
+            view,
+          );
+
+          break;
+        }
+
+        case "sports": {
+          if (
+            now -
+            this.lastSportsRefresh <
+            this.sportsRefreshInterval
+          ) {
+            return;
+          }
+
+          this.lastSportsRefresh = now;
+
+          const view =
+            await this.getSportsCard();
+
+          const content =
+            `${view.title}\n\n${view.body}`;
+
+          if (
+            content ===
+            this.lastSportsContent
+          ) {
+            return;
+          }
+
+          this.lastSportsContent =
+            content;
+
+          await this.refreshVisibleView(
+            view,
+          );
+
+          break;
+        }
+
+        case "calendar": {
+          if (
+            now -
+            this.lastCalendarRefresh <
+            30_000
+          ) {
+            return;
+          }
+
+          this.lastCalendarRefresh = now;
+
+          const view =
+            await this.getCalendarCard();
+
+          await this.refreshVisibleView(
+            view,
+          );
+
+          break;
+        }
+      }
+    } catch (error) {
+      console.error(
+        "Live HUD refresh failed:",
+        error,
+      );
+    }
   }
 
-  const current =
-    hudViews[this.currentView];
-
-  try {
-    switch (current.id) {
-      case "music": {
-        const view =
-          await this.getMusicCard();
-
-        await this.refreshVisibleView(
-          view,
-        );
-
-        break;
-      }
-
-      case "sports": {
-        const view =
-          await this.getSportsCard();
-
-        await this.refreshVisibleView(
-          view,
-        );
-
-        break;
-      }
-
-      case "calendar": {
-        const view =
-          await this.getCalendarCard();
-
-        await this.refreshVisibleView(
-          view,
-        );
-
-        break;
-      }
+  private async refreshVisibleView(
+    view: HudView,
+  ) {
+    if (!this.isCardVisible) {
+      return;
     }
-  } catch (error) {
-    console.error(
-      "Live HUD refresh failed:",
-      error,
+
+    const current =
+      hudViews[this.currentView];
+
+    if (current.id !== view.id) {
+      return;
+    }
+
+    const content =
+      `${view.title}\n\n${view.body}`;
+
+    /*
+     * Don't send the same content to
+     * the glasses repeatedly.
+     */
+    if (
+      this.lastRenderedContent[
+      view.id
+      ] === content
+    ) {
+      return;
+    }
+
+    this.lastRenderedContent[
+      view.id
+    ] = content;
+
+    await this.updateText(
+      HUD.cardId,
+      "cosmic-card",
+      content,
+    );
+
+    console.log(
+      `LIVE HUD UPDATED: ${view.id}`,
     );
   }
-}
-
-private async refreshVisibleView(
-  view: HudView,
-) {
-  if (!this.isCardVisible) {
-    return;
-  }
-
-  const current =
-    hudViews[this.currentView];
-
-  if (current.id !== view.id) {
-    return;
-  }
-
-  const content =
-    `${view.title}\n\n${view.body}`;
-
-  /*
-   * Do nothing if the actual displayed
-   * information hasn't changed.
-   *
-   * This prevents rebuilding the HUD
-   * every two seconds for the same song,
-   * score, etc.
-   */
-  if (
-    content ===
-    this.lastCardContent
-  ) {
-    return;
-  }
-
-  console.log(
-    "LIVE CONTENT CHANGED:",
-    JSON.stringify(content),
-  );
-
-  this.lastCardContent =
-    content;
-
-  await this.forceCardRepaint(
-    content,
-  );
-
-  console.log(
-    `LIVE HUD: ${view.id}`,
-  );
-}
-
-// --------------------------------------------------
-// FORCE HUD REPAINT
-// --------------------------------------------------
-
-private async forceCardRepaint(
-  content: string,
-) {
-  const timeContainer =
-    new TextContainerProperty({
-      xPosition: 10,
-      yPosition: 8,
-      width: 200,
-      height: 40,
-      borderWidth: 0,
-      borderColor: 5,
-      paddingLength: 0,
-      containerID: HUD.timeId,
-      containerName:
-        "cosmic-time",
-      content: this.getTime(),
-      isEventCapture: 0,
-    });
-
-  const statusContainer =
-    new TextContainerProperty({
-      xPosition: 410,
-      yPosition: 8,
-      width: 156,
-      height: 60,
-      borderWidth: 0,
-      borderColor: 5,
-      paddingLength: 0,
-      containerID:
-        HUD.statusId,
-      containerName:
-        "cosmic-status",
-      content:
-        this.statusText,
-      isEventCapture: 0,
-    });
-
-  const cardContainer =
-    new TextContainerProperty({
-      xPosition: 120,
-      yPosition: 95,
-      width: 336,
-      height: 150,
-      borderWidth: 0,
-      borderColor: 5,
-      paddingLength: 0,
-      containerID: HUD.cardId,
-      containerName:
-        "cosmic-card",
-      content,
-      isEventCapture: 1,
-    });
-
-  const rebuilt =
-    await this.bridge
-      .rebuildPageContainer(
-        new RebuildPageContainer({
-          containerTotalNum: 3,
-
-          textObject: [
-            timeContainer,
-            statusContainer,
-            cardContainer,
-          ],
-        }),
-      );
-
-  console.log(
-    "HUD REBUILD:",
-    rebuilt,
-  );
-}
   // --------------------------------------------------
   // TEXT UPDATE
   // --------------------------------------------------
@@ -927,14 +1077,14 @@ private async forceCardRepaint(
   // --------------------------------------------------
 
   private resetDismissTimer() {
-  if (this.dismissTimer) {
-    clearTimeout(
-      this.dismissTimer,
-    );
+    if (this.dismissTimer) {
+      clearTimeout(
+        this.dismissTimer,
+      );
 
-    this.dismissTimer = null;
+      this.dismissTimer = null;
+    }
   }
-}
 
   async dismissCard() {
     if (this.dismissTimer) {
@@ -951,8 +1101,6 @@ private async forceCardRepaint(
     this.activePriority =
       "passive";
 
-    this.lastCardContent = "";
-
     await this.updateText(
       HUD.cardId,
       "cosmic-card",
@@ -965,61 +1113,63 @@ private async forceCardRepaint(
   }
 
   // --------------------------------------------------
-// STATIC VIEW
-// --------------------------------------------------
+  // STATIC VIEW
+  // --------------------------------------------------
 
-private async renderCurrentCard() {
-  const view =
-    hudViews[
+  private async renderCurrentCard() {
+    const view =
+      hudViews[
       this.currentView
-    ];
+      ];
 
-  this.isCardVisible = true;
+    this.isCardVisible = true;
 
-  this.activePriority =
-    view.priority;
+    this.activePriority =
+      view.priority;
 
-  const content =
-    `${view.title}\n\n${view.body}`;
+    const content =
+      `${view.title}\n\n${view.body}`;
 
-  this.lastCardContent =
-    content;
+    this.lastRenderedContent[
+      view.id
+    ] = content;
 
-  await this.updateText(
-    HUD.cardId,
-    "cosmic-card",
-    content,
-  );
+    await this.updateText(
+      HUD.cardId,
+      "cosmic-card",
+      content,
+    );
 
-  this.resetDismissTimer();
-}
+    this.resetDismissTimer();
+  }
 
-// --------------------------------------------------
-// DYNAMIC VIEW
-// --------------------------------------------------
+  // --------------------------------------------------
+  // DYNAMIC VIEW
+  // --------------------------------------------------
 
-private async renderView(
-  view: HudView,
-) {
-  this.isCardVisible = true;
+  private async renderView(
+    view: HudView,
+  ) {
+    this.isCardVisible = true;
 
-  this.activePriority =
-    view.priority;
+    this.activePriority =
+      view.priority;
 
-  const content =
-    `${view.title}\n\n${view.body}`;
+    const content =
+      `${view.title}\n\n${view.body}`;
 
-  this.lastCardContent =
-    content;
+    this.lastRenderedContent[
+      view.id
+    ] = content;
 
-  await this.updateText(
-    HUD.cardId,
-    "cosmic-card",
-    content,
-  );
+    await this.updateText(
+      HUD.cardId,
+      "cosmic-card",
+      content,
+    );
 
-  this.resetDismissTimer();
-}
+    this.resetDismissTimer();
+  }
   // --------------------------------------------------
   // CONTEXT PRIORITY
   // --------------------------------------------------
@@ -1063,7 +1213,7 @@ private async renderView(
   private async loadCurrentView() {
     const view =
       hudViews[
-        this.currentView
+      this.currentView
       ];
 
     if (
@@ -1079,23 +1229,33 @@ private async renderView(
     }
 
     if (
-      view.id === "sports"
-    ) {
-      await this.showContext(
-        await this
-          .getSportsCard(),
-        true,
-      );
+  view.id === "sports"
+) {
+  const sportsView =
+    await this.getSportsCard();
 
-      return;
-    }
+  this.lastSportsContent =
+    `${sportsView.title}\n\n${sportsView.body}`;
+
+  await this.showContext(
+    sportsView,
+    true,
+  );
+
+  return;
+}
 
     if (
       view.id === "music"
     ) {
+      const musicView =
+        await this.getMusicCard();
+
+      this.lastMusicContent =
+        `${musicView.title}\n\n${musicView.body}`;
+
       await this.showContext(
-        await this
-          .getMusicCard(),
+        musicView,
         true,
       );
 
@@ -1179,7 +1339,7 @@ private async renderView(
           }
 
           switch (
-            textEvent.eventType
+          textEvent.eventType
           ) {
             case OsEventTypeList.SCROLL_TOP_EVENT:
               void this
