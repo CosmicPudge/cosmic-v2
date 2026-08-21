@@ -3,7 +3,7 @@
 import { useMusic } from "@/hooks/os/useMusic";
 
 export default function AmbientMusic() {
-  const music = useMusic();
+  const music = useMusic({ refreshMs: 1_000 });
   const track = music.playback?.track;
 
   if (music.loading) {

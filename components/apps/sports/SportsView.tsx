@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import type { SportKind, SportsEvent, SportsEventStatus, SportsSnapshot, SportsSource, SportsStanding } from "@/core/contracts/Sports";
 import { prioritizeFollowedEvents, sportLabels } from "@/services/sports/preferences";
@@ -48,7 +49,7 @@ function matchup(event: SportsEvent): string | undefined {
 
 function EventCard({ event, hero = false }: { event: SportsEvent; hero?: boolean }) {
   const detail = event.status === "scheduled" || event.status === "pregame" ? event.metadata?.sessionType ?? event.metadata?.track ?? event.venue : event.statusDetail ?? event.metadata?.sessionType ?? event.metadata?.track ?? event.venue;
-  return <article className={hero ? "rounded-2xl border border-red-200/20 bg-gradient-to-br from-red-300/15 via-white/10 to-transparent p-5" : card}>
+  return <Link href={`/sports/event/${encodeURIComponent(event.id)}`} className={`block ${hero ? "rounded-2xl border border-red-200/20 bg-gradient-to-br from-red-300/15 via-white/10 to-transparent p-5" : card} transition hover:bg-white/[0.08] focus:outline-none focus:ring-2 focus:ring-cyan-200/60`}>
     <div className="flex flex-wrap items-start justify-between gap-3">
       <div className="min-w-0">
         <p className="text-xs uppercase tracking-widest text-white/45">{sportLabels[event.sport]}</p>
@@ -58,7 +59,7 @@ function EventCard({ event, hero = false }: { event: SportsEvent; hero?: boolean
       </div>
       <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold uppercase tracking-wide ${statusClass(event.status)}`}>{statusLabel(event.status)}</span>
     </div>
-  </article>;
+  </Link>;
 }
 
 function EventList({ title, events, empty, limit }: { title: string; events: SportsEvent[]; empty: string; limit?: number }) {

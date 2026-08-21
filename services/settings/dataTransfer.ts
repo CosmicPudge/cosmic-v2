@@ -36,6 +36,7 @@ import {
   readRecentSearches,
   replaceRecentSearches,
 } from "@/services/search/recentRepository";
+import { emptyFinanceData, readFinanceSnapshot, replaceFinanceSnapshot, validateFinanceSnapshot } from "@/services/finance/localRepository";
 import {
   defaultSettingsData,
   readSettingsSnapshot,
@@ -52,6 +53,7 @@ export const backupDomains: CosmicBackupDomain[] = [
   "notes",
   "clock",
   "search",
+  "finance",
 ];
 
 type DomainSnapshots = CosmicLocalBackupDomains;
@@ -74,6 +76,7 @@ function allHaveStringId(value: unknown) {
 
 function validateDomain(domain: CosmicBackupDomain, value: unknown): DomainSnapshots[typeof domain] | null {
   if (domain === "settings") return validateSettingsSnapshot(value);
+  if (domain === "finance") return validateFinanceSnapshot(value);
   if (!isRecord(value) || value.version !== 1) return null;
   if (domain === "school") {
     if (!hasArrays(value, ["terms", "courses", "assignments", "grades", "goals", "resources"]) || !allHaveStringId(value.terms) || !allHaveStringId(value.courses) || !allHaveStringId(value.assignments) || !allHaveStringId(value.goals) || !allHaveStringId(value.resources) || !(value.grades as unknown[]).every((item) => isRecord(item) && typeof item.courseId === "string")) return null;
@@ -109,6 +112,7 @@ function snapshotAll(): DomainSnapshots {
     notes: readNotesSnapshot(),
     clock: readClockSnapshot(),
     search: { version: 1, searches: readRecentSearches() },
+    finance: readFinanceSnapshot(),
   };
 }
 
@@ -120,6 +124,7 @@ const writers: { [K in CosmicBackupDomain]: (data: DomainSnapshots[K]) => void }
   notes: replaceNotesSnapshot,
   clock: replaceClockSnapshot,
   search: replaceRecentSearches,
+  finance: replaceFinanceSnapshot,
 };
 
 const emptySnapshots: DomainSnapshots = {
@@ -130,6 +135,7 @@ const emptySnapshots: DomainSnapshots = {
   notes: emptyNotesData,
   clock: defaultClockData,
   search: { version: 1, searches: [] },
+  finance: emptyFinanceData,
 };
 
 function countDomain(domain: CosmicBackupDomain, value: DomainSnapshots[typeof domain]): number {

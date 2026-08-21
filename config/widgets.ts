@@ -15,6 +15,7 @@ import ProjectsWidget from "@/components/os/widgets/projects/ProjectsWidget";
 import NotesWidget from "@/components/os/widgets/notes/NotesWidget";
 import OutlookWidget from "@/components/os/widgets/outlook/OutlookWidget";
 import MusicWidget from "@/components/os/widgets/music/MusicWidget";
+import FinanceWidget from "@/components/os/widgets/finance/FinanceWidget";
 
 export interface WidgetSize {
   cols: number;
@@ -57,6 +58,15 @@ export interface DashboardWidget {
 }
 
 export const dashboardWidgets: DashboardWidget[] = [
+  {
+    id: "finance",
+    component: FinanceWidget,
+    cols: 3,
+    rows: 2,
+    priority: 8,
+    movable: true,
+    resizable: true,
+  },
   {
     id: "clock",
     component: ClockWidget,

@@ -9,6 +9,7 @@ export type SearchCategory =
   | "notes"
   | "clock"
   | "music"
+  | "finance"
   | "files"
   | "settings"
   | "system";

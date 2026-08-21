@@ -7,6 +7,7 @@ import {
   ExpandedWidgetProvider,
 } from "@/components/dashboard/expanded";
 import ExpandedWidgetOverlay from "@/components/dashboard/expanded/ExpandedWidgetOverlay";
+import ContextFocus from "@/components/dashboard/context/ContextFocus";
 
 import AssistantDock from "./assistant/AssistantDock";
 import WidgetGrid from "./grid/WidgetGrid";
@@ -34,6 +35,10 @@ function DashboardContent() {
     >
       <DashboardRegion>
         <DashboardHero />
+      </DashboardRegion>
+
+      <DashboardRegion>
+        <ContextFocus />
       </DashboardRegion>
 
       <DashboardRegion>

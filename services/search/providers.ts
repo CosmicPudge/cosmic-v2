@@ -13,6 +13,7 @@ import { readNotesSnapshot } from "@/services/notes/localRepository";
 import { readProjectsSnapshot } from "@/services/projects/localRepository";
 import { settingsSections } from "@/config/settings";
 import { systemDestinations } from "@/config/system";
+import { readFinanceSnapshot } from "@/services/finance/localRepository";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -360,7 +361,7 @@ export const sportsSearchProvider: SearchProvider = {
       : [];
     const events: SearchProviderRecord[] = [...new Map(eventValues.map((event) => [event.id, event])).values()]
       .filter((event) => matches(query, event.title, event.sport, event.status, text(event.venue), text(event.broadcast)))
-      .map((event) => ({ id: `event:${event.id}`, category: "sports", title: event.title, subtitle: `${event.sport.toUpperCase()} · ${event.status}`, description: compact([formatDate(event.start), text(event.venue), text(event.broadcast)]).join(" · "), keywords: ["sports", event.sport, event.status], icon: "◉", href: "/sports", source: "sports", updatedAt: event.start, boost: event.status === "live" ? 38 : 0 }));
+      .map((event) => ({ id: `event:${event.id}`, category: "sports", title: event.title, subtitle: `${event.sport.toUpperCase()} · ${event.status}`, description: compact([formatDate(event.start), text(event.venue), text(event.broadcast)]).join(" · "), keywords: ["sports", event.sport, event.status], icon: "◉", href: `/sports/event/${encodeURIComponent(event.id)}`, source: "sports", updatedAt: event.start, boost: event.status === "live" ? 38 : 0 }));
     const standingRecords: SearchProviderRecord[] = standings.filter(isRecord)
       .filter((standing) => matches(query, text(standing.name), text(standing.team), text(standing.driver), text(standing.sport)))
       .map((standing, index) => ({ id: `standing:${text(standing.id) || index}`, category: "sports", title: text(standing.name) || text(standing.team) || text(standing.driver), subtitle: compact([text(standing.sport).toUpperCase(), typeof standing.rank === "number" ? `Rank ${standing.rank}` : undefined]).join(" · "), description: compact([text(standing.record), typeof standing.points === "number" ? `${standing.points} points` : undefined]).join(" · "), keywords: compact(["sports", text(standing.sport), text(standing.team), text(standing.driver)]), icon: "◉", href: "/sports", source: "sports" }));
@@ -385,6 +386,28 @@ export const musicSearchProvider: SearchProvider = {
   },
 };
 
+export const financeSearchProvider: SearchProvider = {
+  id: "finance",
+  categories: ["finance"],
+  search(query, { limit }) {
+    const data = readFinanceSnapshot();
+    const categoryName = new Map(data.categories.map((category) => [category.id, category.name]));
+    const records: SearchProviderRecord[] = data.accounts
+      .filter((account) => matches(query, account.name, account.type, account.institution))
+      .map((account) => ({ id: `account:${account.id}`, category: "finance", title: account.name, subtitle: `Account · ${account.type}`, description: account.archived ? "Archived account" : "Manual records", keywords: ["finance", "account", account.type], icon: "$", href: "/finance", source: "finance", boost: account.archived ? -10 : 12 }));
+
+    data.transactions.forEach((transaction) => {
+      const category = categoryName.get(transaction.categoryId);
+      if (!matches(query, transaction.description, transaction.merchant, category, transaction.direction, transaction.status)) return;
+      records.push({ id: `transaction:${transaction.id}`, category: "finance", title: transaction.merchant || transaction.description, subtitle: compact([category, transaction.status]).join(" · ") || "Transaction", description: "Manual financial record", keywords: ["finance", transaction.direction, transaction.status, category ?? ""], icon: transaction.direction === "income" ? "↗" : "↘", href: "/finance", source: "finance", updatedAt: transaction.updatedAt });
+    });
+    data.recurringItems.filter((item) => item.active)
+      .filter((item) => matches(query, item.name, item.merchant, categoryName.get(item.categoryId), item.cadence))
+      .forEach((item) => records.push({ id: `recurring:${item.id}`, category: "finance", title: item.name, subtitle: `Expected · ${item.cadence}`, description: `Next expected ${item.nextExpectedDate}`, keywords: ["finance", "expected", "recurring", item.cadence], icon: "↻", href: "/finance", source: "finance", updatedAt: item.updatedAt }));
+    return bounded(records, limit);
+  },
+};
+
 export function createSearchProviders(): SearchProvider[] {
   return [
     appsSearchProvider,
@@ -399,5 +422,6 @@ export function createSearchProviders(): SearchProvider[] {
     mailSearchProvider,
     sportsSearchProvider,
     musicSearchProvider,
+    financeSearchProvider,
   ];
 }

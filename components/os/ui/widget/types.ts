@@ -16,7 +16,8 @@ export type WidgetAccent =
   | "music"
   | "search"
   | "briefing"
-  | "clock";
+  | "clock"
+  | "finance";
 
 export type WidgetSize = "small" | "medium" | "large";
 

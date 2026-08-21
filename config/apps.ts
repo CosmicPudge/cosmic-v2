@@ -24,6 +24,7 @@ export const apps: CosmicApp[] = [
   { id: "projects", name: "Projects", icon: "◫", route: "/projects", description: "Projects, tasks, and milestones.", keywords: ["task", "work", "milestone", "todo"], category: "productivity" },
   { id: "notes", name: "Notes", icon: "✎", route: "/notes", description: "Notes, ideas, and references.", keywords: ["note", "writing", "memo", "tags"], category: "productivity" },
   { id: "music", name: "Music", icon: "♫", route: "/music", description: "Playback and current listening.", keywords: ["spotify", "song", "track", "album"], category: "media" },
+  { id: "finance", name: "Finance", icon: "$", route: "/finance", description: "Manual financial records and account registers.", keywords: ["money", "checking", "transactions", "spending", "income"], category: "productivity" },
   { id: "clock", name: "Clock", icon: "◷", route: "/clock", description: "World clocks, alarms, and timers.", keywords: ["time", "timer", "alarm", "stopwatch"], category: "system" },
   { id: "files", name: "Files", icon: "▤", route: "/files", description: "Your Cosmic files.", keywords: ["documents", "folders", "storage"], category: "productivity" },
   { id: "weather", name: "Weather", icon: "🌤", route: "/weather", description: "Current conditions and forecasts.", keywords: ["forecast", "temperature", "rain"], category: "system" },

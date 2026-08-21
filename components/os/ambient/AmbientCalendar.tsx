@@ -1,15 +1,20 @@
 "use client";
 
 import useCalendar from "@/hooks/os/useCalendar";
+import useClock from "@/hooks/os/useClock";
+import { getRelevantTimedEvent } from "@/services/calendar/relevance";
 
 function formatEventTime(date: Date) {
   return date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
 }
 
 export default function AmbientCalendar() {
-  const { calendar, loading, error } = useCalendar();
-  const event = calendar?.currentEvent ?? calendar?.nextEvent;
-  const isCurrent = Boolean(calendar?.currentEvent);
+  const { calendar, loading, error } = useCalendar({ refreshMs: 60_000 });
+  const now = useClock();
+  const events = calendar ? [...calendar.today, ...calendar.upcoming] : [];
+  const selection = now ? getRelevantTimedEvent(events, now) : { event: undefined, current: false };
+  const event = selection.event;
+  const isCurrent = selection.current;
 
   if (loading) {
     return <p className="text-sm text-white/40">Reading today’s calendar…</p>;

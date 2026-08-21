@@ -58,6 +58,9 @@ const BACKGROUNDS: Record<WidgetAccent, string> = {
 
   clock:
     "from-zinc-500/18 via-slate-400/10 to-transparent",
+
+  finance:
+    "from-emerald-500/22 via-cyan-400/12 to-transparent",
 };
 
 export default function WidgetBackground({

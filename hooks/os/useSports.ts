@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import type { SportKind, SportsEvent, SportsEventStatus, SportsSnapshot } from "@/core/contracts/Sports";
+import { useVisiblePolling } from "@/hooks/useVisiblePolling";
 
-type SportsHookOptions = { sport?: SportKind; refreshMs?: number };
+type SportsHookOptions = { sport?: SportKind; refreshMs?: number | ((snapshot: SportsSnapshot | null) => number) };
 type SportsWireEvent = Omit<SportsEvent, "start" | "end"> & { start: string; end?: string };
 type SportsWireSnapshot = Omit<SportsSnapshot, "live" | "upcoming" | "recent" | "featured" | "lastUpdated"> & {
   live: SportsWireEvent[];
@@ -92,11 +93,8 @@ export function useSports(options: SportsHookOptions = {}) {
     }
   }, [sport]);
 
-  useEffect(() => {
-    const initial = window.setTimeout(() => { void refresh(); }, 0);
-    const interval = window.setInterval(() => { void refresh(); }, refreshMs);
-    return () => { window.clearTimeout(initial); window.clearInterval(interval); };
-  }, [refresh, refreshMs]);
+  const intervalMs = typeof refreshMs === "function" ? refreshMs(data) : refreshMs;
+  useVisiblePolling(refresh, intervalMs, { immediate: data === null });
 
   return { data, loading, error, refresh };
 }

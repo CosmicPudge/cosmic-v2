@@ -3,10 +3,16 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { MusicSnapshot } from "@/core/contracts/Music";
+import { useVisiblePolling } from "@/hooks/useVisiblePolling";
 
-export function useMusic() {
+interface UseMusicOptions {
+  refreshMs?: number;
+}
+
+export function useMusic({ refreshMs }: UseMusicOptions = {}) {
   const [snapshot, setSnapshot] = useState<MusicSnapshot | null>(null);
   const hasLoaded = useRef(false);
+  const refreshPromiseRef = useRef<Promise<void> | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [requestError, setRequestError] = useState<string>();
@@ -14,6 +20,8 @@ export function useMusic() {
   const [actionLoading, setActionLoading] = useState(false);
 
   const refresh = useCallback(async () => {
+    if (refreshPromiseRef.current) return refreshPromiseRef.current;
+
     const initial = !hasLoaded.current;
 
     if (initial) {
@@ -22,31 +30,44 @@ export function useMusic() {
       setRefreshing(true);
     }
 
-    try {
-      const response = await fetch("/api/music", { cache: "no-store" });
+    const request = (async () => {
+      try {
+        const response = await fetch("/api/music", { cache: "no-store" });
 
-      if (!response.ok) {
-        throw new Error("Music is unavailable.");
+        if (!response.ok) {
+          throw new Error("Music is unavailable.");
+        }
+
+        setSnapshot(await response.json() as MusicSnapshot);
+        setRequestError(undefined);
+      } catch (cause) {
+        setRequestError(cause instanceof Error ? cause.message : "Music is unavailable.");
+      } finally {
+        hasLoaded.current = true;
+        setLoading(false);
+        setRefreshing(false);
       }
+    })();
 
-      setSnapshot(await response.json() as MusicSnapshot);
-      setRequestError(undefined);
-    } catch (cause) {
-      setRequestError(cause instanceof Error ? cause.message : "Music is unavailable.");
+    refreshPromiseRef.current = request;
+    try {
+      await request;
     } finally {
-      hasLoaded.current = true;
-      setLoading(false);
-      setRefreshing(false);
+      if (refreshPromiseRef.current === request) refreshPromiseRef.current = null;
     }
   }, []);
 
   useEffect(() => {
+    if (refreshMs !== undefined) return;
+
     const initial = window.setTimeout(() => {
       void refresh();
     }, 0);
 
     return () => window.clearTimeout(initial);
-  }, [refresh]);
+  }, [refresh, refreshMs]);
+
+  useVisiblePolling(refresh, refreshMs ?? 0, { enabled: refreshMs !== undefined });
 
   const command = useCallback(async (action: string, value?: number) => {
     if (actionLoading) {

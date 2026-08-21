@@ -20,7 +20,7 @@ interface ConnectionPayload { calendar: ConnectionStatus; spotify: ConnectionSta
 type DialogState = { type: "reset"; domain: CosmicBackupDomain } | { type: "reset-all" } | { type: "disconnect-spotify" } | { type: "import"; preview: BackupPreview };
 
 const domainLabels: Record<CosmicBackupDomain, string> = {
-  settings: "Settings preferences", school: "School local data", garage: "Garage local data", projects: "Projects local data", notes: "Notes local data", clock: "Clock local data", search: "Recent Search history",
+  settings: "Settings preferences", school: "School local data", garage: "Garage local data", projects: "Projects local data", notes: "Notes local data", clock: "Clock local data", search: "Recent Search history", finance: "Finance local data",
 };
 const idleOptions = [1, 2, 5, 10, 15, 30] as const;
 const controlClass = "min-h-10 rounded-xl border border-white/12 bg-[#0a1021]/80 px-3 text-sm text-white outline-none transition focus:border-cyan-200/45 focus:ring-4 focus:ring-cyan-300/10";

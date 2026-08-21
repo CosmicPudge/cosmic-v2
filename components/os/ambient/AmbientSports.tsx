@@ -3,7 +3,13 @@
 import { useSports } from "@/hooks/os/useSports";
 
 export default function AmbientSports() {
-  const { data, loading } = useSports({ refreshMs: 60_000 });
+  const { data, loading } = useSports({
+    refreshMs: (snapshot) => {
+      if (snapshot?.live.length) return 2_000;
+      const upcomingSoon = snapshot?.upcoming.some((event) => event.start.getTime() - Date.now() <= 30 * 60 * 1_000);
+      return upcomingSoon ? 15_000 : 60_000;
+    },
+  });
   const event = data?.live[0];
 
   if (loading) {

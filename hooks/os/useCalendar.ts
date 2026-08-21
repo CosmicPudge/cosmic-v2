@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import type {
   CalendarEvent,
   CalendarSnapshot,
 } from "@/core/contracts";
+import { useVisiblePolling } from "@/hooks/useVisiblePolling";
 
 interface CalendarResponse {
   today: Array<Omit<CalendarEvent, "start" | "end"> & {
@@ -64,9 +65,13 @@ function hydrateSnapshot(
   };
 }
 
-const REFRESH_INTERVAL_MS = 5 * 60 * 1000;
+const DEFAULT_REFRESH_INTERVAL_MS = 5 * 60 * 1000;
 
-export default function useCalendar() {
+interface UseCalendarOptions {
+  refreshMs?: number;
+}
+
+export default function useCalendar({ refreshMs = DEFAULT_REFRESH_INTERVAL_MS }: UseCalendarOptions = {}) {
   const [calendar, setCalendar] =
     useState<CalendarSnapshot | null>(null);
 
@@ -130,18 +135,23 @@ export default function useCalendar() {
 
     void loadCalendar(true);
 
-    const interval = window.setInterval(
-      () => {
-        void loadCalendar(false);
-      },
-      REFRESH_INTERVAL_MS
-    );
-
     return () => {
       cancelled = true;
-      window.clearInterval(interval);
     };
   }, []);
+
+  const refresh = useCallback(async () => {
+    try {
+      const response = await fetch("/api/calendar", { cache: "no-store" });
+      if (!response.ok) throw new Error("Calendar is temporarily unavailable.");
+      setCalendar(hydrateSnapshot(await response.json()));
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unknown calendar error");
+    }
+  }, []);
+
+  useVisiblePolling(refresh, refreshMs, { immediate: false });
 
   return {
     calendar,
