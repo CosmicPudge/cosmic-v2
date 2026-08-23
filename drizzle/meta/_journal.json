@@ -57,6 +57,13 @@
       "when": 1787373443594,
       "tag": "0007_stormy_miracleman",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1787456384707,
+      "tag": "0008_young_electro",
+      "breakpoints": true
     }
   ]
 }

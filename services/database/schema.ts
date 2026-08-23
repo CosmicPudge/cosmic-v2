@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { boolean, check, index, integer, jsonb, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { boolean, check, index, integer, jsonb, pgTable, primaryKey, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 
 export const users = pgTable("users", {
   id: text("id").primaryKey(),
@@ -93,3 +93,40 @@ export const providerCredentials = pgTable("provider_credentials", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+export const accountRoles = pgTable("account_roles", {
+  accountId: text("account_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  role: text("role").notNull().default("user"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  createdBy: text("created_by"),
+}, (table) => [primaryKey({ columns: [table.accountId, table.role] }), check("account_roles_role_check", sql`${table.role} in ('user', 'admin')`), index("account_roles_role_index").on(table.role)]);
+
+export const adminEntitlementOverrides = pgTable("admin_entitlement_overrides", {
+  accountId: text("account_id").primaryKey().references(() => users.id, { onDelete: "cascade" }),
+  plan: text("plan").notNull(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  createdBy: text("created_by").notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [check("admin_entitlement_overrides_plan_check", sql`${table.plan} in ('free', 'cosmic_plus')`), index("admin_entitlement_overrides_expires_index").on(table.expiresAt)]);
+
+export const accountModeration = pgTable("account_moderation", {
+  accountId: text("account_id").primaryKey().references(() => users.id, { onDelete: "cascade" }),
+  status: text("status").notNull().default("active"),
+  reason: text("reason"),
+  internalNote: text("internal_note"),
+  expiresAt: timestamp("expires_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  createdBy: text("created_by"),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [check("account_moderation_status_check", sql`${table.status} in ('active', 'suspended', 'banned')`), index("account_moderation_status_expires_index").on(table.status, table.expiresAt)]);
+
+export const adminAuditLog = pgTable("admin_audit_log", {
+  id: text("id").primaryKey(),
+  actorAccountId: text("actor_account_id"),
+  targetAccountId: text("target_account_id"),
+  action: text("action").notNull(),
+  metadata: jsonb("metadata").notNull().default({}),
+  correlationId: text("correlation_id"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [index("admin_audit_log_created_index").on(table.createdAt), index("admin_audit_log_target_index").on(table.targetAccountId), index("admin_audit_log_actor_index").on(table.actorAccountId)]);

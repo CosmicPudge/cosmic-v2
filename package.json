@@ -10,6 +10,7 @@
     "lint": "eslint",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
+    "db:bootstrap-admin": "node scripts/bootstrap-admin.mjs",
     "download:mlb": "node scripts/download-mlb-logos.mjs"
   },
   "dependencies": {

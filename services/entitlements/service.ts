@@ -5,7 +5,7 @@ import type { CosmicEntitlements, CosmicFeature, CosmicPlan } from "@/core/contr
 import { entitlementsForPlan, freeEntitlements } from "@/core/contracts/Entitlements";
 import { getCurrentCosmicAccount, requireCosmicAccount } from "@/services/auth/server";
 import { getDatabase, isDatabaseConfigured } from "@/services/database/client";
-import { accountEntitlements } from "@/services/database/schema";
+import { accountEntitlements, adminEntitlementOverrides } from "@/services/database/schema";
 import { getBillingSubscription } from "@/services/billing/repository";
 import { isSubscriptionEntitled } from "@/services/billing/contracts";
 import { isCheckoutConfigured } from "@/services/billing/stripe";
@@ -19,6 +19,13 @@ function validPlan(value: unknown): value is CosmicPlan {
 export async function getAccountEntitlements(accountId: string): Promise<CosmicEntitlements> {
   const override = getDevelopmentEntitlement(accountId);
   if (override && process.env.NODE_ENV !== "production") return entitlementsForPlan(override, "development-override");
+  if (isDatabaseConfigured()) {
+    try {
+      const rows = await getDatabase().select({ plan: adminEntitlementOverrides.plan, expiresAt: adminEntitlementOverrides.expiresAt }).from(adminEntitlementOverrides).where(eq(adminEntitlementOverrides.accountId, accountId)).limit(1);
+      const record = rows[0];
+      if (record && (!record.expiresAt || record.expiresAt > new Date()) && validPlan(record.plan)) return entitlementsForPlan(record.plan, "admin-override");
+    } catch { /* Migrations may not be applied yet; billing remains the safe fallback. */ }
+  }
   return entitlementsForPlan(await getAccountBillingPlan(accountId), "account");
 }
 

@@ -1,5 +1,5 @@
 export type CosmicPlan = "free" | "cosmic_plus";
-export type CosmicEntitlementSource = "guest-default" | "account" | "development-override";
+export type CosmicEntitlementSource = "guest-default" | "account" | "admin-override" | "development-override";
 export type CosmicLimit = "garage.activeVehicles";
 
 export type CosmicFeature =
