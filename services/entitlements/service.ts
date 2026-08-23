@@ -38,7 +38,7 @@ export async function getAccountBillingPlan(accountId: string): Promise<CosmicPl
   if (isCheckoutConfigured()) {
     try {
       const billing = await getBillingSubscription(accountId);
-      return isSubscriptionEntitled(billing) ? "cosmic_plus" : "free";
+      return isSubscriptionEntitled(billing, new Date(), process.env.STRIPE_COSMIC_PLUS_PRICE_ID) ? "cosmic_plus" : "free";
     } catch {
       return "free";
     }

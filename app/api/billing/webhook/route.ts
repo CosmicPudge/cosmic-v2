@@ -1,12 +1,13 @@
 import Stripe from "stripe";
 import { hasBillingWebhookProcessed, markBillingWebhookProcessed } from "@/services/billing/repository";
-import { findBillingUserId, getStripe, isBillingConfigured, syncStripeSubscription } from "@/services/billing/stripe";
+import { findBillingUserId, getStripe, syncStripeSubscription } from "@/services/billing/stripe";
 import { upsertBillingSubscription } from "@/services/billing/repository";
+import { getBillingConfiguration } from "@/services/billing/config";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
-  if (!isBillingConfigured()) return Response.json({ error: "Billing webhook is not configured." }, { status: 503 });
+  if (!getBillingConfiguration().webhookConfigured) return Response.json({ error: "Billing webhook is not configured." }, { status: 503 });
   const signature = request.headers.get("stripe-signature");
   if (!signature) return Response.json({ error: "Missing Stripe signature." }, { status: 400 });
   let event: Stripe.Event;

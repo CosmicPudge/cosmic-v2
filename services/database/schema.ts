@@ -55,7 +55,7 @@ export const billingSubscriptions = pgTable("billing_subscriptions", {
   lastEventId: text("last_event_id"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-}, (table) => [uniqueIndex("billing_subscriptions_user_provider_unique").on(table.userId, table.provider), uniqueIndex("billing_subscriptions_customer_unique").on(table.providerCustomerId), uniqueIndex("billing_subscriptions_subscription_unique").on(table.providerSubscriptionId), index("billing_subscriptions_status_index").on(table.status), check("billing_subscriptions_provider_check", sql`${table.provider} = 'stripe'`), check("billing_subscriptions_status_check", sql`${table.status} in ('inactive', 'trialing', 'active', 'past_due', 'canceled', 'unpaid')`)]);
+}, (table) => [uniqueIndex("billing_subscriptions_user_provider_unique").on(table.userId, table.provider), uniqueIndex("billing_subscriptions_customer_unique").on(table.providerCustomerId), uniqueIndex("billing_subscriptions_subscription_unique").on(table.providerSubscriptionId), index("billing_subscriptions_status_index").on(table.status), check("billing_subscriptions_provider_check", sql`${table.provider} = 'stripe'`), check("billing_subscriptions_status_check", sql`${table.status} in ('inactive', 'trialing', 'active', 'past_due', 'canceled', 'unpaid', 'incomplete', 'incomplete_expired', 'paused')`)]);
 
 export const billingWebhookEvents = pgTable("billing_webhook_events", {
   eventId: text("event_id").primaryKey(),

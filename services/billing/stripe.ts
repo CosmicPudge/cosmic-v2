@@ -19,8 +19,16 @@ export function isCheckoutConfigured() {
 
 export function getStripe() {
   if (!process.env.STRIPE_SECRET_KEY) throw new Error("Stripe billing is not configured.");
-  stripeClient ??= new Stripe(process.env.STRIPE_SECRET_KEY);
+  stripeClient ??= new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: "2026-07-29.dahlia" });
   return stripeClient;
+}
+
+async function getCosmicPlusPrice() {
+  const priceId = process.env.STRIPE_COSMIC_PLUS_PRICE_ID;
+  if (!priceId) throw new BillingActionError("billing_unavailable", "Cosmic+ billing is not configured.", 503);
+  const price = await getStripe().prices.retrieve(priceId);
+  if (!price.active || price.currency !== "usd" || price.unit_amount !== 499 || price.type !== "recurring" || price.recurring?.interval !== "month") throw new BillingActionError("billing_unavailable", "Cosmic+ pricing is not configured correctly.", 503);
+  return price;
 }
 
 function appUrl(request: Request) {
@@ -32,7 +40,7 @@ function dateFromUnix(value: number | null | undefined) {
 }
 
 function statusFromStripe(value: string): BillingSubscriptionStatus {
-  return value === "trialing" || value === "active" || value === "past_due" || value === "canceled" || value === "unpaid" ? value : "inactive";
+  return value === "trialing" || value === "active" || value === "past_due" || value === "canceled" || value === "unpaid" || value === "incomplete" || value === "incomplete_expired" || value === "paused" ? value : "inactive";
 }
 
 export async function ensureStripeCustomer(account: CosmicAccount) {
@@ -45,11 +53,12 @@ export async function ensureStripeCustomer(account: CosmicAccount) {
 
 export async function createCheckoutSession(request: Request, account: CosmicAccount) {
   if (!isCheckoutConfigured()) throw new BillingActionError("billing_unavailable", "Cosmic+ billing is not configured.", 503);
+  const price = await getCosmicPlusPrice();
   const existing = await getBillingSubscription(account.id);
-  if (existing?.providerSubscriptionId && (existing.status === "active" || existing.status === "trialing" || existing.status === "past_due")) throw new BillingActionError("already_subscribed", "Cosmic+ is already active for this account. Manage billing instead.");
+  if (existing?.providerSubscriptionId && ["active", "trialing", "past_due", "incomplete", "paused"].includes(existing.status)) throw new BillingActionError("already_subscribed", "A Cosmic+ subscription already exists for this account. Manage billing instead.");
   if (existing?.providerSubscriptionId && existing.status === "canceled" && existing.currentPeriodEnd && existing.currentPeriodEnd > new Date()) throw new BillingActionError("subscription_cancel_pending", "Cosmic+ is still active until the current period ends. Resume it instead of creating a new subscription.");
   const customer = await ensureStripeCustomer(account);
-  return getStripe().checkout.sessions.create({ mode: "subscription", customer, line_items: [{ price: process.env.STRIPE_COSMIC_PLUS_PRICE_ID!, quantity: 1 }], client_reference_id: account.id, metadata: { cosmic_user_id: account.id, cosmic_plan: "cosmic_plus" }, subscription_data: { metadata: { cosmic_user_id: account.id, cosmic_plan: "cosmic_plus" } }, success_url: `${appUrl(request)}/cosmic-plus?checkout=success`, cancel_url: `${appUrl(request)}/cosmic-plus?checkout=canceled` });
+  return getStripe().checkout.sessions.create({ mode: "subscription", customer, line_items: [{ price: price.id, quantity: 1 }], client_reference_id: account.id, metadata: { cosmic_user_id: account.id, cosmic_plan: "cosmic_plus", cosmic_price_id: price.id }, subscription_data: { metadata: { cosmic_user_id: account.id, cosmic_plan: "cosmic_plus" } }, success_url: `${appUrl(request)}/cosmic-plus?checkout=success`, cancel_url: `${appUrl(request)}/cosmic-plus?checkout=canceled` });
 }
 
 export async function createBillingPortalSession(request: Request, account: CosmicAccount) {
@@ -77,6 +86,7 @@ export async function cancelSubscriptionForAccountDeletion(account: CosmicAccoun
 export async function syncStripeSubscription(subscription: Stripe.Subscription, userId?: string, eventCreated?: number, eventId?: string) {
   const customerId = typeof subscription.customer === "string" ? subscription.customer : subscription.customer.id;
   const existing = await findBillingSubscription({ providerCustomerId: customerId, providerSubscriptionId: subscription.id });
+  if (existing && eventCreated !== undefined && (existing.lastEventCreated !== null && eventCreated < existing.lastEventCreated || existing.lastEventId === eventId)) return existing;
   const resolvedUserId = userId ?? existing?.userId ?? subscription.metadata.cosmic_user_id;
   if (!resolvedUserId) throw new Error("Stripe subscription is not mapped to a Cosmic account.");
   if (!existing && !(await getAuthRepository().findUserById(resolvedUserId))) return null;
