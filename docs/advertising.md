@@ -38,10 +38,36 @@ Provider failure collapses the slot and leaves Cosmic usable. Provider script lo
 2. Add the actual publisher site in AdSense. Verify whether the approved site is `cosmicpudge.shop` or `os.cosmicpudge.shop`; do not assume the subdomain is the publisher root.
 3. Complete Google's site verification and approval. Do not enable live mode before approval.
 4. Create responsive display ad units and record the public publisher ID (`pub-` plus 16 digits) and each unit's public slot ID.
-5. Add `NEXT_PUBLIC_COSMIC_ADS_ENABLED=true`, `NEXT_PUBLIC_COSMIC_ADS_MODE=test`, `NEXT_PUBLIC_ADSENSE_PUBLISHER_ID`, and the eight `NEXT_PUBLIC_ADSENSE_SLOT_*` values to the deployment environment. These are public IDs, not secrets.
+5. Add `NEXT_PUBLIC_COSMIC_ADS_ENABLED=true`, `NEXT_PUBLIC_COSMIC_ADS_MODE=test`, `NEXT_PUBLIC_ADSENSE_PUBLISHER_ID`, and the ten `NEXT_PUBLIC_ADSENSE_SLOT_*` values to the deployment environment. These are public IDs, not secrets.
 6. Configure Google's Privacy & messaging for applicable U.S. state opt-out/GPP handling and EEA/UK/Switzerland consent using a certified TCF path. Verify the resulting `__tcfapi`/`__gpp` signal before live mode.
 7. Confirm `/ads.txt` returns `google.com, pub-…16-digits…, DIRECT, f08c47fec0942fa0`; the route stays 404 until a real publisher ID is configured.
 8. Validate test mode on a non-production/approved test environment. Never click live ads. Then change only the mode to `live` after approval and privacy verification.
+
+## Phase O3 review readiness
+
+The canonical production site is `https://cosmicpudge.shop`. The legacy hostname `os.cosmicpudge.shop` is not referenced by runtime code; configure it as a Vercel/domain-level permanent redirect preserving path and query. Do not add application middleware unless the hosting configuration cannot provide this redirect.
+
+The application remains safe with `NEXT_PUBLIC_COSMIC_ADS_MODE` unset or `disabled`. Do not set `live` before AdSense approval. The Google publisher script has one provider boundary and is loaded only for eligible Free/Guest users when the configured mode, public IDs, and consent readiness permit it. CMP readiness is bounded to eight seconds; failure closes ads without blocking Cosmic.
+
+Public review surfaces are available at `/`, `/os`, `/privacy`, `/terms`, `/support`, and `/ads.txt`. The public sitemap includes only public routes. Account, Finance, Mail, Garage detail, admin, dev, and API routes are excluded from the sitemap/robots allowlist.
+
+### Production checklist
+
+1. Verify ownership of `cosmicpudge.shop` in Google AdSense and complete site review.
+2. Publish and verify `/ads.txt` with the real public publisher ID.
+3. Configure Google's certified CMP with Consent / Do not consent / Manage options and verify `__tcfapi`/`__gpp` behavior.
+4. Publish Privacy and Terms and confirm the public footer links.
+5. Configure public publisher and unit IDs in the deployment environment; these are not secrets.
+6. Validate `test` mode on an approved test environment. Never click ads.
+7. After approval only, enable `live` and manually verify Free, Guest, Cosmic+, responsive, ad blocker, no-fill, and sensitive-surface behavior.
+
+### External dashboard changes required
+
+- Vercel: set `NEXT_PUBLIC_APP_URL=https://cosmicpudge.shop`, configure the canonical domain, and create the legacy-domain redirect.
+- Google AdSense: add/review `cosmicpudge.shop`, complete ownership/site review, configure Privacy & messaging, and verify ads.txt.
+- Google OAuth: replace any callback URI still registered to the legacy hostname, if present.
+- Stripe: set production success/cancel/portal return origins through `NEXT_PUBLIC_APP_URL` and verify webhook configuration.
+- Other providers: replace any OAuth callback or allowed-origin entry that still uses `os.cosmicpudge.shop`.
 
 ## Launch gates
 

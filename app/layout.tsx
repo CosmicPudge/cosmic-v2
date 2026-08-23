@@ -17,11 +17,15 @@ import { EntitlementsProvider } from "@/hooks/os/useEntitlements";
 import { CosmicTransitionProvider } from "@/components/os/transition";
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? "https://cosmicpudge.shop"),
   title: {
     default: "Cosmic OS",
     template: "%s • Cosmic OS",
   },
   description: "The Cosmic desktop experience.",
+  alternates: { canonical: "/" },
+  openGraph: { title: "Cosmic OS", description: "The Cosmic desktop experience.", url: "https://cosmicpudge.shop", siteName: "Cosmic OS", type: "website" },
+  robots: { index: true, follow: true },
   applicationName: "Cosmic OS",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
