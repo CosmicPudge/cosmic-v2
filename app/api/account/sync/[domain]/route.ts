@@ -4,6 +4,7 @@ import { readCloudSnapshot, writeCloudSnapshot } from "@/services/sync/repositor
 import { validateFinanceSync, validateGarageSync, validateNotesSync, validateProjectsSync, validateSchoolSync, validateSettingsSync } from "@/services/sync/validation";
 import type { CosmicSyncDomain } from "@/services/sync/contracts";
 import { assertFinanceSnapshotWriteAllowed } from "@/services/sync/entitlementValidation";
+import { assertSameOrigin } from "@/services/security/origin";
 
 export const dynamic = "force-dynamic";
 const domains: CosmicSyncDomain[] = ["settings", "notes", "projects", "finance", "garage", "school"];
@@ -17,6 +18,7 @@ export async function GET(request: Request, context: { params: Promise<{ domain:
 }
 
 export async function PUT(request: Request, context: { params: Promise<{ domain: string }> }) {
+  assertSameOrigin(request);
   const domain = domainFrom(await context.params); if (!domain) return Response.json({ error: "Unknown sync domain." }, { status: 404 });
   const account = await requireCosmicAccount(request); if (!isDatabaseConfigured()) return Response.json({ error: "Cloud sync requires DATABASE_URL." }, { status: 503 });
   try { const body = await request.json() as { snapshot?: unknown; expectedRevision?: unknown }; if (typeof body.expectedRevision !== "number" || !Number.isSafeInteger(body.expectedRevision) || body.expectedRevision < 0 || !validator(domain)(body.snapshot)) return Response.json({ error: "Invalid sync payload." }, { status: 400 }); if (domain === "finance") { const current = await readCloudSnapshot(account.id, domain); await assertFinanceSnapshotWriteAllowed(account.id, body.snapshot, current?.snapshot); } const result = await writeCloudSnapshot(account.id, domain, body.snapshot, body.expectedRevision); if ("conflict" in result) return Response.json({ error: "A newer cloud revision exists.", snapshot: result.snapshot, revision: result.revision }, { status: 409 }); return Response.json({ revision: result.revision }); } catch (error) { if (error instanceof Response) return error; return Response.json({ error: "Cloud sync is unavailable." }, { status: 503 }); }

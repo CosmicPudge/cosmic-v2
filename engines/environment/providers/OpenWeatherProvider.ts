@@ -1,6 +1,7 @@
 import type { CurrentWeather } from "../models/types";
 
 const API_KEY = process.env.OPENWEATHER_API_KEY;
+type ForecastItem = { main: { temp_max: number; temp_min: number }; rain?: { [key: string]: number }; snow?: { [key: string]: number } };
 
 if (!API_KEY) {
   throw new Error(
@@ -14,14 +15,9 @@ export async function getOpenWeather(
 ): Promise<CurrentWeather & { daylightProgress: number }> {
 
   // Current Weather
-  const currentResponse = await fetch(
-    `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${API_KEY}&units=imperial`,
-    {
-      next: {
-        revalidate: 300,
-      },
-    }
-  );
+  const currentUrl = new URL("https://api.openweathermap.org/data/2.5/weather");
+  currentUrl.search = new URLSearchParams({ lat: String(lat), lon: String(lon), appid: API_KEY ?? "", units: "imperial" }).toString();
+  const currentResponse = await fetch(currentUrl, { redirect: "error", next: { revalidate: 300 } });
 
   if (!currentResponse.ok) {
     throw new Error("Failed to fetch current weather.");
@@ -30,25 +26,20 @@ export async function getOpenWeather(
   const current = await currentResponse.json();
 
   // Forecast
-  const forecastResponse = await fetch(
-    `https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&appid=${API_KEY}&units=imperial`,
-    {
-      next: {
-        revalidate: 300,
-      },
-    }
-  );
+  const forecastUrl = new URL("https://api.openweathermap.org/data/2.5/forecast");
+  forecastUrl.search = new URLSearchParams({ lat: String(lat), lon: String(lon), appid: API_KEY ?? "", units: "imperial" }).toString();
+  const forecastResponse = await fetch(forecastUrl, { redirect: "error", next: { revalidate: 300 } });
 
   if (!forecastResponse.ok) {
     throw new Error("Failed to fetch forecast.");
   }
 
-  const forecast = await forecastResponse.json();
+  const forecast = await forecastResponse.json() as { list: ForecastItem[] };
 
   const today = forecast.list.slice(0, 8);
 
   const precipitation24h = today.reduce(
-    (total: number, item: any) => {
+    (total: number, item: ForecastItem) => {
       return (
         total +
         (item.rain?.["3h"] ?? 0) +
@@ -61,7 +52,7 @@ export async function getOpenWeather(
   const high = Math.round(
     Math.max(
       ...today.map(
-        (item: any) => item.main.temp_max
+      (item: ForecastItem) => item.main.temp_max
       )
     )
   );
@@ -69,7 +60,7 @@ export async function getOpenWeather(
   const low = Math.round(
     Math.min(
       ...today.map(
-        (item: any) => item.main.temp_min
+        (item: ForecastItem) => item.main.temp_min
       )
     )
   );

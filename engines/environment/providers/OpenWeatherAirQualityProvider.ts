@@ -4,9 +4,9 @@ export async function getOpenWeatherAirQuality(
   lat: number,
   lon: number
 ) {
-  const response = await fetch(
-    `https://api.openweathermap.org/data/2.5/air_pollution?lat=${lat}&lon=${lon}&appid=${API_KEY}`
-  );
+  const url = new URL("https://api.openweathermap.org/data/2.5/air_pollution");
+  url.search = new URLSearchParams({ lat: String(lat), lon: String(lon), appid: API_KEY }).toString();
+  const response = await fetch(url, { redirect: "error", cache: "no-store" });
 
   if (!response.ok) {
     throw new Error("Failed to fetch air quality.");

@@ -1,8 +1,10 @@
 import { requireCosmicAccount } from "@/services/auth/server";
 import { updateSubscriptionCancellation } from "@/services/billing/stripe";
+import { assertSameOrigin } from "@/services/security/origin";
 
 export async function POST(request: Request) {
   try {
+    assertSameOrigin(request);
     const account = await requireCosmicAccount(request);
     const body = await request.json().catch(() => ({})) as { action?: unknown };
     if (body.action !== "cancel" && body.action !== "resume") return Response.json({ error: "Choose cancel or resume." }, { status: 400 });
@@ -11,6 +13,6 @@ export async function POST(request: Request) {
     return Response.json({ subscription: { status: subscription.status, currentPeriodEnd: subscription.currentPeriodEnd?.toISOString() ?? null, cancelAtPeriodEnd: subscription.cancelAtPeriodEnd } });
   } catch (error) {
     if (error instanceof Response) return error;
-    return Response.json({ error: error instanceof Error ? error.message : "Subscription update is unavailable." }, { status: 503 });
+    return Response.json({ error: "Subscription update is unavailable." }, { status: 503 });
   }
 }

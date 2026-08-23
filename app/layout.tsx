@@ -1,4 +1,3 @@
-import { Geist, Geist_Mono } from "next/font/google";
 import type { Metadata, Viewport } from "next";
 
 import "./globals.css";
@@ -13,16 +12,6 @@ import { SearchProvider } from "@/components/apps/search/SearchProvider";
 import { SettingsProvider } from "@/components/apps/settings/SettingsProvider";
 import { SystemProvider } from "@/components/os/system/SystemProvider";
 import { AccountProvider } from "@/components/account/AccountProvider";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
 
 export const metadata: Metadata = {
   title: {
@@ -55,7 +44,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className="h-full antialiased"
     >
       <body className="isolate min-h-full overflow-x-hidden bg-[#030511] text-white">
         <SettingsProvider>

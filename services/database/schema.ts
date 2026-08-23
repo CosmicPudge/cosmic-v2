@@ -130,3 +130,36 @@ export const adminAuditLog = pgTable("admin_audit_log", {
   correlationId: text("correlation_id"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [index("admin_audit_log_created_index").on(table.createdAt), index("admin_audit_log_target_index").on(table.targetAccountId), index("admin_audit_log_actor_index").on(table.actorAccountId)]);
+
+export const supportReports = pgTable("support_reports", {
+  id: text("id").primaryKey(),
+  publicReference: text("public_reference").notNull(),
+  accountId: text("account_id").references(() => users.id, { onDelete: "set null" }),
+  type: text("type").notNull(),
+  module: text("module").notNull(),
+  severity: text("severity"),
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  expectedBehavior: text("expected_behavior"),
+  reproductionSteps: text("reproduction_steps"),
+  notes: text("notes"),
+  status: text("status").notNull().default("submitted"),
+  diagnostics: jsonb("diagnostics").notNull().default({}),
+  attachmentRef: text("attachment_ref"),
+  userVisibleMessage: text("user_visible_message"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  resolvedAt: timestamp("resolved_at", { withTimezone: true }),
+}, (table) => [uniqueIndex("support_reports_public_reference_unique").on(table.publicReference), index("support_reports_account_index").on(table.accountId), index("support_reports_status_index").on(table.status), check("support_reports_type_check", sql`${table.type} in ('bug', 'feature', 'feedback')`), check("support_reports_module_check", sql`${table.module} in ('Dashboard', 'Sports', 'Garage', 'Finance', 'Calendar', 'Mail', 'Music', 'Context', 'Search', 'Notes', 'Projects', 'Account', 'Settings', 'Billing', 'Other')`), check("support_reports_severity_check", sql`${table.severity} is null or ${table.severity} in ('cosmetic', 'annoying', 'broken', 'unusable')`), check("support_reports_status_check", sql`${table.status} in ('submitted', 'reviewing', 'needs_info', 'fixing', 'fixed', 'closed')`)]);
+
+export const supportReportEvents = pgTable("support_report_events", {
+  id: text("id").primaryKey(),
+  reportId: text("report_id").notNull().references(() => supportReports.id, { onDelete: "cascade" }),
+  actorAccountId: text("actor_account_id"),
+  kind: text("kind").notNull(),
+  fromStatus: text("from_status"),
+  toStatus: text("to_status"),
+  internalNote: text("internal_note"),
+  userMessage: text("user_message"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [index("support_report_events_report_index").on(table.reportId, table.createdAt), check("support_report_events_kind_check", sql`${table.kind} in ('status', 'note')`)]);

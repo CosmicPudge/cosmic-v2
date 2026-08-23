@@ -6,7 +6,9 @@ export async function GET(request: Request) {
   const lat = searchParams.get("lat");
   const lon = searchParams.get("lon");
 
-  if (!lat || !lon) {
+  const latitude = Number(lat);
+  const longitude = Number(lon);
+  if (!lat || !lon || !Number.isFinite(latitude) || !Number.isFinite(longitude) || latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
     return Response.json(
       {
         error: "Missing coordinates",
@@ -18,10 +20,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    const weather = await getEnvironment(
-      Number(lat),
-      Number(lon)
-    );
+    const weather = await getEnvironment(latitude, longitude);
 
     return Response.json(weather);
   } catch (error) {

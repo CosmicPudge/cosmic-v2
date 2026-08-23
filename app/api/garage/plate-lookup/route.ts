@@ -3,6 +3,7 @@ import { getCurrentCosmicAccount } from "@/services/auth/server";
 import { getAccountEntitlements } from "@/services/entitlements/service";
 import { createCarsXePlateProvider, normalizePlate, normalizeRegion } from "@/services/garage/providers/carsxe";
 import { decodeVinWithNhtsa } from "@/services/garage/providers/nhtsa";
+import { assertSameOrigin } from "@/services/security/origin";
 
 export const dynamic = "force-dynamic";
 const requests = new Map<string, Promise<Response> | undefined>();
@@ -11,6 +12,7 @@ type Response = NextResponse<ResponsePayload>;
 const json = (body: ResponsePayload, status = 200): Response => NextResponse.json(body, { status, headers: { "Cache-Control": "no-store" } });
 
 export async function POST(request: Request) {
+  assertSameOrigin(request);
   const account = await getCurrentCosmicAccount(request);
   if (!account) return json({ error: "Sign in and upgrade to Cosmic+ to use license plate lookup." }, 401);
   const entitlements = await getAccountEntitlements(account.id);

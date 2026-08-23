@@ -2,9 +2,11 @@ import { NextResponse } from "next/server";
 import { getCurrentCosmicAccount } from "@/services/auth/server";
 import { getAccountEntitlements } from "@/services/entitlements/service";
 import { createGooglePlacesRepairShopProvider } from "@/services/garage/providers/googlePlaces";
+import { assertSameOrigin } from "@/services/security/origin";
 
 export const dynamic = "force-dynamic";
 export async function POST(request: Request) {
+  assertSameOrigin(request);
   const account = await getCurrentCosmicAccount(request);
   if (!account) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   const entitlements = await getAccountEntitlements(account.id);

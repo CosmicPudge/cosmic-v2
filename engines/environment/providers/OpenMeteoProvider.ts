@@ -5,9 +5,9 @@ export async function getOpenMeteo(
   lat: number,
   lon: number
 ): Promise<ForecastData> {
-  const response = await fetch(
-    `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,relative_humidity_2m,cloud_cover,precipitation_probability,wind_speed_10m,weather_code,uv_index&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=auto`
-  );
+  const url = new URL("https://api.open-meteo.com/v1/forecast");
+  url.search = new URLSearchParams({ latitude: String(lat), longitude: String(lon), hourly: "temperature_2m,relative_humidity_2m,cloud_cover,precipitation_probability,wind_speed_10m,weather_code,uv_index", daily: "weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max", temperature_unit: "fahrenheit", wind_speed_unit: "mph", timezone: "auto" }).toString();
+  const response = await fetch(url, { redirect: "error", cache: "no-store" });
 
   if (!response.ok) {
     throw new Error("Open-Meteo request failed.");

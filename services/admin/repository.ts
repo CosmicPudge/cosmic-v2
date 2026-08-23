@@ -9,7 +9,7 @@ import { getAuthRepository } from "@/services/auth/repository";
 import { cancelSubscriptionForAccountDeletion } from "@/services/billing/stripe";
 import type { CosmicPlan } from "@/core/contracts/Entitlements";
 
-export type AdminAction = "entitlement.force_plus" | "entitlement.force_free" | "entitlement.reset" | "session.revoke_all" | "account.suspend" | "account.ban" | "account.unban" | "account.delete" | "role.change";
+export type AdminAction = "entitlement.force_plus" | "entitlement.force_free" | "entitlement.reset" | "session.revoke_all" | "account.suspend" | "account.ban" | "account.unban" | "account.delete" | "role.change" | `support.${string}`;
 export type AdminMetadata = Record<string, string | number | boolean | null>;
 
 export async function searchAccounts(query: string) {

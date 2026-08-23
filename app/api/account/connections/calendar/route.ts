@@ -2,6 +2,7 @@ import { requireCosmicAccount } from "@/services/auth/server";
 import { isCredentialEncryptionConfigured } from "@/services/providers/credentialCrypto";
 import { listProviderConnections, setProviderCredentials, upsertProviderConnection } from "@/services/providers/store";
 import { getAccountEntitlements } from "@/services/entitlements/service";
+import { assertSameOrigin } from "@/services/security/origin";
 
 function text(value: unknown, name: string, max: number) {
   if (typeof value !== "string" || !value.trim() || value.length > max) throw new Error(`${name} is invalid.`);
@@ -10,6 +11,7 @@ function text(value: unknown, name: string, max: number) {
 
 export async function POST(request: Request) {
   try {
+    assertSameOrigin(request);
     const account = await requireCosmicAccount(request);
     if (!process.env.DATABASE_URL || !isCredentialEncryptionConfigured()) return Response.json({ error: "Account-owned Calendar storage is not configured." }, { status: 503 });
     const body = await request.json() as Record<string, unknown>;

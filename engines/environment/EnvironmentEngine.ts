@@ -15,6 +15,9 @@ export async function getEnvironment(
   lat: number,
   lon: number
 ): Promise<WeatherData> {
+  if (!Number.isFinite(lat) || !Number.isFinite(lon) || lat < -90 || lat > 90 || lon < -180 || lon > 180) {
+    throw new Error("Invalid weather coordinates.");
+  }
   const [
     currentResult,
     forecastResult,

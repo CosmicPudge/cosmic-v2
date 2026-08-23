@@ -2,6 +2,7 @@ import { requireCosmicAccount } from "@/services/auth/server";
 import { deleteProviderConnection, listProviderConnections } from "@/services/providers/store";
 import { isCredentialEncryptionConfigured } from "@/services/providers/credentialCrypto";
 import { clearWritableEventTargets } from "@/services/calendar/writableEventRegistry";
+import { assertSameOrigin } from "@/services/security/origin";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +20,7 @@ export async function GET(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
+    assertSameOrigin(request);
     const account = await requireCosmicAccount(request);
     const body = await request.json().catch(() => null) as { connectionId?: unknown } | null;
     if (typeof body?.connectionId !== "string") return Response.json({ error: "connectionId is required." }, { status: 400 });
