@@ -8,10 +8,14 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
     "download:mlb": "node scripts/download-mlb-logos.mjs"
   },
   "dependencies": {
+    "@neondatabase/serverless": "^1.1.0",
     "clsx": "^2.1.1",
+    "drizzle-orm": "^0.45.2",
     "framer-motion": "^12.42.2",
     "ical.js": "^2.2.1",
     "leaflet": "^1.9.4",
@@ -20,6 +24,7 @@
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "react-draggable": "^4.7.0",
+    "stripe": "^22.5.0",
     "zustand": "^5.0.14"
   },
   "devDependencies": {
@@ -28,6 +33,8 @@
     "@types/node": "^20.19.43",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "dotenv": "^17.4.2",
+    "drizzle-kit": "^0.31.10",
     "eslint": "^9",
     "eslint-config-next": "16.2.9",
     "tailwindcss": "^4",

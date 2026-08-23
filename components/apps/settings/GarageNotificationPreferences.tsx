@@ -1,0 +1,8 @@
+"use client";
+
+import type { GarageNotificationPreferences } from "@/core/contracts/Settings";
+import type { SettingsRepository } from "@/services/settings/localRepository";
+
+const labels: Array<[keyof GarageNotificationPreferences, string]> = [["maintenanceDueSoon", "Maintenance due soon"], ["maintenanceOverdue", "Maintenance overdue"], ["criticalIssueReminder", "Critical issue reminder"], ["vehicleReminderDue", "Vehicle reminder due"], ["diagnosticCodeDetected", "Diagnostic code detected"], ["connectedVehicleNeedsAttention", "Connected vehicle needs attention"]];
+
+export default function GarageNotificationPreferencesPanel({ settings }: { settings: SettingsRepository }) { const current = settings.data.preferences.garage?.notifications ?? Object.fromEntries(labels.map(([key]) => [key, false])) as unknown as GarageNotificationPreferences; const update = (key: keyof GarageNotificationPreferences) => settings.setPreferences({ ...settings.data.preferences, garage: { notifications: { ...current, [key]: !current[key] } } }); return <div className="mt-5 rounded-xl border border-white/10 bg-black/10 p-3.5"><div className="mb-3"><h4 className="font-semibold">Garage notifications</h4><p className="mt-1 text-xs text-white/35">Preferences are account-scoped and default off. Delivery is not implemented yet.</p></div><div className="grid gap-2 sm:grid-cols-2">{labels.map(([key, label]) => <label key={key} className="flex items-center justify-between gap-3 rounded-lg border border-white/[0.07] px-3 py-2.5 text-sm text-white/65"><span>{label}</span><input type="checkbox" checked={current[key]} onChange={() => update(key)} className="size-4 accent-cyan-300" /></label>)}</div></div>; }

@@ -8,6 +8,7 @@ import { useWidgetContext } from "@/components/os/ui/widget/WidgetContext";
 import { WidgetEmpty, WidgetError, WidgetLoading } from "@/components/os/ui/widget";
 import { useSports } from "@/hooks/os/useSports";
 import { prioritizeFollowedEvents } from "@/services/sports/preferences";
+import { useSettingsRepository } from "@/services/settings/localRepository";
 
 import SportsCurrent from "./SportsCurrent";
 import SportsScores from "./SportsScores";
@@ -17,8 +18,9 @@ import SportsFooter from "./SportsFooter";
 export default function SportsWidget() {
   const { size } = useWidgetContext();
   const { data, loading, error } = useSports();
-  const liveOrFeatured = data ? prioritizeFollowedEvents(data.live)[0] ?? prioritizeFollowedEvents(data.featured)[0] : undefined;
-  const upcoming = data ? prioritizeFollowedEvents(data.upcoming) : [];
+  const { data: settings } = useSettingsRepository();
+  const liveOrFeatured = data ? prioritizeFollowedEvents(data.live, settings.preferences)[0] ?? prioritizeFollowedEvents(data.featured, settings.preferences)[0] : undefined;
+  const upcoming = data ? prioritizeFollowedEvents(data.upcoming, settings.preferences) : [];
   const standings = data ? Object.values(data.standings).flat() : [];
 
   return (

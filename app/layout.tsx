@@ -12,6 +12,7 @@ import { ClockProvider } from "@/components/apps/clock/ClockProvider";
 import { SearchProvider } from "@/components/apps/search/SearchProvider";
 import { SettingsProvider } from "@/components/apps/settings/SettingsProvider";
 import { SystemProvider } from "@/components/os/system/SystemProvider";
+import { AccountProvider } from "@/components/account/AccountProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -58,6 +59,7 @@ export default function RootLayout({
     >
       <body className="isolate min-h-full overflow-x-hidden bg-[#030511] text-white">
         <SettingsProvider>
+          <AccountProvider>
           <SystemProvider>
             <GlobalCosmicBackground />
             <div className="relative z-10 min-h-screen">
@@ -74,6 +76,7 @@ export default function RootLayout({
               </PerformanceProvider>
             </div>
           </SystemProvider>
+          </AccountProvider>
         </SettingsProvider>
       </body>
     </html>

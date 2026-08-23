@@ -3,6 +3,7 @@ import "server-only";
 import { createHash } from "node:crypto";
 
 interface WritableEventTarget {
+  ownerKey: string;
   calendarId: string;
   resourceUrl: string;
   etag: string;
@@ -17,7 +18,7 @@ const targets = new Map<string, WritableEventTarget>();
 
 export function registerWritableEventTarget(target: Omit<WritableEventTarget, "expiresAt">): string {
   const id = createHash("sha256")
-    .update(`${target.calendarId}:${target.resourceUrl}`)
+    .update(`${target.ownerKey}:${target.calendarId}:${target.resourceUrl}`)
     .digest("hex");
 
   targets.set(id, { ...target, expiresAt: Date.now() + TARGET_TTL_MS });
@@ -25,7 +26,7 @@ export function registerWritableEventTarget(target: Omit<WritableEventTarget, "e
   return id;
 }
 
-export function getWritableEventTarget(id: string): WritableEventTarget | null {
+export function getWritableEventTarget(id: string, ownerKey?: string): WritableEventTarget | null {
   const target = targets.get(id);
 
   if (!target || target.expiresAt < Date.now()) {
@@ -33,7 +34,13 @@ export function getWritableEventTarget(id: string): WritableEventTarget | null {
     return null;
   }
 
+  if (ownerKey && target.ownerKey !== ownerKey) return null;
+
   return target;
+}
+
+export function clearWritableEventTargets(ownerKey: string): void {
+  for (const [id, target] of targets) if (target.ownerKey === ownerKey) targets.delete(id);
 }
 
 export function removeWritableEventTarget(id: string): void {

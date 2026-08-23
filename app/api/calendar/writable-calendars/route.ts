@@ -1,10 +1,12 @@
-import { getAppleCalendarWriter } from "@/core/serverCosmic";
+import { getAccountCalendarWriter } from "@/core/serverCosmic";
+import { requireCosmicAccount } from "@/services/auth/server";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const writer = getAppleCalendarWriter();
+    if (process.env.NODE_ENV === "production") await requireCosmicAccount(request);
+    const writer = await getAccountCalendarWriter(request);
 
     if (!writer) {
       return Response.json({ calendars: [] });

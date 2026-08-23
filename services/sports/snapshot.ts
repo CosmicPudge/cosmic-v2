@@ -1,6 +1,8 @@
-import type { SportKind, SportsEvent, SportsProviderError, SportsSnapshot, SportsSource } from "@/core/contracts/Sports";
+import type { SportsEvent, SportsProviderError, SportsSnapshot, SportsSource } from "@/core/contracts/Sports";
 import { sportsProviders } from "./providers";
-import { officialSourceReferences, sportsPreferences } from "./preferences";
+import { officialSourceReferences, sportOrder } from "./preferences";
+import type { CosmicUserPreferences } from "@/core/contracts/Settings";
+import { neutralPreferences } from "@/services/settings/preferences";
 
 function byStart(first: SportsEvent, second: SportsEvent): number {
   return first.start.getTime() - second.start.getTime();
@@ -23,8 +25,8 @@ function unique(events: SportsEvent[]): SportsEvent[] {
   });
 }
 
-export async function getSportsSnapshot(now = new Date()): Promise<SportsSnapshot> {
-  const providers = sportsProviders();
+export async function getSportsSnapshot(now = new Date(), preferences: CosmicUserPreferences = neutralPreferences): Promise<SportsSnapshot> {
+  const providers = sportsProviders(preferences);
   const results = await Promise.all(providers.map(async (provider) => {
     try {
       return { provider, result: await provider.getSnapshot(now) };
@@ -57,15 +59,24 @@ export async function getSportsSnapshot(now = new Date()): Promise<SportsSnapsho
     sources.push({ id: item.provider.id, sport: item.provider.sport, providerName: item.provider.providerName, official: item.provider.official, fallback: item.provider.fallback, status: "unavailable", capabilities: item.provider.capabilities, cacheSeconds: item.provider.cacheSeconds, ...(item.provider.sourceUrl ? { sourceUrl: item.provider.sourceUrl } : {}) });
   }
 
-  const normalized = unique(events);
+  const normalized = unique(events).filter((event) => eventMatchesSportsPreferences(event, preferences));
   const live = normalized.filter(isLive).sort(byStart);
   const upcoming = normalized.filter((event) => !isLive(event) && !isRecent(event)).sort(byStart);
   const recent = normalized.filter((event) => !isLive(event) && isRecent(event)).sort((first, second) => second.start.getTime() - first.start.getTime());
   const featured: SportsEvent[] = [];
-  for (const sport of sportsPreferences.sportOrder) {
+  for (const sport of sportOrder) {
     const event = live.find((item) => item.sport === sport) ?? upcoming.find((item) => item.sport === sport) ?? recent.find((item) => item.sport === sport);
     if (event) featured.push(event);
   }
 
   return { live, upcoming, recent, featured, standings, providerErrors, sources, lastUpdated: now };
+}
+
+function eventMatchesSportsPreferences(event: SportsEvent, preferences: CosmicUserPreferences) {
+  if (!preferences.sports.enabledSports.includes(event.sport)) return false;
+  if (event.sport === "f1" || event.sport === "nascar") {
+    const followed = [...preferences.sports.followedDrivers, ...preferences.sports.followedConstructors];
+    return followed.length > 0;
+  }
+  return preferences.sports.followedTeams.some((team) => team.sport === event.sport && ([event.homeTeam?.id, event.awayTeam?.id].includes(team.teamId) || [event.homeTeam?.name, event.awayTeam?.name].some((name) => name?.toLowerCase() === team.label.toLowerCase())));
 }

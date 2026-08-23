@@ -1,0 +1,22 @@
+"use client";
+
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import type { SportsEvent, SportsStanding } from "@/core/contracts/Sports";
+import { useSettingsRepository } from "@/services/settings/localRepository";
+import { isFollowedName } from "@/services/sports/favorites";
+
+interface TeamPayload { team: { name: string; abbreviation?: string; sport: string }; events: SportsEvent[]; standings: SportsStanding[]; lastUpdated: string; }
+const panel = "rounded-3xl border border-white/10 bg-white/[0.045] p-5";
+
+export default function TeamPage({ sport, teamId }: { sport: string; teamId: string }) {
+  const [data, setData] = useState<TeamPayload | null>(null);
+  const { data: settings } = useSettingsRepository();
+  const [error, setError] = useState<string | null>(null);
+  useEffect(() => { let active = true; fetch(`/api/sports/team/${encodeURIComponent(sport)}/${encodeURIComponent(teamId)}`, { cache: "no-store" }).then(async (response) => { if (!response.ok) throw new Error("Team data is unavailable."); return response.json() as Promise<TeamPayload>; }).then((value) => { if (active) setData(value); }).catch((reason) => { if (active) setError(reason instanceof Error ? reason.message : "Team data is unavailable."); }); return () => { active = false; }; }, [sport, teamId]);
+  if (error) return <section className={panel}><h1 className="text-xl font-semibold text-white">Team unavailable</h1><p className="mt-2 text-sm text-white/55">{error}</p><Link href="/sports" className="mt-4 inline-flex text-sm text-cyan-100/75">Back to Sports</Link></section>;
+  if (!data) return <div className={`${panel} animate-pulse text-sm text-white/45`}>Loading team…</div>;
+  const upcoming = data.events.filter((event) => !["final", "cancelled", "postponed"].includes(event.status)).slice(0, 5);
+  const recent = data.events.filter((event) => ["final", "cancelled", "postponed"].includes(event.status)).slice(-5).reverse();
+  return <div className="mx-auto max-w-[1200px] space-y-5"><Link href="/sports" className="inline-flex text-sm text-white/45 hover:text-white">← Sports overview</Link><header className={panel}><p className="text-xs uppercase tracking-[0.2em] text-cyan-100/45">{sport.toUpperCase()} team</p><div className="mt-2 flex flex-wrap items-center gap-3"><h1 className="text-3xl font-bold text-white">{data.team.name}</h1>{isFollowedName(sport as "nfl" | "mlb" | "nba" | "mls", data.team.name, settings.preferences) ? <span className="rounded-full border border-cyan-200/25 bg-cyan-200/10 px-2.5 py-1 text-xs font-semibold text-cyan-100">Following</span> : null}</div><p className="mt-2 text-sm text-white/45">{data.team.abbreviation ?? ""} · Public provider data · Updated {new Date(data.lastUpdated).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</p></header><div className="grid gap-5 lg:grid-cols-2"><section className={panel}><h2 className="text-xs uppercase tracking-[0.2em] text-white/45">Next games</h2><div className="mt-4 space-y-3">{upcoming.map((event) => <Link key={event.id} href={`/sports/event/${encodeURIComponent(event.id)}`} className="block rounded-2xl border border-white/10 p-3 hover:bg-white/[0.06]"><p className="font-medium text-white">{event.title}</p><p className="mt-1 text-sm text-white/45">{new Date(event.start).toLocaleString()} · {event.status}</p></Link>)}{!upcoming.length ? <p className="mt-3 text-sm text-white/40">No upcoming games returned.</p> : null}</div></section><section className={panel}><h2 className="text-xs uppercase tracking-[0.2em] text-white/45">Recent results</h2><div className="mt-4 space-y-3">{recent.map((event) => <Link key={event.id} href={`/sports/event/${encodeURIComponent(event.id)}`} className="block rounded-2xl border border-white/10 p-3 hover:bg-white/[0.06]"><p className="font-medium text-white">{event.title}</p><p className="mt-1 text-sm text-white/45">{event.status} · {event.homeTeam?.score ?? "—"}–{event.awayTeam?.score ?? "—"}</p></Link>)}{!recent.length ? <p className="mt-3 text-sm text-white/40">No recent results returned.</p> : null}</div></section></div>{data.standings.length ? <section className={panel}><h2 className="text-xs uppercase tracking-[0.2em] text-white/45">Standing context</h2><div className="mt-4 space-y-2 text-sm text-white/65">{data.standings.map((standing) => <p key={standing.id}>{standing.conference ? `${standing.conference} · ` : ""}{standing.record ?? "Record unavailable"}{standing.rank ? ` · Rank ${standing.rank}` : ""}</p>)}</div></section> : null}</div>;
+}

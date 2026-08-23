@@ -1,11 +1,16 @@
-import { serverCosmic } from "@/core/serverCosmic";
 import type { CalendarDateRange } from "@/engines/calendar";
+import { getCurrentCosmicAccount } from "@/services/auth/server";
+import { getCalendarEngineForRequest } from "@/services/calendar/accountProvider";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(
   request: Request
 ) {
+  if (process.env.NODE_ENV === "production" && !(await getCurrentCosmicAccount(request))) return Response.json({ error: "Authentication required for private calendar access." }, { status: 401 });
+  const account = await getCurrentCosmicAccount(request);
+  const calendar = await getCalendarEngineForRequest(account?.id, new URL(request.url).searchParams.get("connectionId") ?? undefined);
+  if (!calendar) return Response.json({ error: "Calendar is not connected.", events: [] }, { status: 200 });
   try {
     const url = new URL(
       request.url
@@ -63,7 +68,7 @@ export async function GET(
       };
 
       const events =
-        await serverCosmic.calendar.getEvents(
+        await calendar.engine.getEvents(
           range
         );
 
@@ -75,14 +80,8 @@ export async function GET(
     /*
      * Existing dashboard behavior.
      */
-    if (
-      !serverCosmic.calendar.isReady()
-    ) {
-      await serverCosmic.calendar.initialize();
-    }
-
     return Response.json(
-      await serverCosmic.calendar.getSnapshot()
+      await calendar.engine.getSnapshot()
     );
   } catch (error) {
     console.error(

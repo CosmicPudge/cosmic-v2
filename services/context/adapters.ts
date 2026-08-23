@@ -56,10 +56,16 @@ export function financeContext(snapshot: FinanceSnapshot, now: Date): CosmicCont
   return getUpcomingRecurringItems(snapshot.recurringItems, now, 7).slice(0, 2).map((item) => ({ id: `finance:recurring:${item.id}`, priority: item.direction === "expense" ? "attention" : "glance", source: "finance", kind: "expected-transaction", title: item.name, subtitle: `Expected ${new Date(item.nextExpectedDate).toLocaleDateString([], { month: "short", day: "numeric" })}`, timestamp: iso(now), startsAt: item.nextExpectedDate, destination: "/finance", metadata: { balancesHidden: snapshot.hideBalances } }));
 }
 
-export function garageContext(selectedVehicle: { id: string; nickname: string } | undefined, summary: { maintenance: Array<{ id: string; name: string }>; statusById: Map<string, string> } | null, now: Date): CosmicContextItem[] {
+export function garageContext(selectedVehicle: { id: string; nickname: string } | undefined, summary: { maintenance: Array<{ id: string; name: string }>; statusById: Map<string, string>; issues?: Array<{ id: string; title: string; status: string; severity: string }> } | null, now: Date): CosmicContextItem[] {
   if (!selectedVehicle || !summary) return [];
+  const critical = summary.issues?.find((item) => item.status !== "resolved" && item.severity === "critical");
+  const high = summary.issues?.find((item) => item.status !== "resolved" && item.severity === "high");
   const overdue = summary.maintenance.find((item) => summary.statusById.get(item.id) === "overdue");
-  return overdue ? [{ id: `garage:${overdue.id}`, priority: "attention", source: "garage", kind: "maintenance", title: overdue.name, subtitle: `${selectedVehicle.nickname} needs attention`, timestamp: iso(now), destination: "/garage" }] : [];
+  const dueSoon = summary.maintenance.find((item) => summary.statusById.get(item.id) === "dueSoon");
+  if (critical) return [{ id: `garage:issue:${critical.id}`, priority: "critical", source: "garage", kind: "issue", title: critical.title, subtitle: `${selectedVehicle.nickname} has a critical issue`, timestamp: iso(now), destination: "/garage" }];
+  if (high) return [{ id: `garage:issue:${high.id}`, priority: "attention", source: "garage", kind: "issue", title: high.title, subtitle: `${selectedVehicle.nickname} has a high-severity issue`, timestamp: iso(now), destination: "/garage" }];
+  const item = overdue ?? dueSoon;
+  return item ? [{ id: `garage:${item.id}`, priority: overdue ? "attention" : "glance", source: "garage", kind: "maintenance", title: item.name, subtitle: `${selectedVehicle.nickname} · ${overdue ? "overdue" : "due soon"}`, timestamp: iso(now), destination: "/garage" }] : [];
 }
 
 export function clockContext(data: ClockLocalData, now: Date): CosmicContextItem[] {

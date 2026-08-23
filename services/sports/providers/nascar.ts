@@ -1,4 +1,4 @@
-import type { SportsEvent, SportsEventStatus } from "@/core/contracts/Sports";
+import type { SportsEvent, SportsEventStatus, SportsStanding } from "@/core/contracts/Sports";
 import type { SportsProvider, SportsProviderResult } from "./types";
 import { fetchJson, isRecord, number, records, string } from "./types";
 
@@ -28,7 +28,7 @@ export class NascarProvider implements SportsProvider {
   readonly official = true;
   readonly fallback = false;
   readonly sourceUrl = "https://www.nascar.com";
-  readonly capabilities = { schedule: true, liveScore: false, standings: false, results: true, sessions: true, telemetry: false };
+  readonly capabilities = { schedule: true, liveScore: true, standings: true, results: true, sessions: true, telemetry: false };
   readonly cacheSeconds = 3_600;
 
   async getSnapshot(now: Date): Promise<SportsProviderResult> {
@@ -51,9 +51,22 @@ export class NascarProvider implements SportsProvider {
         ...(track ? { venue: track } : {}),
         ...(broadcast ? { broadcast } : {}),
         source: "nascar",
-        metadata: { competition: "NASCAR Cup Series", eventName: title, ...(track ? { track } : {}) },
+        metadata: { competition: "NASCAR Cup Series", eventName: title, ...(track ? { track } : {}), ...(number(race.scheduled_laps) !== undefined ? { detail: `${number(race.scheduled_laps)} laps` } : {}) },
       }];
     });
-    return { events };
+    return { events, standings: await this.getStandings(now.getFullYear()) };
+  }
+
+  private async getStandings(season: number): Promise<SportsStanding[]> {
+    try {
+      const payload = await fetchJson(`https://cf.nascar.com/cacher/${season}/1/standings.json`, 900);
+      return records(payload).flatMap((entry) => {
+        const driver = isRecord(entry.driver) ? entry.driver : entry;
+        const name = string(driver.full_name) ?? string(driver.name) ?? [string(driver.first_name), string(driver.last_name)].filter(Boolean).join(" ");
+        if (!name) return [];
+        const rank = number(entry.position) ?? number(entry.rank); const points = number(entry.points); const wins = number(entry.wins);
+        return [{ id: `nascar-standing-${string(driver.driver_id) ?? name}`, sport: "nascar" as const, name, driver: name, ...(rank !== undefined ? { rank } : {}), ...(points !== undefined ? { points } : {}), ...(wins !== undefined ? { wins } : {}), source: "nascar-official" }];
+      });
+    } catch { return []; }
   }
 }

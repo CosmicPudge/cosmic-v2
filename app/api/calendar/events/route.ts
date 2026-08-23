@@ -1,8 +1,9 @@
 import {
-  getAppleCalendarWriter,
+  getAccountCalendarWriter,
   refreshAppleCalendarAfterWrite,
 } from "@/core/serverCosmic";
 import { CalendarDuplicateError } from "@/services/calendar/appleCalendarWriter";
+import { requireCosmicAccount } from "@/services/auth/server";
 
 export const dynamic = "force-dynamic";
 
@@ -26,6 +27,7 @@ function optionalText(value: unknown, maxLength: number): string | undefined {
 
 export async function POST(request: Request) {
   try {
+    if (process.env.NODE_ENV === "production") await requireCosmicAccount(request);
     const body: unknown = await request.json();
 
     if (!body || typeof body !== "object" || Array.isArray(body)) {
@@ -42,7 +44,7 @@ export async function POST(request: Request) {
       return Response.json({ error: "Provide a title, writable calendar, and valid event times." }, { status: 400 });
     }
 
-    const writer = getAppleCalendarWriter();
+    const writer = await getAccountCalendarWriter(request);
 
     if (!writer) {
       return Response.json({ error: "Calendar creation is not configured." }, { status: 403 });
@@ -58,7 +60,7 @@ export async function POST(request: Request) {
       confirmDuplicate: input.confirmDuplicate === true,
     });
 
-    await refreshAppleCalendarAfterWrite();
+    await refreshAppleCalendarAfterWrite(request);
 
     return Response.json({ event }, { status: 201 });
   } catch (error) {

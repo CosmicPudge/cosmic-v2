@@ -1,5 +1,7 @@
 "use client";
 
+import { createScopedStorageKey, migrateLegacyStorage, readScopedOrLegacy } from "@/services/storage/scope";
+
 export interface RecentSearch {
   query: string;
   searchedAt: number;
@@ -18,9 +20,10 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-export function readRecentSearches(): RecentSearch[] {
+export function readRecentSearches(scopeId?: string): RecentSearch[] {
   try {
-    const raw = window.localStorage.getItem(SEARCH_RECENTS_KEY);
+    const stored = readScopedOrLegacy("search", scopeId, SEARCH_RECENTS_KEY); const raw = stored.raw;
+    if (stored.migrated && raw) migrateLegacyStorage("search", raw, scopeId);
     const value: unknown = raw ? JSON.parse(raw) : undefined;
     if (!isRecord(value) || value.version !== 1 || !Array.isArray(value.searches)) return [];
     return value.searches
@@ -39,21 +42,21 @@ export function saveRecentSearch(query: string) {
     ...readRecentSearches().filter((item) => item.query.toLocaleLowerCase() !== normalized.toLocaleLowerCase()),
   ].slice(0, MAX_RECENTS);
   const data: RecentSearchData = { version: 1, searches };
-  window.localStorage.setItem(SEARCH_RECENTS_KEY, JSON.stringify(data));
-  window.dispatchEvent(new CustomEvent(SEARCH_RECENTS_UPDATE_EVENT, { detail: searches }));
+  window.localStorage.setItem(createScopedStorageKey("search"), JSON.stringify(data));
+  window.dispatchEvent(new CustomEvent(SEARCH_RECENTS_UPDATE_EVENT, { detail: { scopeId: createScopedStorageKey("search"), searches } }));
   return searches;
 }
 
 export function clearRecentSearches() {
-  window.localStorage.removeItem(SEARCH_RECENTS_KEY);
+  window.localStorage.removeItem(createScopedStorageKey("search"));
   window.dispatchEvent(new CustomEvent(SEARCH_RECENTS_UPDATE_EVENT, { detail: [] }));
 }
 
-export function replaceRecentSearches(data: RecentSearchData) {
+export function replaceRecentSearches(data: RecentSearchData, scopeId?: string) {
   if (data.version !== 1 || !Array.isArray(data.searches) || !data.searches.every((item) => isRecord(item) && typeof item.query === "string" && typeof item.searchedAt === "number")) {
     throw new Error("Invalid Search history data.");
   }
   const next = { version: 1 as const, searches: data.searches.slice(0, MAX_RECENTS) };
-  window.localStorage.setItem(SEARCH_RECENTS_KEY, JSON.stringify(next));
+  window.localStorage.setItem(createScopedStorageKey("search", scopeId), JSON.stringify(next));
   window.dispatchEvent(new CustomEvent(SEARCH_RECENTS_UPDATE_EVENT, { detail: next.searches }));
 }

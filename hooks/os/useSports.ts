@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { SportKind, SportsEvent, SportsEventStatus, SportsSnapshot } from "@/core/contracts/Sports";
 import { useVisiblePolling } from "@/hooks/useVisiblePolling";
+import { useCosmicScope } from "@/services/storage/scope";
 
 type SportsHookOptions = { sport?: SportKind; refreshMs?: number | ((snapshot: SportsSnapshot | null) => number) };
 type SportsWireEvent = Omit<SportsEvent, "start" | "end"> & { start: string; end?: string };
@@ -16,12 +17,19 @@ type SportsWireSnapshot = Omit<SportsSnapshot, "live" | "upcoming" | "recent" | 
 
 const pendingRequests = new Map<string, Promise<SportsSnapshot>>();
 
+function sportsRefreshMs(snapshot: SportsSnapshot | null): number {
+  if (!snapshot) return 15_000;
+  if (snapshot.live.length) return 15_000;
+  if (snapshot.upcoming.length) return 60_000;
+  return 5 * 60_000;
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function isSportKind(value: string): value is SportKind {
-  return value === "mlb" || value === "nfl" || value === "f1" || value === "nascar" || value === "college-football";
+  return value === "mlb" || value === "nfl" || value === "nba" || value === "mls" || value === "f1" || value === "nascar" || value === "college-football";
 }
 
 function isStatus(value: string): value is SportsEventStatus {
@@ -59,8 +67,8 @@ function isWireSnapshot(value: unknown): value is SportsWireSnapshot {
     && [snapshot.live, snapshot.upcoming, snapshot.recent, snapshot.featured].every((items) => Array.isArray(items) && items.every(isWireEvent));
 }
 
-async function requestSnapshot(sport?: SportKind): Promise<SportsSnapshot> {
-  const key = sport ?? "all";
+async function requestSnapshot(sport: SportKind | undefined, scopeId: string): Promise<SportsSnapshot> {
+  const key = `${scopeId}:${sport ?? "all"}`;
   const pendingRequest = pendingRequests.get(key);
   if (pendingRequest) return pendingRequest;
   const query = sport ? `?sport=${encodeURIComponent(sport)}` : "";
@@ -77,7 +85,8 @@ async function requestSnapshot(sport?: SportKind): Promise<SportsSnapshot> {
 }
 
 export function useSports(options: SportsHookOptions = {}) {
-  const { sport, refreshMs = 60_000 } = options;
+  const { sport, refreshMs = sportsRefreshMs } = options;
+  const scope = useCosmicScope();
   const [data, setData] = useState<SportsSnapshot | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -85,13 +94,14 @@ export function useSports(options: SportsHookOptions = {}) {
   const refresh = useCallback(async () => {
     try {
       setError(null);
-      setData(await requestSnapshot(sport));
+      setData(await requestSnapshot(sport, scope.id));
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Sports data is temporarily unavailable.");
     } finally {
       setLoading(false);
     }
-  }, [sport]);
+  }, [sport, scope.id]);
+  useEffect(() => { const timer = window.setTimeout(() => { setData(null); setLoading(true); setError(null); }, 0); return () => window.clearTimeout(timer); }, [scope.id]);
 
   const intervalMs = typeof refreshMs === "function" ? refreshMs(data) : refreshMs;
   useVisiblePolling(refresh, intervalMs, { immediate: data === null });

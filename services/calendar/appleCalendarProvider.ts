@@ -19,9 +19,10 @@ import {
 import { registerWritableEventTarget } from "./writableEventRegistry";
 
 export interface AppleCalendarConfig {
-  username: string;
-  password: string;
+  username?: string;
+  password?: string;
   serverUrl?: string;
+  ownerKey?: string;
 }
 
 const CACHE_DURATION_MS = 5 * 60 * 1000;
@@ -38,6 +39,7 @@ export class AppleCalendarProvider
   implements CalendarProvider
 {
   private readonly config: CalDavConfig;
+  private readonly ownerKey: string;
 
   private cache: AppleCalendarCache | null = null;
 
@@ -69,6 +71,7 @@ export class AppleCalendarProvider
         process.env.APPLE_CALENDAR_SERVER ??
         "https://caldav.icloud.com",
     };
+    this.ownerKey = config?.ownerKey ?? "development-environment";
   }
 
   async getEvents(
@@ -180,6 +183,7 @@ export class AppleCalendarProvider
                 writable,
                 getWriteId: (resourceHref, etag, event) =>
                   registerWritableEventTarget({
+                    ownerKey: this.ownerKey,
                     calendarId,
                     resourceUrl: new URL(resourceHref, calendar.url).toString(),
                     etag,

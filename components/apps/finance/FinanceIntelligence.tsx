@@ -3,6 +3,8 @@
 import { useMemo, useState } from "react";
 import type { FinanceAccount, FinanceBudget, FinanceCategory, FinanceRecurringCadence, FinanceRecurringItem, FinanceSnapshot, FinanceTransaction, FinanceTransactionDirection } from "@/core/contracts/Finance";
 import { advanceRecurringDate, calculateBudgetStatus, calculateExpectedCashFlow, formatMoney, getAverageDailySpending, getCategoryTotals, getMerchantTotals, getMonthComparison, getUpcomingRecurringItems, parseMoneyToMinor, transactionImpactMinor } from "@/services/finance/domain";
+import CosmicPlusGate from "@/components/cosmic-plus/CosmicPlusGate";
+import { useEntitlements } from "@/hooks/os/useEntitlements";
 
 const inputClass = "mt-1 w-full rounded-xl border border-white/10 bg-black/20 px-3 py-2.5 text-sm text-white outline-none transition placeholder:text-white/25 focus:border-cyan-200/45 focus:ring-4 focus:ring-cyan-300/10";
 const buttonClass = "inline-flex items-center justify-center rounded-xl border border-white/12 bg-white/[0.07] px-3.5 py-2 text-sm font-medium text-white/78 transition hover:bg-white/[0.13] focus:outline-none focus:ring-4 focus:ring-cyan-300/10";
@@ -28,7 +30,13 @@ function recurringDraft(item: FinanceRecurringItem | undefined, accountId: strin
   return { accountId: item?.accountId ?? accountId, name: item?.name ?? "", merchant: item?.merchant ?? "", amount: item ? (item.amountMinor / 100).toFixed(2) : "", direction: item?.direction ?? "expense", cadence: item?.cadence ?? "monthly", nextExpectedDate: item?.nextExpectedDate ?? today(), categoryId: item?.categoryId ?? categoryId };
 }
 
-export default function FinanceIntelligence({ data, selectedAccount, balances, saveTransaction, saveRecurringItem, removeRecurringItem, saveBudget, removeBudget, saveCategory }: Props) {
+export default function FinanceIntelligence(props: Props) {
+  const { data: entitlements, loading } = useEntitlements();
+  if (loading) return null;
+  return entitlements.features["finance.recurring"] ? <FinanceIntelligencePremium {...props} /> : <CosmicPlusGate feature="finance.recurring" title="Recurring Finance, budgets, and forecasting" />;
+}
+
+function FinanceIntelligencePremium({ data, selectedAccount, balances, saveTransaction, saveRecurringItem, removeRecurringItem, saveBudget, removeBudget, saveCategory }: Props) {
   const hidden = data.hideBalances;
   const categories = data.categories.filter((category) => !category.archived);
   const categoryName = (categoryId: string) => data.categories.find((category) => category.id === categoryId)?.name ?? "Other";

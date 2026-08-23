@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import type { MaintenanceStatus, VehicleMaintenanceItem, VehicleReminder } from "@/core/contracts/Garage";
+import type { GarageTimelineEntry, MaintenanceStatus, VehicleMaintenanceItem, VehicleReminder } from "@/core/contracts/Garage";
 import { useGarageRepository } from "@/services/garage/localRepository";
 
 const DAY = 86_400_000;
@@ -33,10 +33,37 @@ export function useGarage() {
   const selected = repository.selectedVehicle;
   const summary = useMemo(() => {
     if (!selected) return null;
+    const mileageHistory = repository.data.mileageHistory.filter((item) => item.vehicleId === selected.id).sort((a, b) => b.date.localeCompare(a.date));
+    const currentMileage = mileageHistory[0]?.mileage ?? selected.currentMileage;
+    const months = new Set(mileageHistory.map((item) => item.date.slice(0, 7)));
+    const oldest = mileageHistory[mileageHistory.length - 1];
+    const newest = mileageHistory[0];
+    const monthSpan = oldest && newest ? (Number(newest.date.slice(0, 4)) - Number(oldest.date.slice(0, 4))) * 12 + Number(newest.date.slice(5, 7)) - Number(oldest.date.slice(5, 7)) : 0;
+    const averageMonthlyMileage = months.size >= 3 && monthSpan > 0 ? Math.max(0, (newest.mileage - oldest.mileage) / monthSpan) : undefined;
     const maintenance = repository.data.maintenance.filter((item) => item.vehicleId === selected.id);
-    const statusById = new Map(maintenance.map((item) => [item.id, maintenanceStatus(item, selected.currentMileage)]));
+    const statusById = new Map(maintenance.map((item) => [item.id, maintenanceStatus(item, currentMileage)]));
     const issues = repository.data.issues.filter((item) => item.vehicleId === selected.id);
-    return { maintenance, statusById, issues, services: repository.data.services.filter((item) => item.vehicleId === selected.id).sort((a, b) => b.date.localeCompare(a.date)), modifications: repository.data.modifications.filter((item) => item.vehicleId === selected.id).sort((a, b) => (b.installedAt ?? b.createdAt).localeCompare(a.installedAt ?? a.createdAt)), expenses: repository.data.expenses.filter((item) => item.vehicleId === selected.id), reminders: repository.data.reminders.filter((item) => item.vehicleId === selected.id), mileageHistory: repository.data.mileageHistory.filter((item) => item.vehicleId === selected.id).sort((a, b) => b.date.localeCompare(a.date)) };
+    const services = repository.data.services.filter((item) => item.vehicleId === selected.id).sort((a, b) => b.date.localeCompare(a.date));
+    const modifications = repository.data.modifications.filter((item) => item.vehicleId === selected.id).sort((a, b) => (b.installedAt ?? b.createdAt).localeCompare(a.installedAt ?? a.createdAt));
+    const expenses = repository.data.expenses.filter((item) => item.vehicleId === selected.id);
+    const reminders = repository.data.reminders.filter((item) => item.vehicleId === selected.id);
+    const fuelRecords = repository.data.fuelRecords.filter((item) => item.vehicleId === selected.id).sort((a, b) => b.date.localeCompare(a.date));
+    const mpgIntervals = fuelRecords.map((record, index) => { const previous = fuelRecords[index + 1]; if (!record.fullTank || !previous?.fullTank || record.odometer <= previous.odometer || record.gallons <= 0) return undefined; return { recordId: record.id, date: record.date, mpg: (record.odometer - previous.odometer) / record.gallons }; }).filter((item): item is { recordId: string; date: string; mpg: number } => Boolean(item));
+    const fuelCostMinor = fuelRecords.reduce((sum, item) => sum + (item.totalCostMinor ?? 0), 0);
+    const latestMpg = mpgIntervals[0]?.mpg;
+    const averageMpg = mpgIntervals.length ? mpgIntervals.reduce((sum, item) => sum + item.mpg, 0) / mpgIntervals.length : undefined;
+    const bestMpg = mpgIntervals.length ? Math.max(...mpgIntervals.map((item) => item.mpg)) : undefined;
+    const timeline: GarageTimelineEntry[] = [
+      ...mileageHistory.map((item) => ({ id: `mileage:${item.id}`, date: item.date, type: "mileage" as const, title: `${item.mileage.toLocaleString()} mile reading`, metadata: item.note, recordId: item.id })),
+      ...fuelRecords.map((item) => ({ id: `fuel:${item.id}`, date: item.date, type: "fuel" as const, title: "Fuel fill-up", metadata: `${item.gallons} gal${item.totalCostMinor !== undefined ? ` · $${(item.totalCostMinor / 100).toFixed(2)}` : ""}`, recordId: item.id })),
+      ...services.map((item) => ({ id: `service:${item.id}`, date: item.date, type: "service" as const, title: item.title, metadata: item.cost === undefined ? undefined : `$${item.cost.toFixed(2)}`, recordId: item.id })),
+      ...issues.map((item) => ({ id: `issue:${item.id}`, date: item.reportedAt, type: "issue" as const, title: item.title, metadata: `${item.severity} · ${item.status}`, recordId: item.id })),
+      ...modifications.map((item) => ({ id: `modification:${item.id}`, date: item.installedAt ?? item.createdAt.slice(0, 10), type: "modification" as const, title: item.name, metadata: item.category, recordId: item.id })),
+      ...reminders.filter((item) => item.completed).map((item) => ({ id: `reminder:${item.id}`, date: item.createdAt.slice(0, 10), type: "reminder" as const, title: item.title, metadata: "Completed", recordId: item.id })),
+      ...(selected.purchaseDate ? [{ id: `purchase:${selected.id}`, date: selected.purchaseDate, type: "purchase" as const, title: "Vehicle purchased", metadata: selected.purchasePrice === undefined ? undefined : `$${selected.purchasePrice.toFixed(2)}` }] : []),
+      ...(selected.soldDate ? [{ id: `sale:${selected.id}`, date: selected.soldDate, type: "sale" as const, title: "Vehicle sold", metadata: selected.salePrice === undefined ? undefined : `$${selected.salePrice.toFixed(2)}` }] : []),
+    ].sort((a, b) => b.date.localeCompare(a.date));
+    return { maintenance, statusById, issues, currentMileage, averageMonthlyMileage, services, modifications, expenses, reminders, mileageHistory, fuelRecords, mpgIntervals, latestMpg, averageMpg, bestMpg, fuelCostMinor, timeline };
   }, [repository.data, selected]);
   return { ...repository, selectedVehicle: selected, summary, loading: !repository.ready, error: undefined as string | undefined };
 }

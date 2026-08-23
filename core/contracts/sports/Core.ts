@@ -2,10 +2,12 @@ import type { BaseballLiveData } from "./Baseball";
 import type { FootballLiveData } from "./Football";
 import type { F1LiveData } from "./F1";
 import type { NascarLiveData } from "./Nascar";
+import type { BasketballLiveData } from "./Basketball";
 
 export type SportKind =
   | "mlb"
   | "nfl"
+  | "nba"
   | "f1"
   | "nascar"
   | "college-football";
@@ -207,6 +209,6 @@ export interface SportsLiveDataBase {
 export type SportsLiveData =
   | BaseballLiveData
   | FootballLiveData
+  | BasketballLiveData
   | F1LiveData
   | NascarLiveData;
-  

@@ -1,0 +1,6 @@
+import Link from "next/link";
+import type { ReactNode } from "react";
+
+export default function GarageCosmicPlusGate({ title, detail, alternative, onBack }: { title: string; detail: string; alternative?: ReactNode; onBack?: () => void }) {
+  return <section className="rounded-2xl border border-fuchsia-200/20 bg-fuchsia-200/[0.06] p-5" role="region" aria-labelledby="garage-cosmic-plus-gate-title"><p className="text-xs font-semibold uppercase tracking-[0.18em] text-fuchsia-100/70">COSMIC+</p><h3 id="garage-cosmic-plus-gate-title" className="mt-2 text-xl font-semibold text-white">{title}</h3><p className="mt-2 max-w-2xl text-sm leading-6 text-white/65">{detail}</p><div className="mt-4 flex flex-wrap items-center gap-3"><Link href="/cosmic-plus" className="rounded-xl border border-fuchsia-200/25 bg-fuchsia-200/15 px-4 py-2.5 text-sm font-semibold text-fuchsia-50 transition hover:bg-fuchsia-200/25 focus:outline-none focus:ring-2 focus:ring-fuchsia-200">Upgrade to Cosmic+</Link>{alternative}{onBack ? <button type="button" onClick={onBack} className="rounded-xl border border-white/15 px-4 py-2.5 text-sm text-white/70 transition hover:bg-white/[0.08] focus:outline-none focus:ring-2 focus:ring-cyan-200">Back to Garage</button> : null}</div></section>;
+}

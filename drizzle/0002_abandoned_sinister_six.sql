@@ -1,0 +1,1 @@
+ALTER TABLE "sync_documents" ADD CONSTRAINT "sync_documents_domain_check" CHECK ("sync_documents"."domain" in ('notes', 'projects', 'finance', 'garage', 'school'));

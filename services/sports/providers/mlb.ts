@@ -58,26 +58,32 @@ function gameEvent(value: unknown): SportsEvent | null {
   };
 }
 
-function angelsStanding(payload: unknown): SportsStanding[] {
+function teamStanding(payload: unknown): SportsStanding[] {
   const root = isRecord(payload) ? payload : undefined;
-  const teamRecord = records(root?.records)
-    .flatMap((division) => records(division.teamRecords))
-    .find((entry) => number(isRecord(entry.team) ? entry.team.id : undefined) === ANGELS_ID);
-  if (!teamRecord) return [];
-  const wins = number(teamRecord.wins);
-  const losses = number(teamRecord.losses);
-  const rank = number(teamRecord.divisionRank) ?? number(teamRecord.leagueRank);
-  return [{ id: "mlb-angels-standing", sport: "mlb", name: "Los Angeles Angels", team: "Los Angeles Angels", ...(rank !== undefined ? { rank } : {}), ...(wins !== undefined ? { wins } : {}), ...(losses !== undefined ? { losses } : {}), ...(wins !== undefined && losses !== undefined ? { record: `${wins}-${losses}` } : {}), source: "mlb-stats-api" }];
+  return records(root?.records).flatMap((division) => records(division.teamRecords).flatMap((entry) => {
+    const team = isRecord(entry.team) ? entry.team : {};
+    const name = string(team.name);
+    if (!name) return [];
+    const wins = number(entry.wins); const losses = number(entry.losses); const rank = number(entry.divisionRank) ?? number(entry.leagueRank);
+    return [{ id: `mlb-${string(team.id) ?? name}-standing`, sport: "mlb" as const, name, team: name, ...(rank !== undefined ? { rank } : {}), ...(wins !== undefined ? { wins } : {}), ...(losses !== undefined ? { losses } : {}), ...(wins !== undefined && losses !== undefined ? { record: `${wins}-${losses}` } : {}), source: "mlb-stats-api" }];
+  }));
 }
 
 export class MlbAngelsProvider implements SportsProvider {
-  readonly id = "mlb-angels";
+  readonly id: string;
   readonly sport = "mlb" as const;
   readonly providerName = "MLB Stats API";
   readonly official = true;
   readonly fallback = false;
   readonly sourceUrl = "https://statsapi.mlb.com";
   readonly capabilities = { schedule: true, liveScore: true, standings: true, results: true, sessions: false, telemetry: false };
+  private readonly teamId: number;
+  private readonly teamName: string;
+  constructor(config: { teamId?: string; teamName?: string } = {}) {
+    this.teamId = Number(config.teamId ?? ANGELS_ID);
+    this.teamName = config.teamName ?? "Los Angeles Angels";
+    this.id = `mlb-${this.teamId}`;
+  }
   private isLive = false;
 
   get cacheSeconds(): number {
@@ -87,12 +93,12 @@ export class MlbAngelsProvider implements SportsProvider {
   async getSnapshot(now: Date): Promise<SportsProviderResult> {
     const start = new Date(now.getTime() - 14 * DAY);
     const end = new Date(now.getTime() + 30 * DAY);
-    const url = `https://statsapi.mlb.com/api/v1/schedule?sportId=1&teamId=${ANGELS_ID}&startDate=${dayKey(start)}&endDate=${dayKey(end)}&hydrate=team`;
+    const url = `https://statsapi.mlb.com/api/v1/schedule?sportId=1&teamId=${this.teamId}&startDate=${dayKey(start)}&endDate=${dayKey(end)}&hydrate=team`;
     const standingsUrl = `https://statsapi.mlb.com/api/v1/standings?leagueId=103&season=${now.getFullYear()}&hydrate=team`;
     const [payload, standingsPayload] = await Promise.all([fetchJson(url, this.cacheSeconds), fetchJson(standingsUrl, 3_600)]);
     const dates = isRecord(payload) ? records(payload.dates) : [];
     const events = dates.flatMap((item) => records(item.games).map(gameEvent).filter((event): event is SportsEvent => event !== null));
     this.isLive = events.some((event) => event.status === "live" || event.status === "delayed");
-    return { events, standings: angelsStanding(standingsPayload) };
+    return { events, standings: teamStanding(standingsPayload) };
   }
 }

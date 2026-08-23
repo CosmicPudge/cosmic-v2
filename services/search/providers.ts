@@ -14,6 +14,7 @@ import { readProjectsSnapshot } from "@/services/projects/localRepository";
 import { settingsSections } from "@/config/settings";
 import { systemDestinations } from "@/config/system";
 import { readFinanceSnapshot } from "@/services/finance/localRepository";
+import { allSportsDirectoryEntries } from "@/services/sports/directory";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -179,8 +180,13 @@ export const garageSearchProvider: SearchProvider = {
 
     for (const vehicle of data.vehicles) {
       // VIN and license plate are intentionally excluded from both matching and output.
-      if (!matches(query, vehicle.nickname, `${vehicle.year}`, vehicle.make, vehicle.model, vehicle.trim, vehicle.status)) continue;
-      records.push({ id: `vehicle:${vehicle.id}`, category: "garage", title: vehicle.nickname || `${vehicle.year} ${vehicle.make} ${vehicle.model}`, subtitle: `${vehicle.year} ${vehicle.make} ${vehicle.model}`, description: `${vehicle.currentMileage.toLocaleString()} miles · ${vehicle.status}`, keywords: ["vehicle", "car", vehicle.make, vehicle.model], icon: "◆", href: "/garage", source: "garage", updatedAt: vehicle.updatedAt, boost: vehicle.status === "active" ? 10 : 0 });
+      if (!matches(query, vehicle.nickname, `${vehicle.year}`, vehicle.make, vehicle.model, vehicle.trim, vehicle.status, vehicle.classification, vehicle.unitNumber, vehicle.department, vehicle.locationLabel, vehicle.usageType)) continue;
+      records.push({ id: `vehicle:${vehicle.id}`, category: "garage", title: vehicle.nickname || `${vehicle.year} ${vehicle.make} ${vehicle.model}`, subtitle: compact([vehicle.unitNumber, vehicle.classification, vehicle.status]).join(" · ") || `${vehicle.year} ${vehicle.make} ${vehicle.model}`, description: `${vehicle.currentMileage.toLocaleString()} miles${vehicle.department ? ` · ${vehicle.department}` : ""}${vehicle.locationLabel ? ` · ${vehicle.locationLabel}` : ""}`, keywords: ["vehicle", "car", vehicle.make, vehicle.model, vehicle.unitNumber ?? "", vehicle.department ?? ""], icon: "◆", href: `/garage/vehicle/${encodeURIComponent(vehicle.id)}`, source: "garage", updatedAt: vehicle.updatedAt, boost: vehicle.status === "active" ? 10 : 0 });
+    }
+
+    for (const collection of data.collections) {
+      if (!matches(query, collection.name, collection.description, collection.kind)) continue;
+      records.push({ id: `collection:${collection.id}`, category: "garage", title: collection.name, subtitle: "Garage collection", description: `${data.vehicles.filter((vehicle) => (vehicle.collectionId ?? "my-garage") === collection.id).length} vehicles`, keywords: ["collection", collection.kind], icon: "▦", href: "/garage", source: "garage", updatedAt: collection.updatedAt, boost: 6 });
     }
 
     const addVehicleRecords = <T extends { id: string; vehicleId: string }>(
@@ -195,15 +201,17 @@ export const garageSearchProvider: SearchProvider = {
         const details = detailsFor(item);
         const title = titleFor(item);
         if (!matches(query, title, vehicle, ...details)) continue;
-        records.push({ id: `${kind}:${item.id}`, category: "garage", title, subtitle: compact([kind, vehicle]).join(" · "), description: truncate(details.join(" · ")), keywords: [kind, "vehicle", "car"], icon: "◇", href: "/garage", source: "garage", boost: boostFor(item) });
+        records.push({ id: `${kind}:${item.id}`, category: "garage", title, subtitle: compact([kind, vehicle]).join(" · "), description: truncate(details.join(" · ")), keywords: [kind, "vehicle", "car"], icon: "◇", href: `/garage/vehicle/${encodeURIComponent(item.vehicleId)}`, source: "garage", boost: boostFor(item) });
       }
     };
 
     addVehicleRecords(data.maintenance, "Maintenance", (item) => item.name, (item) => compact([item.priority, item.nextDueDate]));
     addVehicleRecords(data.issues, "Issue", (item) => item.title, (item) => compact([item.status, item.severity, item.description]), (item) => item.status !== "resolved" ? 28 : 0);
     addVehicleRecords(data.services, "Service", (item) => item.title, (item) => compact([item.date, item.shop, item.description]));
-    addVehicleRecords(data.modifications, "Modification", (item) => item.name, (item) => compact([item.category, item.description]));
+    addVehicleRecords(data.modifications, "Modification", (item) => item.name, (item) => compact([item.category, item.status, item.brand, item.partNumber, item.description]));
+    addVehicleRecords(data.fuelRecords, "Fuel", (item) => item.station ?? "Fuel fill-up", (item) => compact([item.date, item.station, item.fuelGrade, `${item.gallons} gallons`]));
     addVehicleRecords(data.reminders, "Reminder", (item) => item.title, (item) => compact([item.dueDate, item.completed ? "completed" : "open"]), (item) => item.completed ? 0 : 16);
+    addVehicleRecords(data.diagnosticScans, "Diagnostic scan", (item) => item.codes.map((code) => code.code).join(", ") || "Clean diagnostic scan", (item) => compact([item.timestamp, ...item.codes.map((code) => code.description)]), (item) => item.codes.length ? 26 : 4);
 
     return bounded(records, limit);
   },
@@ -365,7 +373,21 @@ export const sportsSearchProvider: SearchProvider = {
     const standingRecords: SearchProviderRecord[] = standings.filter(isRecord)
       .filter((standing) => matches(query, text(standing.name), text(standing.team), text(standing.driver), text(standing.sport)))
       .map((standing, index) => ({ id: `standing:${text(standing.id) || index}`, category: "sports", title: text(standing.name) || text(standing.team) || text(standing.driver), subtitle: compact([text(standing.sport).toUpperCase(), typeof standing.rank === "number" ? `Rank ${standing.rank}` : undefined]).join(" · "), description: compact([text(standing.record), typeof standing.points === "number" ? `${standing.points} points` : undefined]).join(" · "), keywords: compact(["sports", text(standing.sport), text(standing.team), text(standing.driver)]), icon: "◉", href: "/sports", source: "sports" }));
-    return bounded([...events, ...standingRecords], limit);
+    const directoryRecords: SearchProviderRecord[] = allSportsDirectoryEntries
+      .filter((entry) => matches(query, entry.name, entry.shortName, entry.abbreviation, entry.id, entry.sport, entry.entityType))
+      .map((entry) => ({
+        id: `directory:${entry.id}`,
+        category: "sports",
+        title: entry.name,
+        subtitle: compact([entry.sport.toUpperCase(), entry.entityType]).join(" · "),
+        description: compact([entry.abbreviation, entry.driverNumber ? `#${entry.driverNumber}` : undefined, entry.carNumber ? `#${entry.carNumber}` : undefined, "Sports directory"]).join(" · "),
+        keywords: compact(["sports", entry.sport, entry.entityType, entry.abbreviation, entry.shortName]),
+        icon: "◉",
+        href: entry.entityType === "team" ? `/sports/team/${encodeURIComponent(entry.sport)}/${encodeURIComponent(entry.id.slice(entry.sport.length + 1))}` : entry.sport === "f1" ? `/sports/f1/${entry.entityType === "constructor" ? "constructor" : "driver"}/${encodeURIComponent(entry.id)}` : entry.sport === "nascar" && entry.entityType === "driver" ? `/sports/nascar/driver/${encodeURIComponent(entry.id)}` : "/settings",
+        source: "sports",
+        boost: 4,
+      }));
+    return bounded([...events, ...standingRecords, ...directoryRecords], limit);
   },
 };
 

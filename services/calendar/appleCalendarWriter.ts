@@ -33,10 +33,11 @@ export class CalendarDuplicateError extends Error {
 export class AppleCalendarWriter implements CalendarWriter {
   private readonly config: CalDavConfig;
   private readonly defaultCalendarName: string | undefined;
+  private readonly ownerKey: string;
 
-  constructor() {
-    const username = process.env.APPLE_CALENDAR_USERNAME;
-    const password = process.env.APPLE_CALENDAR_PASSWORD;
+  constructor(input?: { username?: string; password?: string; serverUrl?: string; defaultCalendarName?: string; ownerKey?: string }) {
+    const username = input?.username ?? process.env.APPLE_CALENDAR_USERNAME;
+    const password = input?.password ?? process.env.APPLE_CALENDAR_PASSWORD;
 
     if (!username || !password) {
       throw new Error("Apple Calendar credentials are not configured.");
@@ -45,9 +46,10 @@ export class AppleCalendarWriter implements CalendarWriter {
     this.config = {
       username,
       password,
-      serverUrl: process.env.APPLE_CALENDAR_SERVER ?? "https://caldav.icloud.com",
+      serverUrl: input?.serverUrl ?? process.env.APPLE_CALENDAR_SERVER ?? "https://caldav.icloud.com",
     };
-    this.defaultCalendarName = process.env.COSMIC_DEFAULT_CALENDAR_NAME?.trim();
+    this.defaultCalendarName = input?.defaultCalendarName?.trim() ?? process.env.COSMIC_DEFAULT_CALENDAR_NAME?.trim();
+    this.ownerKey = input?.ownerKey ?? "development-environment";
   }
 
   async getWritableCalendars(): Promise<WritableCalendar[]> {
@@ -152,7 +154,7 @@ export class AppleCalendarWriter implements CalendarWriter {
   }
 
   private async getWritableTarget(eventId: string) {
-    const target = getWritableEventTarget(eventId);
+    const target = getWritableEventTarget(eventId, this.ownerKey);
 
     if (!target || target.isRecurring || target.allDay || !target.uid) {
       throw new Error("This event is not available for editing.");

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { serverCosmic } from "@/core/serverCosmic";
+import { getCurrentCosmicAccount } from "@/services/auth/server";
+import { getCalendarEngineForRequest } from "@/services/calendar/accountProvider";
 
 import type { CalendarDateRange } from "@/engines/calendar";
 
@@ -11,11 +12,12 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type",
 };
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    if (!serverCosmic.calendar.isReady()) {
-      await serverCosmic.calendar.initialize();
-    }
+    if (process.env.NODE_ENV === "production" && !(await getCurrentCosmicAccount(request))) return NextResponse.json({ error: "Authentication required." }, { status: 401, headers: corsHeaders });
+    const account = await getCurrentCosmicAccount(request);
+    const calendar = await getCalendarEngineForRequest(account?.id, new URL(request.url).searchParams.get("connectionId") ?? undefined);
+    if (!calendar) return NextResponse.json({ nextEvent: null }, { headers: corsHeaders });
 
     const now = new Date();
 
@@ -29,7 +31,7 @@ export async function GET() {
     };
 
     const events =
-      await serverCosmic.calendar.getEvents(range);
+      await calendar.engine.getEvents(range);
 
     const upcoming = events
       .filter((event) => {

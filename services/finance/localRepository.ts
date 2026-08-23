@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { FinanceAccount, FinanceBudget, FinanceCategory, FinanceRecurringItem, FinanceSnapshot, FinanceTransaction } from "@/core/contracts/Finance";
+import { createScopedStorageKey, migrateLegacyStorage, readScopedOrLegacy, useCosmicScope } from "@/services/storage/scope";
+import { useCloudSnapshotSync } from "@/services/sync/useCloudSnapshotSync";
 
 export const FINANCE_STORAGE_KEY = "cosmic.finance.local-data";
 export const FINANCE_UPDATE_EVENT = "cosmic:finance-local-data-updated";
@@ -41,14 +43,14 @@ export function validateFinanceSnapshot(value: unknown): FinanceSnapshot | null 
   return { version: 1, accounts, categories: categories.length ? categories : defaultFinanceCategories, transactions, recurringItems, budgets, hideBalances: value.hideBalances, ...(isString(value.selectedAccountId) ? { selectedAccountId: value.selectedAccountId } : {}) };
 }
 
-export function readFinanceSnapshot(): FinanceSnapshot {
-  try { return validateFinanceSnapshot(JSON.parse(window.localStorage.getItem(FINANCE_STORAGE_KEY) ?? "null")) ?? emptyFinanceData; } catch { return emptyFinanceData; }
+export function readFinanceSnapshot(scopeId?: string): FinanceSnapshot {
+  try { const stored = readScopedOrLegacy("finance", scopeId); if (stored.migrated && stored.raw) migrateLegacyStorage("finance", stored.raw, scopeId); return validateFinanceSnapshot(JSON.parse(stored.raw ?? "null")) ?? emptyFinanceData; } catch { return emptyFinanceData; }
 }
 
-export function replaceFinanceSnapshot(data: FinanceSnapshot) {
+export function replaceFinanceSnapshot(data: FinanceSnapshot, scopeId?: string) {
   const validated = validateFinanceSnapshot(data);
   if (!validated) throw new Error("Invalid Finance data.");
-  window.localStorage.setItem(FINANCE_STORAGE_KEY, JSON.stringify(validated));
+  window.localStorage.setItem(createScopedStorageKey("finance", scopeId), JSON.stringify(validated));
   window.dispatchEvent(new CustomEvent(FINANCE_UPDATE_EVENT, { detail: validated }));
 }
 
@@ -56,17 +58,21 @@ function same(left: FinanceSnapshot, right: FinanceSnapshot) { return JSON.strin
 function upsert<T extends { id: string }>(items: T[], item: T) { return items.some((entry) => entry.id === item.id) ? items.map((entry) => entry.id === item.id ? item : entry) : [...items, item]; }
 
 export function useFinanceRepository() {
+  const scope = useCosmicScope();
   const [data, setData] = useState<FinanceSnapshot>(emptyFinanceData);
   const [ready, setReady] = useState(false);
+  const [loadedScope, setLoadedScope] = useState<string>();
 
-  useEffect(() => { const timer = window.setTimeout(() => { setData(readFinanceSnapshot()); setReady(true); }, 0); return () => window.clearTimeout(timer); }, []);
-  useEffect(() => { if (ready) replaceFinanceSnapshot(data); }, [data, ready]);
+  useEffect(() => { const timer = window.setTimeout(() => { setData(readFinanceSnapshot(scope.id)); setLoadedScope(scope.id); setReady(true); }, 0); return () => window.clearTimeout(timer); }, [scope.id]);
+  useEffect(() => { if (ready && loadedScope === scope.id) replaceFinanceSnapshot(data, scope.id); }, [data, ready, loadedScope, scope.id]);
   useEffect(() => {
-    const sync = (event: Event) => { const next = event instanceof CustomEvent && event.detail ? validateFinanceSnapshot(event.detail) : readFinanceSnapshot(); if (next) setData((current) => same(current, next) ? current : next); };
-    const storage = (event: StorageEvent) => { if (event.key === FINANCE_STORAGE_KEY) sync(event); };
+    const sync = (event: Event) => { const next = event instanceof CustomEvent && event.detail ? validateFinanceSnapshot(event.detail) : readFinanceSnapshot(scope.id); if (next) setData((current) => same(current, next) ? current : next); };
+    const storage = (event: StorageEvent) => { if (event.key === createScopedStorageKey("finance", scope.id) || event.key === FINANCE_STORAGE_KEY) sync(event); };
     window.addEventListener("storage", storage); window.addEventListener(FINANCE_UPDATE_EVENT, sync);
     return () => { window.removeEventListener("storage", storage); window.removeEventListener(FINANCE_UPDATE_EVENT, sync); };
-  }, []);
+  }, [scope.id]);
+
+  const sync = useCloudSnapshotSync({ domain: "finance", scope, ready: ready && loadedScope === scope.id, data, setData, equals: same });
 
   const saveAccount = useCallback((account: FinanceAccount) => setData((current) => ({ ...current, accounts: upsert(current.accounts, account), selectedAccountId: current.selectedAccountId ?? account.id })), []);
   const saveTransaction = useCallback((transaction: FinanceTransaction) => setData((current) => ({ ...current, transactions: upsert(current.transactions, transaction) })), []);
@@ -79,5 +85,5 @@ export function useFinanceRepository() {
   const setSelectedAccount = useCallback((id?: string) => setData((current) => ({ ...current, selectedAccountId: id })), []);
   const setHideBalances = useCallback((hideBalances: boolean) => setData((current) => ({ ...current, hideBalances })), []);
 
-  return { data, ready, saveAccount, saveTransaction, removeTransaction, saveRecurringItem, removeRecurringItem, saveBudget, removeBudget, saveCategory, setSelectedAccount, setHideBalances };
+  return { data, ready, sync, saveAccount, saveTransaction, removeTransaction, saveRecurringItem, removeRecurringItem, saveBudget, removeBudget, saveCategory, setSelectedAccount, setHideBalances };
 }

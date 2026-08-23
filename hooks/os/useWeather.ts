@@ -1,14 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
-import { cosmic } from "@/core/CosmicCore";
+import { WeatherEngine } from "@/engines/weather";
 import useLocation from "@/hooks/os/useLocation";
 
 import type { WeatherData } from "@/engines/environment";
 
 export default function useWeather() {
   const location = useLocation();
+  const weatherEngine = useRef<WeatherEngine | null>(null);
 
   const [weather, setWeather] =
     useState<WeatherData | null>(null);
@@ -20,23 +21,24 @@ export default function useWeather() {
     useState<string | null>(null);
 
  useEffect(() => {
-  if (!location) return;
+  if (!location) { const timer = window.setTimeout(() => { setLoading(false); setWeather(null); }, 0); return () => window.clearTimeout(timer); }
 
   const { lat, lon } = location;
 
   async function load() {
     try {
-      if (!cosmic.weather.isReady()) {
-        await cosmic.weather.initialize({
+      weatherEngine.current ??= new WeatherEngine();
+      if (!weatherEngine.current.isReady()) {
+        await weatherEngine.current.initialize({
           lat,
           lon,
         });
       } else {
-        await cosmic.weather.refresh();
+        await weatherEngine.current.refresh();
       }
 
       setWeather(
-        await cosmic.weather.getSnapshot()
+        await weatherEngine.current.getSnapshot()
       );
     } catch (err) {
       setError(

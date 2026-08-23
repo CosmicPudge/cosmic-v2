@@ -1,10 +1,10 @@
-import type { SportKind, SportsEvent, SportsEventStatus, SportsTeam } from "@/core/contracts/Sports";
+import type { SportKind, SportsEvent, SportsEventStatus, SportsStanding, SportsTeam } from "@/core/contracts/Sports";
 import type { SportsProvider, SportsProviderResult } from "./types";
 import { date, fetchJson, isRecord, number, records, string } from "./types";
 
 interface TeamProviderConfig {
   id: string;
-  sport: Extract<SportKind, "nfl" | "college-football">;
+  sport: Extract<SportKind, "nfl" | "nba" | "college-football">;
   teamId: string;
   leaguePath: string;
   cacheSeconds: number;
@@ -43,13 +43,13 @@ function competitor(value: unknown): { side?: "home" | "away"; team?: SportsTeam
 
 export class EspnTeamProvider implements SportsProvider {
   readonly id: string;
-  readonly sport: Extract<SportKind, "nfl" | "college-football">;
+  readonly sport: Extract<SportKind, "nfl" | "nba" | "college-football">;
   readonly cacheSeconds: number;
   readonly providerName = "ESPN Scoreboard";
   readonly official = false;
   readonly fallback = true;
   readonly sourceUrl = "https://www.espn.com";
-  readonly capabilities = { schedule: true, liveScore: true, standings: false, results: true, sessions: false, telemetry: false };
+  get capabilities() { return { schedule: true, liveScore: true, standings: this.config.sport === "nfl", results: true, sessions: false, telemetry: false }; }
   private readonly config: TeamProviderConfig;
 
   constructor(config: TeamProviderConfig) {
@@ -87,10 +87,33 @@ export class EspnTeamProvider implements SportsProvider {
         awayTeam,
         ...(venue ? { venue } : {}),
         source: "espn",
-        metadata: { competition: this.sport === "nfl" ? "NFL" : "College Football", ...(seasonType ? { seasonType } : {}) },
+        metadata: { competition: this.sport === "nfl" ? "NFL" : this.sport === "nba" ? "NBA" : "College Football", ...(seasonType ? { seasonType } : {}) },
       }];
     });
-    return { events };
+    return { events, ...(this.config.sport === "nfl" ? { standings: await this.getStandings(year) } : {}) };
+  }
+
+  private async getStandings(season: number): Promise<SportsStanding[]> {
+    try {
+      const payload = await fetchJson(`https://site.api.espn.com/apis/v2/sports/football/nfl/standings?season=${season}`, 900);
+      const root = isRecord(payload) ? payload : {};
+      return records(root.children).flatMap((conference) => {
+        const conferenceName = string(conference.name) ?? string(conference.abbreviation);
+        const divisions = records(conference.children);
+        return (divisions.length ? divisions : [conference]).flatMap((division) => {
+          const divisionName = string(division.name) ?? string(division.abbreviation);
+          const standings = isRecord(division.standings) ? division.standings : {};
+          return records(standings.entries).flatMap((entry) => {
+            const team = isRecord(entry.team) ? entry.team : {};
+            const name = string(team.displayName) ?? string(team.name);
+            if (!name) return [];
+            const stats = Object.fromEntries(records(entry.stats).map((stat) => { const key = string(stat.name); const value = string(stat.displayValue) ?? (number(stat.value) !== undefined ? String(number(stat.value)) : undefined); return key && value ? [key, value] : undefined; }).filter((item): item is [string, string] => Boolean(item)));
+            const wins = number(stats.wins); const losses = number(stats.losses); const rank = number(stats.playoffSeed) ?? number(stats.rank);
+            return [{ id: `nfl-standing-${string(team.id) ?? name}`, sport: "nfl" as const, name, team: name, ...(rank !== undefined ? { rank } : {}), ...(wins !== undefined ? { wins } : {}), ...(losses !== undefined ? { losses } : {}), ...(wins !== undefined && losses !== undefined ? { record: `${wins}-${losses}` } : {}), ...(conferenceName ? { conference: conferenceName } : {}), ...(divisionName ? { division: divisionName } : {}), source: "espn-nfl-standings" }];
+          });
+        });
+      });
+    } catch { return []; }
   }
 }
 

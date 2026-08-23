@@ -9,6 +9,7 @@ import {
   useClockRepository,
 } from "@/services/clock/localRepository";
 import { getAlarmOccurrenceBetween } from "@/services/clock/time";
+import { useCosmicScope } from "@/services/storage/scope";
 import ClockAlarmOverlay from "./ClockAlarmOverlay";
 
 const ClockContext = createContext<ClockRepository | null>(null);
@@ -18,6 +19,8 @@ function ClockRuntime() {
   const now = useClockTick(1_000);
   const lastCheck = useRef<number | null>(null);
   const [activeAlarm, setActiveAlarm] = useState<Alarm | null>(null);
+  const scope = useCosmicScope();
+  useEffect(() => { const timer = window.setTimeout(() => { setActiveAlarm(null); lastCheck.current = null; }, 0); return () => window.clearTimeout(timer); }, [scope.id]);
 
   useEffect(() => {
     if (now === null || !clock.ready) return;

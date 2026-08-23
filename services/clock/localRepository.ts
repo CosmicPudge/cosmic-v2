@@ -11,6 +11,7 @@ import type {
   WorldClockLocation,
 } from "@/core/contracts/Clock";
 import { getStopwatchElapsed, getTimerRemaining } from "./time";
+import { createScopedStorageKey, migrateLegacyStorage, readScopedOrLegacy, useCosmicScope } from "@/services/storage/scope";
 
 export const CLOCK_STORAGE_KEY = "cosmic.clock.local-data";
 export const CLOCK_UPDATE_EVENT = "cosmic:clock-local-data-updated";
@@ -50,9 +51,10 @@ function isHourFormat(value: unknown): value is ClockHourFormat {
   return value === "system" || value === "12" || value === "24";
 }
 
-export function readClockSnapshot() {
+export function readClockSnapshot(scopeId?: string) {
   try {
-    const raw = window.localStorage.getItem(CLOCK_STORAGE_KEY);
+    const stored = readScopedOrLegacy("clock", scopeId); const raw = stored.raw;
+    if (stored.migrated && raw) migrateLegacyStorage("clock", raw, scopeId);
     if (!raw) return defaultClockData;
     const value: unknown = JSON.parse(raw);
     if (!isRecord(value) || value.version !== 1) return defaultClockData;
@@ -82,12 +84,12 @@ export function readClockSnapshot() {
   }
 }
 
-export function replaceClockSnapshot(data: ClockLocalData) {
+export function replaceClockSnapshot(data: ClockLocalData, scopeId?: string) {
   if (data.version !== 1 || !isHourFormat(data.preferences.hourFormat) || !Array.isArray(data.worldClocks) || !Array.isArray(data.alarms) || !Array.isArray(data.timers) || !Array.isArray(data.timerPresets) || !isRecord(data.stopwatch)) {
     throw new Error("Invalid Clock data.");
   }
-  window.localStorage.setItem(CLOCK_STORAGE_KEY, JSON.stringify(data));
-  window.dispatchEvent(new CustomEvent(CLOCK_UPDATE_EVENT, { detail: data }));
+  window.localStorage.setItem(createScopedStorageKey("clock", scopeId), JSON.stringify(data));
+  window.dispatchEvent(new CustomEvent(CLOCK_UPDATE_EVENT, { detail: { scopeId, data } }));
 }
 
 function dataMatches(left: ClockLocalData, right: ClockLocalData) {
@@ -101,32 +103,35 @@ function upsert<T extends { id: string }>(items: T[], item: T) {
 }
 
 export function useClockRepository() {
+  const scope = useCosmicScope();
   const [data, setData] = useState<ClockLocalData>(defaultClockData);
   const [ready, setReady] = useState(false);
+  const [loadedScope, setLoadedScope] = useState<string>();
 
   useEffect(() => {
     const initial = window.setTimeout(() => {
-      setData(readClockSnapshot());
+      setData(readClockSnapshot(scope.id));
+      setLoadedScope(scope.id);
       setReady(true);
     }, 0);
     return () => window.clearTimeout(initial);
-  }, []);
+  }, [scope.id]);
 
   useEffect(() => {
     if (!ready) return;
-    window.localStorage.setItem(CLOCK_STORAGE_KEY, JSON.stringify(data));
-    window.dispatchEvent(new CustomEvent(CLOCK_UPDATE_EVENT, { detail: data }));
-  }, [data, ready]);
+    if (loadedScope !== scope.id) return;
+    replaceClockSnapshot(data, scope.id);
+  }, [data, ready, loadedScope, scope.id]);
 
   useEffect(() => {
     const sync = (incoming: Event) => {
-      const next = incoming instanceof CustomEvent && incoming.detail
-        ? incoming.detail as ClockLocalData
-        : readClockSnapshot();
+      const detail = incoming instanceof CustomEvent ? incoming.detail as { scopeId?: string; data?: ClockLocalData } : undefined;
+      if (detail?.scopeId && detail.scopeId !== scope.id) return;
+      const next = detail?.data ?? readClockSnapshot(scope.id);
       setData((current) => dataMatches(current, next) ? current : next);
     };
     const storageSync = (incoming: StorageEvent) => {
-      if (incoming.key === CLOCK_STORAGE_KEY) sync(incoming);
+      if (incoming.key === createScopedStorageKey("clock", scope.id) || incoming.key === CLOCK_STORAGE_KEY) sync(incoming);
     };
 
     window.addEventListener("storage", storageSync);
@@ -135,7 +140,7 @@ export function useClockRepository() {
       window.removeEventListener("storage", storageSync);
       window.removeEventListener(CLOCK_UPDATE_EVENT, sync);
     };
-  }, []);
+  }, [scope.id]);
 
   const update = useCallback(
     (operation: (current: ClockLocalData) => ClockLocalData) => setData(operation),

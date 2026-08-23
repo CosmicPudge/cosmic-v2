@@ -1,4 +1,5 @@
-import { consumeGoogleState } from "../route";
-import { exchangeGoogleCode, storeGmailToken } from "@/services/mail/gmail";
+import { exchangeGoogleCode, storeAccountGmailToken } from "@/services/mail/gmail";
+import { consumeOAuthState, expiredOAuthStateCookie } from "@/services/auth/oauthState";
+import { requireCosmicAccount } from "@/services/auth/server";
 export const dynamic = "force-dynamic";
-export async function GET(request: Request) { const url = new URL(request.url); if (!consumeGoogleState(url.searchParams.get("state")) || !url.searchParams.get("code")) return Response.json({ error: "Invalid or expired OAuth state." }, { status: 400 }); try { storeGmailToken(await exchangeGoogleCode(url.searchParams.get("code")!)); return Response.redirect(new URL("/gmail?connected=gmail", request.url), 302); } catch { return Response.json({ error: "Gmail connection failed." }, { status: 502 }); } }
+export async function GET(request: Request) { const url = new URL(request.url); let account; try { account = await requireCosmicAccount(request); } catch { return Response.json({ error: "Sign in before connecting Gmail." }, { status: 401 }); } if (!consumeOAuthState(request, url.searchParams.get("state"), account.id) || !url.searchParams.get("code")) return Response.json({ error: "Invalid or expired OAuth state." }, { status: 400 }); try { await storeAccountGmailToken(account.id, await exchangeGoogleCode(url.searchParams.get("code")!)); return new Response(null, { status: 302, headers: { Location: new URL("/gmail?connected=gmail", request.url).toString(), "Set-Cookie": expiredOAuthStateCookie() } }); } catch { return Response.json({ error: "Gmail connection failed." }, { status: 502 }); } }

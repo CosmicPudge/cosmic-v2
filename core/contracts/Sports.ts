@@ -1,4 +1,4 @@
-export type SportKind = "mlb" | "nfl" | "f1" | "nascar" | "college-football";
+export type SportKind = "mlb" | "nfl" | "nba" | "mls" | "f1" | "nascar" | "college-football";
 
 export type SportsEventStatus =
   | "scheduled"
@@ -26,6 +26,9 @@ export interface SportsEventMetadata {
   country?: string;
   track?: string;
   detail?: string;
+  period?: number;
+  clock?: string;
+  minute?: number;
   sessionKind?: "practice" | "qualifying" | "sprint" | "race";
 }
 
@@ -80,8 +83,15 @@ export interface SportsStanding {
   driver?: string;
   wins?: number;
   losses?: number;
+  draws?: number;
   points?: number;
+  goalDifference?: number;
   record?: string;
+  conference?: string;
+  division?: string;
+  percentage?: string;
+  gamesBehind?: string;
+  streak?: string;
   source: string;
 }
 

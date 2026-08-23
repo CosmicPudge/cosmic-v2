@@ -1,0 +1,35 @@
+"use client";
+
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import { useCosmicAccount } from "@/components/account/AccountProvider";
+import { useBillingStatus } from "@/hooks/os/useBillingStatus";
+import { useEntitlements } from "@/hooks/os/useEntitlements";
+
+function dateLabel(value: string | null) { return value ? new Date(value).toLocaleDateString(undefined, { dateStyle: "medium" }) : "—"; }
+
+export default function CosmicPlusPage() {
+  const { account } = useCosmicAccount();
+  const { data: entitlements, refresh: refreshEntitlements } = useEntitlements();
+  const { data: billing, loading, refresh } = useBillingStatus();
+  const [busy, setBusy] = useState<string>(); const [error, setError] = useState<string>(); const [checkoutPending, setCheckoutPending] = useState(false);
+  const status = billing.subscription?.status;
+  const canceling = billing.subscription?.cancelAtPeriodEnd === true;
+  const plus = entitlements.plan === "cosmic_plus";
+  const paymentNeedsAttention = status === "past_due" || status === "unpaid";
+
+  useEffect(() => {
+    if (typeof window === "undefined" || new URLSearchParams(window.location.search).get("checkout") !== "success") return;
+    let cancelled = false; let attempts = 0; const pendingTimer = window.setTimeout(() => setCheckoutPending(true), 0);
+    const poll = async () => { if (cancelled) return; await refresh(); await refreshEntitlements(); window.dispatchEvent(new Event("cosmic:entitlements-updated")); attempts += 1; if (attempts >= 5 || entitlements.plan === "cosmic_plus") { setCheckoutPending(false); return; } window.setTimeout(() => void poll(), 2000); };
+    void poll(); return () => { cancelled = true; window.clearTimeout(pendingTimer); };
+  }, [entitlements.plan, refresh, refreshEntitlements]);
+
+  async function billingAction(endpoint: string, body?: object) {
+    setBusy(endpoint); setError(undefined);
+    try { const response = await fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json" }, ...(body ? { body: JSON.stringify(body) } : {}) }); const payload = await response.json() as { url?: string; error?: string; code?: string }; if (!response.ok) throw new Error(payload.error ?? "Billing action failed."); if (payload.url) { window.location.assign(payload.url); return; } await refresh(); await refreshEntitlements(); window.dispatchEvent(new Event("cosmic:entitlements-updated")); } catch (caught) { setError(caught instanceof Error ? caught.message : "Billing action failed."); } finally { setBusy(undefined); }
+  }
+
+  const hasExistingBilling = Boolean(billing.subscription || billing.customerExists);
+  return <main className="mx-auto max-w-3xl p-6 sm:p-10"><p className="text-xs uppercase tracking-[0.22em] text-fuchsia-100/60">Cosmic+</p><h1 className="mt-3 text-4xl font-black tracking-tight text-white">The complete Cosmic experience.</h1><p className="mt-4 max-w-2xl text-base leading-7 text-white/55">Cosmic+ makes the Cosmic tools you already use smarter, more automated, more scalable, and ad-free. Billing is handled securely through Stripe Checkout.</p>{checkoutPending ? <p role="status" className="mt-5 rounded-2xl border border-cyan-200/15 bg-cyan-200/[0.04] p-4 text-sm text-cyan-50/80">Confirming your Cosmic+ subscription…</p> : null}<section className="mt-8 rounded-3xl border border-fuchsia-200/15 bg-fuchsia-200/[0.055] p-6"><p className="text-sm uppercase tracking-widest text-fuchsia-100/60">Current plan</p><p className="mt-2 text-3xl font-bold text-white">{loading ? "Loading…" : plus ? "Cosmic+" : "Free"}</p><p className="mt-2 text-sm text-white/45">Entitlement source: {entitlements.source}</p>{plus && billing.subscription ? <p className="mt-3 text-sm text-white/60">{canceling ? `Active until ${dateLabel(billing.subscription.currentPeriodEnd)}` : `Renews ${dateLabel(billing.subscription.currentPeriodEnd)}`}</p> : null}{paymentNeedsAttention ? <p className="mt-3 text-sm font-medium text-amber-100/85">Your Cosmic+ payment needs attention.</p> : null}{!plus && status === "unpaid" ? <p className="mt-3 text-sm text-white/60">Your previous subscription ended. Manage billing to resolve payment, or start a new subscription.</p> : null}</section>{error ? <p role="alert" className="mt-5 rounded-2xl border border-rose-200/15 bg-rose-200/[0.06] p-4 text-sm text-rose-100">{error}</p> : null}<div className="mt-6 flex flex-wrap gap-3">{!account ? <Link href="/account" className="rounded-xl border border-fuchsia-200/20 bg-fuchsia-200/10 px-4 py-3 text-sm font-semibold text-fuchsia-50">Sign in to upgrade</Link> : plus ? <><button type="button" disabled={Boolean(busy) || !billing.configured} onClick={() => void billingAction("/api/billing/portal")} className="rounded-xl border border-fuchsia-200/20 bg-fuchsia-200/10 px-4 py-3 text-sm font-semibold text-fuchsia-50 disabled:opacity-40">{busy === "/api/billing/portal" ? "Opening…" : "Manage billing"}</button>{billing.subscription && status !== "unpaid" ? <button type="button" disabled={Boolean(busy) || !billing.configured} onClick={() => void billingAction("/api/billing/subscription", { action: canceling ? "resume" : "cancel" })} className="rounded-xl border border-white/15 px-4 py-3 text-sm text-white/70 disabled:opacity-40">{busy === "/api/billing/subscription" ? "Updating…" : canceling ? "Resume Cosmic+" : "Cancel at period end"}</button> : null}</> : status === "unpaid" && hasExistingBilling ? <button type="button" disabled={Boolean(busy) || !billing.configured} onClick={() => void billingAction("/api/billing/portal")} className="rounded-xl border border-fuchsia-200/20 bg-fuchsia-200/10 px-4 py-3 text-sm font-semibold text-fuchsia-50 disabled:opacity-40">{busy === "/api/billing/portal" ? "Opening…" : "Manage billing"}</button> : <button type="button" disabled={Boolean(busy) || !billing.configured} onClick={() => void billingAction("/api/billing/checkout", { plan: "cosmic_plus" })} className="rounded-xl border border-fuchsia-200/20 bg-fuchsia-200/10 px-4 py-3 text-sm font-semibold text-fuchsia-50 disabled:opacity-40">{busy === "/api/billing/checkout" ? "Opening Checkout…" : billing.configured ? "Upgrade to Cosmic+" : "Billing not configured"}</button>}</div><div className="mt-6 grid gap-3 sm:grid-cols-2">{["No third-party advertising anywhere", "Up to unlimited active Garage vehicles", "Automatic VIN and future plate lookup", "Advanced Context, intelligence, and automation"].map((item) => <div key={item} className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 text-sm text-white/65">{item}</div>)}</div><p className="mt-6 rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-sm leading-6 text-white/45">Stripe manages payment details, invoices, and receipts. Cosmic stores only safe billing identifiers and subscription state. Existing Free functionality and account-owned data remain available after downgrade.</p><Link href="/account" className="mt-6 inline-flex rounded-xl border border-white/15 bg-white/[0.06] px-4 py-3 text-sm text-white/75">Back to Account</Link></main>;
+}

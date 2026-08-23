@@ -17,3 +17,5 @@ export * from "./School";
 export * from "./Timeline";
 export * from "./Finance";
 export * from "./Context";
+export * from "./Account";
+export * from "./Entitlements";

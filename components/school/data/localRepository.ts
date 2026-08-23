@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { AcademicGoal, Assignment, Course, Grade, SchoolResource, SchoolTerm } from "@/core/contracts/School";
+import { createScopedStorageKey, migrateLegacyStorage, readScopedOrLegacy, useCosmicScope } from "@/services/storage/scope";
+import { useCloudSnapshotSync } from "@/services/sync/useCloudSnapshotSync";
 
 export const SCHOOL_STORAGE_KEY = "cosmic.school.local-data";
 export const SCHOOL_UPDATE_EVENT = "cosmic:school-local-data-updated";
@@ -34,9 +36,10 @@ function isLocalSchoolData(value: unknown): value is LocalSchoolData {
     && Array.isArray(value.resources) && value.resources.every(hasId);
 }
 
-export function readSchoolSnapshot(): LocalSchoolData {
+export function readSchoolSnapshot(scopeId?: string): LocalSchoolData {
   try {
-    const raw = window.localStorage.getItem(SCHOOL_STORAGE_KEY);
+    const stored = readScopedOrLegacy("school", scopeId); const raw = stored.raw;
+    if (stored.migrated && raw) migrateLegacyStorage("school", raw, scopeId);
     if (!raw) return emptySchoolData;
     const parsed: unknown = JSON.parse(raw);
     if (!isRecord(parsed) || parsed.version !== VERSION) return emptySchoolData;
@@ -52,50 +55,56 @@ export function readSchoolSnapshot(): LocalSchoolData {
   } catch { return emptySchoolData; }
 }
 
-export function replaceSchoolSnapshot(data: LocalSchoolData) {
+export function replaceSchoolSnapshot(data: LocalSchoolData, scopeId?: string) {
   if (!isLocalSchoolData(data)) throw new Error("Invalid School data.");
-  window.localStorage.setItem(SCHOOL_STORAGE_KEY, JSON.stringify(data));
-  window.dispatchEvent(new CustomEvent(SCHOOL_UPDATE_EVENT, { detail: data }));
+  window.localStorage.setItem(createScopedStorageKey("school", scopeId), JSON.stringify(data));
+  window.dispatchEvent(new CustomEvent(SCHOOL_UPDATE_EVENT, { detail: { scopeId, data } }));
 }
 
 export function useLocalSchoolRepository() {
+  const scope = useCosmicScope();
   const [data, setData] = useState<LocalSchoolData>(emptySchoolData);
   const [ready, setReady] = useState(false);
+  const [loadedScope, setLoadedScope] = useState<string>();
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
-      setData(readSchoolSnapshot());
+      setData(readSchoolSnapshot(scope.id));
+      setLoadedScope(scope.id);
       setReady(true);
     }, 0);
     return () => window.clearTimeout(timeout);
-  }, []);
+  }, [scope.id]);
+  const sync = useCloudSnapshotSync({ domain: "school", scope, ready: ready && loadedScope === scope.id, data, setData, equals: (left, right) => JSON.stringify(left) === JSON.stringify(right) });
   useEffect(() => {
     if (!ready) return;
-    window.localStorage.setItem(SCHOOL_STORAGE_KEY, JSON.stringify(data));
-    window.dispatchEvent(new CustomEvent(SCHOOL_UPDATE_EVENT, { detail: data }));
-  }, [data, ready]);
+    if (loadedScope !== scope.id) return;
+    replaceSchoolSnapshot(data, scope.id);
+  }, [data, ready, loadedScope, scope.id]);
   useEffect(() => {
     function sync(event: StorageEvent) {
-      if (event.key === SCHOOL_STORAGE_KEY) setData(readSchoolSnapshot());
+      if (event.key === createScopedStorageKey("school", scope.id) || event.key === SCHOOL_STORAGE_KEY) setData(readSchoolSnapshot(scope.id));
     }
     window.addEventListener("storage", sync);
     return () => window.removeEventListener("storage", sync);
-  }, []);
+  }, [scope.id]);
   useEffect(() => {
     function syncLocal(event: Event) {
       if (!(event instanceof CustomEvent)) return;
-      const next: unknown = event.detail;
+      const detail = event.detail as { scopeId?: string; data?: unknown };
+      if (detail.scopeId && detail.scopeId !== scope.id) return;
+      const next: unknown = detail.data ?? detail;
       if (isLocalSchoolData(next)) setData(next);
     }
     window.addEventListener(SCHOOL_UPDATE_EVENT, syncLocal);
     return () => window.removeEventListener(SCHOOL_UPDATE_EVENT, syncLocal);
-  }, []);
+  }, [scope.id]);
 
   const update = useCallback((recipe: (current: LocalSchoolData) => LocalSchoolData) => setData((current) => recipe(current)), []);
   const removeCourse = useCallback((id: string) => update((current) => ({ ...current, courses: current.courses.filter((course) => course.id !== id), assignments: current.assignments.filter((assignment) => assignment.courseId !== id), grades: current.grades.filter((grade) => grade.courseId !== id), resources: current.resources.filter((resource) => resource.courseId !== id) })), [update]);
 
   return {
-    data, ready,
+    data, ready, sync,
     addTerm: (term: SchoolTerm) => update((current) => ({ ...current, terms: [...current.terms.map((item) => ({ ...item, active: term.active ? false : item.active })), term] })),
     saveTerm: (term: SchoolTerm) => update((current) => ({ ...current, terms: [...current.terms.filter((item) => item.id !== term.id).map((item) => ({ ...item, active: term.active ? false : item.active })), term] })),
     removeTerm: (id: string) => update((current) => {

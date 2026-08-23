@@ -1,8 +1,9 @@
 import {
-  getAppleCalendarWriter,
+  getAccountCalendarWriter,
   refreshAppleCalendarAfterWrite,
 } from "@/core/serverCosmic";
 import { CalDavConflictError } from "@/services/calendar/caldav";
+import { requireCosmicAccount } from "@/services/auth/server";
 
 const MAX_TITLE_LENGTH = 200;
 const MAX_LOCATION_LENGTH = 300;
@@ -20,6 +21,7 @@ function getEventId(context: { params: Promise<{ id: string }> }): Promise<strin
 
 export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
+    if (process.env.NODE_ENV === "production") await requireCosmicAccount(request);
     const id = await getEventId(context);
     const body = await request.json() as Record<string, unknown>;
     const title = optionalText(body.title, MAX_TITLE_LENGTH);
@@ -30,7 +32,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
       return Response.json({ error: "Provide a title and valid event times." }, { status: 400 });
     }
 
-    const writer = getAppleCalendarWriter();
+    const writer = await getAccountCalendarWriter(request);
     if (!writer) return Response.json({ error: "Calendar editing is not configured." }, { status: 403 });
 
     const event = await writer.updateEvent({
@@ -41,7 +43,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
       ...(optionalText(body.location, MAX_LOCATION_LENGTH) ? { location: optionalText(body.location, MAX_LOCATION_LENGTH) } : {}),
       ...(optionalText(body.description, MAX_DESCRIPTION_LENGTH) ? { description: optionalText(body.description, MAX_DESCRIPTION_LENGTH) } : {}),
     });
-    await refreshAppleCalendarAfterWrite();
+    await refreshAppleCalendarAfterWrite(request);
     return Response.json({ event });
   } catch (error) {
     if (error instanceof CalDavConflictError) return Response.json({ error: error.message, conflict: true }, { status: 409 });
@@ -49,12 +51,13 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
   }
 }
 
-export async function DELETE(_request: Request, context: { params: Promise<{ id: string }> }) {
+export async function DELETE(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
-    const writer = getAppleCalendarWriter();
+    if (process.env.NODE_ENV === "production") await requireCosmicAccount(request);
+    const writer = await getAccountCalendarWriter(request);
     if (!writer) return Response.json({ error: "Calendar editing is not configured." }, { status: 403 });
     await writer.deleteEvent({ eventId: await getEventId(context) });
-    await refreshAppleCalendarAfterWrite();
+    await refreshAppleCalendarAfterWrite(request);
     return new Response(null, { status: 204 });
   } catch (error) {
     if (error instanceof CalDavConflictError) return Response.json({ error: error.message, conflict: true }, { status: 409 });

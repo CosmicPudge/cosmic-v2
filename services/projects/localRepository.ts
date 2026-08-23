@@ -8,6 +8,8 @@ import type {
   ProjectsLocalData,
   ProjectTask,
 } from "@/core/contracts/Projects";
+import { createScopedStorageKey, migrateLegacyStorage, readScopedOrLegacy, useCosmicScope } from "@/services/storage/scope";
+import { useCloudSnapshotSync } from "@/services/sync/useCloudSnapshotSync";
 
 export const PROJECTS_STORAGE_KEY = "cosmic.projects.local-data";
 export const PROJECTS_UPDATE_EVENT = "cosmic:projects-updated";
@@ -26,9 +28,10 @@ function isEntity<T extends { id: string }>(value: unknown): value is T {
   return isRecord(value) && typeof value.id === "string";
 }
 
-export function readProjectsSnapshot(): ProjectsLocalData {
+export function readProjectsSnapshot(scopeId?: string): ProjectsLocalData {
   try {
-    const raw = localStorage.getItem(PROJECTS_STORAGE_KEY);
+    const stored = readScopedOrLegacy("projects", scopeId); const raw = stored.raw;
+    if (stored.migrated && raw) migrateLegacyStorage("projects", raw, scopeId);
     const value: unknown = raw ? JSON.parse(raw) : undefined;
 
     if (!isRecord(value) || value.version !== 1) {
@@ -55,12 +58,12 @@ export function readProjectsSnapshot(): ProjectsLocalData {
   }
 }
 
-export function replaceProjectsSnapshot(data: ProjectsLocalData) {
+export function replaceProjectsSnapshot(data: ProjectsLocalData, scopeId?: string) {
   if (data.version !== 1 || !Array.isArray(data.projects) || !Array.isArray(data.tasks) || !Array.isArray(data.milestones) || ![...data.projects, ...data.tasks, ...data.milestones].every((item) => isRecord(item) && typeof item.id === "string")) {
     throw new Error("Invalid Projects data.");
   }
-  localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(data));
-  window.dispatchEvent(new CustomEvent(PROJECTS_UPDATE_EVENT, { detail: data }));
+  localStorage.setItem(createScopedStorageKey("projects", scopeId), JSON.stringify(data));
+  window.dispatchEvent(new CustomEvent(PROJECTS_UPDATE_EVENT, { detail: { scopeId, data } }));
 }
 
 function upsert<T extends { id: string }>(list: T[], item: T) {
@@ -74,32 +77,37 @@ function dataMatches(left: ProjectsLocalData, right: ProjectsLocalData) {
 }
 
 export function useProjectsRepository() {
+  const scope = useCosmicScope();
   const [data, setData] = useState<ProjectsLocalData>(emptyProjectsData);
   const [ready, setReady] = useState(false);
+  const [loadedScope, setLoadedScope] = useState<string>();
 
   useEffect(() => {
     const initial = window.setTimeout(() => {
-      setData(readProjectsSnapshot());
+      setData(readProjectsSnapshot(scope.id));
+      setLoadedScope(scope.id);
       setReady(true);
     }, 0);
 
     return () => window.clearTimeout(initial);
-  }, []);
+  }, [scope.id]);
+
+  const sync = useCloudSnapshotSync({ domain: "projects", scope, ready: ready && loadedScope === scope.id, data, setData, equals: dataMatches });
 
   useEffect(() => {
     if (!ready) {
       return;
     }
 
-    localStorage.setItem(PROJECTS_STORAGE_KEY, JSON.stringify(data));
-    window.dispatchEvent(new CustomEvent(PROJECTS_UPDATE_EVENT, { detail: data }));
-  }, [data, ready]);
+    if (loadedScope !== scope.id) return;
+    replaceProjectsSnapshot(data, scope.id);
+  }, [data, ready, loadedScope, scope.id]);
 
   useEffect(() => {
     const sync = (incoming: Event) => {
-      const next = incoming instanceof CustomEvent && incoming.detail
-        ? incoming.detail as ProjectsLocalData
-        : readProjectsSnapshot();
+      const detail = incoming instanceof CustomEvent ? incoming.detail as { scopeId?: string; data?: ProjectsLocalData } : undefined;
+      const next = detail?.data ?? readProjectsSnapshot(scope.id);
+      if (detail?.scopeId && detail.scopeId !== scope.id) return;
 
       setData((current) => dataMatches(current, next) ? current : next);
     };
@@ -111,7 +119,7 @@ export function useProjectsRepository() {
       window.removeEventListener("storage", sync);
       window.removeEventListener(PROJECTS_UPDATE_EVENT, sync);
     };
-  }, []);
+  }, [scope.id]);
 
   const update = useCallback(
     (operation: (value: ProjectsLocalData) => ProjectsLocalData) => setData(operation),
@@ -125,6 +133,7 @@ export function useProjectsRepository() {
   return {
     data,
     ready,
+    sync,
     selectedProject,
     selectProject: (id: string) => update((value) => ({ ...value, selectedProjectId: id })),
     saveProject: (item: Project) => update((value) => ({

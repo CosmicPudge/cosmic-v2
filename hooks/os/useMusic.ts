@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { MusicSnapshot } from "@/core/contracts/Music";
 import { useVisiblePolling } from "@/hooks/useVisiblePolling";
+import { useCosmicScope } from "@/services/storage/scope";
 
 interface UseMusicOptions {
   refreshMs?: number;
@@ -18,6 +19,7 @@ export function useMusic({ refreshMs }: UseMusicOptions = {}) {
   const [requestError, setRequestError] = useState<string>();
   const [actionError, setActionError] = useState<string>();
   const [actionLoading, setActionLoading] = useState(false);
+  const scope = useCosmicScope();
 
   const refresh = useCallback(async () => {
     if (refreshPromiseRef.current) return refreshPromiseRef.current;
@@ -65,7 +67,9 @@ export function useMusic({ refreshMs }: UseMusicOptions = {}) {
     }, 0);
 
     return () => window.clearTimeout(initial);
-  }, [refresh, refreshMs]);
+  }, [refresh, refreshMs, scope.id]);
+
+  useEffect(() => { const timer = window.setTimeout(() => { setSnapshot(null); setLoading(true); setRequestError(undefined); hasLoaded.current = false; }, 0); return () => window.clearTimeout(timer); }, [scope.id]);
 
   useVisiblePolling(refresh, refreshMs ?? 0, { enabled: refreshMs !== undefined });
 
