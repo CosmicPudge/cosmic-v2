@@ -23,6 +23,27 @@ export function getStripe() {
   return stripeClient;
 }
 
+export function logStripeBillingError(error: unknown, operation: string) {
+  const stripeError = error instanceof Stripe.errors.StripeError ? error : null;
+  console.error("Stripe billing operation failed", {
+    operation,
+    environment: getBillingConfiguration().environment,
+    type: stripeError?.type ?? (error instanceof Error ? error.name : "UnknownError"),
+    code: stripeError?.code ?? null,
+    requestId: stripeError?.requestId ?? null,
+  });
+}
+
+function isMissingStripeResource(error: unknown) {
+  return error instanceof Stripe.errors.StripeError && error.code === "resource_missing";
+}
+
+function canReplaceMissingCustomer(record: Awaited<ReturnType<typeof getBillingSubscription>>) {
+  if (!record) return true;
+  if (record.status === "inactive" || record.status === "incomplete_expired") return true;
+  return record.status === "canceled" && (!record.currentPeriodEnd || record.currentPeriodEnd <= new Date());
+}
+
 async function getCosmicPlusPrice() {
   const priceId = process.env.STRIPE_COSMIC_PLUS_PRICE_ID;
   if (!priceId) throw new BillingActionError("billing_unavailable", "Cosmic+ billing is not configured.", 503);
@@ -45,9 +66,27 @@ function statusFromStripe(value: string): BillingSubscriptionStatus {
 
 export async function ensureStripeCustomer(account: CosmicAccount) {
   const existing = await getBillingSubscription(account.id);
-  if (existing?.providerCustomerId) return existing.providerCustomerId;
+  let replacingMissingCustomer = false;
+  if (existing?.providerCustomerId) {
+    try {
+      const customer = await getStripe().customers.retrieve(existing.providerCustomerId);
+      if (customer.deleted) throw new Error("Stripe customer is deleted.");
+      return customer.id;
+    } catch (error) {
+      if (!isMissingStripeResource(error)) {
+        logStripeBillingError(error, "retrieve_customer");
+        throw new BillingActionError("billing_unavailable", "Cosmic+ billing could not verify the customer. Please try again.", 503);
+      }
+      logStripeBillingError(error, "retrieve_customer_missing");
+      if (!canReplaceMissingCustomer(existing)) {
+        console.error("Stripe customer mapping is missing for a subscription that requires recovery", { accountId: account.id, status: existing.status, hasSubscription: Boolean(existing.providerSubscriptionId), environment: getBillingConfiguration().environment });
+        throw new BillingActionError("billing_unavailable", "This subscription needs billing recovery before a new checkout can start.", 503);
+      }
+      replacingMissingCustomer = true;
+    }
+  }
   const customer = await getStripe().customers.create({ email: account.email, name: account.displayName ?? undefined, metadata: { cosmic_user_id: account.id } }, { idempotencyKey: `cosmic-customer-${account.id}` });
-  await upsertBillingSubscription({ userId: account.id, providerCustomerId: customer.id, providerSubscriptionId: existing?.providerSubscriptionId ?? null, providerPriceId: existing?.providerPriceId ?? null, status: existing?.status ?? "inactive", currentPeriodStart: existing?.currentPeriodStart ?? null, currentPeriodEnd: existing?.currentPeriodEnd ?? null, cancelAtPeriodEnd: existing?.cancelAtPeriodEnd ?? false });
+  await upsertBillingSubscription({ userId: account.id, providerCustomerId: customer.id, providerSubscriptionId: replacingMissingCustomer ? null : existing?.providerSubscriptionId ?? null, providerPriceId: replacingMissingCustomer ? null : existing?.providerPriceId ?? null, status: replacingMissingCustomer ? "inactive" : existing?.status ?? "inactive", currentPeriodStart: replacingMissingCustomer ? null : existing?.currentPeriodStart ?? null, currentPeriodEnd: replacingMissingCustomer ? null : existing?.currentPeriodEnd ?? null, cancelAtPeriodEnd: replacingMissingCustomer ? false : existing?.cancelAtPeriodEnd ?? false });
   return customer.id;
 }
 
