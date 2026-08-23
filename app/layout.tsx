@@ -12,6 +12,9 @@ import { SearchProvider } from "@/components/apps/search/SearchProvider";
 import { SettingsProvider } from "@/components/apps/settings/SettingsProvider";
 import { SystemProvider } from "@/components/os/system/SystemProvider";
 import { AccountProvider } from "@/components/account/AccountProvider";
+import { AdProvider } from "@/components/ads/AdProvider";
+import { EntitlementsProvider } from "@/hooks/os/useEntitlements";
+import { CosmicTransitionProvider } from "@/components/os/transition";
 
 export const metadata: Metadata = {
   title: {
@@ -42,29 +45,40 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="en"
-      className="h-full antialiased"
-    >
+    <html lang="en" className="h-full antialiased">
+       <head>
+    <script
+      async
+      src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1471533859879343"
+      crossOrigin="anonymous"
+    />
+  </head>
       <body className="isolate min-h-full overflow-x-hidden bg-[#030511] text-white">
         <SettingsProvider>
           <AccountProvider>
-          <SystemProvider>
-            <GlobalCosmicBackground />
-            <div className="relative z-10 min-h-screen">
-              <PerformanceProvider>
-                <OSProvider>
-                  <DisplayProvider>
-                    <ClockProvider>
-                      <SearchProvider>
-                        {children}
-                      </SearchProvider>
-                    </ClockProvider>
-                  </DisplayProvider>
-                </OSProvider>
-              </PerformanceProvider>
-            </div>
-          </SystemProvider>
+            <EntitlementsProvider>
+              <AdProvider>
+                <SystemProvider>
+                  <GlobalCosmicBackground />
+
+                  <div className="relative z-10 min-h-screen">
+                    <PerformanceProvider>
+                      <OSProvider>
+                        <DisplayProvider>
+                          <ClockProvider>
+                            <SearchProvider>
+                              <CosmicTransitionProvider>
+                                {children}
+                              </CosmicTransitionProvider>
+                            </SearchProvider>
+                          </ClockProvider>
+                        </DisplayProvider>
+                      </OSProvider>
+                    </PerformanceProvider>
+                  </div>
+                </SystemProvider>
+              </AdProvider>
+            </EntitlementsProvider>
           </AccountProvider>
         </SettingsProvider>
       </body>

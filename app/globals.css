@@ -449,3 +449,32 @@ html[data-cosmic-reduced-effects="true"] *::after {
     transform: translateY(120vh);
   }
 }
+
+.cosmic-transition-surface {
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: radial-gradient(circle at 50% 45%, rgba(44, 48, 105, .42), rgba(3, 5, 17, .97) 62%);
+  color: rgba(255, 255, 255, .92);
+  pointer-events: none;
+  animation: cosmic-transition-in 260ms ease-out both;
+}
+.cosmic-transition-boot { pointer-events: auto; }
+.cosmic-transition-navigation { background: rgba(3, 5, 17, .68); backdrop-filter: blur(10px); }
+.cosmic-transition-content { position: relative; z-index: 1; width: min(90vw, 30rem); padding: 2rem; text-align: center; }
+.cosmic-transition-mark { margin: 0 auto .75rem; color: rgba(165, 243, 252, .9); font-size: 2rem; text-shadow: 0 0 30px rgba(103, 232, 249, .8); }
+.cosmic-transition-kicker { color: rgba(207, 250, 254, .58); font-size: .68rem; font-weight: 700; letter-spacing: .28em; }
+.cosmic-transition-content h1 { margin-top: .8rem; font-size: clamp(1.25rem, 4vw, 1.8rem); font-weight: 700; letter-spacing: -.02em; }
+.cosmic-transition-copy { margin-top: .65rem; color: rgba(255, 255, 255, .52); font-size: .9rem; line-height: 1.5; }
+.cosmic-transition-destination { margin-top: 1rem; color: rgba(165, 243, 252, .68); font-size: .7rem; font-weight: 700; letter-spacing: .22em; text-transform: uppercase; }
+.cosmic-transition-progress { height: .25rem; margin: 1.6rem auto .65rem; width: min(100%, 20rem); overflow: hidden; border-radius: 999px; background: rgba(255, 255, 255, .1); }
+.cosmic-transition-progress span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, rgba(103, 232, 249, .7), rgba(196, 181, 253, .9)); transition: width 300ms ease-out; }
+.cosmic-transition-count { color: rgba(255, 255, 255, .35); font-size: .7rem; }
+.cosmic-transition-stars { position: absolute; inset: -20%; opacity: .35; background-image: radial-gradient(circle, rgba(255,255,255,.8) 0 1px, transparent 1.5px), radial-gradient(circle, rgba(165,243,252,.55) 0 1px, transparent 1.5px); background-position: 0 0, 28px 42px; background-size: 88px 88px, 132px 132px; animation: cosmic-transition-drift 24s linear infinite; }
+.cosmic-transition-reduced .cosmic-transition-stars { animation: none; }
+@keyframes cosmic-transition-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes cosmic-transition-drift { from { transform: translate3d(0, 0, 0) scale(1); } to { transform: translate3d(3%, -2%, 0) scale(1.04); } }
+@media (prefers-reduced-motion: reduce) { .cosmic-transition-surface, .cosmic-transition-progress span { animation: none; transition-duration: 120ms; } }

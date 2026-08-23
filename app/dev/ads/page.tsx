@@ -1,0 +1,16 @@
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
+import AppShell from "@/components/os/app/AppShell";
+import AdPreview from "@/components/ads/AdPreview";
+import AdSystemDiagnostics from "@/components/ads/AdSystemDiagnostics";
+import { adPlacements, adPolicies, getAdRuntimeConfig } from "@/core/contracts/Advertising";
+import { requireCosmicAccount } from "@/services/auth/server";
+import { isAdminAccount } from "@/services/admin/auth";
+
+export default async function AdsInspectorPage() {
+  if (process.env.NODE_ENV === "production") redirect("/account");
+  const source = await headers(); const host = source.get("host") ?? "localhost"; const protocol = source.get("x-forwarded-proto") ?? "http";
+  try { const account = await requireCosmicAccount(new Request(`${protocol}://${host}/dev/ads`, { headers: new Headers(source) })); if (!(await isAdminAccount(account.id))) redirect("/account"); } catch { redirect("/account"); }
+  const config = getAdRuntimeConfig();
+  return <AppShell><main className="mx-auto max-w-7xl space-y-6 p-6 text-white"><header><p className="text-xs uppercase tracking-[0.2em] text-fuchsia-100/60">Developer tools</p><h1 className="mt-2 text-3xl font-semibold">Ad System Inspector</h1><p className="mt-2 max-w-3xl text-sm leading-6 text-white/50">Development-only placement map. Preview renders every registered placement with dedicated boundaries; it never enables live provider requests.</p><p className="mt-3 text-xs text-cyan-100/60">Tip: add <code>?adDebug=1</code> to an eligible route to show its placement boundary in development.</p></header><AdSystemDiagnostics /><section className="rounded-2xl border border-white/10 bg-white/[0.04] p-5"><div className="flex flex-wrap items-end justify-between gap-3"><div><h2 className="font-semibold">Registered placements</h2><p className="mt-1 text-sm text-white/45">Grouped by surface with layout and density metadata.</p></div><span className="rounded-full border border-white/10 px-3 py-1 text-xs text-white/50">Show all preview: enabled</span></div><div className="mt-4 overflow-x-auto"><table className="w-full min-w-[1050px] text-left text-sm"><thead className="text-xs uppercase tracking-wider text-white/40"><tr><th className="pb-2">Placement</th><th>Surface</th><th>Format</th><th>Breakpoint</th><th>Priority</th><th>Separation</th><th>Policy</th><th>Slot</th><th>State</th></tr></thead><tbody>{adPlacements.map((placement) => <tr key={placement.id} className="border-t border-white/10 text-white/65"><td className="py-3 font-mono text-xs">{placement.id}</td><td>{placement.surface}</td><td>{placement.format}</td><td>{placement.breakpoint}</td><td>{placement.priority}</td><td>{placement.minContentSeparation} sections</td><td>{adPolicies[placement.surface]}</td><td className="font-mono text-xs">{config.slots[placement.id] ? "configured" : "not configured"}</td><td>{placement.enabled ? "enabled" : "disabled"}</td></tr>)}</tbody></table></div></section><section className="rounded-2xl border border-white/10 bg-white/[0.04] p-5"><h2 className="font-semibold">Responsive placement preview</h2><p className="mt-1 text-sm text-white/45">Mobile, tablet, and desktop boundaries are intentionally separate. Provider configuration is ignored in this preview.</p><div className="mt-4"><AdPreview /></div></section></main></AppShell>;
+}

@@ -10,13 +10,13 @@ export default function SchoolView() {
         </h1>
 
         <p className="text-white/60">
-          School is currently under development.
+          The active School workspace lives in the School overview and settings routes.
         </p>
       </div>
 
       <div className="rounded-3xl border border-white/10 bg-white/5 p-8">
         <p className="text-white/50">
-          Future School features will appear here.
+          This legacy view is retained for compatibility; use the canonical School navigation for terms, courses, assignments, grades, and schedules.
         </p>
       </div>
 

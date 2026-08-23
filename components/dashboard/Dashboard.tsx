@@ -25,7 +25,7 @@ function DashboardContent() {
 
   return (
     <main
-      className="mx-auto flex h-full flex-col"
+      className="mx-auto flex min-h-full flex-col"
       style={{
         maxWidth: layout.maxWidth,
         gap: layout.sectionGap,

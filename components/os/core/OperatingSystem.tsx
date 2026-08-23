@@ -12,9 +12,11 @@ import { Dashboard } from "@/components/dashboard";
 
 import useIdleAmbient from "@/hooks/os/useIdleAmbient";
 import WindowManager from "../window/WindowManager";
+import { useRouteReadiness } from "@/components/os/transition";
 
 export default function OperatingSystem() {
   useIdleAmbient();
+  useRouteReadiness("/os");
 
   return (
     <OSProvider>

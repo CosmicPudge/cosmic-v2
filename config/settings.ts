@@ -10,6 +10,7 @@ export type SettingsSectionId =
   | "clock"
   | "connections"
   | "apps"
+  | "ai"
   | "search"
   | "privacy-data"
   | "about";
@@ -34,6 +35,7 @@ export const settingsSections: SettingsSectionMetadata[] = [
   { id: "clock", name: "Clock", description: "Time format and Clock data status.", keywords: ["time", "12 hour", "24 hour", "alarms", "timers"], icon: "◷", href: "/settings#clock", category: "settings" },
   { id: "connections", name: "Connections", description: "Calendar, Spotify, Gmail, and Weather status.", keywords: ["accounts", "oauth", "calendar", "spotify", "gmail", "weather"], icon: "⌁", href: "/settings#connections", category: "settings" },
   { id: "apps", name: "Apps", description: "Open apps and review local data summaries.", keywords: ["school", "garage", "projects", "notes", "sports"], icon: "◫", href: "/settings#apps", category: "settings" },
+  { id: "ai", name: "Cosmic AI", description: "Control AI access to public and private Cosmic context.", keywords: ["assistant", "ai", "permissions", "privacy", "web"], icon: "✧", href: "/settings#ai", category: "settings" },
   { id: "search", name: "Search", description: "Recent-search history and searchable destinations.", keywords: ["find", "history", "recents", "command"], icon: "⌕", href: "/settings#search", category: "settings" },
   { id: "privacy-data", name: "Privacy & Data", description: "Export, import, or reset browser-local Cosmic data.", keywords: ["backup", "restore", "export", "import", "reset", "delete"], icon: "◇", href: "/settings#privacy-data", category: "settings" },
   { id: "about", name: "About", description: "Version, storage model, and diagnostics.", keywords: ["version", "diagnostics", "storage", "local first"], icon: "ⓘ", href: "/settings#about", category: "settings" },

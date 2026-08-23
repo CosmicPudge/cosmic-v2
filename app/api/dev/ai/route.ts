@@ -1,0 +1,6 @@
+import { getCurrentCosmicAccount } from "@/services/auth/server";
+import { isAdminAccount } from "@/services/admin/auth";
+import { getAIProvider } from "@/services/ai/provider";
+import { aiToolDefinitions } from "@/services/ai/tools";
+import { getAIUsage } from "@/services/ai/usage";
+export async function GET(request: Request) { if (process.env.NODE_ENV === "production") return Response.json({ error: "Development tools are unavailable in production." }, { status: 404 }); const account = await getCurrentCosmicAccount(request); if (!account || !(await isAdminAccount(account.id))) return Response.json({ error: "Not found." }, { status: 404 }); let provider = { configured: false, id: "openai", model: process.env.COSMIC_AI_MODEL || "gpt-5.4-mini" }; try { const selected = getAIProvider(); provider = { configured: Boolean(process.env.OPENAI_API_KEY), id: selected.id, model: selected.model }; } catch { /* diagnostics intentionally omit secrets */ } return Response.json({ provider, publicSearchConfigured: Boolean(process.env.TAVILY_API_KEY), policyVersion: "p1-readonly-2026-08-22", tools: aiToolDefinitions.map((tool) => tool.name), usage: getAIUsage() }, { headers: { "Cache-Control": "no-store" } }); }

@@ -13,6 +13,7 @@ import type { CosmicProfileId, CosmicUserPreferences } from "@/core/contracts/Se
 import { clonePreferences, neutralPreferences, preferencesForProfile, referencePreferences } from "./preferences";
 import { createScopedStorageKey, migrateLegacyStorage, readScopedOrLegacy, useCosmicScope } from "@/services/storage/scope";
 import { useCloudSnapshotSync } from "@/services/sync/useCloudSnapshotSync";
+import { defaultAIPermissions, type CosmicAIPermissions } from "@/core/contracts/AI";
 
 export const SETTINGS_STORAGE_KEY = "cosmic.settings.local-data";
 export const SETTINGS_UPDATE_EVENT = "cosmic:settings-local-data-updated";
@@ -108,7 +109,10 @@ function validatePreferences(value: Record<string, unknown>): CosmicUserPreferen
   const garageDefaults = neutralPreferences.garage?.notifications;
   const rawGarage = isRecord(value.garage) && isRecord(value.garage.notifications) ? value.garage.notifications : {};
   const garageNotifications = garageDefaults ? Object.fromEntries(Object.keys(garageDefaults).map((key) => [key, rawGarage[key] === true])) as unknown as NonNullable<CosmicUserPreferences["garage"]>["notifications"] : undefined;
-  return { version: 1, sports: { enabledSports, followedTeams, followedDrivers, followedConstructors, notifications }, garage: garageNotifications ? { notifications: garageNotifications } : undefined, dashboard: { visibleWidgets: dashboard.visibleWidgets.filter((item): item is string => typeof item === "string"), widgetOrder: dashboard.widgetOrder.filter((item): item is string => typeof item === "string"), widgetSizes: Object.fromEntries(Object.entries(dashboard.widgetSizes).filter(([, size]) => size === "small" || size === "medium" || size === "large")) as CosmicUserPreferences["dashboard"]["widgetSizes"], contextDensity }, modules: normalizedModules, context: { enabledSources: context.enabledSources.filter((item): item is string => typeof item === "string"), suppressedKinds: context.suppressedKinds.filter((item): item is string => typeof item === "string") } };
+  const rawAI = isRecord(value.ai) ? value.ai : {};
+  const rawAIModules = isRecord(rawAI.modules) ? rawAI.modules : {};
+  const ai: CosmicAIPermissions = { enabled: rawAI.enabled !== false, modules: Object.fromEntries(Object.keys(defaultAIPermissions.modules).map((key) => [key, rawAIModules[key] === undefined ? defaultAIPermissions.modules[key as keyof typeof defaultAIPermissions.modules] : rawAIModules[key] === true])) as CosmicAIPermissions["modules"] };
+  return { version: 1, sports: { enabledSports, followedTeams, followedDrivers, followedConstructors, notifications }, garage: garageNotifications ? { notifications: garageNotifications } : undefined, dashboard: { visibleWidgets: dashboard.visibleWidgets.filter((item): item is string => typeof item === "string"), widgetOrder: dashboard.widgetOrder.filter((item): item is string => typeof item === "string"), widgetSizes: Object.fromEntries(Object.entries(dashboard.widgetSizes).filter(([, size]) => size === "small" || size === "medium" || size === "large")) as CosmicUserPreferences["dashboard"]["widgetSizes"], contextDensity }, modules: normalizedModules, context: { enabledSources: context.enabledSources.filter((item): item is string => typeof item === "string"), suppressedKinds: context.suppressedKinds.filter((item): item is string => typeof item === "string") }, ai };
 }
 
 export function readSettingsSnapshot(scopeId?: string): CosmicSettingsLocalData {

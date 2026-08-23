@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
+import { useCosmicTransition } from "@/components/os/transition";
 
 interface AppHeaderProps {
   title: string;
@@ -15,6 +16,7 @@ export default function AppHeader({
 }: AppHeaderProps) {
 
     const router = useRouter();
+    const { prefetch } = useCosmicTransition();
     
   return (
     <header className="mb-6 flex items-center justify-between sm:mb-10">
@@ -22,6 +24,8 @@ export default function AppHeader({
       <div>
 
         <button
+  onMouseEnter={() => prefetch("/os")}
+  onFocus={() => prefetch("/os")}
   onClick={() => router.push("/os")}
   className="mb-4 inline-flex items-center gap-2 text-white/60 transition hover:text-white"
 >

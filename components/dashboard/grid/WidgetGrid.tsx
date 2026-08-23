@@ -12,6 +12,8 @@ import GridItem from "./GridItem";
 import { GridProvider } from "./GridContext";
 import { useGridLayout } from "./useGridLayout";
 import { useSettingsRepository } from "@/services/settings/localRepository";
+import AdSlot from "@/components/ads/AdSlot";
+import { getDashboardAdPlan } from "@/core/contracts/Advertising";
 
 export default function WidgetGrid() {
   const { data: settings } = useSettingsRepository();
@@ -30,6 +32,7 @@ export default function WidgetGrid() {
   const { profile, tokens } = useDisplay();
 
   const grid = GRID_PROFILES[profile];
+  const adPlan = getDashboardAdPlan(widgets.length);
 
   void WIDGET_LAYOUTS;
 
@@ -43,12 +46,13 @@ export default function WidgetGrid() {
           gap: tokens.widgetGap,
         }}
       >
-        {widgets.map((widget) => (
-          <GridItem
-            key={widget.id}
-            widget={widget}
-          />
-        ))}
+        {widgets.flatMap((widget, index) => {
+          const ad = adPlan.find((item) => item.afterIndex === index + 1);
+          return [
+            <GridItem key={widget.id} widget={widget} />,
+            ...(ad ? [<AdSlot key={ad.placementId} placementId={ad.placementId} fullRow />] : []),
+          ];
+        })}
       </section>
     </GridProvider>
   );

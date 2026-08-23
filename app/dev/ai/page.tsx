@@ -1,0 +1,7 @@
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
+import AppShell from "@/components/os/app/AppShell";
+import { requireCosmicAccount } from "@/services/auth/server";
+import { isAdminAccount } from "@/services/admin/auth";
+
+export default async function AIDevPage() { const source = await headers(); const host = source.get("host") ?? "localhost"; const protocol = source.get("x-forwarded-proto") ?? "http"; try { const account = await requireCosmicAccount(new Request(`${protocol}://${host}/dev/ai`, { headers: new Headers(source) })); if (!(await isAdminAccount(account.id))) redirect("/account"); } catch { redirect("/account"); } return <AppShell><main className="mx-auto max-w-4xl space-y-6 p-6 text-white"><header><p className="text-xs uppercase tracking-[0.2em] text-cyan-100/60">Developer tools</p><h1 className="mt-2 text-3xl font-semibold">Cosmic AI Inspector</h1><p className="mt-2 text-sm text-white/50">Safe configuration and aggregate usage diagnostics. Prompts, private payloads, and secrets are never shown.</p></header><section className="rounded-2xl border border-white/10 bg-white/[0.04] p-5"><pre id="ai-diagnostics" className="overflow-x-auto text-sm text-cyan-50/75">Loading diagnostics…</pre><script dangerouslySetInnerHTML={{ __html: "fetch('/api/dev/ai').then(r=>r.json()).then(v=>document.getElementById('ai-diagnostics').textContent=JSON.stringify(v,null,2)).catch(()=>document.getElementById('ai-diagnostics').textContent='Diagnostics unavailable.')" }} /></section></main></AppShell>; }

@@ -8,6 +8,7 @@ import { useSports } from "@/hooks/os/useSports";
 import { useSettingsRepository } from "@/services/settings/localRepository";
 import { sportsDirectory } from "@/services/sports/directory";
 import { isFollowedStanding } from "@/services/sports/favorites";
+import { useRouteReadiness } from "@/components/os/transition";
 
 type SportsTab = "overview" | SportKind;
 
@@ -92,6 +93,7 @@ function ProviderWarning({ sources }: { sources: SportsSource[] }) {
 
 export default function SportsView() {
   const { data, loading, error, refresh } = useSports();
+  useRouteReadiness("/sports", !loading, error ? "degraded" : "ready");
   const { data: settings } = useSettingsRepository();
   const [tab, setTab] = useState<SportsTab>("overview");
   const tabs = useMemo(() => sportsTabs.map((id) => ({ id, label: id === "overview" ? "Overview" : settings.preferences.sports.followedTeams.find((team) => team.sport === id)?.label ?? sportLabels[id] })), [settings.preferences.sports.followedTeams]);

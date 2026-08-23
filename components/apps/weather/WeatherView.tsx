@@ -13,6 +13,7 @@ import AirQualityCard from "./AirQualityCard";
 import WeatherAlerts from "./WeatherAlerts";
 
 import Skeleton from "@/components/os/ui/Skeleton";
+import { useRouteReadiness } from "@/components/os/transition";
 
 export default function WeatherView() {
     const {
@@ -20,6 +21,7 @@ export default function WeatherView() {
     loading,
     error,
 } = useWeather();
+    useRouteReadiness("/weather", !loading, error ? "degraded" : "ready");
 
     if (loading) {
         return (

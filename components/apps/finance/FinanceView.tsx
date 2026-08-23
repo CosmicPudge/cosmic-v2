@@ -5,6 +5,7 @@ import type { FinanceAccount, FinanceAccountType, FinanceTransaction, FinanceTra
 import { calculateAccountBalance, calculateClearedBalance, calculateRunningBalances, formatMoney, getCategoryTotals, getMonthTotals, parseMoneyToMinor } from "@/services/finance/domain";
 import { useFinanceRepository } from "@/services/finance/localRepository";
 import FinanceIntelligence from "@/components/apps/finance/FinanceIntelligence";
+import { useRouteReadiness } from "@/components/os/transition";
 
 const accountTypes: Array<{ value: FinanceAccountType; label: string }> = [
   { value: "checking", label: "Checking" }, { value: "savings", label: "Savings" }, { value: "cash", label: "Cash" }, { value: "credit", label: "Credit card" }, { value: "other", label: "Other" },
@@ -30,6 +31,7 @@ function Metric({ label, value, hidden }: { label: string; value: number; hidden
 
 export default function FinanceView() {
   const { data, ready, saveAccount, saveTransaction, removeTransaction, saveRecurringItem, removeRecurringItem, saveBudget, removeBudget, saveCategory, setSelectedAccount, setHideBalances } = useFinanceRepository();
+  useRouteReadiness("/finance", ready);
   const [accountForm, setAccountForm] = useState<AccountDraft | null>(null);
   const [editingAccountId, setEditingAccountId] = useState<string>();
   const [transactionForm, setTransactionForm] = useState<TransactionDraft | null>(null);

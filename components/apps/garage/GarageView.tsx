@@ -11,6 +11,7 @@ import VehicleScanner from "@/components/apps/garage/VehicleScanner";
 import type { VehicleScanKind } from "@/core/contracts/VehicleScanning";
 import { useEntitlements } from "@/hooks/os/useEntitlements";
 import { canAddActiveVehicle, countActiveVehicles, getGarageVehicleLimitState, isActiveVehicleStatus } from "@/lib/garage/limits";
+import { useRouteReadiness } from "@/components/os/transition";
 
 const tabs = ["Overview", "Mileage", "Maintenance", "Service", "Issues", "Modifications", "Expenses", "Reminders"] as const;
 type Tab = typeof tabs[number];
@@ -26,6 +27,7 @@ const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD
 
 export default function GarageView() {
   const garage = useGarage();
+  useRouteReadiness("/garage", !garage.loading, garage.error ? "degraded" : "ready");
   const { data: entitlements } = useEntitlements();
   const [tab, setTab] = useState<Tab>("Overview");
   const [editing, setEditing] = useState<string | null>(null);

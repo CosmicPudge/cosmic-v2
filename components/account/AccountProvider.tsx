@@ -25,6 +25,10 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
 
   const refresh = useCallback(async () => {
     setLoading(true);
+    setAccount(null);
+    setExpiresAt(null);
+    setIsAdmin(false);
+    setActiveCosmicScope("local");
     try {
       const response = await fetch("/api/account/session", { cache: "no-store" });
       const payload = await response.json() as { authenticated?: boolean; account?: CosmicAccount; expiresAt?: string; isAdmin?: boolean };
@@ -44,11 +48,17 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signOut = useCallback(async () => {
+    setLoading(true);
+    setAccount(null);
+    setExpiresAt(null);
+    setIsAdmin(false);
+    setActiveCosmicScope("local");
     await fetch("/api/account/signout", { method: "POST" });
     setAccount(null);
     setExpiresAt(null);
     setIsAdmin(false);
     setActiveCosmicScope("local");
+    setLoading(false);
   }, []);
 
   useEffect(() => { const timer = window.setTimeout(() => void refresh(), 0); return () => window.clearTimeout(timer); }, [refresh]);

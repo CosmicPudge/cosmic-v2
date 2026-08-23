@@ -1,6 +1,8 @@
 "use client";
 
 import type { BackgroundApp } from "@/components/os/backgrounds/types";
+import { usePathname } from "next/navigation";
+import { useRouteReadiness } from "@/components/os/transition";
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -10,7 +12,10 @@ interface AppShellProps {
 
 export default function AppShell({
   children,
+  app,
 }: AppShellProps) {
+  const pathname = usePathname() ?? "/";
+  useRouteReadiness(app ? `/${app}` : pathname);
   return (
     <main className="relative min-h-screen overflow-hidden bg-black/15 text-white">
       <div className="absolute inset-0 bg-black/25 pointer-events-none" />

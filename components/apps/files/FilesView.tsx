@@ -10,13 +10,13 @@ export default function FilesView() {
         </h1>
 
         <p className="text-white/60">
-          Files is currently under development.
+          Cosmic currently keeps documents and exports with the module that owns them. A general-purpose cloud file browser is intentionally not enabled yet.
         </p>
       </div>
 
       <div className="rounded-3xl border border-white/10 bg-white/5 p-8">
         <p className="text-white/50">
-          Future Files features will appear here.
+          Open Garage for vehicle documents or Settings for validated local exports. This route does not claim file-management capabilities that are not connected.
         </p>
       </div>
 

@@ -5,6 +5,7 @@ import type { ProjectsLocalData } from "./Projects";
 import type { FinanceSnapshot } from "./Finance";
 import type { DeviceProfileOverride, PerformanceMode } from "./System";
 import type { SportKind } from "./Sports";
+import type { CosmicAIPermissions } from "./AI";
 
 export type BackgroundIntensity = "low" | "normal" | "high";
 export type BackgroundMotion = "off" | "subtle" | "normal";
@@ -70,6 +71,7 @@ export interface CosmicUserPreferences {
     enabledSources: string[];
     suppressedKinds: string[];
   };
+  ai?: CosmicAIPermissions;
 }
 
 export type CosmicProfileId = "neutral" | "reference" | "sports-heavy" | "student" | "minimal";

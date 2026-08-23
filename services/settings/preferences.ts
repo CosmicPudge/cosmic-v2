@@ -1,4 +1,5 @@
 import type { CosmicUserPreferences } from "@/core/contracts/Settings";
+import { defaultAIPermissions } from "@/core/contracts/AI";
 
 export const neutralPreferences: CosmicUserPreferences = {
   version: 1,
@@ -7,6 +8,7 @@ export const neutralPreferences: CosmicUserPreferences = {
   dashboard: { visibleWidgets: [], widgetOrder: [], widgetSizes: {}, contextDensity: "balanced" },
   modules: { sports: true, finance: true, school: true, garage: true, mail: true, calendar: true, projects: true, notes: true },
   context: { enabledSources: [], suppressedKinds: [] },
+  ai: structuredClone(defaultAIPermissions),
 };
 
 export const referencePreferences: CosmicUserPreferences = {

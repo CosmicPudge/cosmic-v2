@@ -1,0 +1,4 @@
+"use client";
+import { adPlacements } from "@/core/contracts/Advertising";
+import AdSlot from "./AdSlot";
+export default function AdPreview() { return <div className="space-y-6">{adPlacements.map((placement) => <div key={placement.id}><p className="mb-1 text-xs text-white/45">{placement.label} · {placement.format} · {placement.breakpoint}</p><div className="grid gap-3 md:grid-cols-3"><div className="max-w-[390px] rounded-xl border border-white/10 p-2"><p className="mb-1 text-[10px] uppercase text-white/30">Mobile · 390px</p><AdSlot placementId={placement.id} preview /></div><div className="max-w-[768px] rounded-xl border border-white/10 p-2"><p className="mb-1 text-[10px] uppercase text-white/30">Tablet · 768px</p><AdSlot placementId={placement.id} preview /></div><div className="min-w-0 rounded-xl border border-white/10 p-2"><p className="mb-1 text-[10px] uppercase text-white/30">Desktop</p><AdSlot placementId={placement.id} preview /></div></div></div>)}</div>; }

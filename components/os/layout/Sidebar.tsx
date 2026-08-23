@@ -5,10 +5,12 @@ import { useRouter } from "next/navigation";
 
 import { apps } from "@/config/apps";
 import { useBoot } from "@/components/os/boot/BootManager";
+import { useCosmicTransition } from "@/components/os/transition";
 
 export default function Sidebar() {
   const router = useRouter();
   const { complete } = useBoot();
+  const { prefetch } = useCosmicTransition();
 
   useEffect(() => {
     complete("sidebar");
@@ -31,6 +33,8 @@ export default function Sidebar() {
               hover:scale-110
             "
             title={app.name}
+            onMouseEnter={() => prefetch(app.route)}
+            onFocus={() => prefetch(app.route)}
           >
             {app.icon}
           </button>

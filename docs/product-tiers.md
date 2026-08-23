@@ -17,7 +17,7 @@ Cosmic+ is account-wide. The long-term model is one Cosmic+ account across Web, 
 
 ## Advertising
 
-Free may eventually include responsive banner or native/content-feed placements and clearly separated sponsored placements. Every placement must be labeled `Sponsored` or `Advertisement`.
+Free may include light responsive banner or inline placements and clearly separated sponsored placements. Every placement must be labeled `Sponsored` or `Advertisement`. During O1 development, only lightweight labeled placement previews render; production remains empty until a real provider is configured.
 
 Never use forced or unskippable video, interstitial navigation ads, full-screen blocking ads, autoplay audio, popups, countdowns, ads covering controls/content, ads disguised as Cosmic UI, or ads interrupting diagnostics and critical workflows. Do not show third-party ads on sign-in, account, billing, checkout, subscription management, deletion, privacy/security, destructive confirmation, or actively running diagnostic surfaces.
 
