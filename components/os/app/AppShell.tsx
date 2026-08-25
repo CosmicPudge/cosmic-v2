@@ -2,7 +2,9 @@
 
 import type { BackgroundApp } from "@/components/os/backgrounds/types";
 import { usePathname } from "next/navigation";
+import { useEffect, useRef } from "react";
 import { useRouteReadiness } from "@/components/os/transition";
+import Sidebar from "@/components/os/layout/Sidebar";
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -15,13 +17,20 @@ export default function AppShell({
   app,
 }: AppShellProps) {
   const pathname = usePathname() ?? "/";
+  const mainRef = useRef<HTMLElement>(null);
   useRouteReadiness(app ? `/${app}` : pathname);
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => {
+      if (document.activeElement === document.body) mainRef.current?.focus();
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [pathname]);
   return (
-    <main className="relative min-h-screen overflow-hidden bg-black/15 text-white">
-      <div className="absolute inset-0 bg-black/25 pointer-events-none" />
-
-      <div className="relative z-10 h-screen overflow-y-auto pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] pt-[max(1.25rem,env(safe-area-inset-top))] pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:px-8 sm:py-8 lg:px-12 lg:py-10">
-        {children}
+    <main ref={mainRef} tabIndex={-1} id="main-content" className="cosmic-site-shell relative min-h-screen overflow-hidden text-white outline-none">
+      <div className="cosmic-stars pointer-events-none absolute inset-0" />
+      <div className="relative z-10 flex min-h-screen flex-col gap-4 p-3 sm:p-5 lg:flex-row lg:gap-5 lg:p-6">
+        <Sidebar />
+        <div className="min-w-0 flex-1 overflow-hidden lg:min-h-[calc(100vh-3rem)]">{children}</div>
       </div>
     </main>
   );

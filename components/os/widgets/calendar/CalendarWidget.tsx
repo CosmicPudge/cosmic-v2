@@ -12,6 +12,7 @@ import CalendarAgenda from "./CalendarAgenda";
 import CalendarFooter from "./CalendarFooter";
 
 import useCalendar from "@/hooks/os/useCalendar";
+import { useDashboardWidgetReadiness } from "@/components/dashboard/readiness/DashboardReadiness";
 
 export default function CalendarWidget() {
   const { size } = useWidgetContext();
@@ -20,6 +21,7 @@ export default function CalendarWidget() {
     loading,
     error,
   } = useCalendar();
+  useDashboardWidgetReadiness("calendar", loading ? "loading" : error && !calendar ? "degraded" : "ready");
 
   return (
     <Widget accent="calendar">

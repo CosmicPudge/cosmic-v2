@@ -31,5 +31,3 @@ export async function executeAITool(name: string, args: { module?: string; query
   const snapshot = row.snapshot as unknown as Record<string, unknown>;
   return { available: true, module: selectedModule, freshness: row.updatedAt, counts: Object.fromEntries(Object.keys(snapshot).filter((key) => Array.isArray(snapshot[key])).slice(0, 10).map((key) => [key, count(snapshot[key], key)])) };
 }
-
-export function guestAIPermissions() { return { ...defaultAIPermissions, modules: { ...defaultAIPermissions.modules, finance: false, mail: false, notes: false, garage: false, school: false, projects: false, calendar: false, music: false, context: false } }; }

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowUpRight, Clock3 } from "lucide-react";
+import { ArrowUpRight } from "lucide-react";
 
 import { useClockData } from "@/components/apps/clock/ClockProvider";
 import { useClockTick } from "@/hooks/os/useClock";
@@ -41,7 +41,6 @@ export default function ClockWidget() {
       <WidgetHeader
         title="Clock"
         subtitle={size === "small" ? undefined : "Local time"}
-        icon={<Clock3 size={18} />}
         action={
           <Link href="/clock" aria-label="Open Clock" className="rounded-xl p-2 text-white/45 transition hover:bg-white/8 hover:text-white focus-visible:outline-2 focus-visible:outline-cyan-200">
             <ArrowUpRight size={17} />

@@ -40,6 +40,7 @@ export interface FinanceTransaction {
   status: FinanceTransactionStatus;
   createdAt: string;
   updatedAt: string;
+  source?: "manual" | "import";
 }
 
 export interface FinanceRecurringItem {

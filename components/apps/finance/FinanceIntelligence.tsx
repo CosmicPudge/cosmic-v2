@@ -1,10 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { FinanceAccount, FinanceBudget, FinanceCategory, FinanceRecurringCadence, FinanceRecurringItem, FinanceSnapshot, FinanceTransaction, FinanceTransactionDirection } from "@/core/contracts/Finance";
-import { advanceRecurringDate, calculateBudgetStatus, calculateExpectedCashFlow, formatMoney, getAverageDailySpending, getCategoryTotals, getMerchantTotals, getMonthComparison, getUpcomingRecurringItems, parseMoneyToMinor, transactionImpactMinor } from "@/services/finance/domain";
+import { advanceRecurringDate, calculateBudgetStatus, calculateExpectedCashFlow, formatMoney, getAverageDailySpending, getMerchantTotals, getMonthComparison, getUpcomingRecurringItems, parseMoneyToMinor, transactionImpactMinor } from "@/services/finance/domain";
 import CosmicPlusGate from "@/components/cosmic-plus/CosmicPlusGate";
 import { useEntitlements } from "@/hooks/os/useEntitlements";
+import { getUnifiedCategoryTotals, mergeFinanceTransactions, type ConnectedFinanceTransaction } from "@/services/finance/merged";
 
 const inputClass = "mt-1 w-full rounded-xl border border-white/10 bg-black/20 px-3 py-2.5 text-sm text-white outline-none transition placeholder:text-white/25 focus:border-cyan-200/45 focus:ring-4 focus:ring-cyan-300/10";
 const buttonClass = "inline-flex items-center justify-center rounded-xl border border-white/12 bg-white/[0.07] px-3.5 py-2 text-sm font-medium text-white/78 transition hover:bg-white/[0.13] focus:outline-none focus:ring-4 focus:ring-cyan-300/10";
@@ -38,11 +39,14 @@ export default function FinanceIntelligence(props: Props) {
 
 function FinanceIntelligencePremium({ data, selectedAccount, balances, saveTransaction, saveRecurringItem, removeRecurringItem, saveBudget, removeBudget, saveCategory }: Props) {
   const hidden = data.hideBalances;
+  const [connectedTransactions, setConnectedTransactions] = useState<ConnectedFinanceTransaction[]>([]);
+  useEffect(() => { let active = true; void fetch("/api/finance/connected-data?limit=200", { cache: "no-store" }).then((response) => response.ok ? response.json() as Promise<{ transactions?: ConnectedFinanceTransaction[] }> : { transactions: [] }).then((body) => { if (active) setConnectedTransactions(body.transactions ?? []); }).catch(() => undefined); return () => { active = false; }; }, []);
   const categories = data.categories.filter((category) => !category.archived);
   const categoryName = (categoryId: string) => data.categories.find((category) => category.id === categoryId)?.name ?? "Other";
   const upcoming = useMemo(() => getUpcomingRecurringItems(data.recurringItems, new Date(), 30), [data.recurringItems]);
   const [projectionNow] = useState(() => new Date());
-  const categoryTotals = useMemo(() => getCategoryTotals(data.transactions), [data.transactions]);
+  const unifiedTransactions = useMemo(() => mergeFinanceTransactions(data.transactions, connectedTransactions, data.categories), [data.transactions, connectedTransactions, data.categories]);
+  const categoryTotals = useMemo(() => getUnifiedCategoryTotals(unifiedTransactions), [unifiedTransactions]);
   const merchantTotals = useMemo(() => getMerchantTotals(data.transactions), [data.transactions]);
   const comparison = useMemo(() => getMonthComparison(data.transactions), [data.transactions]);
   const averageDaily = useMemo(() => getAverageDailySpending(data.transactions), [data.transactions]);

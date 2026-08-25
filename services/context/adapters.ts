@@ -8,6 +8,8 @@ import type { LocalSchoolData } from "@/components/school/data/localRepository";
 import { getCurrentAndNextClass } from "@/components/school/data/weeklySchedule";
 import { getTimerRemaining } from "@/services/clock/time";
 import { getUpcomingRecurringItems } from "@/services/finance/domain";
+import type { UnifiedFinanceAccount } from "@/services/finance/merged";
+import { getUnifiedAccountTotals } from "@/services/finance/merged";
 import { getRelevantTimedEvent } from "@/services/calendar/relevance";
 
 const iso = (value: Date | number) => new Date(value).toISOString();
@@ -52,8 +54,11 @@ export function sportsContext(snapshot: SportsSnapshot | null, now: Date): Cosmi
   return [...snapshot.live, ...snapshot.upcoming].slice(0, 4).map((event) => ({ id: `sports:${event.id}`, priority: event.status === "live" || event.status === "delayed" ? "attention" : "glance", source: "sports", kind: event.status === "live" ? "live-event" : "upcoming-event", title: event.title, subtitle: event.status === "live" ? "Live now" : event.start.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }), timestamp: iso(now), startsAt: iso(event.start), destination: `/sports/event/${encodeURIComponent(event.id)}` }));
 }
 
-export function financeContext(snapshot: FinanceSnapshot, now: Date): CosmicContextItem[] {
-  return getUpcomingRecurringItems(snapshot.recurringItems, now, 7).slice(0, 2).map((item) => ({ id: `finance:recurring:${item.id}`, priority: item.direction === "expense" ? "attention" : "glance", source: "finance", kind: "expected-transaction", title: item.name, subtitle: `Expected ${new Date(item.nextExpectedDate).toLocaleDateString([], { month: "short", day: "numeric" })}`, timestamp: iso(now), startsAt: item.nextExpectedDate, destination: "/finance", metadata: { balancesHidden: snapshot.hideBalances } }));
+export function financeContext(snapshot: FinanceSnapshot, now: Date, accounts?: UnifiedFinanceAccount[]): CosmicContextItem[] {
+  const totals = accounts?.length ? getUnifiedAccountTotals(accounts) : null;
+  const accountItem = totals && accounts?.some((account) => account.source === "connected") ? [{ id: "finance:account-summary", priority: "glance" as const, source: "finance" as const, kind: "account-summary" as const, title: "Finance accounts are up to date", subtitle: snapshot.hideBalances ? "Manual + connected accounts" : `Available cash ${new Intl.NumberFormat(undefined, { style: "currency", currency: "USD" }).format(totals.availableCashMinor / 100)} · net worth ${new Intl.NumberFormat(undefined, { style: "currency", currency: "USD" }).format(totals.netWorthMinor / 100)}`, timestamp: iso(now), destination: "/finance", metadata: { balancesHidden: snapshot.hideBalances } }] : [];
+  const recurringItems = getUpcomingRecurringItems(snapshot.recurringItems, now, 7).slice(0, 2).map((item) => ({ id: `finance:recurring:${item.id}`, priority: item.direction === "expense" ? "attention" as const : "glance" as const, source: "finance" as const, kind: "expected-transaction" as const, title: item.name, subtitle: `Expected ${new Date(item.nextExpectedDate).toLocaleDateString([], { month: "short", day: "numeric" })}`, timestamp: iso(now), startsAt: item.nextExpectedDate, destination: "/finance", metadata: { balancesHidden: snapshot.hideBalances } }));
+  return [...accountItem, ...recurringItems];
 }
 
 export function garageContext(selectedVehicle: { id: string; nickname: string } | undefined, summary: { maintenance: Array<{ id: string; name: string }>; statusById: Map<string, string>; issues?: Array<{ id: string; title: string; status: string; severity: string }> } | null, now: Date): CosmicContextItem[] {

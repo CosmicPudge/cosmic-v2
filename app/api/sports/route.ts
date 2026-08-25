@@ -1,6 +1,6 @@
 import type { SportKind } from "@/core/contracts/Sports";
 import { getSportsSnapshot } from "@/services/sports/snapshot";
-import { getCurrentCosmicAccount } from "@/services/auth/server";
+import { requireCosmicAccount } from "@/services/auth/server";
 import { getAccountPreferences } from "@/services/settings/accountPreferences";
 import { referencePreferences } from "@/services/settings/preferences";
 
@@ -9,8 +9,8 @@ function isSportKind(value: string): value is SportKind {
 }
 
 export async function GET(request: Request) {
-  const account = await getCurrentCosmicAccount(request);
-  const preferences = account && process.env.DATABASE_URL ? await getAccountPreferences(account.id) : referencePreferences;
+  const account = await requireCosmicAccount(request);
+  const preferences = process.env.DATABASE_URL ? await getAccountPreferences(account.id) : referencePreferences;
   const requestedSport = new URL(request.url).searchParams.get("sport");
   if (!requestedSport) {
     return Response.json(await getSportsSnapshot(new Date(), preferences));

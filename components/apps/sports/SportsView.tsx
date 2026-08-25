@@ -2,122 +2,59 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import type { SportKind, SportsEvent, SportsEventStatus, SportsSnapshot, SportsSource, SportsStanding } from "@/core/contracts/Sports";
+import type { SportKind, SportsEvent, SportsEventStatus, SportsSource, SportsStanding } from "@/core/contracts/Sports";
 import { prioritizeFollowedEvents, sportLabels } from "@/services/sports/preferences";
 import { useSports } from "@/hooks/os/useSports";
 import { useSettingsRepository } from "@/services/settings/localRepository";
-import { sportsDirectory } from "@/services/sports/directory";
 import { isFollowedStanding } from "@/services/sports/favorites";
 import { useRouteReadiness } from "@/components/os/transition";
 
 type SportsTab = "overview" | SportKind;
-
 const sportsTabs: SportsTab[] = ["overview", "nfl", "mlb", "nba", "mls", "f1", "nascar"];
+const card = "relative overflow-hidden rounded-[1.35rem] border border-cyan-200/15 bg-[linear-gradient(145deg,rgba(8,15,43,.94),rgba(2,6,24,.96))] p-5 shadow-[0_0_32px_rgba(38,68,180,.08)] transition duration-300 hover:border-cyan-200/30 hover:shadow-[0_0_42px_rgba(86,59,232,.14)]";
+const label = "text-[10px] font-semibold uppercase tracking-[0.25em] text-cyan-100/55";
+const muted = "text-white/42";
 
-const card = "rounded-2xl border border-white/10 bg-white/5 p-4";
-const heading = "mb-3 text-sm font-semibold uppercase tracking-widest text-white/45";
-
-function statusLabel(status: SportsEventStatus): string {
-  return status === "scheduled" ? "Upcoming" : status.toUpperCase();
-}
-
-function statusClass(status: SportsEventStatus): string {
-  if (status === "live") return "border-red-200/30 bg-red-300/15 text-red-100";
-  if (status === "delayed") return "border-amber-200/30 bg-amber-300/15 text-amber-100";
-  if (status === "final") return "border-white/15 bg-white/10 text-white/65";
-  return "border-sky-200/20 bg-sky-200/10 text-sky-100";
-}
-
-function humanTime(value: Date): string {
-  const today = new Date();
-  const tomorrow = new Date(today);
-  tomorrow.setDate(today.getDate() + 1);
-  const sameDay = (a: Date, b: Date) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
-  const prefix = sameDay(value, today) ? "Today" : sameDay(value, tomorrow) ? "Tomorrow" : value.toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" });
-  return `${prefix} · ${value.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`;
-}
-
-function matchup(event: SportsEvent): string | undefined {
-  if (!event.awayTeam || !event.homeTeam) return undefined;
-  const away = `${event.awayTeam.abbreviation ?? event.awayTeam.name}${event.awayTeam.score !== undefined ? ` ${event.awayTeam.score}` : ""}`;
-  const home = `${event.homeTeam.abbreviation ?? event.homeTeam.name}${event.homeTeam.score !== undefined ? ` ${event.homeTeam.score}` : ""}`;
-  return `${away} at ${home}`;
-}
-
-function teamHref(sport: SportKind, name?: string): string | undefined {
-  if (!name) return undefined;
-  const entry = sportsDirectory.find((item) => item.sport === sport && item.name.toLowerCase() === name.toLowerCase());
-  return entry ? `/sports/team/${sport}/${entry.id.slice(sport.length + 1)}` : undefined;
-}
-
-function EventCard({ event, hero = false }: { event: SportsEvent; hero?: boolean }) {
-  const detail = event.status === "scheduled" || event.status === "pregame" ? event.metadata?.sessionType ?? event.metadata?.track ?? event.venue : event.statusDetail ?? event.metadata?.sessionType ?? event.metadata?.track ?? event.venue;
-  return <Link href={`/sports/event/${encodeURIComponent(event.id)}`} className={`block ${hero ? "rounded-2xl border border-red-200/20 bg-gradient-to-br from-red-300/15 via-white/10 to-transparent p-5" : card} transition hover:bg-white/[0.08] focus:outline-none focus:ring-2 focus:ring-cyan-200/60`}>
-    <div className="flex flex-wrap items-start justify-between gap-3">
-      <div className="min-w-0">
-        <p className="text-xs uppercase tracking-widest text-white/45">{sportLabels[event.sport]}</p>
-        <h3 className={hero ? "mt-1 text-xl font-semibold text-white" : "mt-1 font-semibold text-white"}>{event.title}</h3>
-        {matchup(event) && <p className="mt-2 text-sm text-white/75">{matchup(event)}</p>}
-        <p className="mt-2 text-sm text-white/50">{humanTime(event.start)}{detail ? ` · ${detail}` : ""}{event.broadcast ? ` · ${event.broadcast}` : ""}</p>
-      </div>
-      <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold uppercase tracking-wide ${statusClass(event.status)}`}>{statusLabel(event.status)}</span>
-    </div>
-  </Link>;
-}
-
-function EventList({ title, events, empty, limit }: { title: string; events: SportsEvent[]; empty: string; limit?: number }) {
-  const displayed = limit ? events.slice(0, limit) : events;
-  return <section><h2 className={heading}>{title}</h2>{displayed.length ? <div className="space-y-3">{displayed.map((event) => <EventCard key={event.id} event={event} />)}</div> : <div className={`${card} text-sm text-white/55`}>{empty}</div>}</section>;
-}
-
-function Standings({ standings, sport, preferences }: { standings: SportsStanding[]; sport: SportKind; preferences?: Parameters<typeof isFollowedStanding>[1] }) {
-  if (!standings.length) return <div className={`${card} text-sm text-white/55`}>{sport === "f1" ? "Driver and constructor standings are unavailable from the current source." : "Standings unavailable from the current source."}</div>;
-  return <div className={`${card} overflow-x-auto`}><table className="w-full min-w-[300px] text-left text-sm"><thead className="text-xs uppercase tracking-wider text-white/40"><tr><th className="pb-3">Rank</th><th className="pb-3">Team / driver</th><th className="pb-3">Record</th><th className="pb-3">Points</th></tr></thead><tbody>{standings.map((standing) => { const followed = preferences ? isFollowedStanding(standing, preferences) : false; return <tr key={standing.id} className={`border-t border-white/10 text-white/70 ${followed ? "bg-cyan-200/[0.06]" : ""}`}><td className="py-3">{standing.rank ?? "—"}</td><td className="py-3 text-white">{standing.driver ?? standing.team ?? standing.name}{followed ? <span className="ml-2 rounded-full border border-cyan-200/25 px-1.5 py-0.5 text-[10px] text-cyan-100">Following</span> : null}</td><td className="py-3">{standing.record ?? (standing.wins !== undefined ? `${standing.wins}-${standing.losses ?? 0}${standing.draws !== undefined ? `-${standing.draws}` : ""}` : "—")}</td><td className="py-3">{standing.points ?? "—"}</td></tr>; })}</tbody></table></div>;
-}
-
-function SourceNotice({ sport, sources }: { sport: SportKind; sources: SportsSource[] }) {
-  const fallback = sources.find((source) => source.sport === sport && source.fallback && source.status !== "unavailable");
-  if (!fallback) return null;
-  const gaps: string[] = [];
-  if (!fallback.capabilities.standings) gaps.push("standings");
-  if (sport === "f1" && !fallback.capabilities.sessions) gaps.push("full session timing");
-  if (!gaps.length) return null;
-  return <p className="text-sm text-white/45">{gaps.join(" and ")} unavailable from the current source.</p>;
-}
-
-function ProviderWarning({ sources }: { sources: SportsSource[] }) {
-  const unavailable = sources.filter((source) => source.status === "unavailable" && !source.official);
-  if (!unavailable.length) return null;
-  return <div className="rounded-xl border border-amber-200/15 bg-amber-300/10 px-4 py-3 text-sm text-amber-100">{unavailable.map((source) => `${sportLabels[source.sport]} data temporarily unavailable.`).join(" ")}</div>;
-}
+function statusLabel(status: SportsEventStatus) { return status === "scheduled" ? "Upcoming" : status.toUpperCase(); }
+function statusTone(status: SportsEventStatus) { if (status === "live") return "text-rose-200 border-rose-200/30 bg-rose-300/10"; if (status === "delayed") return "text-amber-100 border-amber-200/25 bg-amber-300/10"; if (status === "final") return "text-white/50 border-white/12 bg-white/[.05]"; return "text-cyan-100/70 border-cyan-200/20 bg-cyan-200/[.06]"; }
+function timeLabel(value: Date) { const today = new Date(); const tomorrow = new Date(today); tomorrow.setDate(today.getDate() + 1); const sameDay = (a: Date, b: Date) => a.toDateString() === b.toDateString(); const prefix = sameDay(value, today) ? "Today" : sameDay(value, tomorrow) ? "Tomorrow" : value.toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" }); return `${prefix} · ${value.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`; }
+function teamName(team?: SportsEvent["homeTeam"]) { return team?.abbreviation ?? team?.name ?? "—"; }
+function teamRecord(team?: SportsEvent["homeTeam"]) { return team?.record ? ` · ${team.record}` : ""; }
+function matchup(event: SportsEvent) { return event.awayTeam && event.homeTeam ? `${teamName(event.awayTeam)} at ${teamName(event.homeTeam)}` : event.title; }
 
 export default function SportsView() {
-  const { data, loading, error, refresh } = useSports();
-  useRouteReadiness("/sports", !loading, error ? "degraded" : "ready");
-  const { data: settings } = useSettingsRepository();
-  const [tab, setTab] = useState<SportsTab>("overview");
-  const tabs = useMemo(() => sportsTabs.map((id) => ({ id, label: id === "overview" ? "Overview" : settings.preferences.sports.followedTeams.find((team) => team.sport === id)?.label ?? sportLabels[id] })), [settings.preferences.sports.followedTeams]);
-  const tabEvents = useMemo(() => data ? {
-    live: prioritizeFollowedEvents(data.live.filter((event) => tab === "overview" || event.sport === tab), settings.preferences),
-    upcoming: prioritizeFollowedEvents(data.upcoming.filter((event) => tab === "overview" || event.sport === tab), settings.preferences),
-    recent: [...data.recent.filter((event) => tab === "overview" || event.sport === tab)].sort((first, second) => second.start.getTime() - first.start.getTime()),
-  } : null, [data, tab, settings.preferences]);
-
-  if (loading && !data) return <div className="space-y-4"><div className={`${card} h-28 animate-pulse`} /><div className={`${card} h-36 animate-pulse`} /></div>;
-  if (!data) return <div className={card}><h2 className="font-semibold text-white">Sports is unavailable</h2><p className="mt-2 text-sm text-white/55">{error ?? "Try refreshing scores and schedules."}</p><button type="button" onClick={() => void refresh()} className="mt-4 rounded-xl border border-white/15 bg-white/10 px-4 py-2 text-sm text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-200/80">Refresh</button></div>;
-  if (!settings.preferences.sports.followedTeams.length && !settings.preferences.sports.followedDrivers.length && !settings.preferences.sports.followedConstructors.length) return <div className={card}><h2 className="font-semibold text-white">Choose what to follow</h2><p className="mt-2 text-sm text-white/55">Sports data is account-specific. Add teams or drivers in Settings to see relevant schedules and context.</p><Link href="/settings" className="mt-4 inline-flex rounded-xl border border-white/15 bg-white/10 px-4 py-2 text-sm text-white">Open Settings</Link></div>;
-
-  const primaryLive = tabEvents?.live[0];
-  const remainingLive = tabEvents?.live.slice(1) ?? [];
-  const standings = tab === "overview" ? [] : data.standings[tab] ?? [];
-  return <div className="space-y-6">
-    <div className="flex gap-2 overflow-x-auto pb-1" role="tablist" aria-label="Sports sections">{tabs.map((item) => <button key={item.id} type="button" role="tab" aria-selected={tab === item.id} onClick={() => setTab(item.id)} className={`shrink-0 rounded-xl border px-3 py-2 text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-200/80 ${tab === item.id ? "border-sky-100/25 bg-sky-200/10 text-sky-50" : "border-white/10 text-white/60 hover:bg-white/10"}`}>{item.label}</button>)}</div>
-    <ProviderWarning sources={data.sources} />
-    {tab === "overview" ? <Overview data={data} live={primaryLive} additionalLive={remainingLive} upcoming={tabEvents?.upcoming ?? []} recent={tabEvents?.recent ?? []} /> : <div className="grid gap-6 xl:grid-cols-[minmax(0,1.25fr)_minmax(20rem,0.75fr)]"><div className="space-y-6">{primaryLive ? <section><h2 className={heading}>Live now</h2><EventCard event={primaryLive} hero /></section> : null}<EventList title="Next up" events={tabEvents?.upcoming ?? []} empty="No upcoming events from this source." limit={1} /><EventList title="Upcoming schedule" events={(tabEvents?.upcoming ?? []).slice(1)} empty="No additional upcoming events." limit={8} /><EventList title="Recent results" events={tabEvents?.recent ?? []} empty="No recent results available." limit={5} /></div><aside className="space-y-6"><section><h2 className={heading}>Standings</h2><Standings standings={standings} sport={tab} preferences={settings.preferences} /></section><SourceNotice sport={tab} sources={data.sources} /></aside></div>}</div>;
+  const { data, loading, error, refresh } = useSports(); useRouteReadiness("/sports", !loading, error ? "degraded" : "ready"); const { data: settings } = useSettingsRepository(); const [tab, setTab] = useState<SportsTab>("overview");
+  const preferences = settings.preferences; const tabs = useMemo(() => sportsTabs.map((id) => ({ id, label: id === "overview" ? "All" : sportLabels[id] })), []);
+  const filtered = useMemo(() => data ? { live: prioritizeFollowedEvents(data.live.filter((event) => tab === "overview" || event.sport === tab), preferences), upcoming: prioritizeFollowedEvents(data.upcoming.filter((event) => tab === "overview" || event.sport === tab), preferences), recent: [...data.recent.filter((event) => tab === "overview" || event.sport === tab)].sort((a, b) => b.start.getTime() - a.start.getTime()) } : null, [data, preferences, tab]);
+  if (loading && !data) return <LoadingHub/>;
+  if (!data) return <UnavailableHub message={error ?? "Try refreshing scores and schedules."} onRefresh={() => void refresh()}/>;
+  const live = filtered?.live ?? []; const upcoming = filtered?.upcoming ?? []; const recent = filtered?.recent ?? []; const featured = live[0] ?? upcoming[0] ?? recent[0]; const standings = tab === "overview" ? data.standings.mlb ?? data.standings.nfl ?? [] : data.standings[tab] ?? [];
+  const hasFollowing = preferences.sports.followedTeams.length > 0 || preferences.sports.followedDrivers.length > 0 || preferences.sports.followedConstructors.length > 0;
+  return <div className="relative isolate mx-auto max-w-[1500px] space-y-6 overflow-hidden rounded-[2rem] bg-[#020512] px-3 py-4 text-white sm:px-6 sm:py-7"><div className="pointer-events-none absolute inset-0 -z-10 opacity-75 [background-image:radial-gradient(circle_at_12%_8%,rgba(38,73,206,.2),transparent_25%),radial-gradient(circle_at_84%_19%,rgba(119,42,204,.16),transparent_26%),radial-gradient(circle_at_54%_57%,rgba(18,66,125,.13),transparent_37%),radial-gradient(rgba(154,190,255,.18) .7px,transparent .7px)] [background-size:auto,auto,auto,42px_42px]"></div><div className="pointer-events-none absolute -right-20 top-24 -z-10 h-96 w-96 rounded-full bg-indigo-500/10 blur-3xl"></div>
+    <header className="flex flex-col justify-between gap-5 border-b border-violet-200/15 pb-6 sm:flex-row sm:items-end"><div><p className={label}>Cosmic OS · live telemetry</p><h1 className="mt-4 text-[clamp(3.1rem,9vw,6.8rem)] font-light leading-[.82] tracking-[0.14em] text-white">SPORTS</h1><p className="mt-4 text-xs font-medium uppercase tracking-[0.34em] text-violet-200/75">Live. Compete. Inspire.</p></div><div className="text-right"><p className={label}>Signal time</p><p className="mt-2 text-sm tabular-nums text-white/70">{data.lastUpdated.toLocaleTimeString([], { hour: "numeric", minute: "2-digit", second: "2-digit" })}</p><p className="mt-1 text-[10px] uppercase tracking-[0.16em] text-white/30">{data.sources.filter((source) => source.status !== "unavailable").length} active feeds</p></div></header>
+    <nav className="flex gap-2 overflow-x-auto pb-1" role="tablist" aria-label="Sports leagues">{tabs.map((item) => <button key={item.id} type="button" role="tab" aria-selected={tab === item.id} onClick={() => setTab(item.id)} className={`shrink-0 rounded-xl border px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.16em] transition focus:outline-none focus:ring-2 focus:ring-cyan-200/60 ${tab === item.id ? "border-violet-200/60 bg-violet-400/15 text-white shadow-[0_0_20px_rgba(124,92,255,.22)]" : "border-white/10 bg-black/15 text-white/48 hover:border-cyan-200/25 hover:text-white/75"}`}>{item.label}</button>)}</nav>
+    <ProviderWarning sources={data.sources}/>{!hasFollowing ? <div className="rounded-xl border border-amber-200/20 bg-amber-200/[.06] px-4 py-3 text-sm text-amber-100/80">Follow teams, drivers, or constructors in Settings to personalize this hub. Showing the available provider feed.</div> : null}
+    <div className="grid gap-5 xl:grid-cols-[1.28fr_.72fr]"><FeaturedGame event={featured}/><Schedule events={upcoming.slice(0, 5)} /></div>
+    <div className="grid gap-5 xl:grid-cols-[1fr_1fr_.9fr]"><StandingsCard standings={standings.slice(0, 6)} sport={tab === "overview" ? "mlb" : tab} preferences={preferences}/><LiveScores events={live}/><Favorites preferences={preferences} events={data.featured}/></div>
+    <section className={card} aria-labelledby="sports-recent-heading"><div className="flex items-center justify-between gap-3"><div><p className={label}>Across the constellation</p><h2 id="sports-recent-heading" className="mt-1 text-lg font-medium tracking-[0.08em] text-white/90">RECENT RESULTS</h2></div><span className="text-[10px] uppercase tracking-[0.14em] text-white/32">{recent.length} returned</span></div><div className="mt-4 grid gap-2 md:grid-cols-2 xl:grid-cols-3">{recent.slice(0, 6).map((event) => <EventRow key={event.id} event={event}/>) }{!recent.length ? <p className="text-sm text-white/40">No recent results are available from the current source.</p> : null}</div></section>
+    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-violet-200/15 pt-5"><p className="text-[10px] uppercase tracking-[0.38em] text-violet-200/55">THE STARS DON’T COMPETE. THEY SHINE.</p><Link href="/settings" className="text-xs uppercase tracking-[0.16em] text-cyan-100/65 underline decoration-cyan-100/20 underline-offset-4 hover:text-white focus:outline-none focus:ring-2 focus:ring-cyan-200/60">Manage follows</Link></div>
+  </div>;
 }
 
-function Overview({ data, live, additionalLive, upcoming, recent }: { data: SportsSnapshot; live?: SportsEvent; additionalLive: SportsEvent[]; upcoming: SportsEvent[]; recent: SportsEvent[] }) {
-  const nextToday = upcoming.filter((event) => event.start.toDateString() === new Date().toDateString());
-  const soon = upcoming.filter((event) => !nextToday.includes(event));
-  return <div className="grid gap-6 xl:grid-cols-[minmax(0,1.3fr)_minmax(20rem,0.7fr)]"><div className="space-y-6">{live ? <section><h2 className={heading}>Live now</h2><EventCard event={live} hero />{additionalLive.length ? <div className="mt-3 space-y-3">{additionalLive.map((event) => <EventCard key={event.id} event={event} />)}</div> : null}</section> : <div className={`${card} text-sm text-white/55`}>No followed events are live right now.</div>}<EventList title="Next today" events={nextToday} empty="Nothing else is scheduled today." limit={3} /><EventList title="Coming up soon" events={soon} empty="No upcoming events are available." limit={6} /></div><aside className="space-y-6"><section><h2 className={heading}>Followed teams</h2><div className="space-y-2">{data.featured.filter((event) => event.homeTeam || event.awayTeam).slice(0, 4).map((event) => { const name = event.homeTeam?.name ?? event.awayTeam?.name; const href = teamHref(event.sport, name); return href ? <Link key={event.id} href={href} className={`${card} block text-sm hover:bg-white/[0.08]`}><p className="font-medium text-white">{name}</p><p className="mt-1 text-white/45">{event.status === "scheduled" ? `Next · ${humanTime(event.start)}` : `${statusLabel(event.status)} · ${event.homeTeam?.record ?? event.awayTeam?.record ?? "Record unavailable"}`}</p></Link> : null; })}{!data.featured.length ? <p className={`${card} text-sm text-white/45`}>Followed team cards will appear when provider data is available.</p> : null}</div></section><EventList title="Recent results" events={recent} empty="No recent results available." limit={5} /><section><h2 className={heading}>Standings</h2><Standings standings={data.standings.mlb ?? []} sport="mlb" /></section></aside></div>;
-}
+function FeaturedGame({ event }: { event?: SportsEvent }) { if (!event) return <section className={`${card} min-h-[286px]`} aria-labelledby="featured-game-heading"><p className={label}>Featured game</p><h2 id="featured-game-heading" className="mt-2 text-2xl font-light tracking-[0.08em] text-white/85">NO LIVE SIGNAL</h2><p className={`mt-3 max-w-md text-sm leading-6 ${muted}`}>When a followed or available event arrives, its live state, matchup, and score will anchor this panel.</p><Link href="/settings" className="mt-8 inline-flex rounded-xl border border-violet-200/35 bg-violet-400/[.08] px-4 py-2 text-xs uppercase tracking-[0.16em] text-violet-100/80 hover:bg-violet-400/[.15] focus:outline-none focus:ring-2 focus:ring-violet-200/60">Choose favorites</Link></section>; const away = event.awayTeam; const home = event.homeTeam; const detail = event.status === "scheduled" || event.status === "pregame" ? event.metadata?.sessionType ?? event.metadata?.track ?? event.venue : event.statusDetail ?? event.metadata?.sessionType ?? event.metadata?.track ?? event.venue; return <Link href={`/sports/event/${encodeURIComponent(event.id)}`} className={`${card} min-h-[286px] block border-violet-200/25 bg-[radial-gradient(circle_at_50%_100%,rgba(75,34,133,.26),transparent_42%),linear-gradient(135deg,rgba(17,12,48,.94),rgba(3,7,25,.96))] focus:outline-none focus:ring-2 focus:ring-cyan-200/60`}><div className="flex items-start justify-between gap-3"><div><p className={label}>Featured game · {sportLabels[event.sport]}</p><h2 className="mt-2 text-xl font-medium tracking-[0.08em] text-white/90">{event.status === "live" || event.status === "delayed" ? "LIVE NOW" : "NEXT ON DECK"}</h2></div><span className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] ${statusTone(event.status)}`}>{event.status === "live" ? "● Live" : statusLabel(event.status)}</span></div><div className="mt-8 grid grid-cols-[1fr_auto_1fr] items-center gap-3 text-center"><div><TeamMark team={away} sport={event.sport}/><p className="mt-3 text-2xl font-light tracking-[0.08em] text-white/90">{teamName(away)}</p><p className={`mt-1 text-xs ${muted}`}>{away?.name}{teamRecord(away)}</p></div><div><p className="text-4xl font-light tabular-nums text-white">{away?.score ?? "—"}<span className="mx-2 text-white/25">–</span>{home?.score ?? "—"}</p><p className={`mt-2 text-[10px] uppercase tracking-[0.15em] ${muted}`}>{event.status === "live" ? event.statusDetail ?? "In progress" : timeLabel(event.start)}</p></div><div><TeamMark team={home} sport={event.sport}/><p className="mt-3 text-2xl font-light tracking-[0.08em] text-white/90">{teamName(home)}</p><p className={`mt-1 text-xs ${muted}`}>{home?.name}{teamRecord(home)}</p></div></div><div className="mt-7 flex items-center justify-between gap-3 text-xs"><span className="truncate uppercase tracking-[0.12em] text-white/32">{detail ?? matchup(event)}{event.broadcast ? ` · ${event.broadcast}` : ""}</span><span className="shrink-0 text-cyan-100/70">Open game center →</span></div></Link>; }
+
+function Schedule({ events }: { events: SportsEvent[] }) { return <section className={card} aria-labelledby="sports-schedule-heading"><div className="flex items-center justify-between gap-3"><div><p className={label}>Next signals</p><h2 id="sports-schedule-heading" className="mt-1 text-lg font-medium tracking-[0.08em] text-white/90">TODAY’S SCHEDULE</h2></div><span className="text-[10px] uppercase tracking-[0.14em] text-white/30">{events.length} events</span></div><div className="mt-4 space-y-2">{events.map((event) => <Link key={event.id} href={`/sports/event/${encodeURIComponent(event.id)}`} className="flex items-center gap-3 rounded-xl border border-white/8 bg-black/20 p-3 transition hover:border-violet-200/35 focus:outline-none focus:ring-2 focus:ring-cyan-200/60"><span className="w-11 shrink-0 text-[10px] uppercase tracking-[0.1em] text-violet-100/60">{sportLabels[event.sport]}</span><div className="min-w-0 flex-1"><p className="truncate text-sm text-white/75">{matchup(event)}</p><p className={`mt-1 truncate text-[10px] uppercase tracking-[0.1em] ${muted}`}>{timeLabel(event.start)}</p></div><span className={`shrink-0 text-[10px] uppercase tracking-[0.1em] ${event.status === "live" ? "text-rose-200" : "text-white/38"}`}>{event.status === "live" ? "Live" : "View"}</span></Link>)}{!events.length ? <p className="py-5 text-sm text-white/40">Nothing upcoming is available from the current source.</p> : null}</div></section>; }
+
+function StandingsCard({ standings, sport, preferences }: { standings: SportsStanding[]; sport: SportKind; preferences: Parameters<typeof isFollowedStanding>[1] }) { return <section className={card} aria-labelledby="sports-standings-heading"><p className={label}>League context · {sportLabels[sport]}</p><h2 id="sports-standings-heading" className="mt-1 text-lg font-medium tracking-[0.08em] text-white/90">STANDINGS</h2><div className="mt-4 overflow-x-auto"><table className="w-full min-w-[330px] text-left text-xs"><thead className="text-[10px] uppercase tracking-[0.12em] text-white/30"><tr><th className="pb-3">#</th><th className="pb-3">Team / driver</th><th className="pb-3">Record</th><th className="pb-3 text-right">Pts</th></tr></thead><tbody>{standings.map((standing) => { const followed = isFollowedStanding(standing, preferences); return <tr key={standing.id} className={`border-t border-white/8 ${followed ? "bg-violet-400/[.08]" : ""}`}><td className="py-3 text-violet-100/70">{standing.rank ?? "—"}</td><td className="max-w-[130px] truncate py-3 text-white/75">{standing.driver ?? standing.team ?? standing.name}</td><td className="py-3 text-white/42">{standing.record ?? (standing.wins !== undefined ? `${standing.wins}-${standing.losses ?? 0}` : "—")}</td><td className="py-3 text-right text-cyan-100/70">{standing.points ?? standing.percentage ?? "—"}</td></tr>; })}</tbody></table>{!standings.length ? <p className="py-5 text-sm text-white/40">Standings unavailable from the current source.</p> : null}</div></section>; }
+
+function LiveScores({ events }: { events: SportsEvent[] }) { return <section className={card} aria-labelledby="sports-live-heading"><div className="flex items-center justify-between gap-3"><div><p className={label}>Active telemetry</p><h2 id="sports-live-heading" className="mt-1 text-lg font-medium tracking-[0.08em] text-white/90">LIVE SCORES</h2></div><span className="text-[10px] uppercase tracking-[0.14em] text-rose-200/70">{events.length} live</span></div><div className="mt-4 space-y-2">{events.slice(0, 4).map((event) => <Link key={event.id} href={`/sports/event/${encodeURIComponent(event.id)}`} className="block rounded-xl border border-white/8 bg-black/20 p-3 transition hover:border-cyan-200/30 focus:outline-none focus:ring-2 focus:ring-cyan-200/60"><div className="flex items-center justify-between gap-3"><span className="text-[10px] uppercase tracking-[0.12em] text-violet-100/65">{sportLabels[event.sport]}</span><span className="text-[10px] text-rose-200/80">● {event.status === "delayed" ? "Delayed" : "Live"}</span></div><div className="mt-3 flex items-center justify-between gap-2 text-sm text-white/75"><span>{teamName(event.awayTeam)}</span><strong className="text-lg font-light tabular-nums">{event.awayTeam?.score ?? "—"} – {event.homeTeam?.score ?? "—"}</strong><span>{teamName(event.homeTeam)}</span></div><p className={`mt-2 truncate text-[10px] uppercase tracking-[0.1em] ${muted}`}>{event.statusDetail ?? timeLabel(event.start)}</p></Link>)}{!events.length ? <p className="py-5 text-sm text-white/40">No live events right now.</p> : null}</div></section>; }
+
+function Favorites({ preferences, events }: { preferences: Parameters<typeof isFollowedStanding>[1]; events: SportsEvent[] }) { const favorites = [...preferences.sports.followedTeams.map((team) => ({ name: team.label, sport: team.sport })), ...preferences.sports.followedConstructors.map((item) => ({ name: item.label, sport: "f1" as SportKind })), ...preferences.sports.followedDrivers.map((item) => ({ name: item.label, sport: (item.sport ?? "f1") as SportKind }))].slice(0, 5); return <section className={card} aria-labelledby="sports-favorites-heading"><div className="flex items-center justify-between gap-3"><div><p className={label}>Personal orbit</p><h2 id="sports-favorites-heading" className="mt-1 text-lg font-medium tracking-[0.08em] text-white/90">MY FAVORITES</h2></div><Link href="/settings" className="text-[10px] uppercase tracking-[0.14em] text-cyan-100/60 hover:text-white">Edit</Link></div><div className="mt-4 grid grid-cols-2 gap-2">{favorites.map((favorite) => <div key={`${favorite.sport}-${favorite.name}`} className="rounded-xl border border-violet-200/20 bg-violet-400/[.05] p-3"><p className="truncate text-sm text-white/78">{favorite.name}</p><p className="mt-1 text-[10px] uppercase tracking-[0.12em] text-violet-100/55">{sportLabels[favorite.sport]}</p></div>)}{!favorites.length ? <Link href="/settings" className="col-span-2 rounded-xl border border-dashed border-white/15 p-4 text-center text-sm text-white/45 hover:border-cyan-200/30 hover:text-white/70">+ Add teams, drivers, or constructors</Link> : null}</div><div className="mt-4 rounded-xl border border-white/8 bg-black/20 p-3"><p className={label}>Featured feed</p><p className="mt-2 text-sm text-white/58">{events.length ? `${events.length} featured event${events.length === 1 ? "" : "s"} available.` : "Waiting for provider events."}</p></div></section>; }
+
+function EventRow({ event }: { event: SportsEvent }) { return <Link href={`/sports/event/${encodeURIComponent(event.id)}`} className="flex items-center gap-3 rounded-xl border border-white/8 bg-black/20 p-3 transition hover:border-cyan-200/25 focus:outline-none focus:ring-2 focus:ring-cyan-200/60"><span className={`grid h-8 w-8 shrink-0 place-items-center rounded-full border text-xs ${event.status === "final" ? "border-white/15 text-white/50" : "border-violet-200/30 text-violet-100/75"}`}>{event.status === "final" ? "✓" : "↗"}</span><div className="min-w-0 flex-1"><p className="truncate text-sm text-white/75">{matchup(event)}</p><p className={`mt-1 truncate text-[10px] uppercase tracking-[0.1em] ${muted}`}>{sportLabels[event.sport]} · {statusLabel(event.status)} · {timeLabel(event.start)}</p></div><span className="shrink-0 text-sm tabular-nums text-white/65">{event.awayTeam?.score ?? "—"}–{event.homeTeam?.score ?? "—"}</span></Link>; }
+
+function TeamMark({ team, sport }: { team?: SportsEvent["homeTeam"]; sport: SportKind }) { return <div className="mx-auto grid h-14 w-14 place-items-center rounded-full border border-cyan-200/25 bg-cyan-200/[.05] text-lg font-light text-cyan-100/80 shadow-[0_0_20px_rgba(45,212,191,.1)]" aria-label={team?.name ?? "Team unavailable"}>{team?.abbreviation?.slice(0, 3) ?? sportLabels[sport].slice(0, 3)}</div>; }
+
+function ProviderWarning({ sources }: { sources: SportsSource[] }) { const unavailable = sources.filter((source) => source.status === "unavailable" && !source.official); return unavailable.length ? <div className="rounded-xl border border-amber-200/20 bg-amber-300/[.07] px-4 py-3 text-sm text-amber-100/80">{unavailable.map((source) => `${sportLabels[source.sport]} data temporarily unavailable.`).join(" ")}</div> : null; }
+function LoadingHub() { return <div className="space-y-5"><div className={`${card} h-52 animate-pulse`}/><div className="grid gap-5 lg:grid-cols-2"><div className={`${card} h-64 animate-pulse`}/><div className={`${card} h-64 animate-pulse`}/></div></div>; }
+function UnavailableHub({ message, onRefresh }: { message: string; onRefresh: () => void }) { return <section className={card}><p className={label}>Sports telemetry</p><h1 className="mt-2 text-2xl font-light tracking-[0.08em] text-white/90">SIGNAL UNAVAILABLE</h1><p className={`mt-3 text-sm ${muted}`}>{message}</p><button type="button" onClick={onRefresh} className="mt-5 rounded-xl border border-cyan-200/25 bg-cyan-200/[.06] px-4 py-2 text-xs uppercase tracking-[0.16em] text-cyan-100/75 hover:bg-cyan-200/[.12] focus:outline-none focus:ring-2 focus:ring-cyan-200/60">Refresh feed</button></section>; }

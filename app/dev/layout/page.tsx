@@ -1,88 +1,42 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
+import OperatingSystem from "@/components/os/core/OperatingSystem";
 
-import type { WidgetFootprint } from "@/apps/core";
-import { WidgetResizer } from "@/components/os/layout/WidgetResizer";
+type Rect = { width: number; height: number; left: number; top: number };
+type LayoutState = { viewport: Rect; shell?: Rect; navigation?: Rect; workspace?: Rect; dashboard?: Rect; horizontalOverflow: boolean };
 
-const CELL_WIDTH = 150;
-const CELL_HEIGHT = 140;
-const GAP = 16;
+const measure = (element: Element | null): Rect | undefined => {
+  if (!element) return undefined;
+  const rect = element.getBoundingClientRect();
+  return { width: Math.round(rect.width), height: Math.round(rect.height), left: Math.round(rect.left), top: Math.round(rect.top) };
+};
 
-export default function DashboardLayoutLab() {
-  const [footprint, setFootprint] = useState<WidgetFootprint>({
-    rows: 2,
-    cols: 2,
-  });
+export default function LayoutDiagnosticsPage() {
+  const [layout, setLayout] = useState<LayoutState>({ viewport: { width: 0, height: 0, left: 0, top: 0 }, horizontalOverflow: false });
 
-  const previewStyle = useMemo(() => {
-    return {
-      width: footprint.cols * CELL_WIDTH + (footprint.cols - 1) * GAP,
-      height: footprint.rows * CELL_HEIGHT + (footprint.rows - 1) * GAP,
-    };
-  }, [footprint]);
+  useEffect(() => {
+    const update = () => setLayout({
+      viewport: { width: window.innerWidth, height: window.innerHeight, left: 0, top: 0 },
+      shell: measure(document.querySelector("[data-cosmic-os-root]")),
+      navigation: measure(document.querySelector("[data-cosmic-navigation]")),
+      workspace: measure(document.querySelector("[data-cosmic-workspace]")),
+      dashboard: measure(document.querySelector("[data-dashboard-root]")),
+      horizontalOverflow: document.documentElement.scrollWidth > document.documentElement.clientWidth,
+    });
+    update();
+    const observer = new ResizeObserver(update);
+    ["[data-cosmic-os-root]", "[data-cosmic-navigation]", "[data-cosmic-workspace]", "[data-dashboard-root]"].forEach((selector) => {
+      const element = document.querySelector(selector);
+      if (element) observer.observe(element);
+    });
+    window.addEventListener("resize", update);
+    return () => { observer.disconnect(); window.removeEventListener("resize", update); };
+  }, []);
 
-  return (
-    <main className="min-h-screen bg-neutral-950 text-white">
-      <div className="mx-auto flex min-h-screen max-w-7xl items-center justify-center p-12">
-        <div className="grid grid-cols-[340px_1fr] gap-12">
-          {/* Controls */}
-          <div className="rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur-xl">
-            <WidgetResizer
-              value={footprint}
-              onChange={setFootprint}
-            />
+  const rows = [
+    ["Viewport", layout.viewport], ["Shell", layout.shell], ["Navigation", layout.navigation], ["Workspace", layout.workspace], ["Dashboard", layout.dashboard],
+  ] as const;
 
-            <div className="mt-8 rounded-2xl border border-white/10 bg-black/20 p-4">
-              <p className="text-xs uppercase tracking-[0.18em] text-white/40">
-                Selected
-              </p>
-
-              <p className="mt-2 text-2xl font-semibold">
-                {footprint.cols} × {footprint.rows}
-              </p>
-
-              <p className="mt-2 text-sm text-white/50">
-                {footprint.cols} columns • {footprint.rows} rows
-              </p>
-            </div>
-          </div>
-
-          {/* Preview */}
-          <div className="flex items-center justify-center rounded-3xl border border-white/10 bg-gradient-to-b from-white/5 to-white/[0.02] p-12">
-            <div
-              style={previewStyle}
-              className="
-                flex
-                items-center
-                justify-center
-                rounded-3xl
-                border
-                border-cyan-300/30
-                bg-cyan-400/10
-                shadow-[0_0_60px_rgba(34,211,238,0.15)]
-                transition-all
-                duration-300
-                ease-out
-              "
-            >
-              <div className="text-center">
-                <h2 className="text-xl font-semibold">
-                  Weather Widget
-                </h2>
-
-                <p className="mt-2 text-sm text-white/60">
-                  Live Resize Preview
-                </p>
-
-                <p className="mt-6 text-3xl font-bold">
-                  {footprint.cols} × {footprint.rows}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </main>
-  );
+  return <><OperatingSystem /><aside className="fixed right-3 top-3 z-[1200] w-[min(22rem,calc(100vw-1.5rem))] rounded-2xl border border-cyan-200/25 bg-[#050b1c]/92 p-4 text-white shadow-2xl backdrop-blur-xl"><p className="cosmic-kicker">Cosmic OS / Layout Probe</p><h1 className="mt-2 text-lg font-light tracking-[.12em]">LIVE DIMENSIONS</h1><div className="mt-3 grid gap-2 text-xs">{rows.map(([label, rect]) => <div key={label} className="flex justify-between gap-3 border-b border-white/[.08] py-1.5"><span className="text-violet-200/65">{label}</span><code className="text-cyan-100/80">{rect ? `${rect.width}×${rect.height}` : "not mounted"}</code></div>)}</div><div className={`mt-3 rounded-lg border p-2 ${layout.horizontalOverflow ? "border-rose-300/35 bg-rose-400/10 text-rose-100" : "border-emerald-300/25 bg-emerald-400/10 text-emerald-100"}`}>Horizontal overflow: {layout.horizontalOverflow ? "detected" : "none"}</div></aside></>;
 }

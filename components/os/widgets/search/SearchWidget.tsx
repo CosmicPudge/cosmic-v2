@@ -41,7 +41,6 @@ export default function SearchWidget() {
         eyebrow="Global"
         title="Search"
         subtitle="Find anything in Cosmic"
-        icon={<Search className="h-4 w-4" />}
         action={<button type="button" onClick={() => openSearch(query)} className="grid h-9 w-9 place-items-center rounded-xl border border-white/10 bg-white/5 text-white/55 transition hover:bg-white/10 hover:text-white" aria-label="Open full Search"><Maximize2 className="h-4 w-4" /></button>}
       />
       <WidgetBody className="gap-3">

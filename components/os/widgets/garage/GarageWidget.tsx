@@ -8,10 +8,12 @@ import WidgetFooter from "@/components/os/ui/widget/WidgetFooter";
 import { WidgetEmpty, WidgetLoading } from "@/components/os/ui/widget";
 import { useWidgetContext } from "@/components/os/ui/widget/WidgetContext";
 import { reminderStatus, useGarage } from "@/hooks/os/useGarage";
+import { useDashboardWidgetReadiness } from "@/components/dashboard/readiness/DashboardReadiness";
 
 export default function GarageWidget() {
   const { size } = useWidgetContext();
   const { loading, selectedVehicle, summary } = useGarage();
+  useDashboardWidgetReadiness("garage", loading ? "loading" : "ready");
   const maintenance = summary?.maintenance.filter((item) => ["overdue", "dueSoon"].includes(summary.statusById.get(item.id) ?? "")) ?? [];
   const criticalIssue = summary?.issues.find((item) => item.status !== "resolved" && ["critical", "high"].includes(item.severity));
   const reminder = selectedVehicle ? summary?.reminders.find((item) => reminderStatus(item, selectedVehicle.currentMileage) === "overdue" || reminderStatus(item, selectedVehicle.currentMileage) === "dueSoon") : undefined;

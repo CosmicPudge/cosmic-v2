@@ -4,11 +4,7 @@ import Widget from "@/components/os/ui/widget/Widget";
 import WidgetHeader from "@/components/os/ui/widget/WidgetHeader";
 import WidgetBody from "@/components/os/ui/widget/WidgetBody";
 import WidgetFooter from "@/components/os/ui/widget/WidgetFooter";
-
-import BriefingGreeting from "./BriefingGreeting";
-import BriefingSummary from "./BriefingSummary";
-import BriefingAgenda from "./BriefingAgenda";
-import BriefingFooter from "./BriefingFooter";
+import { WidgetEmpty } from "@/components/os/ui/widget";
 
 export default function BriefingWidget() {
   return (
@@ -20,17 +16,9 @@ export default function BriefingWidget() {
         subtitle="Everything you need today"
       />
 
-      <WidgetBody>
-        <BriefingGreeting />
+      <WidgetBody><WidgetEmpty title="Briefing data unavailable" description="Open Daily Briefing when your schedule and sources are ready." /></WidgetBody>
 
-        <BriefingSummary />
-
-        <BriefingAgenda />
-      </WidgetBody>
-
-      <WidgetFooter>
-        <BriefingFooter />
-      </WidgetFooter>
+      <WidgetFooter><span className="text-xs text-fuchsia-100/70">Briefing source unavailable</span></WidgetFooter>
     </Widget>
   );
 }

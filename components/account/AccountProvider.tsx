@@ -1,20 +1,10 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-
 import type { CosmicAccount } from "@/core/contracts/Account";
 import { setActiveCosmicScope } from "@/services/storage/scope";
 
-interface AccountState {
-  loading: boolean;
-  account: CosmicAccount | null;
-  expiresAt: string | null;
-  authenticated: boolean;
-  isAdmin: boolean;
-  refresh(): Promise<void>;
-  signOut(): Promise<void>;
-}
-
+interface AccountState { loading: boolean; account: CosmicAccount | null; expiresAt: string | null; authenticated: boolean; isAdmin: boolean; refresh(): Promise<void>; signOut(): Promise<void>; }
 const AccountContext = createContext<AccountState | null>(null);
 
 export function AccountProvider({ children }: { children: React.ReactNode }) {
@@ -23,12 +13,8 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
   const [expiresAt, setExpiresAt] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
 
-  const refresh = useCallback(async () => {
-    setLoading(true);
-    setAccount(null);
-    setExpiresAt(null);
-    setIsAdmin(false);
-    setActiveCosmicScope("local");
+  const syncSession = useCallback(async (showLoading: boolean) => {
+    if (showLoading) setLoading(true);
     try {
       const response = await fetch("/api/account/session", { cache: "no-store" });
       const payload = await response.json() as { authenticated?: boolean; account?: CosmicAccount; expiresAt?: string; isAdmin?: boolean };
@@ -37,38 +23,32 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
       setExpiresAt(nextAccount ? payload.expiresAt ?? null : null);
       setIsAdmin(Boolean(nextAccount && payload.isAdmin));
       setActiveCosmicScope(nextAccount ? { id: `account-${nextAccount.id}`, kind: "account" } : "local");
+      if (!nextAccount) window.dispatchEvent(new CustomEvent("cosmic:auth-lost"));
     } catch {
-      setAccount(null);
-      setExpiresAt(null);
-      setIsAdmin(false);
-      setActiveCosmicScope("local");
-    } finally {
-      setLoading(false);
-    }
+      setAccount(null); setExpiresAt(null); setIsAdmin(false); setActiveCosmicScope("local"); window.dispatchEvent(new CustomEvent("cosmic:auth-lost"));
+    } finally { if (showLoading) setLoading(false); }
   }, []);
 
+  const refresh = useCallback(async () => {
+    setAccount(null); setExpiresAt(null); setIsAdmin(false); setActiveCosmicScope("local");
+    await syncSession(true);
+  }, [syncSession]);
+
   const signOut = useCallback(async () => {
-    setLoading(true);
-    setAccount(null);
-    setExpiresAt(null);
-    setIsAdmin(false);
-    setActiveCosmicScope("local");
-    await fetch("/api/account/signout", { method: "POST" });
-    setAccount(null);
-    setExpiresAt(null);
-    setIsAdmin(false);
-    setActiveCosmicScope("local");
-    setLoading(false);
+    setLoading(true); setAccount(null); setExpiresAt(null); setIsAdmin(false); setActiveCosmicScope("local");
+    try { await fetch("/api/account/signout", { method: "POST" }); } finally { setLoading(false); }
   }, []);
 
   useEffect(() => { const timer = window.setTimeout(() => void refresh(), 0); return () => window.clearTimeout(timer); }, [refresh]);
+  useEffect(() => {
+    const timer = window.setInterval(() => void syncSession(false), 60_000);
+    const onVisibility = () => { if (!document.hidden) void syncSession(false); };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => { window.clearInterval(timer); document.removeEventListener("visibilitychange", onVisibility); };
+  }, [syncSession]);
 
   const value = useMemo(() => ({ loading, account, expiresAt, isAdmin, authenticated: Boolean(account), refresh, signOut }), [account, expiresAt, isAdmin, loading, refresh, signOut]);
-  return <AccountContext.Provider key={account?.id ?? "guest"} value={value}>{children}</AccountContext.Provider>;
+  return <AccountContext.Provider key={account?.id ?? "signed-out"} value={value}>{children}</AccountContext.Provider>;
 }
 
-export function useCosmicAccount() {
-  const value = useContext(AccountContext);
-  if (!value) throw new Error("useCosmicAccount must be used inside AccountProvider.");
-  return value;
-}
+export function useCosmicAccount() { const value = useContext(AccountContext); if (!value) throw new Error("useCosmicAccount must be used inside AccountProvider."); return value; }

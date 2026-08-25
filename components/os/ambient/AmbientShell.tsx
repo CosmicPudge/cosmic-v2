@@ -46,6 +46,7 @@ export default function AmbientShell({ children }: { children: ReactNode }) {
       <main className="ambient-enter relative z-10 mx-auto flex min-h-[100svh] w-full max-w-[1600px] items-center px-[max(1.25rem,env(safe-area-inset-left))] py-[max(1.25rem,env(safe-area-inset-top))] sm:px-8 lg:px-14">
         {children}
       </main>
+      <button type="button" className="sr-only" onClick={exitAmbient}>Exit Ambient Mode</button>
       <span className="sr-only">Press anywhere to return to the dashboard.</span>
     </div>
   );

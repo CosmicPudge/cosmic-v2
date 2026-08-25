@@ -94,6 +94,150 @@ export const providerCredentials = pgTable("provider_credentials", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+export const financeConnections = pgTable("finance_connections", {
+  id: text("id").primaryKey().references(() => providerConnections.id, { onDelete: "cascade" }),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  provider: text("provider").notNull(),
+  environment: text("environment").notNull(),
+  institutionId: text("institution_id"),
+  institutionName: text("institution_name"),
+  status: text("status").notNull().default("connected"),
+  reconnectRequired: boolean("reconnect_required").notNull().default(false),
+  lastSuccessfulSyncAt: timestamp("last_successful_sync_at", { withTimezone: true }),
+  lastAttemptedSyncAt: timestamp("last_attempted_sync_at", { withTimezone: true }),
+  errorCategory: text("error_category"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [index("finance_connections_user_index").on(table.userId), uniqueIndex("finance_connections_user_provider_institution_unique").on(table.userId, table.provider, table.environment, table.institutionId), check("finance_connections_environment_check", sql`${table.environment} in ('sandbox', 'development', 'production')`), check("finance_connections_status_check", sql`${table.status} in ('connected', 'syncing', 'up_to_date', 'needs_attention', 'reconnect_required', 'provider_unavailable', 'disconnected')`)]);
+
+export const financeExternalAccounts = pgTable("finance_external_accounts", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  connectionId: text("connection_id").notNull().references(() => financeConnections.id, { onDelete: "cascade" }),
+  providerAccountId: text("provider_account_id").notNull(),
+  manualAccountId: text("manual_account_id"),
+  name: text("name").notNull(),
+  type: text("type").notNull(),
+  subtype: text("subtype"),
+  mask: text("mask"),
+  currency: text("currency").notNull().default("USD"),
+  currentBalanceMinor: integer("current_balance_minor"),
+  availableBalanceMinor: integer("available_balance_minor"),
+  creditLimitMinor: integer("credit_limit_minor"),
+  status: text("status").notNull().default("connected"),
+  lastUpdatedAt: timestamp("last_updated_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [index("finance_external_accounts_user_index").on(table.userId), index("finance_external_accounts_connection_index").on(table.connectionId), uniqueIndex("finance_external_accounts_provider_id_unique").on(table.connectionId, table.providerAccountId)]);
+
+export const financeExternalTransactions = pgTable("finance_external_transactions", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  connectionId: text("connection_id").notNull().references(() => financeConnections.id, { onDelete: "cascade" }),
+  externalAccountId: text("external_account_id").notNull().references(() => financeExternalAccounts.id, { onDelete: "cascade" }),
+  providerTransactionId: text("provider_transaction_id").notNull(),
+  pendingProviderTransactionId: text("pending_provider_transaction_id"),
+  postedDate: text("posted_date"),
+  authorizedDate: text("authorized_date"),
+  description: text("description").notNull(),
+  merchant: text("merchant"),
+  amountMinor: integer("amount_minor").notNull(),
+  direction: text("direction").notNull(),
+  status: text("status").notNull(),
+  providerCategory: text("provider_category"),
+  paymentChannel: text("payment_channel"),
+  currency: text("currency").notNull().default("USD"),
+  removed: boolean("removed").notNull().default(false),
+  syncedAt: timestamp("synced_at", { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [index("finance_external_transactions_user_date_index").on(table.userId, table.postedDate), index("finance_external_transactions_account_date_index").on(table.externalAccountId, table.postedDate), uniqueIndex("finance_external_transactions_provider_id_unique").on(table.connectionId, table.providerTransactionId), check("finance_external_transactions_direction_check", sql`${table.direction} in ('income', 'expense', 'transfer')`), check("finance_external_transactions_status_check", sql`${table.status} in ('pending', 'cleared')`)]);
+
+export const financeSyncState = pgTable("finance_sync_state", {
+  connectionId: text("connection_id").primaryKey().references(() => financeConnections.id, { onDelete: "cascade" }),
+  cursor: text("cursor"),
+  initialSyncComplete: boolean("initial_sync_complete").notNull().default(false),
+  historicalSyncComplete: boolean("historical_sync_complete").notNull().default(false),
+  lastAttemptedAt: timestamp("last_attempted_at", { withTimezone: true }),
+  lastSuccessfulAt: timestamp("last_successful_at", { withTimezone: true }),
+  nextAllowedAt: timestamp("next_allowed_at", { withTimezone: true }),
+  errorCategory: text("error_category"),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const financeTransactionOverrides = pgTable("finance_transaction_overrides", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  externalTransactionId: text("external_transaction_id").notNull().references(() => financeExternalTransactions.id, { onDelete: "cascade" }),
+  categoryId: text("category_id"),
+  notes: text("notes"),
+  ignored: boolean("ignored").notNull().default(false),
+  isSubscription: boolean("is_subscription"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [index("finance_transaction_overrides_user_index").on(table.userId), uniqueIndex("finance_transaction_overrides_transaction_unique").on(table.userId, table.externalTransactionId)]);
+
+export const financeTransferPairs = pgTable("finance_transfer_pairs", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  sourceExternalTransactionId: text("source_external_transaction_id").notNull().references(() => financeExternalTransactions.id, { onDelete: "cascade" }),
+  destinationExternalTransactionId: text("destination_external_transaction_id").notNull().references(() => financeExternalTransactions.id, { onDelete: "cascade" }),
+  confidence: integer("confidence").notNull(),
+  confirmed: boolean("confirmed").notNull().default(false),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [index("finance_transfer_pairs_user_index").on(table.userId), uniqueIndex("finance_transfer_pairs_source_unique").on(table.sourceExternalTransactionId), uniqueIndex("finance_transfer_pairs_destination_unique").on(table.destinationExternalTransactionId)]);
+
+export const financeSavingsGoals = pgTable("finance_savings_goals", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  targetAmountMinor: integer("target_amount_minor").notNull(),
+  targetDate: text("target_date"),
+  progressMode: text("progress_mode").notNull(),
+  linkedAccountId: text("linked_account_id"),
+  manualAssignedMinor: integer("manual_assigned_minor").notNull().default(0),
+  archived: boolean("archived").notNull().default(false),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [index("finance_savings_goals_user_index").on(table.userId), check("finance_savings_goals_mode_check", sql`${table.progressMode} in ('manual', 'dedicated_account', 'contributions')`)]);
+
+export const financeGoalContributions = pgTable("finance_goal_contributions", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  goalId: text("goal_id").notNull().references(() => financeSavingsGoals.id, { onDelete: "cascade" }),
+  manualTransactionId: text("manual_transaction_id"),
+  externalTransactionId: text("external_transaction_id").references(() => financeExternalTransactions.id, { onDelete: "cascade" }),
+  amountMinor: integer("amount_minor").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [index("finance_goal_contributions_user_index").on(table.userId), index("finance_goal_contributions_goal_index").on(table.goalId), uniqueIndex("finance_goal_contributions_external_unique").on(table.goalId, table.externalTransactionId)]);
+
+export const financeSyncJobs = pgTable("finance_sync_jobs", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  connectionId: text("connection_id").notNull().references(() => financeConnections.id, { onDelete: "cascade" }),
+  reason: text("reason").notNull(),
+  status: text("status").notNull().default("queued"),
+  attempts: integer("attempts").notNull().default(0),
+  lastErrorCategory: text("last_error_category"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  attemptedAt: timestamp("attempted_at", { withTimezone: true }),
+  startedAt: timestamp("started_at", { withTimezone: true }),
+  leaseExpiresAt: timestamp("lease_expires_at", { withTimezone: true }),
+  nextAttemptAt: timestamp("next_attempt_at", { withTimezone: true }),
+  completedAt: timestamp("completed_at", { withTimezone: true }),
+}, (table) => [index("finance_sync_jobs_user_index").on(table.userId), index("finance_sync_jobs_connection_status_index").on(table.connectionId, table.status), index("finance_sync_jobs_claim_index").on(table.status, table.nextAttemptAt, table.leaseExpiresAt), check("finance_sync_jobs_status_check", sql`${table.status} in ('queued', 'processing', 'retry', 'completed', 'failed', 'cancelled')`)]);
+
+export const financeDuplicateDecisions = pgTable("finance_duplicate_decisions", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  sourceExternalTransactionId: text("source_external_transaction_id").notNull().references(() => financeExternalTransactions.id, { onDelete: "cascade" }),
+  duplicateExternalTransactionId: text("duplicate_external_transaction_id").notNull().references(() => financeExternalTransactions.id, { onDelete: "cascade" }),
+  decision: text("decision").notNull(),
+  confidence: integer("confidence").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [index("finance_duplicate_decisions_user_index").on(table.userId), uniqueIndex("finance_duplicate_decisions_pair_unique").on(table.userId, table.sourceExternalTransactionId, table.duplicateExternalTransactionId), check("finance_duplicate_decisions_decision_check", sql`${table.decision} in ('keep_both', 'treat_duplicate')`)]);
+
 export const accountRoles = pgTable("account_roles", {
   accountId: text("account_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   role: text("role").notNull().default("user"),

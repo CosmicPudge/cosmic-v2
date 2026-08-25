@@ -23,6 +23,7 @@ export function useVisiblePolling(
     if (!enabled) return;
 
     let disposed = false;
+    let authLost = false;
     let timer: number | null = null;
     let inFlight = false;
 
@@ -34,7 +35,7 @@ export function useVisiblePolling(
     };
 
     const run = async () => {
-      if (disposed || document.visibilityState !== "visible" || inFlight) return;
+      if (disposed || authLost || document.visibilityState !== "visible" || inFlight) return;
       inFlight = true;
       try {
         await callbackRef.current();
@@ -47,7 +48,7 @@ export function useVisiblePolling(
 
     const schedule = () => {
       clearTimer();
-      if (disposed || document.visibilityState !== "visible") return;
+      if (disposed || authLost || document.visibilityState !== "visible") return;
       timer = window.setTimeout(async () => {
         await run();
         schedule();
@@ -58,8 +59,10 @@ export function useVisiblePolling(
       clearTimer();
       if (document.visibilityState === "visible") void run().finally(schedule);
     };
+    const handleAuthLost = () => { authLost = true; clearTimer(); };
 
     document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("cosmic:auth-lost", handleAuthLost);
     if (document.visibilityState === "visible") {
       if (immediate) void run().finally(schedule);
       else schedule();
@@ -69,6 +72,7 @@ export function useVisiblePolling(
       disposed = true;
       clearTimer();
       document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("cosmic:auth-lost", handleAuthLost);
     };
   }, [enabled, immediate, intervalMs]);
 }

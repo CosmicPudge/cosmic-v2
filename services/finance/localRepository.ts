@@ -31,15 +31,20 @@ function isBudget(value: unknown): value is FinanceBudget {
   return isRecord(value) && isString(value.id) && isString(value.categoryId) && isFiniteMinor(value.monthlyLimitMinor) && value.monthlyLimitMinor >= 0 && typeof value.active === "boolean" && isString(value.createdAt) && isString(value.updatedAt);
 }
 
+function uniqueById<T extends { id: string }>(items: T[]) {
+  const seen = new Set<string>();
+  return items.filter((item) => !seen.has(item.id) && seen.add(item.id));
+}
+
 export function validateFinanceSnapshot(value: unknown): FinanceSnapshot | null {
   if (!isRecord(value) || value.version !== 1 || !Array.isArray(value.accounts) || !Array.isArray(value.categories) || !Array.isArray(value.transactions) || typeof value.hideBalances !== "boolean") return null;
-  const accounts = value.accounts.filter(isAccount);
-  const categories = value.categories.filter(isCategory);
+  const accounts = uniqueById(value.accounts.filter(isAccount));
+  const categories = uniqueById(value.categories.filter(isCategory));
   const accountIds = new Set(accounts.map((account) => account.id));
   const categoryIds = new Set(categories.map((category) => category.id));
-  const transactions = value.transactions.filter((transaction): transaction is FinanceTransaction => isTransaction(transaction) && accountIds.has(transaction.accountId) && categoryIds.has(transaction.categoryId));
-  const recurringItems = Array.isArray(value.recurringItems) ? value.recurringItems.filter((item): item is FinanceRecurringItem => isRecurringItem(item) && accountIds.has(item.accountId) && categoryIds.has(item.categoryId)) : [];
-  const budgets = Array.isArray(value.budgets) ? value.budgets.filter((budget): budget is FinanceBudget => isBudget(budget) && categoryIds.has(budget.categoryId)) : [];
+  const transactions = uniqueById(value.transactions.filter((transaction): transaction is FinanceTransaction => isTransaction(transaction) && accountIds.has(transaction.accountId) && categoryIds.has(transaction.categoryId)));
+  const recurringItems = Array.isArray(value.recurringItems) ? uniqueById(value.recurringItems.filter((item): item is FinanceRecurringItem => isRecurringItem(item) && accountIds.has(item.accountId) && categoryIds.has(item.categoryId))) : [];
+  const budgets = Array.isArray(value.budgets) ? uniqueById(value.budgets.filter((budget): budget is FinanceBudget => isBudget(budget) && categoryIds.has(budget.categoryId))) : [];
   return { version: 1, accounts, categories: categories.length ? categories : defaultFinanceCategories, transactions, recurringItems, budgets, hideBalances: value.hideBalances, ...(isString(value.selectedAccountId) ? { selectedAccountId: value.selectedAccountId } : {}) };
 }
 
@@ -63,7 +68,12 @@ export function useFinanceRepository() {
   const [ready, setReady] = useState(false);
   const [loadedScope, setLoadedScope] = useState<string>();
 
-  useEffect(() => { const timer = window.setTimeout(() => { setData(readFinanceSnapshot(scope.id)); setLoadedScope(scope.id); setReady(true); }, 0); return () => window.clearTimeout(timer); }, [scope.id]);
+  useEffect(() => {
+    // Never render or persist the previous account's records while a new scope
+    // is hydrating. The ready flag is intentionally false for this transition.
+    const timer = window.setTimeout(() => { setData(readFinanceSnapshot(scope.id)); setLoadedScope(scope.id); setReady(true); }, 0);
+    return () => window.clearTimeout(timer);
+  }, [scope.id]);
   useEffect(() => { if (ready && loadedScope === scope.id) replaceFinanceSnapshot(data, scope.id); }, [data, ready, loadedScope, scope.id]);
   useEffect(() => {
     const sync = (event: Event) => { const next = event instanceof CustomEvent && event.detail ? validateFinanceSnapshot(event.detail) : readFinanceSnapshot(scope.id); if (next) setData((current) => same(current, next) ? current : next); };
@@ -76,6 +86,7 @@ export function useFinanceRepository() {
 
   const saveAccount = useCallback((account: FinanceAccount) => setData((current) => ({ ...current, accounts: upsert(current.accounts, account), selectedAccountId: current.selectedAccountId ?? account.id })), []);
   const saveTransaction = useCallback((transaction: FinanceTransaction) => setData((current) => ({ ...current, transactions: upsert(current.transactions, transaction) })), []);
+  const saveTransactions = useCallback((transactions: FinanceTransaction[]) => setData((current) => ({ ...current, transactions: transactions.reduce((items, transaction) => upsert(items, transaction), current.transactions) })), []);
   const saveRecurringItem = useCallback((item: FinanceRecurringItem) => setData((current) => ({ ...current, recurringItems: upsert(current.recurringItems, item) })), []);
   const removeRecurringItem = useCallback((id: string) => setData((current) => ({ ...current, recurringItems: current.recurringItems.filter((item) => item.id !== id) })), []);
   const saveBudget = useCallback((budget: FinanceBudget) => setData((current) => ({ ...current, budgets: upsert(current.budgets, budget) })), []);
@@ -85,5 +96,6 @@ export function useFinanceRepository() {
   const setSelectedAccount = useCallback((id?: string) => setData((current) => ({ ...current, selectedAccountId: id })), []);
   const setHideBalances = useCallback((hideBalances: boolean) => setData((current) => ({ ...current, hideBalances })), []);
 
-  return { data, ready, sync, saveAccount, saveTransaction, removeTransaction, saveRecurringItem, removeRecurringItem, saveBudget, removeBudget, saveCategory, setSelectedAccount, setHideBalances };
+  const scopedReady = ready && loadedScope === scope.id;
+  return { data: scopedReady ? data : emptyFinanceData, ready: scopedReady, sync, saveAccount, saveTransaction, saveTransactions, removeTransaction, saveRecurringItem, removeRecurringItem, saveBudget, removeBudget, saveCategory, setSelectedAccount, setHideBalances };
 }

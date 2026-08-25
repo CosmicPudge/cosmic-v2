@@ -4,11 +4,7 @@ import Widget from "@/components/os/ui/widget/Widget";
 import WidgetHeader from "@/components/os/ui/widget/WidgetHeader";
 import WidgetBody from "@/components/os/ui/widget/WidgetBody";
 import WidgetFooter from "@/components/os/ui/widget/WidgetFooter";
-
-import NotificationsPreview from "./NotificationsPreview";
-import NotificationsList from "./NotificationsList";
-import NotificationsHistory from "./NotificationsHistory";
-import NotificationsFooter from "./NotificationsFooter";
+import { WidgetEmpty } from "@/components/os/ui/widget";
 
 export default function NotificationsWidget() {
   return (
@@ -20,17 +16,9 @@ export default function NotificationsWidget() {
         subtitle="Notification Center"
       />
 
-      <WidgetBody>
-        <NotificationsPreview />
+      <WidgetBody><WidgetEmpty title="No notification feed connected" description="Open Notifications to review available alerts." compact /></WidgetBody>
 
-        <NotificationsList />
-
-        <NotificationsHistory />
-      </WidgetBody>
-
-      <WidgetFooter>
-        <NotificationsFooter />
-      </WidgetFooter>
+      <WidgetFooter><span className="text-xs text-rose-100/70">Notification source unavailable</span></WidgetFooter>
     </Widget>
   );
 }

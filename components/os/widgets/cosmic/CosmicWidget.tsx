@@ -4,11 +4,8 @@ import Widget from "@/components/os/ui/widget/Widget";
 import WidgetHeader from "@/components/os/ui/widget/WidgetHeader";
 import WidgetBody from "@/components/os/ui/widget/WidgetBody";
 import WidgetFooter from "@/components/os/ui/widget/WidgetFooter";
-
-import CosmicGreeting from "./CosmicGreeting";
-import CosmicBriefing from "./CosmicBriefing";
-import CosmicActions from "./CosmicActions";
-import CosmicFooter from "./CosmicFooter";
+import { WidgetEmpty } from "@/components/os/ui/widget";
+import Link from "next/link";
 
 export default function CosmicWidget() {
   return (
@@ -20,17 +17,9 @@ export default function CosmicWidget() {
         subtitle="Your intelligent workspace"
       />
 
-      <WidgetBody>
-        <CosmicGreeting />
+      <WidgetBody><WidgetEmpty title="Cosmic AI is ready" description="Open Cosmic AI to ask a real question or provide a source." /></WidgetBody>
 
-        <CosmicBriefing />
-
-        <CosmicActions />
-      </WidgetBody>
-
-      <WidgetFooter>
-        <CosmicFooter />
-      </WidgetFooter>
+      <WidgetFooter><Link href="/ai" className="text-xs text-cyan-100">Open Cosmic AI</Link></WidgetFooter>
     </Widget>
   );
 }

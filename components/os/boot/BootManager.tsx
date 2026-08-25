@@ -107,3 +107,7 @@ export function useBoot() {
 
   return context;
 }
+
+export function useOptionalBoot() {
+  return useContext(BootContext);
+}

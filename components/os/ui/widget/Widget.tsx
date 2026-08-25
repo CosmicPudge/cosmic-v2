@@ -2,11 +2,14 @@
 
 import { motion } from "framer-motion";
 import clsx from "clsx";
+import type { CSSProperties } from "react";
 
 import { useDisplay } from "@/components/os/display";
+import { useWidgetContext, WidgetProvider } from "./WidgetContext";
 
 import GlassPanel from "@/components/os/ui/GlassPanel";
 import WidgetBackground from "./WidgetBackground";
+import { getModuleVisualIdentity } from "./moduleVisualIdentity";
 
 import type {
   WidgetAccent,
@@ -36,8 +39,11 @@ export default function Widget({
   contentPadding = true,
 }: Props) {
   const { tokens } = useDisplay();
+  const parentContext = useWidgetContext();
+  const visual = getModuleVisualIdentity(accent);
 
   return (
+    <WidgetProvider size={parentContext.size} accent={accent}>
     <motion.div
       whileHover={
         hover
@@ -47,6 +53,7 @@ export default function Widget({
           : undefined
       }
       transition={WIDGET_TRANSITION}
+      data-widget-accent={accent}
       className={clsx(
         "relative h-full w-full min-h-0",
         className
@@ -63,7 +70,12 @@ export default function Widget({
         style={{
           borderRadius: tokens.radius.xl,
           backdropFilter: `blur(${tokens.blur}px)`,
-        }}
+          borderColor: visual.borderGlow,
+          "--widget-accent": visual.accent,
+          "--widget-secondary": visual.secondaryAccent,
+          "--widget-panel": visual.panelGradient,
+          "--widget-glow": visual.borderGlow,
+        } as CSSProperties}
       >
         {/* Full widget background */}
         <WidgetBackground accent={accent} />
@@ -87,5 +99,6 @@ export default function Widget({
         </div>
       </GlassPanel>
     </motion.div>
+    </WidgetProvider>
   );
 }

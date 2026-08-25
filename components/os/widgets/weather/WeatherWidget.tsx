@@ -7,6 +7,7 @@ import WidgetHeader from "@/components/os/ui/widget/WidgetHeader";
 import WidgetBody from "@/components/os/ui/widget/WidgetBody";
 import WidgetFooter from "@/components/os/ui/widget/WidgetFooter";
 import { useWidgetContext } from "@/components/os/ui/widget/WidgetContext";
+import { useDashboardWidgetReadiness } from "@/components/dashboard/readiness/DashboardReadiness";
 
 import WeatherCurrent from "./WeatherCurrent";
 import WeatherHourly from "./WeatherHourly";
@@ -20,6 +21,7 @@ export default function WeatherWidget() {
     loading,
     error,
   } = useWeather();
+  useDashboardWidgetReadiness("weather", loading ? "loading" : error && !weather ? "degraded" : "ready");
 
   return (
     <Widget

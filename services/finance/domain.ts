@@ -1,4 +1,4 @@
-import type { FinanceAccount, FinanceBudget, FinanceRecurringCadence, FinanceRecurringItem, FinanceTransaction } from "@/core/contracts/Finance";
+import type { FinanceAccount, FinanceBudget, FinanceRecurringCadence, FinanceRecurringItem, FinanceSnapshot, FinanceTransaction } from "@/core/contracts/Finance";
 
 export const DEFAULT_CURRENCY = "USD";
 
@@ -133,4 +133,43 @@ export function getAverageDailySpending(transactions: FinanceTransaction[], mont
     return date.getFullYear() === month.getFullYear() && date.getMonth() === month.getMonth();
   }).map((transaction) => transaction.date));
   return days.size >= 2 ? Math.round(totals.expenseMinor / days.size) : null;
+}
+
+export type FinanceAttention = { id: string; tone: "critical" | "attention" | "info"; title: string; detail: string };
+
+export function getNetWorthSummary(accounts: FinanceAccount[], balances: Map<string, number>) {
+  const assetsMinor = accounts.filter((account) => account.type !== "credit").reduce((sum, account) => sum + (balances.get(account.id) ?? 0), 0);
+  const liabilitiesMinor = accounts.filter((account) => account.type === "credit").reduce((sum, account) => sum + Math.abs(balances.get(account.id) ?? 0), 0);
+  return { assetsMinor, liabilitiesMinor, netWorthMinor: assetsMinor - liabilitiesMinor };
+}
+
+export function getFinanceAttention(snapshot: FinanceSnapshot, balances: Map<string, number>, now = new Date()): FinanceAttention[] {
+  const result: FinanceAttention[] = [];
+  snapshot.accounts.filter((account) => !account.archived && account.type !== "credit").forEach((account) => {
+    if ((balances.get(account.id) ?? 0) < 0) result.push({ id: `negative:${account.id}`, tone: "critical", title: `${account.name} is below zero`, detail: "Review pending items or move money before the next payment." });
+  });
+  const categoryTotals = getCategoryTotals(snapshot.transactions, now);
+  snapshot.budgets.filter((budget) => budget.active).forEach((budget) => {
+    const status = calculateBudgetStatus(budget, categoryTotals.get(budget.categoryId) ?? 0);
+    const category = snapshot.categories.find((item) => item.id === budget.categoryId)?.name ?? "Category";
+    if (status.status === "Over budget") result.push({ id: `budget-over:${budget.id}`, tone: "critical", title: `${category} is over budget`, detail: `${formatMoney(Math.abs(status.remainingMinor))} over this month's limit.` });
+    else if (status.status === "Near limit") result.push({ id: `budget-near:${budget.id}`, tone: "attention", title: `${category} is near its limit`, detail: `${formatMoney(status.remainingMinor)} remaining this month.` });
+  });
+  const upcoming = getUpcomingRecurringItems(snapshot.recurringItems, now, 7);
+  if (upcoming.length) result.push({ id: "recurring:week", tone: "attention", title: `${upcoming.length} expected item${upcoming.length === 1 ? "" : "s"} due this week`, detail: `${formatMoney(Math.abs(calculateExpectedCashFlow(upcoming, now, 7)))} net expected cash flow.` });
+  const uncategorized = snapshot.transactions.filter((transaction) => !transaction.categoryId || !snapshot.categories.some((category) => category.id === transaction.categoryId)).length;
+  if (uncategorized) result.push({ id: "transactions:uncategorized", tone: "info", title: `${uncategorized} transaction${uncategorized === 1 ? "" : "s"} need categorizing`, detail: "Categorization improves budgets and spending summaries." });
+  return result.slice(0, 6);
+}
+
+export function getCategoryTotalsForRange(transactions: FinanceTransaction[], from: Date, to: Date) {
+  const totals = new Map<string, number>();
+  const start = new Date(from.getFullYear(), from.getMonth(), from.getDate()).getTime();
+  const end = new Date(to.getFullYear(), to.getMonth(), to.getDate(), 23, 59, 59).getTime();
+  transactions.forEach((transaction) => {
+    if (transaction.direction !== "expense") return;
+    const time = new Date(`${transaction.date}T12:00:00`).getTime();
+    if (time >= start && time <= end) totals.set(transaction.categoryId, (totals.get(transaction.categoryId) ?? 0) + transaction.amountMinor);
+  });
+  return totals;
 }

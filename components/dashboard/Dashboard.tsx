@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useMemo } from "react";
+
 import DashboardHero from "@/components/dashboard/hero/DashboardHero";
 import { DASHBOARD_LAYOUTS } from "@/components/dashboard/layout/dashboardLayouts";
 import DashboardRegion from "@/components/dashboard/layout/DashboardRegion";
@@ -15,6 +17,12 @@ import { DashboardProvider } from "./state/useDashboard";
 import { useDashboardShortcuts } from "./state/useDashboardShortcuts";
 
 import { useDisplay } from "@/components/os/display";
+import { useCosmicTransition, useRouteReadiness } from "@/components/os/transition";
+import { useCosmicAccount } from "@/components/account/AccountProvider";
+import { useEntitlements } from "@/hooks/os/useEntitlements";
+import { useSettingsRepository } from "@/services/settings/localRepository";
+import { useCosmicScope } from "@/services/storage/scope";
+import { DashboardReadinessProvider, getCriticalDashboardWidgetIds, useDashboardReadiness } from "@/components/dashboard/readiness/DashboardReadiness";
 
 function DashboardContent() {
   useDashboardShortcuts();
@@ -25,7 +33,8 @@ function DashboardContent() {
 
   return (
     <main
-      className="mx-auto flex min-h-full flex-col"
+      data-dashboard-root
+      className="mx-auto flex w-full min-w-0 flex-col"
       style={{
         maxWidth: layout.maxWidth,
         gap: layout.sectionGap,
@@ -56,13 +65,33 @@ function DashboardContent() {
   );
 }
 
+function DashboardReady() {
+  const { account, loading: accountLoading } = useCosmicAccount();
+  const { loading: entitlementsLoading } = useEntitlements();
+  const settings = useSettingsRepository();
+  const scope = useCosmicScope();
+  const dashboard = useDashboardReadiness();
+  const { setDashboardReadiness } = useCosmicTransition();
+  const baseReady = !accountLoading && !entitlementsLoading && settings.ready && (account ? scope.id === `account-${account.id}` : scope.id === "local");
+  useRouteReadiness("/os", baseReady && dashboard.shellReady && dashboard.criticalReady, dashboard.widgets.some((item) => item.status === "degraded") ? "degraded" : "ready");
+  useEffect(() => { setDashboardReadiness(dashboard); }, [dashboard, setDashboardReadiness]);
+  return null;
+}
+
 export default function Dashboard() {
+  const { profile, height } = useDisplay();
+  const { data: settings } = useSettingsRepository();
+  const scope = useCosmicScope();
+  const criticalWidgetIds = useMemo(() => getCriticalDashboardWidgetIds(settings, profile, height), [height, profile, settings]);
   return (
     <DashboardProvider>
+  <DashboardReadinessProvider key={scope.id} criticalWidgetIds={criticalWidgetIds}>
+    <DashboardReady />
   <ExpandedWidgetProvider>
     <DashboardContent />
     <ExpandedWidgetOverlay />
   </ExpandedWidgetProvider>
+  </DashboardReadinessProvider>
 </DashboardProvider>
   );
 }

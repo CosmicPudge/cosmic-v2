@@ -2,8 +2,8 @@ import "server-only";
 
 import { eq } from "drizzle-orm";
 import type { CosmicEntitlements, CosmicFeature, CosmicPlan } from "@/core/contracts/Entitlements";
-import { entitlementsForPlan, freeEntitlements } from "@/core/contracts/Entitlements";
-import { getCurrentCosmicAccount, requireCosmicAccount } from "@/services/auth/server";
+import { entitlementsForPlan } from "@/core/contracts/Entitlements";
+import { requireCosmicAccount } from "@/services/auth/server";
 import { getDatabase, isDatabaseConfigured } from "@/services/database/client";
 import { accountEntitlements, adminEntitlementOverrides } from "@/services/database/schema";
 import { getBillingSubscription } from "@/services/billing/repository";
@@ -54,8 +54,8 @@ export async function getAccountBillingPlan(accountId: string): Promise<CosmicPl
 }
 
 export async function resolveEntitlements(request: Request): Promise<CosmicEntitlements> {
-  const account = await getCurrentCosmicAccount(request);
-  return account ? getAccountEntitlements(account.id) : freeEntitlements;
+  const account = await requireCosmicAccount(request);
+  return getAccountEntitlements(account.id);
 }
 
 export async function requireEntitlement(request: Request, feature: CosmicFeature): Promise<CosmicEntitlements> {

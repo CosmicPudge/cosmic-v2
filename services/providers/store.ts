@@ -6,7 +6,7 @@ import { getDatabase } from "@/services/database/client";
 import { providerConnections, providerCredentials } from "@/services/database/schema";
 import { decryptCredentialPayload, encryptCredentialPayload } from "./credentialCrypto";
 
-export type ProviderName = "gmail" | "spotify" | "calendar";
+export type ProviderName = "gmail" | "spotify" | "calendar" | "plaid";
 export type ProviderConnection = typeof providerConnections.$inferSelect;
 export type ProviderCredential = Record<string, unknown>;
 
@@ -46,5 +46,11 @@ export async function getProviderCredentials<T = ProviderCredential>(userId: str
 
 export async function deleteProviderConnection(userId: string, connectionId: string) {
   const rows = await getDatabase().delete(providerConnections).where(and(eq(providerConnections.userId, userId), eq(providerConnections.id, connectionId))).returning({ id: providerConnections.id });
+  return Boolean(rows[0]);
+}
+
+export async function deleteProviderConnectionCredentials(userId: string, connectionId: string) {
+  if (!(await getProviderConnection(userId, connectionId))) return false;
+  const rows = await getDatabase().delete(providerCredentials).where(eq(providerCredentials.connectionId, connectionId)).returning({ connectionId: providerCredentials.connectionId });
   return Boolean(rows[0]);
 }

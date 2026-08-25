@@ -8,7 +8,7 @@ export default function AppContent({
   children,
 }: AppContentProps) {
   return (
-    <section className="flex-1 overflow-y-auto rounded-3xl border border-white/10 bg-white/5 p-4 backdrop-blur-xl sm:p-8">
+    <section className="cosmic-content-surface flex-1 overflow-y-auto rounded-[1.5rem] p-3 backdrop-blur-xl sm:p-5 lg:p-7">
 
       {children}
 

@@ -1,6 +1,6 @@
 export type CosmicPlan = "free" | "cosmic_plus";
-export type CosmicEntitlementSource = "guest-default" | "account" | "admin-override" | "development-override";
-export type CosmicLimit = "garage.activeVehicles";
+export type CosmicEntitlementSource = "account" | "admin-override" | "development-override";
+export type CosmicLimit = "garage.activeVehicles" | "finance.connectedInstitutions";
 
 export type CosmicFeature =
   | "sports.basic" | "sports.advanced"
@@ -34,11 +34,14 @@ const featureNames: CosmicFeature[] = [
 ];
 
 function featuresForPlan(plan: CosmicPlan): CosmicFeatureEntitlements {
-  return Object.fromEntries(featureNames.map((feature) => [feature, plan === "cosmic_plus" || !feature.includes("advanced") && !["finance.recurring", "finance.budgets", "finance.forecasting", "finance.analytics", "calendar.multi_connection", "mail.advanced"].includes(feature)])) as CosmicFeatureEntitlements;
+  // Finance's local-first ledger, expected items, and basic category budgets are
+  // core recordkeeping. Paid access is reserved for future forecasting/analytics
+  // surfaces rather than blocking the user's own records.
+  return Object.fromEntries(featureNames.map((feature) => [feature, plan === "cosmic_plus" || !feature.includes("advanced") && !["finance.forecasting", "finance.analytics", "calendar.multi_connection", "mail.advanced"].includes(feature)])) as CosmicFeatureEntitlements;
 }
 
 function limitsForPlan(plan: CosmicPlan): CosmicLimitEntitlements {
-  return { "garage.activeVehicles": plan === "cosmic_plus" ? null : 3 };
+  return { "garage.activeVehicles": plan === "cosmic_plus" ? null : 3, "finance.connectedInstitutions": plan === "cosmic_plus" ? 10 : 1 };
 }
 
 export function entitlementsForPlan(plan: CosmicPlan, source: CosmicEntitlementSource = "account"): CosmicEntitlements {
@@ -46,7 +49,7 @@ export function entitlementsForPlan(plan: CosmicPlan, source: CosmicEntitlementS
   return { plan, features: featuresForPlan(plan), limits: limitsForPlan(plan), ads: { adEligible: !plus, thirdPartyAds: !plus }, source };
 }
 
-export const freeEntitlements = entitlementsForPlan("free", "guest-default");
+export const freeEntitlements = entitlementsForPlan("free", "account");
 export const cosmicPlusEntitlements = entitlementsForPlan("cosmic_plus");
 
 export function hasEntitlement(entitlements: CosmicEntitlements, feature: CosmicFeature): boolean {

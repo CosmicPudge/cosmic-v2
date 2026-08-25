@@ -3,6 +3,7 @@ import { cancelSubscriptionForAccountDeletion } from "@/services/billing/stripe"
 import { getAuthRepository } from "@/services/auth/repository";
 import { expiredSessionCookie } from "@/services/auth/localStore";
 import { assertSameOrigin } from "@/services/security/origin";
+import { revokeFinanceConnectionsForAccount } from "@/services/finance/connectedStore";
 
 export async function DELETE(request: Request) {
   try {
@@ -11,6 +12,7 @@ export async function DELETE(request: Request) {
     const body = await request.json().catch(() => ({})) as { confirmation?: unknown };
     if (body.confirmation !== "DELETE") return Response.json({ error: "Type DELETE to confirm account deletion." }, { status: 400 });
     await cancelSubscriptionForAccountDeletion(account);
+    if (process.env.DATABASE_URL) await revokeFinanceConnectionsForAccount(account.id);
     const repository = getAuthRepository();
     await repository.revokeAllSessions(account.id);
     await repository.deleteUser(account.id);

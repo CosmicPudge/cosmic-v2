@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { useDashboardWidgetReadiness } from "@/components/dashboard/readiness/DashboardReadiness";
 
 import { AppRenderer, getApp } from "@/apps/core";
 
@@ -18,6 +19,7 @@ interface Props {
 export default function GridItem({
   widget,
 }: Props) {
+  useDashboardWidgetReadiness(widget.id, ["weather", "calendar", "sports", "garage", "finance", "school", "projects", "notes", "outlook", "music"].includes(widget.id) ? null : "ready");
   const { profile } = useDisplay();
 
   let cols = widget.cols;
@@ -29,7 +31,7 @@ export default function GridItem({
       break;
 
     case "compact":
-      cols = Math.min(widget.cols, 3);
+      cols = Math.min(widget.cols, 2);
       break;
 
     case "comfortable":

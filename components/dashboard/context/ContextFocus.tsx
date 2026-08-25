@@ -5,6 +5,7 @@ import { X } from "lucide-react";
 import type { CosmicContextItem } from "@/core/contracts/Context";
 import useCosmicContext from "@/hooks/os/useCosmicContext";
 import GlassPanel from "@/components/os/ui/GlassPanel";
+import { useDashboardWidgetReadiness } from "@/components/dashboard/readiness/DashboardReadiness";
 
 const priorityStyles = {
   critical: "border-rose-300/30 bg-rose-300/10",
@@ -26,6 +27,7 @@ function ContextRow({ item, onDismiss }: { item: CosmicContextItem; onDismiss: (
 
 export default function ContextFocus() {
   const context = useCosmicContext();
+  useDashboardWidgetReadiness("context", context.loading ? "loading" : "ready");
   const rows = [context.primary, ...context.secondary].filter((item): item is CosmicContextItem => Boolean(item));
   return <GlassPanel className="w-full" style={{ minHeight: 96 }}>
     <div className="flex flex-wrap items-center justify-between gap-2 px-4 pb-2 pt-4 sm:px-5">

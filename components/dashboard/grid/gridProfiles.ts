@@ -15,17 +15,17 @@ export const GRID_PROFILES: Record<
   },
 
   compact: {
-    columns: 6,
+    columns: 2,
     rowHeight: 185,
   },
 
   comfortable: {
-    columns: 8,
+    columns: 4,
     rowHeight: 190,
   },
 
   expanded: {
-    columns: 12,
+    columns: 6,
     rowHeight: 195,
   },
 };

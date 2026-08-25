@@ -78,6 +78,27 @@
       "when": 1787510000000,
       "tag": "0010_billing_statuses",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1787531178378,
+      "tag": "0012_fine_rage",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1787540650546,
+      "tag": "0013_finance_automation",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1787542949287,
+      "tag": "0014_sync_engine",
+      "breakpoints": true
     }
   ]
 }

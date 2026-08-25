@@ -2,6 +2,8 @@
 
 import clsx from "clsx";
 import { useWidgetContext } from "./WidgetContext";
+import { getModuleVisualIdentity } from "./moduleVisualIdentity";
+import { CosmicIcon } from "@/components/cosmic-icons";
 
 interface WidgetHeaderProps {
   /**
@@ -46,7 +48,8 @@ export default function WidgetHeader({
   action,
   className,
 }: WidgetHeaderProps) {
-  const { size } = useWidgetContext();
+  const { size, accent } = useWidgetContext();
+  const visual = getModuleVisualIdentity(accent ?? "default");
   return (
     <header
       className={clsx(
@@ -58,7 +61,7 @@ export default function WidgetHeader({
       )}
     >
       <div className="flex min-w-0 flex-1 gap-4">
-        {icon && (
+        {(icon || accent) && (
           <div
             className="
               flex
@@ -74,8 +77,9 @@ export default function WidgetHeader({
               text-white/90
               backdrop-blur-xl
             "
+            style={{ borderColor: visual.borderGlow, background: `${visual.accent}18` }}
           >
-            {icon}
+            {icon ?? <CosmicIcon icon={visual.icon} size={size === "small" ? 28 : 34} />}
           </div>
         )}
 

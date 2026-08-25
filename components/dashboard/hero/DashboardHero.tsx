@@ -12,6 +12,7 @@ import HeroDetails from "./HeroDetails";
 import HeroGreeting from "./HeroGreeting";
 import { HERO_LAYOUTS } from "./heroLayouts";
 import HeroSun from "./HeroSun";
+import { useDashboardWidgetReadiness } from "@/components/dashboard/readiness/DashboardReadiness";
 import HeroWeather from "./HeroWeather";
 
 export default function DashboardHero() {
@@ -20,6 +21,7 @@ export default function DashboardHero() {
   const { profile, tokens } = useDisplay();
 
   const hero = HERO_LAYOUTS[profile];
+  useDashboardWidgetReadiness("hero-weather", loading ? "loading" : weather ? "ready" : "degraded");
 
   const stack =
     profile === "pocket" ||

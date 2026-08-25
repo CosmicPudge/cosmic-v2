@@ -3,23 +3,14 @@
 import { useEffect, useState } from "react";
 
 import BootBackground from "./BootBackground";
-import BootLogo from "./BootLogo";
 import BootMessage from "./BootMessage";
 import BootProgress from "./BootProgress";
 
 import { useBoot } from "./BootManager";
 
-interface Props {
-  subtitle: string;
-  messages?: string[];
-  children: React.ReactNode;
-}
+const MIN_BOOT_DURATION = 900;
 
-const MIN_BOOT_DURATION = 1200;
-
-export default function CosmicBoot(props: Props) {
-  console.log("✅ CosmicBoot mounted");
-
+export default function CosmicBoot() {
   const { progress, ready } = useBoot();
 
   const [minimumTimeElapsed, setMinimumTimeElapsed] =
