@@ -93,12 +93,12 @@ export async function consumeApprovedPairing(deviceCode: string) {
       pairLog("consume-session-create start");
       const sessionId = `session_${randomUUID()}`;
       await tx.insert(sessions).values({ id: sessionId, userId: pairing.userId, sessionTokenHash: hashSessionToken(token), expiresAt, sessionType: "device", deviceId, authenticatedBootId: pairing.bootId, userAgent: "Cosmic Display" });
-      pairLog(`session-created sessionType=device deviceId=${deviceId} sessionRow=${sessionId}`);
+      pairLog(`[pair-consume] pairingId=${pairing.id} deviceId=${deviceId} sessionCreated=true sessionType=device authenticatedBootId=${pairing.bootId}`);
       pairLog("consume-session-create success");
       step = "mark-consumed";
       const [consumed] = await tx.update(devicePairings).set({ status: "consumed", consumedAt: new Date() }).where(and(eq(devicePairings.id, pairing.id), eq(devicePairings.status, "approved"), isNull(devicePairings.consumedAt))).returning({ id: devicePairings.id, consumedAt: devicePairings.consumedAt });
       if (!consumed) throw new Error("Pairing could not be marked consumed.");
-      pairLog(`consume-mark-consumed success id=${consumed.id} consumedAt=${Boolean(consumed.consumedAt)}`);
+      pairLog(`[pair-consume] pairingId=${consumed.id} pairingConsumed=${Boolean(consumed.consumedAt)}`);
       return { token, expiresAt: expiresAt.toISOString(), deviceId };
     });
   } catch (error) {

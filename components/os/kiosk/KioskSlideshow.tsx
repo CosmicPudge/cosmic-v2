@@ -3,6 +3,7 @@
 import {
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import { useSearchParams } from "next/navigation";
@@ -76,19 +77,19 @@ function createTestEvent(
       return {
         id: "kiosk-test-mlb",
         sport: "mlb",
-        title: "Los Angeles Angels vs Seattle Mariners",
+        title: "Cleveland Guardians vs Los Angeles Angels",
         start: now,
         status: "live",
-        statusDetail: "Top 7th · 1 Out",
+        statusDetail: "Top 10th · 1 Out",
         awayTeam: {
-          name: "Seattle Mariners",
-          abbreviation: "SEA",
-          score: 3,
+          name: "Cleveland Guardians",
+          abbreviation: "CLE",
+          score: 8,
         },
         homeTeam: {
           name: "Los Angeles Angels",
           abbreviation: "LAA",
-          score: 5,
+          score: 6,
         },
         venue: "Angel Stadium",
         broadcast: "Kiosk Test",
@@ -159,10 +160,7 @@ export default function KioskSlideshow() {
       );
   }, []);
 
-  const testSportParam =
-    searchParams.get(
-      "kiosk-sport-test",
-    );
+  const testSportParam = searchParams.get("simulate-sport") ?? searchParams.get("kiosk-sport-test");
 
   const testModeAllowed =
     process.env.NODE_ENV !== "production";
@@ -229,6 +227,15 @@ export default function KioskSlideshow() {
     setPreviousIndex,
   ] = useState<number | null>(null);
 
+  const intervalRef = useRef<number | null>(null);
+  const transitionTimeoutRef = useRef<number | null>(null);
+  const safeCurrentIndex = widgets.length > 0
+    ? Math.min(currentIndex, widgets.length - 1)
+    : 0;
+  const safePreviousIndex = previousIndex !== null && previousIndex < widgets.length
+    ? previousIndex
+    : null;
+
   useEffect(() => {
     if (liveEvent) {
       return;
@@ -238,49 +245,46 @@ export default function KioskSlideshow() {
       return;
     }
 
-    let transitionTimeout:
-      | number
-      | undefined;
-
-    const interval =
+    intervalRef.current =
       window.setInterval(() => {
         setCurrentIndex(
           (current) => {
-            setPreviousIndex(
-              current,
-            );
+            const from = Math.min(current, widgets.length - 1);
+            const to = (from + 1) % widgets.length;
+            setPreviousIndex(from);
+            if (process.env.NODE_ENV !== "production") console.info(`[kiosk-slideshow] transition from=${from} to=${to}`);
 
-            return (
-              (current + 1) %
-              widgets.length
-            );
+            return to;
           },
         );
 
-        transitionTimeout =
+        if (transitionTimeoutRef.current !== null) {
+          window.clearTimeout(transitionTimeoutRef.current);
+        }
+
+        transitionTimeoutRef.current =
           window.setTimeout(
             () => {
-              setPreviousIndex(
-                null,
-              );
+              setPreviousIndex(null);
+              transitionTimeoutRef.current = null;
+              if (process.env.NODE_ENV !== "production") console.info("[kiosk-slideshow] transition-complete");
             },
             KIOSK_TRANSITION_DURATION_MS,
           );
       }, KIOSK_SLIDE_DURATION_MS);
 
-    return () => {
-      window.clearInterval(
-        interval,
-      );
+    if (process.env.NODE_ENV !== "production") console.info("[kiosk-slideshow] interval-start");
 
-      if (
-        transitionTimeout !==
-        undefined
-      ) {
-        window.clearTimeout(
-          transitionTimeout,
-        );
+    return () => {
+      if (intervalRef.current !== null) {
+        window.clearInterval(intervalRef.current);
+        intervalRef.current = null;
       }
+      if (transitionTimeoutRef.current !== null) {
+        window.clearTimeout(transitionTimeoutRef.current);
+        transitionTimeoutRef.current = null;
+      }
+      if (process.env.NODE_ENV !== "production") console.info("[kiosk-slideshow] interval-stop");
     };
   }, [
     liveEvent,
@@ -316,19 +320,22 @@ export default function KioskSlideshow() {
     );
   }
 
-  const currentWidget =
-    widgets[currentIndex];
+  const currentWidget = widgets[safeCurrentIndex];
 
   const previousWidget =
-    previousIndex !== null
-      ? widgets[previousIndex]
+    safePreviousIndex !== null
+      ? widgets[safePreviousIndex]
       : null;
+
+  if (!currentWidget) {
+    return null;
+  }
 
   return (
     <div className="kiosk-slideshow relative h-[100svh] w-full overflow-hidden">
       {previousWidget ? (
         <KioskSlide
-          key={`previous-${previousWidget.id}-${previousIndex}`}
+          key={`previous-${previousWidget.id}-${safePreviousIndex}`}
           widget={previousWidget}
           active={false}
           exiting
@@ -349,7 +356,7 @@ export default function KioskSlideshow() {
               key={widget.id}
               className={[
                 "h-1.5 rounded-full transition-all duration-300",
-                index === currentIndex
+                index === safeCurrentIndex
                   ? "w-6 bg-white/80"
                   : "w-1.5 bg-white/22",
               ].join(" ")}

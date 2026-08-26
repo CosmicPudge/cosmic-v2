@@ -2,9 +2,7 @@
 
 import {
   type ReactNode,
-  useEffect,
 } from "react";
-import { useSearchParams } from "next/navigation";
 import { useSystem } from "@/components/os/system/SystemProvider";
 
 export const KIOSK_SESSION_STORAGE_KEY = "cosmic:kiosk-session";
@@ -14,19 +12,12 @@ export default function KioskShell({
 }: {
   children: ReactNode;
 }) {
-  const searchParams = useSearchParams();
   const { snapshot } = useSystem();
 
   const compact = snapshot.display.profile === "compact"
     || snapshot.display.profile === "display"
     || (snapshot.display.viewportWidth ?? 0) <= 700
     || (snapshot.display.viewportHeight ?? 0) <= 560;
-
-  useEffect(() => {
-    if (searchParams.get("cosmic-kiosk") === "1") {
-      window.sessionStorage.setItem(KIOSK_SESSION_STORAGE_KEY, "true");
-    }
-  }, [searchParams]);
 
   return (
     <div

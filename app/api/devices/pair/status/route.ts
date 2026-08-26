@@ -12,7 +12,7 @@ export async function POST(request: Request) {
     const session = await consumeApprovedPairing(body.deviceCode);
     if (!session) { const response = Response.json({ status: "expired" }, { headers: { "Cache-Control": "no-store" } }); if (process.env.NODE_ENV !== "production") console.info(`[pair] HTTP POST /api/devices/pair/status status=${response.status} state=expired`); return response; }
     const response = NextResponse.json({ status: "approved" }, { headers: { "Cache-Control": "no-store" } });
-    response.cookies.set({ name: "cosmic_session", value: session.token, httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/", expires: new Date(session.expiresAt) });
+    response.cookies.set({ name: "cosmic_session", value: session.token, httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/" });
     response.cookies.set({ name: "cosmic_device_id", value: session.deviceId, httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/", maxAge: 31536000 });
     if (process.env.NODE_ENV !== "production") console.info(`[pair] cookie-set=true HTTP POST /api/devices/pair/status status=${response.status}`);
     return response;

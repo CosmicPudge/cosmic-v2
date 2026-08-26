@@ -24,8 +24,7 @@ function formatWidgetTitle(id: string) {
     <section
       className={[
         "absolute inset-0",
-        "flex items-center justify-center",
-        "kiosk-slide p-[clamp(.45rem,2.4vw,2.5rem)]",
+        "kiosk-slide",
         "transition-[transform,opacity]",
         "ease-[cubic-bezier(.22,.61,.36,1)]",
         active && !exiting
@@ -37,7 +36,7 @@ function formatWidgetTitle(id: string) {
       style={{ transitionDuration: "700ms" }}
       aria-hidden={!active}
     >
-      <div className="kiosk-slide-card relative flex h-full w-full max-w-[1500px] flex-col overflow-hidden rounded-[clamp(1.5rem,3vw,2.75rem)] border border-white/10 bg-black/10 shadow-[0_30px_120px_rgba(0,0,0,.3)] backdrop-blur-md">
+      <div className="kiosk-slide-card relative flex h-full w-full flex-col overflow-hidden">
 
         {/* Header */}
         <header className="kiosk-slide-header flex shrink-0 items-center justify-between border-b border-white/[0.07] px-[clamp(1.25rem,3vw,2.5rem)] py-[clamp(.9rem,2vh,1.4rem)]">
@@ -63,16 +62,13 @@ function formatWidgetTitle(id: string) {
         </header>
 
         {/* Widget presentation area */}
-        <div className="kiosk-slide-content relative flex min-h-0 flex-1 items-center justify-center overflow-auto p-[clamp(1rem,3vw,2.75rem)]">
-          <div className="flex h-full max-h-full w-full items-center justify-center">
-            <div className="w-full">
+        <div className="kiosk-slide-content relative flex min-h-0 flex-1 items-stretch justify-stretch overflow-hidden p-[clamp(.75rem,2vw,2rem)]">
+          <div className="flex h-full min-h-0 w-full items-stretch">
+            <div className="h-full min-h-0 w-full">
               <WidgetComponent />
             </div>
           </div>
         </div>
-
-        {/* Subtle presentation edge */}
-        <div className="pointer-events-none absolute inset-0 rounded-[inherit] ring-1 ring-inset ring-white/[0.035]" />
       </div>
     </section>
   );

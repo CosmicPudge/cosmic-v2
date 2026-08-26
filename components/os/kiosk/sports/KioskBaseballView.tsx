@@ -8,7 +8,6 @@ import type {
   BaseballPlayerRef,
   BaseballUniform,
 } from "@/core/contracts/sports/Baseball";
-import TeamLogo from "@/components/apps/sports/TeamLogo";
 import { resolveMlbGameTeamTheme } from "@/services/sports/providers/mlb/teamThemes";
 
 interface KioskBaseballViewProps {
@@ -201,7 +200,8 @@ function StatCell({ label, value }: { label: string; value: string }) { return <
 
 function PitchInfoZone({ pitch, pitchCount }: { pitch?: BaseballLiveData["latestPitch"]; pitchCount?: number }) {
   if (!pitch && pitchCount === undefined) return null;
-  return <section className="pitch-zone"><h2>PITCH INFO</h2><div><p>LAST PITCH</p><strong>{pitch?.velocityMph !== undefined ? `${pitch.velocityMph} MPH` : ""}</strong><span>{pitch?.typeName ?? pitch?.description ?? ""}</span></div><div><p>PITCH COUNT</p><strong>{pitchCount ?? ""}</strong></div></section>;
+  const pitchType = pitch?.typeName ?? pitch?.description ?? "";
+  return <section className="pitch-zone"><h2>PITCH INFO</h2><div><p>LAST PITCH</p><strong>{pitch?.velocityMph !== undefined ? `${pitch.velocityMph} MPH` : ""}</strong><span className="pitch-type-desktop">{pitchType}</span></div><div className="pitch-type-compact"><p>PITCH TYPE</p><strong>{pitchType}</strong></div><div><p>PITCH COUNT</p><strong>{pitchCount ?? ""}</strong></div></section>;
 }
 
 function BroadcastFooter({ event, live }: { event: SportsEvent; live?: BaseballLiveData }) {

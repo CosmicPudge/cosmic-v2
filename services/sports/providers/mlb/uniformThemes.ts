@@ -50,7 +50,8 @@ function generatedTheme(teamId: string, number: number): MlbUniformTheme {
 
 export const MLB_UNIFORM_THEMES: UniformThemeMap = Object.fromEntries(Object.entries(catalog.teams).map(([teamId, numbers]) => [teamId, Object.fromEntries((numbers as number[]).map((number) => [`${teamId}_jersey_${number}_${catalog.season}`, generatedTheme(teamId, number)]))]));
 
-MLB_UNIFORM_THEMES["108"]["108_jersey_1_2026"] = theme("angels-home-white", { primary: "#F2E7D0", secondary: "#BA0021", accent: "#8B1026", text: "#17233D", mutedText: "#4B5563", backgroundStart: "#7D1022", backgroundEnd: "#BFAF91", panelTint: "#BA0021", watermarkTint: "#F2E7D0" });
+MLB_UNIFORM_THEMES["108"]["108_jersey_1_2026"] = theme("angels-home-white", { primary: "#F5F7FA", secondary: "#BA0021", accent: "#D7193F", text: "#FFFFFF", mutedText: "#E5E7EB", backgroundStart: "#8F1025", backgroundEnd: "#4A0E1B", panelTint: "#E5EAF0", watermarkTint: "#F5F7FA" });
+MLB_UNIFORM_THEMES["108"]["108_jersey_5_2026"] = theme("angels-city-connect", { primary: "#D8C29D", secondary: "#17324D", accent: "#BA0021", text: "#FFFFFF", mutedText: "#E8DED0", backgroundStart: "#17324D", backgroundEnd: "#24152B", panelTint: "#D8C29D", watermarkTint: "#D8C29D" });
 MLB_UNIFORM_THEMES["114"]["114_jersey_4_2026"] = theme("guardians-alt-2-blue", { primary: "#123B72", secondary: "#E50022", accent: "#FF334F", text: "#FFFFFF", mutedText: "#D7E3F5", backgroundStart: "#123B72", backgroundEnd: "#07172F", panelTint: "#E50022", watermarkTint: "#123B72" });
 
 function jerseyAsset(uniform?: BaseballUniform): BaseballUniformAsset | undefined {
