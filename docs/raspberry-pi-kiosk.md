@@ -61,6 +61,43 @@ Then restart it or log out and back into the `rpd-labwc` session:
 systemctl --user restart cosmic-kiosk.service
 ```
 
+## Hide the pointer on the Wayland kiosk
+
+\`unclutter\` is an X11 utility and is not the reliable choice for Chromium
+running natively under labwc/Wayland. Use labwc's native \`HideCursor\` action
+with the Wayland \`wtype\` client instead. Install the tools on the Pi:
+
+\`\`\`bash
+sudo apt install -y wtype swayidle
+\`\`\`
+
+The commonly used X11 setup is \`sudo apt install -y unclutter\`, but it is
+intentionally not used by this native Wayland launcher because it cannot
+reliably control the labwc pointer.
+
+Add this key binding inside the \`<keyboard>\` element of
+\`~/.config/labwc/rc.xml\`:
+
+\`\`\`xml
+<keybind key="A-W-h">
+  <action name="HideCursor" />
+  <action name="WarpCursor" x="-1" y="-1" />
+</keybind>
+\`\`\`
+
+Add the following to \`~/.config/labwc/autostart\` before the kiosk service:
+
+\`\`\`bash
+swayidle -w timeout 1 'wtype -M alt -M logo h -m alt -m logo' >/dev/null 2>&1 &
+\`\`\`
+
+\`swayidle\` invokes the labwc shortcut after one second of inactivity. The
+pointer may briefly reappear after physical pointer movement and will be
+hidden again on the next idle timeout. This does not affect touch input or
+require any kiosk interaction. Test the shortcut manually with Alt+Super+H;
+do not add \`cursor: none\` to the Cosmic website, since cursor policy belongs
+to the device compositor.
+
 ## Check, stop, and debug
 
 ```bash
