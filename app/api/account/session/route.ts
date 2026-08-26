@@ -12,6 +12,7 @@ export async function GET(request: Request) {
     const session = await getSession(request, bootId);
     const headers = new Headers({ "Cache-Control": "no-store" });
     if (kioskRequest && !session) headers.set("Set-Cookie", expiredSessionCookie());
+    if (process.env.NODE_ENV !== "production") console.info(`[pair] HTTP GET /api/account/session status=200 authenticated=${Boolean(session)} sessionType=${session?.sessionType ?? "none"}`);
     return Response.json({ repositoryMode: getAuthRepositoryMode(), database: await checkDatabase(), ...(session ? { authenticated: true, isAdmin: await isAdminAccount(session.account.id), ...session } : { authenticated: false, isAdmin: false }) }, { headers });
   } catch {
     return Response.json({ error: "Account session service is unavailable." }, { status: 503, headers: { "Cache-Control": "no-store" } });
