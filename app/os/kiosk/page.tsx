@@ -1,10 +1,10 @@
 import KioskShell from "@/components/os/kiosk/KioskShell";
-import KioskSlideshow from "@/components/os/kiosk/KioskSlideshow";
+import KioskAuthGate from "@/components/os/kiosk/KioskAuthGate";
 
 export default function KioskPage() {
   return (
     <KioskShell>
-      <KioskSlideshow />
+      <KioskAuthGate />
     </KioskShell>
   );
 }

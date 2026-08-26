@@ -14,7 +14,8 @@ export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   const isApi = pathname.startsWith("/api/");
   if (isApi && PUBLIC_API_ROUTES.has(pathname)) return NextResponse.next();
-  if (pathname === "/os/kiosk" && request.nextUrl.searchParams.get("cosmic-kiosk") === "1") return NextResponse.next();
+  // Kiosk must reach its own pairing gate before any private content can mount.
+  if (pathname === "/os/kiosk") return NextResponse.next();
   try {
     if (await getCurrentCosmicAccount(request)) return NextResponse.next();
   } catch { /* Private requests fail closed when auth infrastructure is unavailable. */ }
