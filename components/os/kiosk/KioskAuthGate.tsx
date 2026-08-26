@@ -46,12 +46,12 @@ export default function KioskAuthGate() {
   return (
     // Kiosk widgets need the readiness context, but kiosk presentation does not
     // gate mounting on dashboard-critical readiness.
-    <DashboardReadinessProvider criticalWidgetIds={[]}>
-      <KioskDeviceSetupGate deviceId={deviceId!}>
+    <KioskDeviceSetupGate deviceId={deviceId!}>
+      <DashboardReadinessProvider criticalWidgetIds={[]}>
         <KioskAmbientFrame>
           <KioskSlideshow />
         </KioskAmbientFrame>
-      </KioskDeviceSetupGate>
-    </DashboardReadinessProvider>
+      </DashboardReadinessProvider>
+    </KioskDeviceSetupGate>
   );
 }

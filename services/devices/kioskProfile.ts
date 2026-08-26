@@ -1,7 +1,7 @@
 import "server-only";
 
 import { and, eq, isNull } from "drizzle-orm";
-import type { KioskDeviceProfile, KioskDisplayProfile, KioskLocationSource } from "@/core/contracts/Kiosk";
+import type { KioskDeviceProfile, KioskDisplayProfile, KioskLocationSource, KioskSetupPreview } from "@/core/contracts/Kiosk";
 import { getDatabase, isDatabaseConfigured } from "@/services/database/client";
 import { devices, kioskDeviceSettings } from "@/services/database/schema";
 
@@ -9,6 +9,9 @@ export interface KioskProfileInput {
   setupCompleted?: boolean;
   setupVersion?: number;
   uiScale?: number;
+  deviceName?: string;
+  setupPreview?: KioskSetupPreview;
+  nightDimPreview?: boolean;
   display?: Partial<KioskDisplayProfile>;
   timezone?: string;
   clockFormat?: "12h" | "24h";
@@ -33,12 +36,16 @@ export async function readKioskDeviceProfile(deviceId: string): Promise<KioskDev
   const database = requireDatabase();
   const [row] = await database.select().from(kioskDeviceSettings).where(eq(kioskDeviceSettings.deviceId, deviceId)).limit(1);
   if (!row) return null;
+  const [device] = await database.select({ name: devices.name }).from(devices).where(eq(devices.id, deviceId)).limit(1);
   const hasLocation = typeof row.locationLatitude === "number" && typeof row.locationLongitude === "number" && row.locationSource;
   return {
     deviceId,
+    ...(device?.name ? { deviceName: device.name } : {}),
     setupCompleted: row.setupCompleted,
     setupVersion: row.setupVersion,
     uiScale: row.uiScale,
+    setupPreview: row.setupPreview as KioskSetupPreview,
+    nightDimPreview: row.nightDimPreview,
     ...(row.viewportWidth && row.viewportHeight && row.devicePixelRatio && row.aspectRatio && row.orientation && row.density && row.pointer ? {
       display: {
         viewportWidth: row.viewportWidth, viewportHeight: row.viewportHeight, clientWidth: row.viewportWidth, clientHeight: row.viewportHeight,
@@ -77,7 +84,8 @@ export async function saveKioskDeviceProfile(deviceId: string, input: KioskProfi
   const database = requireDatabase();
   const now = new Date();
   const location = input.location === null ? { locationLatitude: null, locationLongitude: null, locationLabel: null, locationSource: null } : input.location ? { locationLatitude: input.location.latitude, locationLongitude: input.location.longitude, locationLabel: input.location.label ?? null, locationSource: input.location.source } : {};
-  await database.insert(kioskDeviceSettings).values({ deviceId, ...(typeof input.setupCompleted === "boolean" ? { setupCompleted: input.setupCompleted } : {}), ...(typeof input.setupVersion === "number" ? { setupVersion: input.setupVersion } : {}), ...(typeof input.uiScale === "number" ? { uiScale: input.uiScale } : {}), ...displayValues(input.display), ...(input.timezone ? { timezone: input.timezone } : {}), ...(input.clockFormat ? { clockFormat: input.clockFormat } : {}), ...location, ...(typeof input.nightDimEnabled === "boolean" ? { nightDimEnabled: input.nightDimEnabled } : {}), ...(input.nightDimStart ? { nightDimStart: input.nightDimStart } : {}), ...(input.nightDimEnd ? { nightDimEnd: input.nightDimEnd } : {}), ...(typeof input.nightDimOpacity === "number" ? { nightDimOpacity: input.nightDimOpacity } : {}), updatedAt: now }).onConflictDoUpdate({ target: kioskDeviceSettings.deviceId, set: { ...(typeof input.setupCompleted === "boolean" ? { setupCompleted: input.setupCompleted } : {}), ...(typeof input.setupVersion === "number" ? { setupVersion: input.setupVersion } : {}), ...(typeof input.uiScale === "number" ? { uiScale: input.uiScale } : {}), ...displayValues(input.display), ...(input.timezone ? { timezone: input.timezone } : {}), ...(input.clockFormat ? { clockFormat: input.clockFormat } : {}), ...location, ...(typeof input.nightDimEnabled === "boolean" ? { nightDimEnabled: input.nightDimEnabled } : {}), ...(input.nightDimStart ? { nightDimStart: input.nightDimStart } : {}), ...(input.nightDimEnd ? { nightDimEnd: input.nightDimEnd } : {}), ...(typeof input.nightDimOpacity === "number" ? { nightDimOpacity: input.nightDimOpacity } : {}), updatedAt: now } });
+  await database.insert(kioskDeviceSettings).values({ deviceId, ...(typeof input.setupCompleted === "boolean" ? { setupCompleted: input.setupCompleted } : {}), ...(typeof input.setupVersion === "number" ? { setupVersion: input.setupVersion } : {}), ...(typeof input.uiScale === "number" ? { uiScale: input.uiScale } : {}), ...(input.setupPreview ? { setupPreview: input.setupPreview } : {}), ...(typeof input.nightDimPreview === "boolean" ? { nightDimPreview: input.nightDimPreview } : {}), ...displayValues(input.display), ...(input.timezone ? { timezone: input.timezone } : {}), ...(input.clockFormat ? { clockFormat: input.clockFormat } : {}), ...location, ...(typeof input.nightDimEnabled === "boolean" ? { nightDimEnabled: input.nightDimEnabled } : {}), ...(input.nightDimStart ? { nightDimStart: input.nightDimStart } : {}), ...(input.nightDimEnd ? { nightDimEnd: input.nightDimEnd } : {}), ...(typeof input.nightDimOpacity === "number" ? { nightDimOpacity: input.nightDimOpacity } : {}), updatedAt: now }).onConflictDoUpdate({ target: kioskDeviceSettings.deviceId, set: { ...(typeof input.setupCompleted === "boolean" ? { setupCompleted: input.setupCompleted } : {}), ...(typeof input.setupVersion === "number" ? { setupVersion: input.setupVersion } : {}), ...(typeof input.uiScale === "number" ? { uiScale: input.uiScale } : {}), ...(input.setupPreview ? { setupPreview: input.setupPreview } : {}), ...(typeof input.nightDimPreview === "boolean" ? { nightDimPreview: input.nightDimPreview } : {}), ...displayValues(input.display), ...(input.timezone ? { timezone: input.timezone } : {}), ...(input.clockFormat ? { clockFormat: input.clockFormat } : {}), ...location, ...(typeof input.nightDimEnabled === "boolean" ? { nightDimEnabled: input.nightDimEnabled } : {}), ...(input.nightDimStart ? { nightDimStart: input.nightDimStart } : {}), ...(input.nightDimEnd ? { nightDimEnd: input.nightDimEnd } : {}), ...(typeof input.nightDimOpacity === "number" ? { nightDimOpacity: input.nightDimOpacity } : {}), updatedAt: now } });
+  if (input.deviceName?.trim()) await database.update(devices).set({ name: input.deviceName.trim(), lastSeenAt: now }).where(eq(devices.id, deviceId));
   const profile = await readKioskDeviceProfile(deviceId);
   if (!profile) throw new Error("Kiosk profile was not available after save.");
   return profile;

@@ -57,11 +57,23 @@ export async function approveDevicePairing(userCodeInput: string, userId: string
   const database = requireDatabase();
   const userCode = normalizeUserCode(userCodeInput);
   if (userCode.length !== 6) return false;
-  const [row] = await database.select({ id: devicePairings.id }).from(devicePairings).where(and(eq(devicePairings.userCode, userCode), eq(devicePairings.status, "pending"), gt(devicePairings.expiresAt, new Date()))).limit(1);
-  if (!row) return false;
-  const updated = await database.update(devicePairings).set({ status: "approved", userId, approvedAt: new Date(), deviceName: "Cosmic Display" }).where(and(eq(devicePairings.id, row.id), eq(devicePairings.status, "pending"), gt(devicePairings.expiresAt, new Date()))).returning({ id: devicePairings.id });
-  if (updated[0]) pairLog(`approved id=${updated[0].id} status=approved`);
-  return Boolean(updated[0]);
+  return database.transaction(async (tx) => {
+    const [row] = await tx.select().from(devicePairings).where(and(eq(devicePairings.userCode, userCode), eq(devicePairings.status, "pending"), gt(devicePairings.expiresAt, new Date()))).for("update").limit(1);
+    if (!row) return false;
+    let deviceId: string | undefined;
+    if (row.deviceId) {
+      const [device] = await tx.select({ id: devices.id }).from(devices).where(and(eq(devices.id, row.deviceId), eq(devices.userId, userId), isNull(devices.revokedAt))).limit(1);
+      deviceId = device?.id;
+    }
+    if (!deviceId) {
+      deviceId = `device_${randomUUID()}`;
+      await tx.insert(devices).values({ id: deviceId, userId, name: row.deviceName ?? "Cosmic Display", type: row.deviceType });
+    }
+    const [updated] = await tx.update(devicePairings).set({ status: "approved", userId, approvedAt: new Date(), deviceName: "Cosmic Display", deviceId }).where(and(eq(devicePairings.id, row.id), eq(devicePairings.status, "pending"), gt(devicePairings.expiresAt, new Date()))).returning({ id: devicePairings.id, deviceId: devicePairings.deviceId });
+    if (!updated) return false;
+    pairLog(`approved id=${updated.id} status=approved`);
+    return { deviceId: updated.deviceId! };
+  });
 }
 
 export async function denyDevicePairing(userCodeInput: string, userId: string) {

@@ -50,6 +50,8 @@ export const kioskDeviceSettings = pgTable("kiosk_device_settings", {
   orientation: text("orientation"),
   density: text("density"),
   uiScale: doublePrecision("ui_scale").notNull().default(1),
+  setupPreview: text("setup_preview").notNull().default("normal"),
+  nightDimPreview: boolean("night_dim_preview").notNull().default(false),
   touchDetected: boolean("touch_detected"),
   pointer: text("pointer"),
   timezone: text("timezone"),
@@ -64,7 +66,7 @@ export const kioskDeviceSettings = pgTable("kiosk_device_settings", {
   nightDimOpacity: doublePrecision("night_dim_opacity").notNull().default(0.35),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-}, (table) => [index("kiosk_device_settings_updated_index").on(table.updatedAt), check("kiosk_device_settings_orientation_check", sql`${table.orientation} is null or ${table.orientation} in ('landscape', 'portrait')`), check("kiosk_device_settings_density_check", sql`${table.density} is null or ${table.density} in ('compact', 'standard', 'large')`), check("kiosk_device_settings_pointer_check", sql`${table.pointer} is null or ${table.pointer} in ('coarse', 'fine', 'unknown')`), check("kiosk_device_settings_clock_format_check", sql`${table.clockFormat} is null or ${table.clockFormat} in ('12h', '24h')`), check("kiosk_device_settings_ui_scale_check", sql`${table.uiScale} >= 0.9 and ${table.uiScale} <= 1.1`), check("kiosk_device_settings_dim_opacity_check", sql`${table.nightDimOpacity} >= 0 and ${table.nightDimOpacity} <= 1`)]);
+}, (table) => [index("kiosk_device_settings_updated_index").on(table.updatedAt), check("kiosk_device_settings_orientation_check", sql`${table.orientation} is null or ${table.orientation} in ('landscape', 'portrait')`), check("kiosk_device_settings_density_check", sql`${table.density} is null or ${table.density} in ('compact', 'standard', 'large')`), check("kiosk_device_settings_pointer_check", sql`${table.pointer} is null or ${table.pointer} in ('coarse', 'fine', 'unknown')`), check("kiosk_device_settings_clock_format_check", sql`${table.clockFormat} is null or ${table.clockFormat} in ('12h', '24h')`), check("kiosk_device_settings_preview_check", sql`${table.setupPreview} in ('normal', 'fit', 'clock', 'weather', 'calendar')`), check("kiosk_device_settings_ui_scale_check", sql`${table.uiScale} >= 0.9 and ${table.uiScale} <= 1.1`), check("kiosk_device_settings_dim_opacity_check", sql`${table.nightDimOpacity} >= 0 and ${table.nightDimOpacity} <= 1`)]);
 
 export const devicePairings = pgTable("device_pairings", {
   id: text("id").primaryKey(),

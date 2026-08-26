@@ -1,0 +1,62 @@
+"use client";
+
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCosmicAccount } from "./AccountProvider";
+import type { KioskDeviceProfile, KioskDisplayProfile, KioskSetupPreview } from "@/core/contracts/Kiosk";
+import { CURRENT_KIOSK_SETUP_VERSION } from "@/core/contracts/Kiosk";
+
+const baseProfile = (deviceId: string): KioskDeviceProfile => ({ deviceId, setupCompleted: false, setupVersion: 0, uiScale: 1, nightDimPreview: false, nightDimEnabled: true, nightDimStart: "20:00", nightDimEnd: "06:00", nightDimOpacity: 0.35 });
+
+export default function DisplaySetupView({ deviceId }: { deviceId: string }) {
+  const { loading, account } = useCosmicAccount();
+  const [profile, setProfile] = useState<KioskDeviceProfile | null>(null);
+  const [display, setDisplay] = useState<KioskDisplayProfile | null>(null);
+  const [name, setName] = useState("");
+  const [timezone, setTimezone] = useState("");
+  const [location, setLocation] = useState<KioskDeviceProfile["location"] | null>(null);
+  const [status, setStatus] = useState("Loading display profile…");
+  const [saving, setSaving] = useState(false);
+  const [finished, setFinished] = useState(false);
+  const [nightPreview, setNightPreview] = useState(false);
+  const fallback = useMemo(() => baseProfile(deviceId), [deviceId]);
+  const url = `/api/devices/kiosk-profile?deviceId=${encodeURIComponent(deviceId)}`;
+
+  const load = useCallback(async () => {
+    if (!deviceId) return;
+    try {
+      const response = await fetch(url, { credentials: "include", cache: "no-store" });
+      const body = await response.json() as { profile?: KioskDeviceProfile | null; error?: string };
+      if (!response.ok || !body.profile && body.profile !== null) throw new Error(body.error ?? "Display setup is unavailable.");
+      const next = body.profile ?? fallback;
+      setProfile(next); setDisplay(next.display ?? null); setName(next.deviceName ?? ""); setTimezone(next.timezone ?? ""); setLocation(next.location ?? null); setNightPreview(next.nightDimPreview); setStatus("Connected to display");
+    } catch (error) { setStatus(error instanceof Error ? error.message : "Display setup is unavailable."); }
+  }, [deviceId, fallback, url]);
+  useEffect(() => { const timer = window.setTimeout(() => void load(), 0); return () => window.clearTimeout(timer); }, [load]);
+  useEffect(() => { if (!profile?.setupCompleted) { const timer = window.setInterval(() => void load(), 2000); return () => window.clearInterval(timer); } return undefined; }, [load, profile?.setupCompleted]);
+
+  async function save(input: Record<string, unknown>, message = "Saved · display updating…") {
+    setSaving(true); setStatus(message);
+    try { const response = await fetch(url, { method: "PATCH", credentials: "include", cache: "no-store", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input) }); const body = await response.json() as { profile?: KioskDeviceProfile; error?: string }; if (!response.ok || !body.profile) throw new Error(body.error ?? "Could not update display."); setProfile(body.profile); setDisplay(body.profile.display ?? display); setStatus("Saved · display updating…"); return true; } catch (error) { setStatus(error instanceof Error ? error.message : "Could not update display."); return false; } finally { setSaving(false); }
+  }
+  function choosePhoneLocation() { if (!navigator.geolocation) { setStatus("Phone location is unavailable."); return; } setStatus("Detecting phone location…"); navigator.geolocation.getCurrentPosition((position) => { const next = { latitude: position.coords.latitude, longitude: position.coords.longitude, source: "manual" as const, label: "Phone location" }; setLocation(next); void save({ location: next }, "Phone location selected · display updating…"); }, () => setStatus("Phone location permission unavailable."), { enableHighAccuracy: false, timeout: 8000, maximumAge: 300000 }); }
+  if (loading) return <main className="grid min-h-screen place-items-center bg-[#030511] text-white/60">Checking Cosmic account…</main>;
+  if (!account || !deviceId) return <main className="grid min-h-screen place-items-center bg-[#030511] p-6 text-center text-white/65">Sign in through Cosmic activation before configuring a display.</main>;
+  const current = profile ?? fallback;
+  const reported = display ?? current.display;
+  return <main className="min-h-screen bg-[#030511] px-4 py-5 text-white sm:px-8"><div className="mx-auto w-full max-w-xl"><header><p className="text-[.65rem] uppercase tracking-[.3em] text-cyan-200/65">Cosmic OS · display setup</p><h1 className="mt-2 text-3xl font-semibold">Configure your display</h1><p className="mt-2 text-sm text-white/50">All setup controls stay on this phone. The display is a passive live preview.</p></header><p className="mt-4 rounded-xl border border-cyan-200/15 bg-cyan-200/[.05] px-3 py-2 text-xs text-cyan-50/75">{status}</p>
+    <section className="mt-5 space-y-4">
+      <Panel title="Name this display"><input value={name} onChange={(event) => setName(event.target.value)} placeholder="Bedroom Cosmic" className="w-full rounded-xl border border-white/10 bg-white/[.06] px-3 py-3 text-sm text-white"/><Button disabled={saving || !name.trim()} onClick={() => void save({ deviceName: name.trim() })}>Save name</Button></Panel>
+      <Panel title="Display detected"><div className="grid grid-cols-2 gap-2"><Metric label="Viewport" value={reported ? `${reported.viewportWidth} × ${reported.viewportHeight}` : "Waiting for kiosk"}/><Metric label="Mode" value={reported ? `${reported.density} ${reported.orientation}` : "—"}/><Metric label="DPR" value={reported ? `${reported.devicePixelRatio}x` : "—"}/><Metric label="Touch" value={reported?.touch ? "Detected" : "Not detected"}/></div></Panel>
+      <Panel title="Screen fit"><p className="text-sm text-white/55">Look at the display while changing its preview. No kiosk interaction is required.</p><div className="mt-3 flex gap-2"><Button disabled={saving} onClick={() => void save({ setupPreview: "fit" as KioskSetupPreview })}>Test screen fit</Button><Button disabled={saving} onClick={() => void save({ setupPreview: "normal" as KioskSetupPreview })}>Normal preview</Button></div><div className="mt-3 flex gap-2"><Button disabled={saving} onClick={() => void save({ uiScale: 0.9 })}>Smaller</Button><Button disabled={saving} onClick={() => void save({ uiScale: 1 })}>Default</Button><Button disabled={saving} onClick={() => void save({ uiScale: 1.05 })}>Larger</Button></div></Panel>
+      <Panel title="Location"><p className="text-sm text-white/55">Do not assume the phone and display are in the same place.</p><div className="mt-3 grid gap-2"><Button onClick={() => void save({ location: null })}>Use account default</Button><Button onClick={choosePhoneLocation}>Use my current phone location</Button><Button disabled={!location} onClick={() => void save({ location })}>Use selected display location</Button></div><p className="mt-2 text-xs text-white/40">{location ? `${location.source} location selected` : "Account/default location selected"}</p></Panel>
+      <Panel title="Time zone"><p className="text-xs text-white/45">Reported by the kiosk, not inferred from this phone.</p><input value={timezone || "Waiting for kiosk report"} onChange={(event) => setTimezone(event.target.value)} placeholder="America/Denver" className="mt-3 w-full rounded-xl border border-white/10 bg-white/[.06] px-3 py-3 text-sm text-white"/><Button disabled={saving || !timezone.trim()} onClick={() => void save({ timezone: timezone.trim() })}>Save timezone</Button></Panel>
+      <Panel title="Optional hardware"><div className="grid gap-2"><Metric label="Touchscreen" value={reported?.touch ? "Detected" : "Not detected"}/><Metric label="Microphone" value="Optional · not required"/><Metric label="Camera" value="Optional · not required"/><Metric label="Audio" value="Available / unknown"/></div><p className="mt-3 text-xs text-white/45">Cosmic works without any of these.</p></Panel>
+      <Panel title="Night dimming"><label className="flex items-center justify-between text-sm"><span>Enabled</span><input type="checkbox" checked={current.nightDimEnabled} onChange={(event) => void save({ nightDimEnabled: event.target.checked })}/></label><div className="mt-3 grid grid-cols-2 gap-2"><input type="time" value={current.nightDimStart} onChange={(event) => void save({ nightDimStart: event.target.value })} className="rounded-xl border border-white/10 bg-white/[.06] px-3 py-3 text-white"/><input type="time" value={current.nightDimEnd} onChange={(event) => void save({ nightDimEnd: event.target.value })} className="rounded-xl border border-white/10 bg-white/[.06] px-3 py-3 text-white"/></div><label className="mt-3 block text-sm">Brightness reduction <input type="range" min="0" max="1" step=".05" value={current.nightDimOpacity} onChange={(event) => void save({ nightDimOpacity: Number(event.target.value) })} className="mt-2 w-full"/></label><div className="mt-3 flex gap-2"><Button disabled={saving} onClick={() => { setNightPreview(true); void save({ nightDimPreview: true }); }}>Preview night mode</Button><Button disabled={saving} onClick={() => { setNightPreview(false); void save({ nightDimPreview: false }); }}>End preview</Button></div>{nightPreview ? <p className="mt-2 text-xs text-violet-200/70">Night preview active on display.</p> : null}</Panel>
+      <Panel title="Preview your Cosmic"><div className="grid grid-cols-3 gap-2">{(["clock", "weather", "calendar"] as KioskSetupPreview[]).map((preview) => <Button key={preview} disabled={saving} onClick={() => void save({ setupPreview: preview })}>{preview}</Button>)}</div></Panel>
+      <Panel title="Your Cosmic is ready"><div className="grid grid-cols-2 gap-2"><Metric label="Display" value={reported ? `${reported.viewportWidth} × ${reported.viewportHeight}` : "Waiting"}/><Metric label="UI size" value={`${current.uiScale}`}/><Metric label="Location" value={location ? "Configured" : "Account default"}/><Metric label="Timezone" value={timezone || "Waiting"}/><Metric label="Night mode" value={current.nightDimEnabled ? `${current.nightDimStart} – ${current.nightDimEnd}` : "Disabled"}/></div><Button disabled={saving} onClick={async () => { const saved = await save({ setupCompleted: true, setupVersion: CURRENT_KIOSK_SETUP_VERSION, setupPreview: "normal", nightDimPreview: false, deviceName: name.trim() || undefined }); if (saved) setFinished(true); }}>Finish setup</Button>{finished ? <p className="mt-3 text-sm text-emerald-200">Display ready. Cosmic is launching normally.</p> : null}</Panel>
+    </section></div></main>;
+}
+
+function Panel({ title, children }: { title: string; children: React.ReactNode }) { return <section className="rounded-2xl border border-white/10 bg-white/[.04] p-4"><h2 className="text-sm font-semibold uppercase tracking-[.16em] text-white/80">{title}</h2><div className="mt-3">{children}</div></section>; }
+function Metric({ label, value }: { label: string; value: string }) { return <div className="rounded-xl border border-white/10 bg-black/10 p-3"><p className="text-[.6rem] uppercase tracking-[.16em] text-white/40">{label}</p><p className="mt-1 truncate text-sm text-white/80">{value}</p></div>; }
+function Button({ children, onClick, disabled }: { children: React.ReactNode; onClick: () => void; disabled?: boolean }) { return <button type="button" onClick={onClick} disabled={disabled} className="rounded-xl border border-cyan-200/20 bg-cyan-200/[.08] px-3 py-2.5 text-sm font-medium text-cyan-50 disabled:opacity-40">{children}</button>; }

@@ -4,6 +4,7 @@ export type KioskOrientation = "landscape" | "portrait";
 export type KioskDensity = "compact" | "standard" | "large";
 export type KioskPointer = "coarse" | "fine" | "unknown";
 export type KioskLocationSource = "detected" | "account" | "manual";
+export type KioskSetupPreview = "normal" | "fit" | "clock" | "weather" | "calendar";
 
 export interface KioskDisplayProfile {
   viewportWidth: number;
@@ -30,6 +31,7 @@ export interface KioskDisplayProfile {
 
 export interface KioskDeviceProfile {
   deviceId: string;
+  deviceName?: string;
   setupCompleted: boolean;
   setupVersion: number;
   uiScale: number;
@@ -41,5 +43,7 @@ export interface KioskDeviceProfile {
   nightDimStart: string;
   nightDimEnd: string;
   nightDimOpacity: number;
+  setupPreview?: KioskSetupPreview;
+  nightDimPreview: boolean;
   updatedAt?: string;
 }
