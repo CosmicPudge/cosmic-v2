@@ -29,6 +29,7 @@ interface Props extends WidgetBaseProps {
    * Backgrounds always fill the entire widget.
    */
   contentPadding?: boolean;
+  sceneState?: string;
 }
 
 export default function Widget({
@@ -37,6 +38,7 @@ export default function Widget({
   hover = true,
   accent = "default",
   contentPadding = true,
+  sceneState,
 }: Props) {
   const { tokens } = useDisplay();
   const parentContext = useWidgetContext();
@@ -78,7 +80,7 @@ export default function Widget({
         } as CSSProperties}
       >
         {/* Full widget background */}
-        <WidgetBackground accent={accent} />
+        <WidgetBackground accent={accent} sceneState={sceneState} />
 
         {/* Widget content */}
         <div

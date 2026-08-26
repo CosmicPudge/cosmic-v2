@@ -4,6 +4,7 @@ import { useCallback, useState } from "react";
 import type { SportsEvent, SportsEventStatus } from "@/core/contracts/Sports";
 import type { SportsLiveData } from "@/core/contracts/sports/Core";
 import { useVisiblePolling } from "@/hooks/useVisiblePolling";
+import { kioskApiUrl } from "@/services/kioskRequest";
 
 interface WireResponse { event: Omit<SportsEvent, "start" | "end"> & { start: string; end?: string }; live: SportsLiveData | null; lastUpdated: string; providerErrors: unknown[]; }
 function hydrate(value: WireResponse) { const { start, end, ...event } = value.event; return { ...value, event: { ...event, start: new Date(start), ...(end ? { end: new Date(end) } : {}) } }; }
@@ -14,7 +15,7 @@ export function useSportsEvent(eventId: string, options: { enabled?: boolean } =
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const refresh = useCallback(async () => {
-    const response = await fetch(`/api/sports/event/${encodeURIComponent(eventId)}`, { cache: "no-store" });
+    const response = await fetch(kioskApiUrl(`/api/sports/event/${encodeURIComponent(eventId)}`), { credentials: "include", cache: "no-store" });
     if (!response.ok) throw new Error(response.status === 404 ? "This Sports event could not be found." : "Sports event data is unavailable.");
     setData(hydrate(await response.json() as WireResponse));
     setError(null);

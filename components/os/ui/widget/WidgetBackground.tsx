@@ -7,10 +7,12 @@ import { getModuleVisualIdentity } from "./moduleVisualIdentity";
 
 interface Props {
   accent: WidgetAccent;
+  sceneState?: string;
 }
 
 export default function WidgetBackground({
   accent,
+  sceneState,
 }: Props) {
   const { tokens } = useDisplay();
   const visual = getModuleVisualIdentity(accent);
@@ -18,12 +20,13 @@ export default function WidgetBackground({
   return (
     <>
       {/* Main Accent */}
-      <div className="cosmic-widget-panel absolute inset-0" style={{ background: "var(--widget-panel, linear-gradient(145deg, rgba(10,17,39,.96), rgba(3,7,21,.92))" }} />
-      <div className={`cosmic-widget-motif cosmic-widget-motif-${visual.motif} absolute inset-0`} aria-hidden="true" />
+      <div className="cosmic-widget-panel kiosk-scene-surface absolute inset-0" data-cosmic-scene={accent} data-scene-state={sceneState} style={{ background: "var(--widget-panel, linear-gradient(145deg, rgba(10,17,39,.96), rgba(3,7,21,.92))" }} />
+      <div className={`cosmic-widget-motif kiosk-scene-motif cosmic-widget-motif-${visual.motif} absolute inset-0`} aria-hidden="true" />
 
       {/* Light Bloom */}
       <div
-        className="
+          className="
+            kiosk-scene-glow
           absolute
           -left-24
           -top-24
@@ -39,7 +42,8 @@ export default function WidgetBackground({
 
       {/* Secondary Glow */}
       <div
-        className="
+          className="
+            kiosk-scene-glow
           absolute
           bottom-0
           right-0

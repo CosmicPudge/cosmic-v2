@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import type {
   Alarm,
@@ -12,6 +12,7 @@ import type {
 } from "@/core/contracts/Clock";
 import { getStopwatchElapsed, getTimerRemaining } from "./time";
 import { createScopedStorageKey, migrateLegacyStorage, readScopedOrLegacy, useCosmicScope } from "@/services/storage/scope";
+import { kioskApiUrl } from "@/services/kioskRequest";
 
 export const CLOCK_STORAGE_KEY = "cosmic.clock.local-data";
 export const CLOCK_UPDATE_EVENT = "cosmic:clock-local-data-updated";
@@ -102,11 +103,20 @@ function upsert<T extends { id: string }>(items: T[], item: T) {
     : [...items, item];
 }
 
+function isKioskRequest() {
+  return typeof window !== "undefined" && window.location.pathname === "/os/kiosk";
+}
+
+function alarmPayload(alarm: Alarm) {
+  return { id: alarm.id, label: alarm.label, time: alarm.time, enabled: alarm.enabled, repeatWeekdays: alarm.repeatWeekdays, snoozeEnabled: alarm.snoozeEnabled };
+}
+
 export function useClockRepository() {
   const scope = useCosmicScope();
   const [data, setData] = useState<ClockLocalData>(defaultClockData);
   const [ready, setReady] = useState(false);
   const [loadedScope, setLoadedScope] = useState<string>();
+  const alarmMigrationScope = useRef<string | null>(null);
 
   useEffect(() => {
     const initial = window.setTimeout(() => {
@@ -116,6 +126,37 @@ export function useClockRepository() {
     }, 0);
     return () => window.clearTimeout(initial);
   }, [scope.id]);
+
+  useEffect(() => {
+    if (!ready || loadedScope !== scope.id || scope.kind !== "account") return;
+    let cancelled = false;
+
+    const pullAlarms = async () => {
+      try {
+        const response = await fetch(kioskApiUrl("/api/clock/alarms"), { credentials: "include", cache: "no-store" });
+        if (!response.ok) return;
+        const body = await response.json() as { alarms?: Alarm[] };
+        const remote = Array.isArray(body.alarms) ? body.alarms : [];
+        if (!remote.length && !isKioskRequest() && alarmMigrationScope.current !== scope.id) {
+          alarmMigrationScope.current = scope.id;
+          const local = readClockSnapshot(scope.id).alarms;
+          for (const alarm of local) {
+            await fetch("/api/clock/alarms", { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include", body: JSON.stringify(alarmPayload(alarm)) });
+          }
+          return;
+        }
+        if (!cancelled) setData((current) => dataMatches(current, { ...current, alarms: remote }) ? current : { ...current, alarms: remote });
+      } catch {
+        // Account data remains available locally if the sync service is unavailable.
+      }
+    };
+
+    void pullAlarms();
+    const timer = window.setInterval(() => void pullAlarms(), 45_000);
+    const onVisibility = () => { if (!document.hidden) void pullAlarms(); };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => { cancelled = true; window.clearInterval(timer); document.removeEventListener("visibilitychange", onVisibility); };
+  }, [loadedScope, ready, scope.id, scope.kind]);
 
   useEffect(() => {
     if (!ready) return;
@@ -148,8 +189,14 @@ export function useClockRepository() {
   );
 
   const saveAlarm = useCallback(
-    (alarm: Alarm) => update((current) => ({ ...current, alarms: upsert(current.alarms, alarm) })),
-    [update],
+    (alarm: Alarm) => {
+      const existing = data.alarms.some((item) => item.id === alarm.id);
+      update((current) => ({ ...current, alarms: upsert(current.alarms, alarm) }));
+      if (scope.kind === "account" && !isKioskRequest()) {
+        void fetch(existing ? kioskApiUrl(`/api/clock/alarms/${encodeURIComponent(alarm.id)}`) : "/api/clock/alarms", { method: existing ? "PATCH" : "POST", headers: { "Content-Type": "application/json" }, credentials: "include", cache: "no-store", body: JSON.stringify(alarmPayload(alarm)) });
+      }
+    },
+    [data.alarms, scope.kind, update],
   );
 
   const startTimer = useCallback((id: string, now = Date.now()) => {
@@ -235,10 +282,10 @@ export function useClockRepository() {
       worldClocks: current.worldClocks.filter((location) => location.id !== id),
     })),
     saveAlarm,
-    removeAlarm: (id: string) => update((current) => ({
-      ...current,
-      alarms: current.alarms.filter((alarm) => alarm.id !== id),
-    })),
+    removeAlarm: (id: string) => {
+      update((current) => ({ ...current, alarms: current.alarms.filter((alarm) => alarm.id !== id) }));
+      if (scope.kind === "account" && !isKioskRequest()) void fetch(kioskApiUrl(`/api/clock/alarms/${encodeURIComponent(id)}`), { method: "DELETE", credentials: "include", cache: "no-store" });
+    },
     createTimer: (timer: ClockTimer) => update((current) => ({
       ...current,
       timers: [...current.timers, timer],

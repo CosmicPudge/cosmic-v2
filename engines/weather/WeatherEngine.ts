@@ -19,25 +19,22 @@ export class WeatherEngine
 
   private config: WeatherConfig | null = null;
 
-  async initialize(config?: WeatherConfig): Promise<void> {
+  async initialize(config?: WeatherConfig, signal?: AbortSignal): Promise<void> {
     if (!config) {
       throw new Error("WeatherEngine requires a WeatherConfig.");
     }
 
     this.config = config;
 
-    await this.refresh();
+    await this.refresh(signal);
   }
 
-  async refresh(): Promise<void> {
+  async refresh(signal?: AbortSignal): Promise<void> {
     if (!this.config) {
       throw new Error("WeatherEngine has not been initialized.");
     }
 
-    const weather = await getWeather(
-      this.config.lat,
-      this.config.lon
-    );
+    const weather = await getWeather(this.config.lat, this.config.lon, signal);
 
     this.snapshot = weather;
 

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { SportKind, SportsEvent, SportsEventStatus, SportsSnapshot } from "@/core/contracts/Sports";
 import { useVisiblePolling } from "@/hooks/useVisiblePolling";
 import { useCosmicScope } from "@/services/storage/scope";
+import { kioskApiUrl } from "@/services/kioskRequest";
 
 type SportsHookOptions = { sport?: SportKind; refreshMs?: number | ((snapshot: SportsSnapshot | null) => number) };
 type SportsWireEvent = Omit<SportsEvent, "start" | "end"> & { start: string; end?: string };
@@ -72,7 +73,7 @@ async function requestSnapshot(sport: SportKind | undefined, scopeId: string): P
   const pendingRequest = pendingRequests.get(key);
   if (pendingRequest) return pendingRequest;
   const query = sport ? `?sport=${encodeURIComponent(sport)}` : "";
-  const request = fetch(`/api/sports${query}`, { cache: "no-store" })
+  const request = fetch(kioskApiUrl(`/api/sports${query}`), { credentials: "include", cache: "no-store" })
     .then(async (response) => {
       if (!response.ok) throw new Error("Sports data is temporarily unavailable.");
       const payload: unknown = await response.json();

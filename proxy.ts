@@ -10,6 +10,15 @@ const PUBLIC_API_ROUTES = new Set([
   "/api/finance/webhooks/plaid", "/api/internal/finance/sync",
 ]);
 
+function isDeviceReadApi(pathname: string) {
+  return pathname === "/api/weather"
+    || pathname === "/api/sports"
+    || pathname.startsWith("/api/sports/event/")
+    || pathname === "/api/calendar"
+    || pathname === "/api/music"
+    || pathname === "/api/clock/alarms";
+}
+
 export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   const isApi = pathname.startsWith("/api/");
@@ -17,7 +26,8 @@ export async function proxy(request: NextRequest) {
   // Kiosk must reach its own pairing gate before any private content can mount.
   if (pathname === "/os/kiosk") return NextResponse.next();
   try {
-    if (await getCurrentCosmicAccount(request)) return NextResponse.next();
+    const allowDevice = isDeviceReadApi(pathname);
+    if (await getCurrentCosmicAccount(request, { allowDevice, bootId: allowDevice ? request.nextUrl.searchParams.get("cosmic-boot") ?? undefined : undefined })) return NextResponse.next();
   } catch { /* Private requests fail closed when auth infrastructure is unavailable. */ }
   if (isApi) return NextResponse.json({ error: "Authentication required." }, { status: 401, headers: { "Cache-Control": "no-store" } });
   const url = new URL("/account", request.url);

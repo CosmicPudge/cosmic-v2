@@ -1,5 +1,5 @@
 import type { CalendarDateRange } from "@/engines/calendar";
-import { getCurrentCosmicAccount } from "@/services/auth/server";
+import { getCurrentCosmicAccount, kioskBootId } from "@/services/auth/server";
 import { getCalendarEngineForRequest } from "@/services/calendar/accountProvider";
 
 export const dynamic = "force-dynamic";
@@ -7,8 +7,8 @@ export const dynamic = "force-dynamic";
 export async function GET(
   request: Request
 ) {
-  if (process.env.NODE_ENV === "production" && !(await getCurrentCosmicAccount(request))) return Response.json({ error: "Authentication required for private calendar access." }, { status: 401 });
-  const account = await getCurrentCosmicAccount(request);
+  const account = await getCurrentCosmicAccount(request, { allowDevice: true, bootId: kioskBootId(request) });
+  if (process.env.NODE_ENV === "production" && !account) return Response.json({ error: "Authentication required for private calendar access." }, { status: 401 });
   const calendar = await getCalendarEngineForRequest(account?.id, new URL(request.url).searchParams.get("connectionId") ?? undefined);
   if (!calendar) return Response.json({ error: "Calendar is not connected.", events: [] }, { status: 200 });
   try {

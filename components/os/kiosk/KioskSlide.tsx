@@ -36,6 +36,7 @@ function formatWidgetTitle(id: string) {
       ].join(" ")}
       style={{ transitionDuration: "700ms" }}
       aria-hidden={!active}
+      data-kiosk-scene={widget.id}
     >
       <div className="kiosk-slide-card relative flex h-full w-full flex-col overflow-hidden">
 

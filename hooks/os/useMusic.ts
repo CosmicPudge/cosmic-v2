@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { MusicSnapshot } from "@/core/contracts/Music";
 import { useVisiblePolling } from "@/hooks/useVisiblePolling";
 import { useCosmicScope } from "@/services/storage/scope";
+import { kioskApiUrl } from "@/services/kioskRequest";
 
 interface UseMusicOptions {
   refreshMs?: number;
@@ -34,7 +35,7 @@ export function useMusic({ refreshMs }: UseMusicOptions = {}) {
 
     const request = (async () => {
       try {
-        const response = await fetch("/api/music", { cache: "no-store" });
+        const response = await fetch(kioskApiUrl("/api/music"), { credentials: "include", cache: "no-store" });
 
         if (!response.ok) {
           throw new Error("Music is unavailable.");

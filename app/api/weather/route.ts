@@ -1,6 +1,8 @@
 import { getEnvironment } from "@/engines/environment";
+import { kioskBootId, requireAuthenticatedSession } from "@/services/auth/server";
 
 export async function GET(request: Request) {
+  await requireAuthenticatedSession(request, { allowDevice: true, bootId: kioskBootId(request) });
   const { searchParams } = new URL(request.url);
 
   const lat = searchParams.get("lat");

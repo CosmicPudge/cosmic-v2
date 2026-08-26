@@ -1,6 +1,6 @@
 import type { SportKind } from "@/core/contracts/Sports";
 import { getSportsSnapshot } from "@/services/sports/snapshot";
-import { requireCosmicAccount } from "@/services/auth/server";
+import { kioskBootId, requireAuthenticatedSession } from "@/services/auth/server";
 import { getAccountPreferences } from "@/services/settings/accountPreferences";
 import { referencePreferences } from "@/services/settings/preferences";
 
@@ -9,7 +9,7 @@ function isSportKind(value: string): value is SportKind {
 }
 
 export async function GET(request: Request) {
-  const account = await requireCosmicAccount(request);
+  const account = (await requireAuthenticatedSession(request, { allowDevice: true, bootId: kioskBootId(request) })).account;
   const preferences = process.env.DATABASE_URL ? await getAccountPreferences(account.id) : referencePreferences;
   const requestedSport = new URL(request.url).searchParams.get("sport");
   if (!requestedSport) {

@@ -7,6 +7,7 @@ import type {
   CalendarSnapshot,
 } from "@/core/contracts";
 import { useVisiblePolling } from "@/hooks/useVisiblePolling";
+import { kioskApiUrl } from "@/services/kioskRequest";
 
 interface CalendarResponse {
   today: Array<Omit<CalendarEvent, "start" | "end"> & {
@@ -95,7 +96,7 @@ export default function useCalendar({ refreshMs = DEFAULT_REFRESH_INTERVAL_MS }:
         setError(null);
 
         const response = await fetch(
-          "/api/calendar",
+          kioskApiUrl("/api/calendar"),
           {
             cache: "no-store",
           }
@@ -142,7 +143,7 @@ export default function useCalendar({ refreshMs = DEFAULT_REFRESH_INTERVAL_MS }:
 
   const refresh = useCallback(async () => {
     try {
-      const response = await fetch("/api/calendar", { cache: "no-store" });
+      const response = await fetch(kioskApiUrl("/api/calendar"), { credentials: "include", cache: "no-store" });
       if (!response.ok) throw new Error("Calendar is temporarily unavailable.");
       setCalendar(hydrateSnapshot(await response.json()));
       setError(null);

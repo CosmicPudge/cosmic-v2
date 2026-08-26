@@ -203,6 +203,42 @@ html, body { width: 100%; min-height: 100%; }
 .cosmic-widget-motif-signal { background: repeating-linear-gradient(165deg, transparent 0 19px, color-mix(in srgb, var(--widget-accent) 18%, transparent) 20px 21px, transparent 22px 36px); }
 .cosmic-widget-motif-system, .cosmic-widget-motif-neutral { background: radial-gradient(circle at 90% 10%, color-mix(in srgb, var(--widget-accent) 16%, transparent), transparent 25%); }
 .cosmic-widget-motif-briefing { background: radial-gradient(ellipse at 70% 18%, color-mix(in srgb, var(--widget-accent) 24%, transparent), transparent 26%); }
+
+/* Kiosk scenes reuse the widget background layers but add a restrained, domain-specific atmosphere. */
+.kiosk-slide .kiosk-scene-surface { isolation: isolate; background: linear-gradient(145deg, rgba(8,13,31,.98), rgba(2,5,16,.98)) !important; }
+.kiosk-slide .kiosk-scene-surface::before, .kiosk-slide .kiosk-scene-surface::after { content: ""; position: absolute; inset: 0; pointer-events: none; }
+.kiosk-slide .kiosk-scene-surface::before { background: radial-gradient(circle at 12% 14%, color-mix(in srgb, var(--widget-accent) 18%, transparent), transparent 34%), radial-gradient(circle at 88% 82%, color-mix(in srgb, var(--widget-secondary) 12%, transparent), transparent 38%); opacity: .9; }
+.kiosk-slide .kiosk-scene-surface::after { background: linear-gradient(180deg, rgba(255,255,255,.035), transparent 34%, rgba(0,0,0,.25)); opacity: .9; }
+.kiosk-slide .kiosk-scene-motif { opacity: .32; }
+.kiosk-slide[data-kiosk-scene="clock"] .kiosk-scene-surface { background: radial-gradient(circle at 50% 42%, rgba(103,232,249,.12), transparent 25%), linear-gradient(145deg, #08091d, #02040e 70%) !important; }
+.kiosk-slide[data-kiosk-scene="weather"] .kiosk-scene-surface { background: linear-gradient(145deg, #06223d, #061326 58%, #030712) !important; }
+.kiosk-slide[data-kiosk-scene="weather"] [data-scene-state="clear-day"] { background: radial-gradient(circle at 74% 20%, rgba(103,232,249,.28), transparent 24%), linear-gradient(145deg, #06335a, #071a35 58%, #030712) !important; }
+.kiosk-slide[data-kiosk-scene="weather"] [data-scene-state="clear-night"] { background: radial-gradient(circle at 76% 18%, rgba(167,139,250,.2), transparent 20%), linear-gradient(145deg, #10143b, #05091e 62%, #02040e) !important; }
+.kiosk-slide[data-kiosk-scene="weather"] [data-scene-state="cloudy-day"], .kiosk-slide[data-kiosk-scene="weather"] [data-scene-state="cloudy-night"] { background: linear-gradient(145deg, #172d43, #0b1728 62%, #050913) !important; }
+.kiosk-slide[data-kiosk-scene="weather"] [data-scene-state="rain-day"], .kiosk-slide[data-kiosk-scene="weather"] [data-scene-state="rain-night"] { background: repeating-linear-gradient(122deg, transparent 0 24px, rgba(103,190,249,.045) 25px 26px), linear-gradient(145deg, #06243e, #061322 62%, #020611) !important; }
+.kiosk-slide[data-kiosk-scene="weather"] [data-scene-state="snow-day"], .kiosk-slide[data-kiosk-scene="weather"] [data-scene-state="snow-night"] { background: radial-gradient(circle at 68% 20%, rgba(219,239,255,.18), transparent 24%), linear-gradient(145deg, #122b46, #09162a 62%, #040812) !important; }
+.kiosk-slide[data-kiosk-scene="weather"] [data-scene-state="thunder-day"], .kiosk-slide[data-kiosk-scene="weather"] [data-scene-state="thunder-night"] { background: radial-gradient(circle at 74% 24%, rgba(129,140,248,.16), transparent 22%), linear-gradient(145deg, #15152d, #080a18 62%, #03040b) !important; }
+.kiosk-slide[data-kiosk-scene="calendar"] .kiosk-scene-surface { background-image: linear-gradient(rgba(103,232,249,.035) 1px, transparent 1px), linear-gradient(90deg, rgba(103,232,249,.035) 1px, transparent 1px), linear-gradient(145deg, #0b1730, #040817 68%) !important; background-size: 42px 42px, 42px 42px, auto !important; }
+.kiosk-slide[data-kiosk-scene="finance"] .kiosk-scene-surface { background-image: repeating-linear-gradient(165deg, transparent 0 42px, rgba(34,211,238,.045) 43px 44px), linear-gradient(145deg, #11142b, #050914 68%) !important; }
+.kiosk-slide[data-kiosk-scene="garage"] .kiosk-scene-surface { background-image: linear-gradient(rgba(96,165,250,.035) 1px, transparent 1px), linear-gradient(90deg, rgba(96,165,250,.035) 1px, transparent 1px), linear-gradient(145deg, #0d1b30, #050812 68%) !important; background-size: 34px 34px, 34px 34px, auto !important; }
+.kiosk-slide[data-kiosk-scene="music"] .kiosk-scene-surface { background: radial-gradient(ellipse at 50% 70%, rgba(240,171,252,.13), transparent 34%), linear-gradient(145deg, #1a0b25, #070513 68%) !important; }
+.kiosk-slide[data-kiosk-scene="sports"] .kiosk-scene-surface { background: linear-gradient(145deg, #071d25, #050b18 68%) !important; }
+.kiosk-slide[data-kiosk-scene="notes"] .kiosk-scene-surface { background-image: linear-gradient(rgba(196,181,253,.035) 1px, transparent 1px), linear-gradient(145deg, #17152b, #070814 68%) !important; background-size: 100% 30px, auto !important; }
+.kiosk-slide[data-kiosk-scene="projects"] .kiosk-scene-surface { background: radial-gradient(circle at 78% 24%, rgba(34,211,238,.13), transparent 20%), linear-gradient(145deg, #151032, #060817 68%) !important; }
+.kiosk-slide[data-kiosk-scene="school"] .kiosk-scene-surface { background: linear-gradient(160deg, rgba(147,197,253,.07), transparent 36%), linear-gradient(145deg, #0b1d34, #050914 68%) !important; }
+.kiosk-slide[data-kiosk-scene="notifications"] .kiosk-scene-surface { background: radial-gradient(circle at 80% 22%, rgba(251,113,133,.16), transparent 24%), linear-gradient(145deg, #211020, #080813 68%) !important; }
+.kiosk-slide[data-kiosk-scene="briefing"] .kiosk-scene-surface { background: radial-gradient(ellipse at 58% 16%, rgba(232,121,249,.16), transparent 30%), linear-gradient(145deg, #1b1232, #070817 68%) !important; }
+
+@media (max-width: 900px) and (max-height: 600px) {
+  .kiosk-slide .kiosk-scene-motif { opacity: .2; }
+  .kiosk-slide .kiosk-scene-glow { filter: blur(18px) !important; opacity: .55; transform: scale(.72); }
+  .kiosk-slide .kiosk-scene-surface::before { opacity: .55; }
+  .kiosk-slide .kiosk-scene-surface::after { opacity: .7; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kiosk-slide .kiosk-scene-motif, .kiosk-slide .kiosk-scene-surface::before, .kiosk-slide .kiosk-scene-surface::after { animation: none !important; }
+}
 [data-widget-accent="music"] .cosmic-icon-music, [data-widget-accent="finance"] .cosmic-icon-finance, [data-widget-accent="cosmic"] .cosmic-icon-cosmic-ai { animation: cosmic-widget-breathe 3.8s ease-in-out infinite; }
 [data-widget-accent="sports"] .cosmic-icon-sports { animation: cosmic-widget-live-glow 2.6s ease-in-out infinite; }
 @keyframes cosmic-widget-breathe { 0%, 100% { filter: drop-shadow(0 0 5px currentColor); } 50% { filter: drop-shadow(0 0 12px currentColor); } }

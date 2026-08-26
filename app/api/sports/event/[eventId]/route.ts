@@ -2,7 +2,7 @@ import { getSportsSnapshot } from "@/services/sports/snapshot";
 import { getMLBLiveData } from "@/services/sports/providers/mlb/live";
 import { getNFLLiveData } from "@/services/sports/providers/nfl/live";
 import { getNBAEventDetail } from "@/services/sports/providers/nba-detail";
-import { getCurrentCosmicAccount } from "@/services/auth/server";
+import { getCurrentCosmicAccount, kioskBootId } from "@/services/auth/server";
 import { getAccountPreferences } from "@/services/settings/accountPreferences";
 import { referencePreferences } from "@/services/settings/preferences";
 
@@ -29,7 +29,7 @@ function upstreamId(eventId: string) {
 
 export async function GET(request: Request, { params }: { params: Promise<{ eventId: string }> }) {
   const eventId = decodeURIComponent((await params).eventId);
-  const account = await getCurrentCosmicAccount(request);
+  const account = await getCurrentCosmicAccount(request, { allowDevice: true, bootId: kioskBootId(request) });
   const accountKey = account?.id ?? "reference";
   const preferences = account && process.env.DATABASE_URL ? await getAccountPreferences(account.id) : referencePreferences;
   const snapshot = await cachedSnapshot(accountKey, preferences);

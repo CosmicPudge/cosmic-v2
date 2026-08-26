@@ -4,6 +4,7 @@ import type { WeatherData } from "@/engines/environment";
 
 interface Props {
   weather: WeatherData | null;
+  loading?: boolean;
   error: string | null;
   dense?: boolean;
   kiosk?: boolean;
@@ -22,6 +23,7 @@ function formatUpdated(time?: string) {
 
 export default function WeatherFooter({
   weather,
+  loading = false,
   error,
   dense = false,
   kiosk = false,
@@ -40,7 +42,7 @@ export default function WeatherFooter({
     );
   }
 
-  if (!weather) {
+  if (!weather && loading) {
     return (
       <div className="flex items-center justify-between">
         <span>Loading weather...</span>
@@ -48,6 +50,15 @@ export default function WeatherFooter({
         <span className="text-white/40">
           --
         </span>
+      </div>
+    );
+  }
+
+  if (!weather) {
+    return (
+      <div className="flex items-center justify-between">
+        <span>{kiosk ? "Waiting for current conditions" : "Set a location for weather"}</span>
+        <span className="text-white/40">--</span>
       </div>
     );
   }

@@ -14,6 +14,13 @@ import WeatherHourly from "./WeatherHourly";
 import WeatherStats from "./WeatherStats";
 import WeatherFooter from "./WeatherFooter";
 
+function weatherSceneState(condition: string | undefined, daylightProgress: number | undefined) {
+  const value = condition?.toLowerCase() ?? "unknown";
+  const category = value.includes("thunder") ? "thunder" : value.includes("snow") || value.includes("sleet") || value.includes("ice") ? "snow" : value.includes("rain") || value.includes("drizzle") || value.includes("shower") ? "rain" : value.includes("cloud") || value.includes("overcast") || value.includes("fog") || value.includes("mist") ? "cloudy" : value === "unknown" ? "unknown" : "clear";
+  const day = daylightProgress !== undefined && daylightProgress > 0 && daylightProgress < 100;
+  return `${category}-${day ? "day" : "night"}`;
+}
+
 export default function WeatherWidget() {
   const { size, presentation } = useWidgetContext();
   const {
@@ -26,6 +33,7 @@ export default function WeatherWidget() {
   return (
     <Widget
       accent="weather"
+      sceneState={weatherSceneState(weather?.condition, weather?.daylightProgress)}
     >
       <WidgetHeader
         title="Weather"
@@ -45,6 +53,7 @@ export default function WeatherWidget() {
       <WidgetFooter>
         <WeatherFooter
           weather={weather}
+          loading={loading}
           error={error}
           kiosk={presentation === "kiosk"}
         />

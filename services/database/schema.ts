@@ -124,6 +124,18 @@ export const providerCredentials = pgTable("provider_credentials", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+export const clockAlarms = pgTable("clock_alarms", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  label: text("label").notNull(),
+  time: text("time").notNull(),
+  enabled: boolean("enabled").notNull().default(true),
+  repeatWeekdays: integer("repeat_weekdays").array().notNull().default(sql`ARRAY[]::integer[]`),
+  snoozeEnabled: boolean("snooze_enabled").notNull().default(true),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [index("clock_alarms_user_id_index").on(table.userId), uniqueIndex("clock_alarms_user_id_alarm_id_unique").on(table.userId, table.id)]);
+
 export const financeConnections = pgTable("finance_connections", {
   id: text("id").primaryKey().references(() => providerConnections.id, { onDelete: "cascade" }),
   userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
