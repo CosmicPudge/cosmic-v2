@@ -687,6 +687,7 @@ html[data-cosmic-reduced-effects="true"] *::after {
 .kiosk-sports-view { overscroll-behavior: none; touch-action: manipulation; }
 .kiosk-slide { height: 100%; width: 100%; }
 .kiosk-slide-card { max-width: none; border: 0; border-radius: 0; background: transparent; box-shadow: none; backdrop-filter: none; }
+.kiosk-night-dimmer { background: rgba(0,0,0,.35); }
 .kiosk-slide-content { scrollbar-width: none; }
 .kiosk-slide-content::-webkit-scrollbar { display: none; }
 

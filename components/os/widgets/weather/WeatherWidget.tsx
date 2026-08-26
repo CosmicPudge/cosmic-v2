@@ -15,7 +15,7 @@ import WeatherStats from "./WeatherStats";
 import WeatherFooter from "./WeatherFooter";
 
 export default function WeatherWidget() {
-  const { size } = useWidgetContext();
+  const { size, presentation } = useWidgetContext();
   const {
     weather,
     loading,
@@ -46,6 +46,7 @@ export default function WeatherWidget() {
         <WeatherFooter
           weather={weather}
           error={error}
+          kiosk={presentation === "kiosk"}
         />
       </WidgetFooter>
     </Widget>

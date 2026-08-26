@@ -6,6 +6,7 @@ interface CalendarAgendaProps {
   currentEvent?: CalendarEvent;
   loading: boolean;
   error: string | null;
+  kiosk?: boolean;
 }
 
 export default function CalendarAgenda({
@@ -13,6 +14,7 @@ export default function CalendarAgenda({
   currentEvent,
   loading,
   error,
+  kiosk = false,
 }: CalendarAgendaProps) {
   const agendaEvents = events
     .filter((event) => event.id !== currentEvent?.id)
@@ -32,7 +34,7 @@ export default function CalendarAgenda({
       {loading ? (
         <WidgetLoading compact className="mt-1 justify-start" />
       ) : error ? (
-        <WidgetError compact title="Calendar unavailable" message={error} />
+        <WidgetError compact title={kiosk ? "Calendar temporarily unavailable" : "Calendar unavailable"} message={kiosk ? "Cosmic will retry automatically." : error} />
       ) : events.length === 0 ? (
         <WidgetEmpty compact title="Your day is clear." description="" />
       ) : (

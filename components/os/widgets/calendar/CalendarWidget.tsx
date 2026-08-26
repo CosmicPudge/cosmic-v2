@@ -15,7 +15,7 @@ import useCalendar from "@/hooks/os/useCalendar";
 import { useDashboardWidgetReadiness } from "@/components/dashboard/readiness/DashboardReadiness";
 
 export default function CalendarWidget() {
-  const { size } = useWidgetContext();
+  const { size, presentation } = useWidgetContext();
   const {
     calendar,
     loading,
@@ -60,6 +60,7 @@ export default function CalendarWidget() {
               currentEvent={calendar?.currentEvent}
               loading={loading}
               error={error}
+              kiosk={presentation === "kiosk"}
             />
           </div>
         )}

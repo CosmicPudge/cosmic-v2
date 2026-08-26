@@ -6,6 +6,7 @@ import { DashboardReadinessProvider } from "@/components/dashboard/readiness/Das
 import DevicePairingScreen from "./DevicePairingScreen";
 import KioskSlideshow from "./KioskSlideshow";
 import { KIOSK_SESSION_STORAGE_KEY } from "./KioskShell";
+import KioskAmbientFrame from "./KioskAmbientFrame";
 
 function authLog(message: string) {
   if (process.env.NODE_ENV !== "production") console.info(`[kiosk-auth] ${message}`);
@@ -45,7 +46,9 @@ export default function KioskAuthGate() {
     // Kiosk widgets need the readiness context, but kiosk presentation does not
     // gate mounting on dashboard-critical readiness.
     <DashboardReadinessProvider criticalWidgetIds={[]}>
-      <KioskSlideshow />
+      <KioskAmbientFrame>
+        <KioskSlideshow />
+      </KioskAmbientFrame>
     </DashboardReadinessProvider>
   );
 }

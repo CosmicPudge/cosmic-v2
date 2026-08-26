@@ -1,6 +1,7 @@
 "use client";
 
 import type { DashboardWidget } from "@/config/widgets";
+import { WidgetProvider } from "@/components/os/ui/widget/WidgetContext";
 
 interface KioskSlideProps {
   widget: DashboardWidget;
@@ -65,7 +66,9 @@ function formatWidgetTitle(id: string) {
         <div className="kiosk-slide-content relative flex min-h-0 flex-1 items-stretch justify-stretch overflow-hidden p-[clamp(.75rem,2vw,2rem)]">
           <div className="flex h-full min-h-0 w-full items-stretch">
             <div className="h-full min-h-0 w-full">
-              <WidgetComponent />
+              <WidgetProvider size="medium" presentation="kiosk">
+                <WidgetComponent />
+              </WidgetProvider>
             </div>
           </div>
         </div>

@@ -43,7 +43,7 @@ export default function Widget({
   const visual = getModuleVisualIdentity(accent);
 
   return (
-    <WidgetProvider size={parentContext.size} accent={accent}>
+    <WidgetProvider size={parentContext.size} accent={accent} presentation={parentContext.presentation}>
     <motion.div
       whileHover={
         hover

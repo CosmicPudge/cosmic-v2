@@ -6,6 +6,7 @@ interface Props {
   weather: WeatherData | null;
   error: string | null;
   dense?: boolean;
+  kiosk?: boolean;
 }
 
 function formatUpdated(time?: string) {
@@ -23,16 +24,17 @@ export default function WeatherFooter({
   weather,
   error,
   dense = false,
+  kiosk = false,
 }: Props) {
   if (error) {
     return (
       <div className="flex items-center justify-between">
         <span className="text-red-300">
-          Weather unavailable
+          {kiosk ? "Waiting for current conditions" : "Weather unavailable"}
         </span>
 
         <span className="text-white/40">
-          Offline
+          {kiosk ? "Retrying" : "Offline"}
         </span>
       </div>
     );

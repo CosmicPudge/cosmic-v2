@@ -15,7 +15,7 @@ import SchoolSchedule from "./SchoolSchedule";
 import SchoolFooter from "./SchoolFooter";
 
 export default function SchoolWidget() {
-  const { size } = useWidgetContext();
+  const { size, presentation } = useWidgetContext();
   const { data, loading, error, local } = useSchoolData();
   const activeTerm = local.data.terms.find((term) => term.active);
   const activeCourses = local.data.courses.filter((course) => !activeTerm || course.termId === activeTerm.id);
@@ -45,7 +45,7 @@ export default function SchoolWidget() {
       />
 
       <WidgetBody scrollable={size === "large"}>
-        {!local.ready || (loading && !hasLocalData) ? <WidgetLoading /> : error && !hasLocalData ? <WidgetError title="School unavailable" message={error} /> : !data && !hasLocalData ? <WidgetEmpty title="No school data yet" description="Add a School term or connect a school calendar to get started." /> : <>
+        {!local.ready || (loading && !hasLocalData) ? <WidgetLoading /> : error && !hasLocalData ? <WidgetError title={presentation === "kiosk" ? "School temporarily unavailable" : "School unavailable"} message={presentation === "kiosk" ? "Cosmic will retry automatically." : error} /> : !data && !hasLocalData ? <WidgetEmpty title="No school data yet" description="Add a School term or connect a school calendar to get started." /> : <>
           <SchoolCurrent term={activeTerm?.name ?? data?.semester.semester ?? "School"} nextClass={localSchedule.currentClass ? { id: localSchedule.currentClass.course.id, name: localSchedule.currentClass.course.name, start: localSchedule.currentClass.start, end: localSchedule.currentClass.end, location: localSchedule.currentClass.location } : localSchedule.nextClass ? { id: localSchedule.nextClass.course.id, name: localSchedule.nextClass.course.name, start: localSchedule.nextClass.start, end: localSchedule.nextClass.end, location: localSchedule.nextClass.location } : nextClass} isCurrentClass={Boolean(localSchedule.currentClass)} urgentAssignment={dueAssignments[0]} />
           {size !== "small" && <SchoolAssignments assignments={dueAssignments} />}
           {size === "large" && <SchoolSchedule classes={[...localSchedule.schedule.map((item) => ({ id: `${item.course.id}:${item.start.toISOString()}`, name: item.course.name, start: item.start, end: item.end, ...(item.location ? { location: item.location } : {}) })), ...upcomingClasses]} />}

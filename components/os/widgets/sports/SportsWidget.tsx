@@ -17,7 +17,7 @@ import SportsStandings from "./SportsStandings";
 import SportsFooter from "./SportsFooter";
 
 export default function SportsWidget() {
-  const { size } = useWidgetContext();
+  const { size, presentation } = useWidgetContext();
   const { data, loading, error } = useSports();
   const { data: settings } = useSettingsRepository();
   const liveOrFeatured = data ? prioritizeFollowedEvents(data.live, settings.preferences)[0] ?? prioritizeFollowedEvents(data.featured, settings.preferences)[0] : undefined;
@@ -35,7 +35,7 @@ export default function SportsWidget() {
       />
 
       <WidgetBody scrollable={size === "large"}>
-        {loading && !data ? <WidgetLoading label="Loading sports" compact /> : error && !data ? <WidgetError title="Sports unavailable" message={error} compact /> : !data ? <WidgetEmpty title="No sports data" description="Scores and schedules will appear here." compact /> : <>
+        {loading && !data ? <WidgetLoading label="Loading sports" compact /> : error && !data ? <WidgetError title={presentation === "kiosk" ? "Sports temporarily unavailable" : "Sports unavailable"} message={presentation === "kiosk" ? "Cosmic will retry automatically." : error} compact /> : !data ? <WidgetEmpty title={presentation === "kiosk" ? "No live games" : "No sports data"} description="Scores and schedules will appear here." compact /> : <>
           <SportsCurrent event={liveOrFeatured} />
           {size !== "small" && <SportsScores events={upcoming.slice(0, size === "medium" ? 2 : 3)} />}
           {size === "large" && <SportsStandings standings={standings} />}
