@@ -19,6 +19,10 @@ function cachedSnapshot(key: string, preferences: Parameters<typeof getSportsSna
   return value;
 }
 
+function mlbGamePk(event: { id: string; metadata?: { gamePk?: string } }) {
+  return event.metadata?.gamePk ?? event.id.replace(/^mlb:/, "");
+}
+
 function upstreamId(eventId: string) {
   return eventId.split(":").at(-1) ?? eventId;
 }
@@ -36,7 +40,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ even
   let detail = detailCache.get(cacheKey)?.value;
   if (!detail || (detailCache.get(cacheKey)?.expiresAt ?? 0) <= Date.now()) {
     const requestDetail = event.sport === "mlb" && ["live", "delayed", "final"].includes(event.status)
-      ? getMLBLiveData(upstreamId(event.id))
+      ? getMLBLiveData(mlbGamePk(event))
       : event.sport === "nfl" && ["live", "delayed", "final"].includes(event.status)
         ? getNFLLiveData(upstreamId(event.id))
         : event.sport === "nba" && ["pregame", "live", "delayed", "final"].includes(event.status)

@@ -54,7 +54,7 @@ function gameEvent(value: unknown): SportsEvent | null {
     awayTeam: { ...awayTeam, ...(awayScore !== undefined ? { score: awayScore } : {}) },
     homeTeam: { ...homeTeam, ...(homeScore !== undefined ? { score: homeScore } : {}) },
     source: "mlb-stats-api",
-    metadata: { competition: "MLB" },
+    metadata: { competition: "MLB", gamePk: String(gamePk) },
   };
 }
 

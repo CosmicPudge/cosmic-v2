@@ -46,7 +46,7 @@ export function selectKioskLiveEvent(
   const liveEvents = events
     .filter(
       (event) =>
-        event.status === "live" &&
+        (event.status === "live" || event.status === "delayed") &&
         isKioskSport(event.sport),
     )
     .sort((a, b) => {

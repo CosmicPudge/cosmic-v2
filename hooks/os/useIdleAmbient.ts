@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useSettingsData } from "@/components/apps/settings/SettingsProvider";
+import { KIOSK_SESSION_STORAGE_KEY } from "@/components/os/kiosk/KioskShell";
 
 export const AMBIENT_IDLE_TIMEOUT_MS = 5 * 60 * 1_000;
 
@@ -51,7 +52,8 @@ export default function useIdleAmbient() {
       }
 
       navigatingRef.current = true;
-      router.replace("/os/ambient");
+      const kioskSession = window.sessionStorage.getItem(KIOSK_SESSION_STORAGE_KEY) === "true";
+      router.replace(kioskSession ? "/os/kiosk?cosmic-kiosk=1" : "/os/ambient");
     };
 
     const resetTimer = () => {

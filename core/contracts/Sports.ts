@@ -18,6 +18,7 @@ export interface SportsTeam {
 }
 
 export interface SportsEventMetadata {
+  gamePk?: string;
   competition?: string;
   seasonType?: string;
   eventName?: string;

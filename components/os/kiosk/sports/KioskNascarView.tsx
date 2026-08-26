@@ -24,7 +24,7 @@ export default function KioskNascarView({
     event.title;
 
   return (
-    <div className="relative flex h-[100svh] w-full items-center justify-center overflow-hidden px-[clamp(1rem,3vw,3rem)] py-[clamp(1rem,3vh,2.5rem)]">
+    <div className="kiosk-sports-view kiosk-nascar-view relative flex h-[100svh] w-full items-center justify-center overflow-hidden px-[clamp(1rem,3vw,3rem)] py-[clamp(1rem,3vh,2.5rem)]">
       <section className="relative flex h-full w-full max-w-[1500px] flex-col overflow-hidden rounded-[clamp(1.5rem,3vw,2.75rem)] border border-white/10 bg-black/10 shadow-[0_30px_120px_rgba(0,0,0,.32)] backdrop-blur-md">
 
         {/* Header */}

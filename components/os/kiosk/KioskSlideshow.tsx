@@ -141,7 +141,7 @@ export default function KioskSlideshow() {
   const searchParams = useSearchParams();
 
   const { data: sportsData } = useSports({
-    refreshMs: 30_000,
+    refreshMs: (snapshot) => snapshot?.live.length ? 10_000 : 60_000,
   });
 
   const widgets = useMemo(() => {
@@ -325,7 +325,7 @@ export default function KioskSlideshow() {
       : null;
 
   return (
-    <div className="relative h-[100svh] w-full overflow-hidden">
+    <div className="kiosk-slideshow relative h-[100svh] w-full overflow-hidden">
       {previousWidget ? (
         <KioskSlide
           key={`previous-${previousWidget.id}-${previousIndex}`}
@@ -342,7 +342,7 @@ export default function KioskSlideshow() {
         exiting={false}
       />
 
-      <div className="pointer-events-none absolute bottom-[max(1rem,env(safe-area-inset-bottom))] left-1/2 z-30 -translate-x-1/2">
+      <div className="kiosk-indicator pointer-events-none absolute bottom-[max(1rem,env(safe-area-inset-bottom))] left-1/2 z-30 -translate-x-1/2">
         <div className="flex items-center gap-2 rounded-full border border-white/10 bg-black/20 px-3 py-2 backdrop-blur-xl">
           {widgets.map((widget, index) => (
             <span

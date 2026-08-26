@@ -1,154 +1,207 @@
 "use client";
 
+import type { CSSProperties } from "react";
 import type { SportsEvent } from "@/core/contracts/Sports";
+import type {
+  BaseballBases,
+  BaseballLiveData,
+  BaseballPlayerRef,
+} from "@/core/contracts/sports/Baseball";
+import TeamLogo from "@/components/apps/sports/TeamLogo";
+import { getMlbTeamTheme } from "@/services/sports/providers/mlb/teamThemes";
 
 interface KioskBaseballViewProps {
   event: SportsEvent;
+  live?: BaseballLiveData;
 }
 
-function getTeamName(
-  team: SportsEvent["homeTeam"] | SportsEvent["awayTeam"],
-) {
-  if (!team) {
-    return "—";
-  }
-
-  return team.abbreviation ?? team.name;
+interface TeamDisplay {
+  id?: string;
+  name: string;
+  abbreviation?: string;
+  score?: number;
+  record?: string;
 }
 
-function getScore(
-  team: SportsEvent["homeTeam"] | SportsEvent["awayTeam"],
-) {
-  if (!team || team.score === undefined) {
-    return "0";
-  }
+const ANGELS_RED = "#BA0021";
+const ANGELS_NAVY = "#003263";
 
-  return String(team.score);
+function isAngels(team?: TeamDisplay) {
+  return Boolean(
+    team &&
+      (team.id === "108" ||
+        team.abbreviation?.toUpperCase() === "LAA" ||
+        team.name.toLowerCase().includes("angels")),
+  );
 }
 
-export default function KioskBaseballView({
-  event,
-}: KioskBaseballViewProps) {
-  const awayName = getTeamName(event.awayTeam);
-  const homeName = getTeamName(event.homeTeam);
+function splitTeamName(name: string) {
+  const words = name.trim().split(/\s+/);
+  return {
+    city: words.slice(0, -1).join(" "),
+    nickname: words.at(-1) ?? name,
+  };
+}
 
-  const awayScore = getScore(event.awayTeam);
-  const homeScore = getScore(event.homeTeam);
+function inningLabel(live: BaseballLiveData | undefined, event: SportsEvent) {
+  if (!live?.inning) return event.statusDetail ?? "LIVE";
+  const half = live.inningHalf === "bottom" ? "BOTTOM" : live.inningHalf === "top" ? "TOP" : "LIVE";
+  return `${half} ${live.inning}${live.inningHalf === "top" || live.inningHalf === "bottom" ? "TH" : ""}`;
+}
+
+function playerFirstName(player?: BaseballPlayerRef) {
+  return player?.name.split(" ").slice(0, -1).join(" ") ?? "";
+}
+
+function playerLastName(player?: BaseballPlayerRef) {
+  return player?.name.split(" ").at(-1) ?? "";
+}
+
+export default function KioskBaseballView({ event, live }: KioskBaseballViewProps) {
+  const away: TeamDisplay = { ...(live?.away.team ?? event.awayTeam ?? { name: "Away" }), score: event.awayTeam?.score, record: event.awayTeam?.record };
+  const home: TeamDisplay = { ...(live?.home.team ?? event.homeTeam ?? { name: "Home" }), score: event.homeTeam?.score, record: event.homeTeam?.record };
+  const awayTheme = getMlbTeamTheme(away);
+  const homeTheme = getMlbTeamTheme(home);
+  const batter = live?.matchup?.batter;
+  const pitcher = live?.matchup?.pitcher;
+  const pitcherStats = pitcher?.id
+    ? [...(live?.boxScore?.away?.players ?? []), ...(live?.boxScore?.home?.players ?? [])]
+        .find((player) => player.player.id === pitcher.id)?.pitching
+    : undefined;
+
+  const style = {
+    "--away-primary": isAngels(away) ? ANGELS_RED : awayTheme.primary,
+    "--away-secondary": isAngels(away) ? ANGELS_NAVY : awayTheme.secondary,
+    "--home-primary": isAngels(home) ? ANGELS_RED : homeTheme.primary,
+    "--home-secondary": isAngels(home) ? ANGELS_NAVY : homeTheme.secondary,
+  } as CSSProperties;
 
   return (
-    <div className="relative flex h-[100svh] w-full items-center justify-center overflow-hidden px-[clamp(1rem,3vw,3rem)] py-[clamp(1rem,3vh,2.5rem)]">
-      <section className="relative flex h-full w-full max-w-[1500px] flex-col overflow-hidden rounded-[clamp(1.5rem,3vw,2.75rem)] border border-white/10 bg-black/10 shadow-[0_30px_120px_rgba(0,0,0,.32)] backdrop-blur-md">
+    <div className="kiosk-sports-view baseball-broadcast-wrap">
+      <section className="baseball-broadcast" style={style} aria-label={`${event.title} live game center`}>
+        <BroadcastHeader />
 
-        {/* Header */}
-        <header className="flex shrink-0 items-center justify-between border-b border-white/[0.07] px-[clamp(1.25rem,3vw,2.5rem)] py-[clamp(.9rem,2vh,1.4rem)]">
-          <div className="flex items-center gap-4">
-            <span className="relative flex h-3 w-3">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-60" />
-              <span className="relative inline-flex h-3 w-3 rounded-full bg-red-400" />
-            </span>
-
-            <div>
-              <p className="text-[clamp(.65rem,1vw,.8rem)] font-semibold uppercase tracking-[0.24em] text-red-200/65">
-                Live Baseball
-              </p>
-
-              <h1 className="text-[clamp(1.15rem,2vw,1.7rem)] font-semibold tracking-tight text-white/90">
-                {event.title}
-              </h1>
-            </div>
+        <main className="baseball-broadcast-main">
+          <div className="baseball-watermark baseball-watermark-away" aria-hidden="true">
+            <Logo team={away} theme={awayTheme} />
+          </div>
+          <div className="baseball-watermark baseball-watermark-home" aria-hidden="true">
+            <Logo team={home} theme={homeTheme} />
           </div>
 
-          <p className="text-[clamp(.65rem,1vw,.8rem)] font-semibold uppercase tracking-[0.2em] text-white/25">
-            Cosmic Sports
-          </p>
-        </header>
-
-        {/* Main game area */}
-        <div className="flex min-h-0 flex-1 flex-col items-center justify-center px-[clamp(1.5rem,5vw,5rem)] py-6">
-
-          {/* Inning / game status */}
-          <div className="mb-[clamp(1.5rem,4vh,3rem)] text-center">
-            <p className="text-[clamp(1rem,2.2vw,1.6rem)] font-black uppercase tracking-[0.16em] text-white/65">
-              {event.statusDetail ?? "Live"}
-            </p>
+          <div className="broadcast-upper">
+            <TeamZone team={away} theme={awayTheme} side="away" score={live?.away.score ?? away.score} />
+            <GameState live={live} event={event} />
+            <TeamZone team={home} theme={homeTheme} side="home" score={live?.home.score ?? home.score} />
           </div>
 
-          {/* Score */}
-          <div className="grid w-full max-w-5xl grid-cols-[1fr_auto_1fr] items-center gap-[clamp(1.25rem,5vw,5rem)]">
+          <MatchupZone batter={batter} pitcher={pitcher} pitcherEra={pitcherStats?.era} />
+          <LastPlayZone description={live?.latestPlay?.description} />
 
-            {/* Away */}
-            <div className="min-w-0 text-right">
-              <p className="truncate text-[clamp(1.5rem,4vw,3.25rem)] font-black uppercase tracking-[-0.04em] text-white/90">
-                {awayName}
-              </p>
-
-              <p className="mt-3 text-[clamp(4.5rem,13vw,10rem)] font-black leading-[0.8] tracking-[-0.08em] text-white">
-                {awayScore}
-              </p>
-            </div>
-
-            {/* Baseball diamond */}
-            <div className="flex flex-col items-center">
-              <div className="relative h-[clamp(6rem,12vw,9rem)] w-[clamp(6rem,12vw,9rem)]">
-                {/* Second */}
-                <div className="absolute left-1/2 top-[8%] h-[24%] w-[24%] -translate-x-1/2 rotate-45 border border-white/35 bg-white/[0.07]" />
-
-                {/* Third */}
-                <div className="absolute left-[10%] top-1/2 h-[24%] w-[24%] -translate-y-1/2 rotate-45 border border-white/35 bg-white/[0.07]" />
-
-                {/* First */}
-                <div className="absolute right-[10%] top-1/2 h-[24%] w-[24%] -translate-y-1/2 rotate-45 border border-white/35 bg-white/[0.07]" />
-
-                {/* Home */}
-                <div className="absolute bottom-[8%] left-1/2 h-[20%] w-[20%] -translate-x-1/2 rotate-45 border border-white/20 bg-white/[0.035]" />
-              </div>
-
-              <p className="mt-4 text-[10px] font-bold uppercase tracking-[0.24em] text-white/25">
-                Live
-              </p>
-            </div>
-
-            {/* Home */}
-            <div className="min-w-0 text-left">
-              <p className="truncate text-[clamp(1.5rem,4vw,3.25rem)] font-black uppercase tracking-[-0.04em] text-white/90">
-                {homeName}
-              </p>
-
-              <p className="mt-3 text-[clamp(4.5rem,13vw,10rem)] font-black leading-[0.8] tracking-[-0.08em] text-white">
-                {homeScore}
-              </p>
-            </div>
+          <div className="broadcast-lower">
+            <LineScoreZone live={live} away={away} home={home} />
+            <GameStatsZone live={live} />
+            <PitchInfoZone pitch={live?.latestPitch} pitchCount={pitcherStats?.pitchesThrown} />
           </div>
+        </main>
 
-          {/* Information strip */}
-          <div className="mt-[clamp(2rem,6vh,4rem)] flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-[clamp(.75rem,1.2vw,1rem)] font-medium text-white/40">
-            {event.venue ? (
-              <span>{event.venue}</span>
-            ) : null}
-
-            {event.venue && event.broadcast ? (
-              <span className="text-white/15">•</span>
-            ) : null}
-
-            {event.broadcast ? (
-              <span>{event.broadcast}</span>
-            ) : null}
-          </div>
-        </div>
-
-        {/* Footer */}
-        <footer className="flex shrink-0 items-center justify-between border-t border-white/[0.06] px-[clamp(1.25rem,3vw,2.5rem)] py-3">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/20">
-            Kiosk slideshow paused
-          </p>
-
-          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/20">
-            Baseball Priority 2
-          </p>
-        </footer>
-
-        <div className="pointer-events-none absolute inset-0 rounded-[inherit] ring-1 ring-inset ring-white/[0.035]" />
+        <BroadcastFooter event={event} live={live} />
       </section>
     </div>
   );
+}
+
+function BroadcastHeader() {
+  return (
+    <header className="broadcast-header">
+      <p><span className="broadcast-live-dot" /> LIVE <span aria-hidden="true">•</span> MLB</p>
+      <p>COSMIC SPORTS</p>
+    </header>
+  );
+}
+
+function TeamZone({ team, theme, side, score }: { team: TeamDisplay; theme: ReturnType<typeof getMlbTeamTheme>; side: "away" | "home"; score?: number }) {
+  const { city, nickname } = splitTeamName(team.name);
+  const angels = isAngels(team);
+  return (
+    <section className={`team-zone team-zone-${side}`} aria-label={`${team.name}, ${score ?? "score unavailable"}`}>
+      <div className="team-zone-content">
+        {side === "away" ? <Logo team={team} theme={theme} /> : null}
+        <div className="team-copy">
+          <p className="team-city">{city || team.name}</p>
+          <h1 className="team-nickname" style={{ color: angels ? ANGELS_RED : theme.accent }}>{nickname}</h1>
+          <p className="team-abbreviation">{team.abbreviation ?? nickname.slice(0, 3).toUpperCase()}</p>
+          <p className="team-score">{score ?? "—"}</p>
+          {team.record ? <p className="team-record">{team.record}</p> : null}
+        </div>
+        {side === "home" ? <Logo team={team} theme={theme} /> : null}
+      </div>
+    </section>
+  );
+}
+
+function Logo({ team, theme }: { team: TeamDisplay; theme: ReturnType<typeof getMlbTeamTheme> }) {
+  return theme.logo ? (
+    <img className="team-logo" src={theme.logo} alt="" draggable={false} />
+  ) : (
+    <span className="team-logo-fallback" style={{ color: theme.accent }}>{team.abbreviation ?? team.name.slice(0, 3)}</span>
+  );
+}
+
+function GameState({ live, event }: { live?: BaseballLiveData; event: SportsEvent }) {
+  return (
+    <section className="game-center-zone" aria-label="Current game situation">
+      <h2 className="inning-heading">{inningLabel(live, event)}</h2>
+      <div className="situation-row">
+        <div className="situation-item"><p>OUTS</p><Outs value={live?.count?.outs} /></div>
+        <div className="situation-item"><p>COUNT</p><strong>{live?.count?.balls !== undefined || live?.count?.strikes !== undefined ? `${live.count?.balls ?? "—"}-${live.count?.strikes ?? "—"}` : "—"}</strong></div>
+        <div className="situation-item"><p>ON BASE</p><BaseDiamond bases={live?.bases} /></div>
+      </div>
+    </section>
+  );
+}
+
+function Outs({ value }: { value?: number }) {
+  return <div className="outs-dots" aria-label={value === undefined ? "Outs unavailable" : `${value} outs`}>{[0, 1, 2].map((out) => <span key={out} className={value !== undefined && out < value ? "is-out" : ""} />)}</div>;
+}
+
+function BaseDiamond({ bases }: { bases?: BaseballBases }) {
+  return <div className="base-diamond" role="img" aria-label={`Bases occupied: ${bases?.second ? "second " : ""}${bases?.third ? "third " : ""}${bases?.first ? "first" : "none"}`}><span className={bases?.second ? "occupied" : ""} /><span className={bases?.third ? "occupied" : ""} /><span className={bases?.first ? "occupied" : ""} /></div>;
+}
+
+function MatchupZone({ batter, pitcher, pitcherEra }: { batter?: BaseballPlayerRef; pitcher?: BaseballPlayerRef; pitcherEra?: string }) {
+  if (!batter && !pitcher) return null;
+  return <section className="matchup-zone"><PlayerMatchup label="AT BAT" player={batter} /><span className="matchup-vs"><span>VS</span></span><PlayerMatchup label="PITCHING" player={pitcher} extra={pitcherEra ? `ERA ${pitcherEra}` : undefined} /></section>;
+}
+
+function PlayerMatchup({ label, player, extra }: { label: string; player?: BaseballPlayerRef; extra?: string }) {
+  return <div className="player-matchup"><p className="matchup-label">{label}</p>{player ? <><p className="player-first">{playerFirstName(player)}</p><p className="player-last">{playerLastName(player)}</p><p className="player-meta">{player.position ?? ""}{extra ? ` · ${extra}` : ""}</p></> : <p className="player-unavailable">Unavailable</p>}</div>;
+}
+
+function LastPlayZone({ description }: { description?: string }) {
+  if (!description) return null;
+  return <section className="last-play-zone"><p>LAST PLAY</p><span>{description}</span></section>;
+}
+
+function LineScoreZone({ live, away, home }: { live?: BaseballLiveData; away: TeamDisplay; home: TeamDisplay }) {
+  const innings = live?.linescore?.innings ?? [];
+  if (!live || !innings.length) return null;
+  return <section className="linescore-zone"><h2>RUNS BY INNING</h2><div className="linescore-table" style={{ "--inning-count": innings.length } as CSSProperties}><div /><div className="linescore-numbers">{innings.map((inning) => <span key={inning.inning}>{inning.inning}</span>)}<span>R</span><span>H</span><span>E</span></div><strong>{away.abbreviation ?? away.name.slice(0, 3)}</strong><div className="linescore-numbers">{innings.map((inning) => <span key={inning.inning}>{inning.away?.runs ?? "—"}</span>)}<span>{live.away.score}</span><span>{live.away.hits ?? "—"}</span><span>{live.away.errors ?? "—"}</span></div><strong>{home.abbreviation ?? home.name.slice(0, 3)}</strong><div className="linescore-numbers">{innings.map((inning) => <span key={inning.inning}>{inning.home?.runs ?? "—"}</span>)}<span>{live.home.score}</span><span>{live.home.hits ?? "—"}</span><span>{live.home.errors ?? "—"}</span></div></div></section>;
+}
+
+function GameStatsZone({ live }: { live?: BaseballLiveData }) {
+  if (!live || (live.away.hits === undefined && live.home.hits === undefined && live.away.errors === undefined && live.home.errors === undefined)) return null;
+  return <section className="stats-zone"><StatCell label="HITS" value={`${live.away.hits ?? "—"} · ${live.home.hits ?? "—"}`} /><StatCell label="ERRORS" value={`${live.away.errors ?? "—"} · ${live.home.errors ?? "—"}`} /></section>;
+}
+
+function StatCell({ label, value }: { label: string; value: string }) { return <div className="stat-cell"><p>{label}</p><strong>{value}</strong></div>; }
+
+function PitchInfoZone({ pitch, pitchCount }: { pitch?: BaseballLiveData["latestPitch"]; pitchCount?: number }) {
+  if (!pitch && pitchCount === undefined) return null;
+  return <section className="pitch-zone"><h2>PITCH INFO</h2><div><p>LAST PITCH</p><strong>{pitch?.velocityMph !== undefined ? `${pitch.velocityMph} MPH` : ""}</strong><span>{pitch?.typeName ?? pitch?.description ?? ""}</span></div><div><p>PITCH COUNT</p><strong>{pitchCount ?? ""}</strong></div></section>;
+}
+
+function BroadcastFooter({ event, live }: { event: SportsEvent; live?: BaseballLiveData }) {
+  const weather = live?.weather?.temperatureF !== undefined ? `${live.weather.temperatureF}°F${live.weather.condition ? ` · ${live.weather.condition}` : ""}` : "";
+  return <footer className="broadcast-footer"><span>{event.start.toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" })}</span><span>{live?.venue?.name ?? event.venue ?? ""}{live?.venue?.city ? ` · ${live.venue.city}` : ""}</span><span>{weather}</span></footer>;
 }
