@@ -866,7 +866,7 @@ html[data-cosmic-reduced-effects="true"] *::after {
   .matchup-vs { height: 1.55rem; width: 1.55rem; font-size: .45rem; }
   .last-play-zone { width: 64%; margin: .15rem auto; padding: .2rem .45rem; border-radius: .55rem; }
   .last-play-zone span { margin-top: .15rem; font-size: .5rem; }
-  .broadcast-lower { grid-template-columns: minmax(0, 1.9fr) minmax(7rem, 1.1fr) minmax(0, 2fr); gap: .3rem; padding-top: .25rem; }
+  .broadcast-lower { display: grid; grid-template-columns: minmax(0, 1.9fr) minmax(7rem, 1.1fr) minmax(0, 2fr); gap: .3rem; padding-top: .25rem; }
   .linescore-zone, .stats-zone, .pitch-zone { border-radius: .45rem; padding: .28rem .4rem; }
   .linescore-zone h2, .pitch-zone h2 { margin-bottom: .18rem; font-size: .42rem; letter-spacing: .12em; }
   .linescore-table { gap: .08rem .2rem; font-size: .48rem; }
