@@ -13,11 +13,20 @@ export interface AuthSessionRecord extends CosmicSession {
   userAgent?: string;
 }
 
+export interface CreateSessionInput {
+  userId: string;
+  tokenHash: string;
+  expiresAt: string;
+  userAgent?: string;
+  sessionType?: "user" | "device";
+  deviceId?: string;
+}
+
 export interface AuthRepository {
   findUserByEmail(email: string): Promise<AuthUserRecord | null>;
   findUserById(id: string): Promise<AuthUserRecord | null>;
   createUser(input: { id: string; email: string; displayName?: string; passwordHash: string; passwordSalt: string }): Promise<AuthUserRecord>;
-  createSession(input: { userId: string; tokenHash: string; expiresAt: string; userAgent?: string }): Promise<AuthSessionRecord>;
+  createSession(input: CreateSessionInput): Promise<AuthSessionRecord>;
   findSession(tokenHash: string): Promise<AuthSessionRecord | null>;
   revokeSession(tokenHash: string): Promise<void>;
   revokeAllSessions(userId: string): Promise<void>;

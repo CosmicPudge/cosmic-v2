@@ -22,7 +22,34 @@ export const sessions = pgTable("sessions", {
   lastUsedAt: timestamp("last_used_at", { withTimezone: true }).notNull().defaultNow(),
   revokedAt: timestamp("revoked_at", { withTimezone: true }),
   userAgent: text("user_agent"),
-}, (table) => [uniqueIndex("sessions_token_hash_unique").on(table.sessionTokenHash), index("sessions_user_id_index").on(table.userId), index("sessions_expires_at_index").on(table.expiresAt)]);
+  sessionType: text("session_type").notNull().default("user"),
+  deviceId: text("device_id"),
+}, (table) => [uniqueIndex("sessions_token_hash_unique").on(table.sessionTokenHash), index("sessions_user_id_index").on(table.userId), index("sessions_expires_at_index").on(table.expiresAt), index("sessions_device_id_index").on(table.deviceId), check("sessions_type_check", sql`${table.sessionType} in ('user', 'device')`)]);
+
+export const devices = pgTable("devices", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  name: text("name").notNull().default("Cosmic Display"),
+  type: text("type").notNull().default("display"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  lastSeenAt: timestamp("last_seen_at", { withTimezone: true }).notNull().defaultNow(),
+  revokedAt: timestamp("revoked_at", { withTimezone: true }),
+}, (table) => [index("devices_user_id_index").on(table.userId), index("devices_active_index").on(table.revokedAt)]);
+
+export const devicePairings = pgTable("device_pairings", {
+  id: text("id").primaryKey(),
+  deviceCodeHash: text("device_code_hash").notNull(),
+  userCode: text("user_code").notNull(),
+  status: text("status").notNull().default("pending"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  approvedAt: timestamp("approved_at", { withTimezone: true }),
+  userId: text("user_id").references(() => users.id, { onDelete: "set null" }),
+  deviceName: text("device_name"),
+  deviceType: text("device_type").notNull().default("display"),
+  lastPolledAt: timestamp("last_polled_at", { withTimezone: true }),
+  consumedAt: timestamp("consumed_at", { withTimezone: true }),
+}, (table) => [uniqueIndex("device_pairings_device_hash_unique").on(table.deviceCodeHash), uniqueIndex("device_pairings_user_code_unique").on(table.userCode), index("device_pairings_status_expires_index").on(table.status, table.expiresAt), index("device_pairings_user_id_index").on(table.userId), check("device_pairings_status_check", sql`${table.status} in ('pending', 'approved', 'expired', 'denied', 'consumed')`)]);
 
 export const userPreferences = pgTable("user_preferences", {
   userId: text("user_id").primaryKey().references(() => users.id, { onDelete: "cascade" }),

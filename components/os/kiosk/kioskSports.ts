@@ -30,6 +30,13 @@ function isKioskSport(
   );
 }
 
+function isAuthoritativeF1Event(event: SportsEvent): boolean {
+  return (
+    event.source === "espn" &&
+    event.provider === "f1-espn-fallback"
+  );
+}
+
 export function kioskSportPriority(
   sport: SportKind,
 ): number {
@@ -47,7 +54,8 @@ export function selectKioskLiveEvent(
     .filter(
       (event) =>
         (event.status === "live" || event.status === "delayed") &&
-        isKioskSport(event.sport),
+        isKioskSport(event.sport) &&
+        (event.sport !== "f1" || isAuthoritativeF1Event(event)),
     )
     .sort((a, b) => {
       const priorityDifference =

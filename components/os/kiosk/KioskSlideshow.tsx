@@ -10,6 +10,7 @@ import { useSearchParams } from "next/navigation";
 import { dashboardWidgets } from "@/config/widgets";
 import { WIDGET_REGISTRY } from "@/components/dashboard/layout/widgetRegistry";
 import { useSports } from "@/hooks/os/useSports";
+import { useCosmicAccount } from "@/components/account/AccountProvider";
 import type {
   SportKind,
   SportsEvent,
@@ -17,6 +18,7 @@ import type {
 
 import KioskSlide from "./KioskSlide";
 import KioskSportsOverride from "./KioskSportsOverride";
+import DevicePairingScreen from "./DevicePairingScreen";
 
 import {
   selectKioskLiveEvent,
@@ -139,6 +141,7 @@ function createTestEvent(
 
 export default function KioskSlideshow() {
   const searchParams = useSearchParams();
+  const { loading: accountLoading, account } = useCosmicAccount();
 
   const { data: sportsData } = useSports({
     refreshMs: (snapshot) => snapshot?.live.length ? 10_000 : 60_000,
@@ -220,6 +223,14 @@ export default function KioskSlideshow() {
     testModeAllowed,
     testSportParam,
   ]);
+
+  if (accountLoading) {
+    return <div className="grid min-h-[100svh] place-items-center text-sm text-white/50">Checking Cosmic device authorization…</div>;
+  }
+
+  if (!account) {
+    return <DevicePairingScreen />;
+  }
 
   const [currentIndex, setCurrentIndex] =
     useState(0);

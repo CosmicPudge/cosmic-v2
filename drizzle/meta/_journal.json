@@ -99,6 +99,13 @@
       "when": 1787542949287,
       "tag": "0014_sync_engine",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1787544000000,
+      "tag": "0015_device_pairing",
+      "breakpoints": true
     }
   ]
 }

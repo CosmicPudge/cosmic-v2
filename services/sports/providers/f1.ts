@@ -7,14 +7,14 @@ function status(value: unknown, now: Date, start: Date, end?: Date): SportsEvent
   const type = isRecord(statusRecord?.type) ? statusRecord.type : undefined;
   const state = string(type?.state) ?? string(statusRecord?.state);
   const detail = string(type?.detail) ?? string(statusRecord?.detail);
+  const normalizedState = state?.toLowerCase();
   const normalized = `${state ?? ""} ${detail ?? ""}`.toLowerCase();
   if (normalized.includes("cancel")) return "cancelled";
   if (normalized.includes("delay")) return "delayed";
-  if (state === "in") return "live";
-  if (state === "post") return "final";
+  if (normalizedState === "in") return "live";
+  if (normalizedState === "post") return "final";
   if (end && end < now) return "final";
-  if (start <= now && (!end || now <= end)) return "live";
-  return "scheduled";
+  return start > now ? "scheduled" : "final";
 }
 
 function sessionKind(label: string): "practice" | "qualifying" | "sprint" | "race" {
@@ -67,7 +67,15 @@ export class F1Provider implements SportsProvider {
       }];
     });
     const sessions = await this.getWeekendSessions(now.getFullYear(), now);
-    return { events: sessions.length ? sessions : events, standings: await this.getStandings(now.getFullYear()) };
+    const authoritativeLiveEvents = events.filter(
+      (event) => event.status === "live" || event.status === "delayed",
+    );
+    return {
+      events: sessions.length
+        ? [...sessions, ...authoritativeLiveEvents]
+        : events,
+      standings: await this.getStandings(now.getFullYear()),
+    };
   }
 
   private async getWeekendSessions(season: number, now: Date): Promise<SportsEvent[]> {
