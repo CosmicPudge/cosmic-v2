@@ -52,6 +52,14 @@ export function SystemProvider({ children }: { children: React.ReactNode }) {
     let active = true;
     let battery: BatteryManagerLike | undefined;
     let geolocationPermission: PermissionStatus | undefined;
+    let cameraPermission: PermissionStatus | undefined;
+    let microphonePermission: PermissionStatus | undefined;
+    const onCameraPermissionChange = () => {
+      if (cameraPermission) syncMediaPermission("camera", cameraPermission);
+    };
+    const onMicrophonePermissionChange = () => {
+      if (microphonePermission) syncMediaPermission("microphone", microphonePermission);
+    };
     const extendedNavigator = navigator as NavigatorWithSystemApis;
     const connection = extendedNavigator.connection;
     const queries = [
@@ -73,6 +81,9 @@ export function SystemProvider({ children }: { children: React.ReactNode }) {
           permissions: { ...current.permissions, geolocation: geolocationPermission!.state },
         }));
       }
+    };
+    const syncMediaPermission = (kind: "camera" | "microphone", permission: PermissionStatus) => {
+      setRaw((current) => ({ ...current, permissions: { ...current.permissions, [kind]: permission.state } }));
     };
     const onInstallPrompt = (event: Event) => {
       event.preventDefault();
@@ -112,6 +123,21 @@ export function SystemProvider({ children }: { children: React.ReactNode }) {
         permission.addEventListener("change", syncGeolocationPermission);
       }).catch(() => undefined);
     }
+    const mediaDevices = (navigator as unknown as { mediaDevices?: MediaDevices }).mediaDevices;
+    if (navigator.permissions && mediaDevices) {
+      void navigator.permissions.query({ name: "camera" as PermissionName }).then((permission) => {
+        if (!active) return;
+        cameraPermission = permission;
+        syncMediaPermission("camera", permission);
+        permission.addEventListener("change", onCameraPermissionChange);
+      }).catch(() => undefined);
+      void navigator.permissions.query({ name: "microphone" as PermissionName }).then((permission) => {
+        if (!active) return;
+        microphonePermission = permission;
+        syncMediaPermission("microphone", permission);
+        permission.addEventListener("change", onMicrophonePermissionChange);
+      }).catch(() => undefined);
+    }
 
     window.addEventListener("resize", sync);
     window.addEventListener("orientationchange", sync);
@@ -136,6 +162,8 @@ export function SystemProvider({ children }: { children: React.ReactNode }) {
       queries.forEach((query) => query.removeEventListener("change", sync));
       connection?.removeEventListener("change", sync);
       geolocationPermission?.removeEventListener("change", syncGeolocationPermission);
+      cameraPermission?.removeEventListener("change", onCameraPermissionChange);
+      microphonePermission?.removeEventListener("change", onMicrophonePermissionChange);
       if (battery) ["chargingchange", "levelchange", "chargingtimechange", "dischargingtimechange"].forEach((name) => battery?.removeEventListener(name, syncBattery));
     };
   }, []);

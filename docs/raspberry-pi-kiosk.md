@@ -129,3 +129,47 @@ The simulator is development-only and must not synthesize production data:
 /os/kiosk?cosmic-kiosk=1&kiosk-sport-test=f1
 /os/kiosk?cosmic-kiosk=1&kiosk-sport-test=nascar
 ```
+
+## Allow trusted kiosk capabilities in Chromium
+
+Cosmic does not request camera or microphone access just to inspect hardware,
+and it never starts capture automatically. The kiosk may use these capabilities
+only when a feature explicitly needs them. The browser policy is the correct
+place to pre-approve the trusted production origin.
+
+The current Chrome Enterprise policy names are:
+
+- `PreciseGeolocationAllowedForUrls` for high-accuracy geolocation
+- `AudioCaptureAllowedUrls` for microphone capture
+- `VideoCaptureAllowedUrls` for camera capture
+
+These are origin allowlists. The official policy documentation specifies the
+Linux managed-policy names and list format for [precise geolocation](https://chromeenterprise.google/policies/precise-geolocation-allowed-for-urls/),
+[audio capture](https://chromeenterprise.google/policies/audio-capture-allowed-urls/),
+and [video capture](https://chromeenterprise.google/policies/video-capture-allowed-urls/).
+
+For the `/usr/bin/chromium` package used by the launcher, create the managed
+policy directory and file:
+
+```bash
+sudo install -d -m 0755 /etc/chromium/policies/managed
+sudo tee /etc/chromium/policies/managed/cosmic-kiosk.json >/dev/null <<'EOF'
+{
+  "PreciseGeolocationAllowedForUrls": ["https://cosmicpudge.shop"],
+  "AudioCaptureAllowedUrls": ["https://cosmicpudge.shop"],
+  "VideoCaptureAllowedUrls": ["https://cosmicpudge.shop"]
+}
+EOF
+sudo chmod 0644 /etc/chromium/policies/managed/cosmic-kiosk.json
+```
+
+Restart Chromium after installing the policy. Confirm it is loaded at
+`chrome://policy` and use **Reload policies** when testing. If a distribution
+uses the legacy `chromium-browser` package instead, use its corresponding
+managed-policy directory and verify the result in that browser's
+`chrome://policy` page; do not install a global allow policy.
+
+The policy grants only this Cosmic origin. It does not use
+`--use-fake-ui-for-media-stream`, does not grant arbitrary websites access,
+and does not override the application rule that missing camera, microphone, or
+location hardware is a normal unavailable capability.

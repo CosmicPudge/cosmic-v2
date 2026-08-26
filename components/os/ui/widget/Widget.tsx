@@ -30,6 +30,11 @@ interface Props extends WidgetBaseProps {
    */
   contentPadding?: boolean;
   sceneState?: string;
+  sceneVariant?: string;
+  imageUrl?: string;
+  imagePosition?: string;
+  imageOpacity?: number;
+  imageBlur?: number;
 }
 
 export default function Widget({
@@ -39,6 +44,11 @@ export default function Widget({
   accent = "default",
   contentPadding = true,
   sceneState,
+  sceneVariant,
+  imageUrl,
+  imagePosition,
+  imageOpacity,
+  imageBlur,
 }: Props) {
   const { tokens } = useDisplay();
   const parentContext = useWidgetContext();
@@ -80,7 +90,7 @@ export default function Widget({
         } as CSSProperties}
       >
         {/* Full widget background */}
-        <WidgetBackground accent={accent} sceneState={sceneState} />
+        <WidgetBackground accent={accent} sceneState={sceneState} sceneVariant={sceneVariant} imageUrl={imageUrl} imagePosition={imagePosition} imageOpacity={imageOpacity} imageBlur={imageBlur} presentation={parentContext.presentation} />
 
         {/* Widget content */}
         <div

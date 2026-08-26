@@ -92,11 +92,15 @@ export interface SystemCapabilities {
   webShare: boolean;
   clipboard: boolean;
   storageManager: boolean;
+  camera: boolean;
+  microphone: boolean;
 }
 
 export interface SystemPermissions {
   notifications: PermissionStateValue;
   geolocation: PermissionStateValue;
+  camera: PermissionStateValue;
+  microphone: PermissionStateValue;
 }
 
 export interface SystemSnapshot {

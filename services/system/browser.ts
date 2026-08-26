@@ -84,7 +84,7 @@ export const initialBrowserSystemState: BrowserSystemState = {
   installable: false,
   iosHomeScreenGuidance: false,
   serviceWorkerRegistered: false,
-  permissions: { notifications: "unknown", geolocation: "unknown" },
+  permissions: { notifications: "unknown", geolocation: "unknown", camera: "unknown", microphone: "unknown" },
   capabilities: {
     battery: false,
     networkInformation: false,
@@ -98,6 +98,8 @@ export const initialBrowserSystemState: BrowserSystemState = {
     webShare: false,
     clipboard: false,
     storageManager: false,
+    camera: false,
+    microphone: false,
   },
 };
 
@@ -132,6 +134,7 @@ export function readBrowserSystemState(previous = initialBrowserSystemState): Br
   const standalone = window.matchMedia("(display-mode: standalone)").matches || extendedNavigator.standalone === true;
   const platform = extendedNavigator.userAgentData?.platform || navigator.platform || "Unavailable";
   const userAgent = navigator.userAgent;
+  const mediaDevices = (navigator as unknown as { mediaDevices?: MediaDevices }).mediaDevices;
   const iosLike = /iPad|iPhone|iPod/.test(userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 
   return {
@@ -177,6 +180,8 @@ export function readBrowserSystemState(previous = initialBrowserSystemState): Br
       webShare: typeof navigator.share === "function",
       clipboard: Boolean(navigator.clipboard?.writeText),
       storageManager: "storage" in navigator,
+      camera: Boolean(mediaDevices),
+      microphone: Boolean(mediaDevices),
     },
     logicalProcessors: navigator.hardwareConcurrency || undefined,
     deviceMemoryGB: extendedNavigator.deviceMemory,
@@ -190,6 +195,8 @@ export function readBrowserSystemState(previous = initialBrowserSystemState): Br
       ...previous.permissions,
       notifications: "Notification" in window ? Notification.permission : "unsupported",
       geolocation: "geolocation" in navigator ? previous.permissions.geolocation : "unsupported",
+      camera: mediaDevices ? previous.permissions.camera : "unsupported",
+      microphone: mediaDevices ? previous.permissions.microphone : "unsupported",
     },
   };
 }
