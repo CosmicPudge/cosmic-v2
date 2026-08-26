@@ -12,6 +12,7 @@ interface Props {
   sceneState?: string;
   sceneVariant?: string;
   imageUrl?: string;
+  imageFallbackUrls?: string[];
   imagePosition?: string;
   imageOpacity?: number;
   imageBlur?: number;
@@ -23,6 +24,7 @@ export default function WidgetBackground({
   sceneState,
   sceneVariant,
   imageUrl,
+  imageFallbackUrls = [],
   imagePosition = "center",
   imageOpacity = 0.38,
   imageBlur = 5,
@@ -30,14 +32,15 @@ export default function WidgetBackground({
 }: Props) {
   const { tokens } = useDisplay();
   const visual = getModuleVisualIdentity(accent);
-  const [failedImageUrl, setFailedImageUrl] = useState<string>();
+  const [failedImageUrls, setFailedImageUrls] = useState<string[]>([]);
   const isKiosk = presentation === "kiosk";
+  const imageSource = [imageUrl, ...imageFallbackUrls].find((source) => source && !failedImageUrls.includes(source));
 
   return (
     <>
       {/* Main Accent */}
       <div className="cosmic-widget-panel kiosk-scene-surface absolute inset-0" data-cosmic-scene={accent} data-scene-state={sceneState} data-scene-variant={sceneVariant} style={{ background: "var(--widget-panel, linear-gradient(145deg, rgba(10,17,39,.96), rgba(3,7,21,.92))" }} />
-      {isKiosk && imageUrl && imageUrl !== failedImageUrl ? <img key={imageUrl} className="kiosk-scene-image absolute inset-0 h-full w-full object-cover" src={imageUrl} alt="" aria-hidden="true" onError={() => setFailedImageUrl(imageUrl)} style={{ objectPosition: imagePosition, opacity: imageOpacity, filter: `blur(${imageBlur}px)`, "--kiosk-scene-image-opacity": imageOpacity } as React.CSSProperties} /> : null}
+      {isKiosk && imageSource ? <img key={imageSource} className="kiosk-scene-image absolute inset-0 h-full w-full object-cover" src={imageSource} alt="" aria-hidden="true" onError={() => setFailedImageUrls((current) => current.includes(imageSource) ? current : [...current, imageSource])} style={{ objectPosition: imagePosition, opacity: imageOpacity, filter: `blur(${imageBlur}px)`, "--kiosk-scene-image-opacity": imageOpacity } as React.CSSProperties} /> : null}
       {isKiosk ? <SceneIllustration accent={accent} sceneState={sceneState} /> : null}
       <div className={`cosmic-widget-motif kiosk-scene-motif cosmic-widget-motif-${visual.motif} absolute inset-0`} aria-hidden="true" />
 

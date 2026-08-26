@@ -35,6 +35,7 @@ interface Props extends WidgetBaseProps {
   imagePosition?: string;
   imageOpacity?: number;
   imageBlur?: number;
+  imageFallbackUrls?: string[];
 }
 
 export default function Widget({
@@ -49,6 +50,7 @@ export default function Widget({
   imagePosition,
   imageOpacity,
   imageBlur,
+  imageFallbackUrls,
 }: Props) {
   const { tokens } = useDisplay();
   const parentContext = useWidgetContext();
@@ -90,7 +92,7 @@ export default function Widget({
         } as CSSProperties}
       >
         {/* Full widget background */}
-        <WidgetBackground accent={accent} sceneState={sceneState} sceneVariant={sceneVariant} imageUrl={imageUrl} imagePosition={imagePosition} imageOpacity={imageOpacity} imageBlur={imageBlur} presentation={parentContext.presentation} />
+        <WidgetBackground accent={accent} sceneState={sceneState} sceneVariant={sceneVariant} imageUrl={imageUrl} imageFallbackUrls={imageFallbackUrls} imagePosition={imagePosition} imageOpacity={imageOpacity} imageBlur={imageBlur} presentation={parentContext.presentation} />
 
         {/* Widget content */}
         <div

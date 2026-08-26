@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -231,12 +232,36 @@ export default function KioskSlideshow() {
 
   const intervalRef = useRef<number | null>(null);
   const transitionTimeoutRef = useRef<number | null>(null);
+  const transitionLockRef = useRef(false);
+  const gestureRef = useRef<{ pointerId: number; startX: number; startY: number; lastX: number; lastY: number } | null>(null);
+  const [timerEpoch, setTimerEpoch] = useState(0);
   const safeCurrentIndex = widgets.length > 0
     ? Math.min(currentIndex, widgets.length - 1)
     : 0;
   const safePreviousIndex = previousIndex !== null && previousIndex < widgets.length
     ? previousIndex
     : null;
+
+  const goToRelativeSlide = useCallback((direction: 1 | -1, resetTimer: boolean) => {
+    if (liveEvent || widgets.length <= 1 || transitionLockRef.current) return false;
+
+    transitionLockRef.current = true;
+    setCurrentIndex((current) => {
+      const from = Math.min(Math.max(current, 0), widgets.length - 1);
+      const to = (from + direction + widgets.length) % widgets.length;
+      setPreviousIndex(from);
+      if (process.env.NODE_ENV !== "production") console.info(`[kiosk-swipe] ${direction === 1 ? "left next" : "right previous"}`);
+      return to;
+    });
+    if (resetTimer) setTimerEpoch((epoch) => epoch + 1);
+    if (transitionTimeoutRef.current !== null) window.clearTimeout(transitionTimeoutRef.current);
+    transitionTimeoutRef.current = window.setTimeout(() => {
+      setPreviousIndex(null);
+      transitionLockRef.current = false;
+      transitionTimeoutRef.current = null;
+    }, KIOSK_TRANSITION_DURATION_MS);
+    return true;
+  }, [liveEvent, widgets.length]);
 
   useEffect(() => {
     if (liveEvent) {
@@ -249,30 +274,7 @@ export default function KioskSlideshow() {
 
     intervalRef.current =
       window.setInterval(() => {
-        setCurrentIndex(
-          (current) => {
-            const from = Math.min(current, widgets.length - 1);
-            const to = (from + 1) % widgets.length;
-            setPreviousIndex(from);
-            if (process.env.NODE_ENV !== "production") console.info(`[kiosk-slideshow] transition from=${from} to=${to}`);
-
-            return to;
-          },
-        );
-
-        if (transitionTimeoutRef.current !== null) {
-          window.clearTimeout(transitionTimeoutRef.current);
-        }
-
-        transitionTimeoutRef.current =
-          window.setTimeout(
-            () => {
-              setPreviousIndex(null);
-              transitionTimeoutRef.current = null;
-              if (process.env.NODE_ENV !== "production") console.info("[kiosk-slideshow] transition-complete");
-            },
-            KIOSK_TRANSITION_DURATION_MS,
-          );
+        goToRelativeSlide(1, false);
       }, KIOSK_SLIDE_DURATION_MS);
 
     if (process.env.NODE_ENV !== "production") console.info("[kiosk-slideshow] interval-start");
@@ -282,23 +284,58 @@ export default function KioskSlideshow() {
         window.clearInterval(intervalRef.current);
         intervalRef.current = null;
       }
-      if (transitionTimeoutRef.current !== null) {
-        window.clearTimeout(transitionTimeoutRef.current);
-        transitionTimeoutRef.current = null;
-      }
       if (process.env.NODE_ENV !== "production") console.info("[kiosk-slideshow] interval-stop");
     };
   }, [
     liveEvent,
+    goToRelativeSlide,
+    timerEpoch,
     widgets.length,
   ]);
+
+  useEffect(() => () => {
+    if (transitionTimeoutRef.current !== null) window.clearTimeout(transitionTimeoutRef.current);
+    transitionTimeoutRef.current = null;
+    transitionLockRef.current = false;
+  }, []);
+
+  const handlePointerDown = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    if (liveEvent || widgets.length <= 1 || (event.pointerType === "mouse" && event.button !== 0)) return;
+    gestureRef.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      lastX: event.clientX,
+      lastY: event.clientY,
+    };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }, [liveEvent, widgets.length]);
+
+  const handlePointerMove = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    const gesture = gestureRef.current;
+    if (!gesture || gesture.pointerId !== event.pointerId) return;
+    gesture.lastX = event.clientX;
+    gesture.lastY = event.clientY;
+  }, []);
+
+  const finishPointerGesture = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    const gesture = gestureRef.current;
+    if (!gesture || gesture.pointerId !== event.pointerId) return;
+    gestureRef.current = null;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+
+    const deltaX = gesture.lastX - gesture.startX;
+    const deltaY = gesture.lastY - gesture.startY;
+    if (Math.abs(deltaX) <= Math.abs(deltaY) || Math.abs(deltaX) < 50) return;
+    goToRelativeSlide(deltaX < 0 ? 1 : -1, true);
+  }, [goToRelativeSlide]);
 
   const currentWidget = widgets[safeCurrentIndex];
 
   useEffect(() => {
-    setPersistentClockHidden(currentWidget?.id === "clock");
+    setPersistentClockHidden(!liveEvent && currentWidget?.id === "clock");
     return () => setPersistentClockHidden(false);
-  }, [currentWidget?.id, setPersistentClockHidden]);
+  }, [currentWidget?.id, liveEvent, setPersistentClockHidden]);
 
   if (liveEvent) {
     return (
@@ -339,7 +376,15 @@ export default function KioskSlideshow() {
   }
 
   return (
-    <div className="kiosk-slideshow relative h-[100svh] w-full overflow-hidden">
+    <div
+      className="kiosk-slideshow relative h-[100svh] w-full overflow-hidden"
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={finishPointerGesture}
+      onPointerCancel={finishPointerGesture}
+      style={{ touchAction: "pan-y" }}
+      aria-label="Cosmic kiosk slideshow"
+    >
       {previousWidget ? (
         <KioskSlide
           key={`previous-${previousWidget.id}-${safePreviousIndex}`}
@@ -356,21 +401,7 @@ export default function KioskSlideshow() {
         exiting={false}
       />
 
-      <div className="kiosk-indicator pointer-events-none absolute bottom-[max(1rem,env(safe-area-inset-bottom))] left-1/2 z-30 -translate-x-1/2">
-        <div className="flex items-center gap-2 rounded-full border border-white/10 bg-black/20 px-3 py-2 backdrop-blur-xl">
-          {widgets.map((widget, index) => (
-            <span
-              key={widget.id}
-              className={[
-                "h-1.5 rounded-full transition-all duration-300",
-                index === safeCurrentIndex
-                  ? "w-6 bg-white/80"
-                  : "w-1.5 bg-white/22",
-              ].join(" ")}
-            />
-          ))}
-        </div>
-      </div>
+      <span className="sr-only" aria-live="polite">Current kiosk scene: {currentWidget.id}</span>
     </div>
   );
 }

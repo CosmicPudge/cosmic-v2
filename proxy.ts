@@ -27,7 +27,9 @@ export async function proxy(request: NextRequest) {
   if (pathname === "/os/kiosk") return NextResponse.next();
   try {
     const allowDevice = isDeviceReadApi(pathname);
-    if (await getCurrentCosmicAccount(request, { allowDevice, bootId: allowDevice ? request.nextUrl.searchParams.get("cosmic-boot") ?? undefined : undefined })) return NextResponse.next();
+    const authenticated = await getCurrentCosmicAccount(request, { allowDevice, bootId: allowDevice ? request.nextUrl.searchParams.get("cosmic-boot") ?? undefined : undefined });
+    if (pathname === "/api/weather" && process.env.NODE_ENV !== "production") console.info(`[weather] proxy-auth=${authenticated ? "accepted" : "rejected"} bootPresent=${Boolean(request.nextUrl.searchParams.get("cosmic-boot"))}`);
+    if (authenticated) return NextResponse.next();
   } catch { /* Private requests fail closed when auth infrastructure is unavailable. */ }
   if (isApi) return NextResponse.json({ error: "Authentication required." }, { status: 401, headers: { "Cache-Control": "no-store" } });
   const url = new URL("/account", request.url);

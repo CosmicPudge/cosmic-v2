@@ -2,7 +2,14 @@ import { getEnvironment } from "@/engines/environment";
 import { kioskBootId, requireAuthenticatedSession } from "@/services/auth/server";
 
 export async function GET(request: Request) {
-  await requireAuthenticatedSession(request, { allowDevice: true, bootId: kioskBootId(request) });
+  const bootId = kioskBootId(request);
+  try {
+    const session = await requireAuthenticatedSession(request, { allowDevice: true, bootId });
+    if (process.env.NODE_ENV !== "production") console.info(`[weather] route-auth=accepted sessionType=${session.sessionType ?? "user"} bootPresent=${Boolean(bootId)}`);
+  } catch (error) {
+    if (process.env.NODE_ENV !== "production") console.info(`[weather] route-auth=rejected bootPresent=${Boolean(bootId)}`);
+    throw error;
+  }
   const { searchParams } = new URL(request.url);
 
   const lat = searchParams.get("lat");

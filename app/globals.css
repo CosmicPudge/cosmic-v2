@@ -252,10 +252,32 @@ html, body { width: 100%; min-height: 100%; }
 .kiosk-slide-clock .kiosk-scene-illustration { display: none; }
 .kiosk-clock-scene-time { font-size: clamp(4rem, 12vw, 10rem); line-height: .88; text-shadow: 0 0 26px rgba(225,240,255,.24); }
 
+/* Weather uses the same full-screen scene contract, with live data floating over the image. */
+.kiosk-slide[data-kiosk-scene="weather"] .kiosk-slide-header { display: none; }
+.kiosk-slide[data-kiosk-scene="weather"] .kiosk-slide-content { padding: 0; }
+.kiosk-slide[data-kiosk-scene="weather"] .kiosk-slide-card,
+.kiosk-slide[data-kiosk-scene="weather"] [data-widget-accent="weather"],
+.kiosk-slide[data-kiosk-scene="weather"] [data-widget-accent="weather"] > div {
+  border-radius: 0 !important;
+  border-color: transparent !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+}
+.kiosk-slide[data-kiosk-scene="weather"] .kiosk-scene-surface { background: #0a1b2c !important; }
+.kiosk-slide[data-kiosk-scene="weather"] .kiosk-scene-image { opacity: .92 !important; filter: none !important; }
+.kiosk-slide[data-kiosk-scene="weather"] .kiosk-scene-surface::before { background: linear-gradient(90deg, rgba(0,0,10,.3), transparent 54%), linear-gradient(180deg, rgba(0,0,10,.1), transparent 45%, rgba(0,0,8,.42)); opacity: 1; }
+.kiosk-slide[data-kiosk-scene="weather"] .kiosk-scene-surface::after { background: radial-gradient(ellipse at center, transparent 42%, rgba(0,0,8,.32) 100%), linear-gradient(180deg, transparent 58%, rgba(0,0,8,.38)); opacity: 1; }
+.kiosk-slide[data-kiosk-scene="weather"] .kiosk-scene-motif,
+.kiosk-slide[data-kiosk-scene="weather"] .kiosk-scene-glow,
+.kiosk-slide[data-kiosk-scene="weather"] .kiosk-scene-illustration { display: none; }
+.kiosk-weather-temperature { font-size: clamp(4.25rem, 12vw, 9rem); line-height: .82; text-shadow: 0 0 28px rgba(225,240,255,.22); }
+
 @media (max-width: 900px) and (max-height: 600px) {
   .kiosk-slide-clock .kiosk-clock-scene { padding-bottom: 3.5rem; }
   .kiosk-slide-clock .kiosk-clock-scene-time { font-size: clamp(3.5rem, 16vw, 6.5rem); }
   .kiosk-slide-clock .kiosk-scene-surface::before { background: linear-gradient(180deg, rgba(0,0,0,.08), transparent 42%, rgba(0,0,8,.3)); }
+  .kiosk-slide[data-kiosk-scene="weather"] .kiosk-scene-image { opacity: .84 !important; }
 }
 
 @media (max-width: 900px) and (max-height: 600px) {
@@ -752,7 +774,7 @@ html[data-cosmic-reduced-effects="true"] *::after {
 .kiosk-shell,
 .kiosk-shell main,
 .kiosk-slideshow,
-.kiosk-sports-view { overscroll-behavior: none; touch-action: manipulation; }
+.kiosk-sports-view { overscroll-behavior: none; touch-action: pan-y; }
 .kiosk-slide { height: 100%; width: 100%; }
 .kiosk-slide-card { max-width: none; border: 0; border-radius: 0; background: transparent; box-shadow: none; backdrop-filter: none; }
 .kiosk-night-dimmer { background: rgba(0,0,0,.35); }
@@ -771,11 +793,6 @@ html[data-cosmic-reduced-effects="true"] *::after {
 .kiosk-shell[data-compact="true"] .kiosk-slide-header p,
 .kiosk-shell[data-compact="true"] .kiosk-sports-view > section > header p { font-size: .5rem; letter-spacing: .14em; }
 .kiosk-shell[data-compact="true"] .kiosk-slide-content { padding: .45rem; overflow: hidden; }
-.kiosk-shell[data-compact="true"] .kiosk-indicator { bottom: max(.35rem, env(safe-area-inset-bottom)); }
-.kiosk-shell[data-compact="true"] .kiosk-indicator > div { gap: .2rem; padding: .25rem .4rem; backdrop-filter: blur(4px); }
-.kiosk-shell[data-compact="true"] .kiosk-indicator span { height: .25rem; }
-.kiosk-shell[data-compact="true"] .kiosk-indicator span.w-6 { width: .9rem; }
-.kiosk-shell[data-compact="true"] .kiosk-indicator span.w-1\.5 { width: .25rem; }
 
 .kiosk-shell[data-compact="true"] .kiosk-sports-view { padding: max(.25rem, env(safe-area-inset-top)) max(.25rem, env(safe-area-inset-right)) max(.25rem, env(safe-area-inset-bottom)) max(.25rem, env(safe-area-inset-left)); }
 .kiosk-shell[data-compact="true"] .kiosk-sports-view > section { min-height: 0; }

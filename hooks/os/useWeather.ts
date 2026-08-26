@@ -24,12 +24,13 @@ export default function useWeather() {
   const [error, setError] =
     useState<string | null>(null);
 
- useEffect(() => {
+  useEffect(() => {
   if (!location) { const timer = window.setTimeout(() => { setLoading(false); setWeather(null); }, 0); return () => window.clearTimeout(timer); }
 
   const { lat, lon } = location;
   const controller = new AbortController();
-  const timeout = window.setTimeout(() => controller.abort(), 15_000);
+  let timedOut = false;
+  const timeout = window.setTimeout(() => { timedOut = true; controller.abort(); }, 15_000);
   let active = true;
 
   async function load() {
@@ -40,15 +41,18 @@ export default function useWeather() {
       const snapshot = await weatherEngine.current.getSnapshot();
       if (!active) return;
       setWeather(snapshot);
-      weatherLog("fetch-success");
+      weatherLog("request-success");
     } catch (err) {
-      if (!active || controller.signal.aborted) return;
+      if (!active) return;
+      if (controller.signal.aborted) {
+        if (timedOut) weatherLog("request-error=timeout");
+        return;
+      }
+      const message = err instanceof Error ? err.message.slice(0, 120) : "unknown error";
       setError(
-        err instanceof Error
-          ? err.message
-          : "Unknown weather error"
+        err instanceof Error ? err.message : "Unknown weather error"
       );
-      weatherLog("fetch-error");
+      weatherLog(`request-error=${message}`);
     } finally {
       window.clearTimeout(timeout);
       if (active) setLoading(false);
@@ -59,11 +63,16 @@ export default function useWeather() {
     if (!active) return;
     setLoading(true);
     setError(null);
-    weatherLog("fetch-start");
+    weatherLog("request-start");
     void load();
   }, 0);
   return () => { active = false; window.clearTimeout(start); window.clearTimeout(timeout); controller.abort(); };
 }, [location]);
+
+  useEffect(() => {
+    const state = loading ? "loading" : weather ? (error ? "stale" : "ready") : error ? "error" : "empty";
+    weatherLog(`final-state=${state}`);
+  }, [error, loading, weather]);
 
   return {
     weather,
