@@ -14,8 +14,10 @@ export interface KioskProfileInput {
   nightDimPreview?: boolean;
   display?: Partial<KioskDisplayProfile>;
   timezone?: string;
+  reportedTimezone?: string;
+  timezoneOverride?: string | null;
   clockFormat?: "12h" | "24h";
-  location?: { latitude: number; longitude: number; label?: string; source: KioskLocationSource } | null;
+  location?: { latitude: number; longitude: number; label?: string; region?: string; country?: string; timezone?: string; source: KioskLocationSource } | null;
   nightDimEnabled?: boolean;
   nightDimStart?: string;
   nightDimEnd?: string;
@@ -25,6 +27,29 @@ export interface KioskProfileInput {
 function requireDatabase() {
   if (!isDatabaseConfigured()) throw new Error("Kiosk setup requires durable PostgreSQL storage.");
   return getDatabase();
+}
+
+export function isValidKioskTimezone(value: unknown): value is string {
+  if (typeof value !== "string" || !value.trim()) return false;
+  try { new Intl.DateTimeFormat("en-US", { timeZone: value }).format(); return true; } catch { return false; }
+}
+
+async function reverseGeocode(latitude: number, longitude: number) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 4000);
+  try {
+    const url = new URL("https://nominatim.openstreetmap.org/reverse");
+    url.searchParams.set("format", "jsonv2"); url.searchParams.set("zoom", "10"); url.searchParams.set("addressdetails", "1");
+    url.searchParams.set("lat", String(latitude)); url.searchParams.set("lon", String(longitude));
+    const response = await fetch(url, { signal: controller.signal, headers: { "User-Agent": "Cosmic OS kiosk setup" }, cache: "no-store" });
+    if (!response.ok) return null;
+    const body = await response.json() as { address?: { city?: string; town?: string; village?: string; municipality?: string; state?: string; country?: string } };
+    const address = body.address;
+    if (!address) return null;
+    const city = address.city ?? address.town ?? address.village ?? address.municipality;
+    const label = [city, address.state, address.country].filter(Boolean).join(", ") || undefined;
+    return { label, region: address.state, country: address.country };
+  } catch { return null; } finally { clearTimeout(timeout); }
 }
 
 export async function assertDeviceOwner(deviceId: string, userId: string) {
@@ -38,6 +63,9 @@ export async function readKioskDeviceProfile(deviceId: string): Promise<KioskDev
   if (!row) return null;
   const [device] = await database.select({ name: devices.name }).from(devices).where(eq(devices.id, deviceId)).limit(1);
   const hasLocation = typeof row.locationLatitude === "number" && typeof row.locationLongitude === "number" && row.locationSource;
+  const reportedTimezone = isValidKioskTimezone(row.reportedTimezone) ? row.reportedTimezone : undefined;
+  const timezoneOverride = isValidKioskTimezone(row.timezoneOverride) ? row.timezoneOverride : isValidKioskTimezone(row.timezone) ? row.timezone : undefined;
+  const effectiveTimezone = timezoneOverride ?? reportedTimezone ?? (isValidKioskTimezone(row.locationTimezone) ? row.locationTimezone : undefined);
   return {
     deviceId,
     ...(device?.name ? { deviceName: device.name } : {}),
@@ -51,11 +79,14 @@ export async function readKioskDeviceProfile(deviceId: string): Promise<KioskDev
         viewportWidth: row.viewportWidth, viewportHeight: row.viewportHeight, clientWidth: row.viewportWidth, clientHeight: row.viewportHeight,
         ...(row.physicalScreenWidth ? { physicalScreenWidth: row.physicalScreenWidth } : {}), ...(row.physicalScreenHeight ? { physicalScreenHeight: row.physicalScreenHeight } : {}),
         devicePixelRatio: row.devicePixelRatio, aspectRatio: row.aspectRatio, orientation: row.orientation as KioskDisplayProfile["orientation"], density: row.density as KioskDisplayProfile["density"], touch: Boolean(row.touchDetected), pointer: row.pointer as KioskDisplayProfile["pointer"], overflowX: 0, overflowY: 0, setupVersion: row.setupVersion,
+        ...(reportedTimezone ? { timezone: reportedTimezone } : {}),
       },
     } : {}),
-    ...(row.timezone ? { timezone: row.timezone } : {}),
+    ...(effectiveTimezone ? { timezone: effectiveTimezone, effectiveTimezone } : {}),
+    ...(reportedTimezone ? { reportedTimezone } : {}),
+    ...(timezoneOverride ? { timezoneOverride } : {}),
     ...(row.clockFormat ? { clockFormat: row.clockFormat as "12h" | "24h" } : {}),
-    ...(hasLocation ? { location: { latitude: row.locationLatitude!, longitude: row.locationLongitude!, ...(row.locationLabel ? { label: row.locationLabel } : {}), source: row.locationSource as KioskLocationSource } } : {}),
+    ...(hasLocation ? { location: { latitude: row.locationLatitude!, longitude: row.locationLongitude!, ...(row.locationLabel ? { label: row.locationLabel } : {}), ...(row.locationRegion ? { region: row.locationRegion } : {}), ...(row.locationCountry ? { country: row.locationCountry } : {}), ...(row.locationTimezone ? { timezone: row.locationTimezone } : {}), source: row.locationSource as KioskLocationSource } } : {}),
     nightDimEnabled: row.nightDimEnabled,
     nightDimStart: row.nightDimStart,
     nightDimEnd: row.nightDimEnd,
@@ -83,8 +114,15 @@ function displayValues(display: Partial<KioskDisplayProfile> | undefined) {
 export async function saveKioskDeviceProfile(deviceId: string, input: KioskProfileInput) {
   const database = requireDatabase();
   const now = new Date();
-  const location = input.location === null ? { locationLatitude: null, locationLongitude: null, locationLabel: null, locationSource: null } : input.location ? { locationLatitude: input.location.latitude, locationLongitude: input.location.longitude, locationLabel: input.location.label ?? null, locationSource: input.location.source } : {};
-  await database.insert(kioskDeviceSettings).values({ deviceId, ...(typeof input.setupCompleted === "boolean" ? { setupCompleted: input.setupCompleted } : {}), ...(typeof input.setupVersion === "number" ? { setupVersion: input.setupVersion } : {}), ...(typeof input.uiScale === "number" ? { uiScale: input.uiScale } : {}), ...(input.setupPreview ? { setupPreview: input.setupPreview } : {}), ...(typeof input.nightDimPreview === "boolean" ? { nightDimPreview: input.nightDimPreview } : {}), ...displayValues(input.display), ...(input.timezone ? { timezone: input.timezone } : {}), ...(input.clockFormat ? { clockFormat: input.clockFormat } : {}), ...location, ...(typeof input.nightDimEnabled === "boolean" ? { nightDimEnabled: input.nightDimEnabled } : {}), ...(input.nightDimStart ? { nightDimStart: input.nightDimStart } : {}), ...(input.nightDimEnd ? { nightDimEnd: input.nightDimEnd } : {}), ...(typeof input.nightDimOpacity === "number" ? { nightDimOpacity: input.nightDimOpacity } : {}), updatedAt: now }).onConflictDoUpdate({ target: kioskDeviceSettings.deviceId, set: { ...(typeof input.setupCompleted === "boolean" ? { setupCompleted: input.setupCompleted } : {}), ...(typeof input.setupVersion === "number" ? { setupVersion: input.setupVersion } : {}), ...(typeof input.uiScale === "number" ? { uiScale: input.uiScale } : {}), ...(input.setupPreview ? { setupPreview: input.setupPreview } : {}), ...(typeof input.nightDimPreview === "boolean" ? { nightDimPreview: input.nightDimPreview } : {}), ...displayValues(input.display), ...(input.timezone ? { timezone: input.timezone } : {}), ...(input.clockFormat ? { clockFormat: input.clockFormat } : {}), ...location, ...(typeof input.nightDimEnabled === "boolean" ? { nightDimEnabled: input.nightDimEnabled } : {}), ...(input.nightDimStart ? { nightDimStart: input.nightDimStart } : {}), ...(input.nightDimEnd ? { nightDimEnd: input.nightDimEnd } : {}), ...(typeof input.nightDimOpacity === "number" ? { nightDimOpacity: input.nightDimOpacity } : {}), updatedAt: now } });
+  const previous = await database.select({ latitude: kioskDeviceSettings.locationLatitude, longitude: kioskDeviceSettings.locationLongitude }).from(kioskDeviceSettings).where(eq(kioskDeviceSettings.deviceId, deviceId)).limit(1);
+  const locationChanged = Boolean(input.location && (!previous[0] || Math.abs((previous[0].latitude ?? 0) - input.location.latitude) > 0.0001 || Math.abs((previous[0].longitude ?? 0) - input.location.longitude) > 0.0001));
+  const resolved = input.location && locationChanged ? await reverseGeocode(input.location.latitude, input.location.longitude) : null;
+  const location = input.location === null ? { locationLatitude: null, locationLongitude: null, locationLabel: null, locationRegion: null, locationCountry: null, locationTimezone: null, locationSource: null } : input.location ? { locationLatitude: input.location.latitude, locationLongitude: input.location.longitude, locationLabel: input.location.label ?? resolved?.label ?? null, locationRegion: input.location.region ?? resolved?.region ?? null, locationCountry: input.location.country ?? resolved?.country ?? null, locationTimezone: input.location.timezone ?? null, locationSource: input.location.source } : {};
+  const reportedTimezone = isValidKioskTimezone(input.reportedTimezone) ? input.reportedTimezone : undefined;
+  const timezoneOverride = input.timezoneOverride === null ? { timezoneOverride: null } : isValidKioskTimezone(input.timezoneOverride ?? input.timezone) ? { timezoneOverride: input.timezoneOverride ?? input.timezone } : {};
+  const values = { deviceId, ...(typeof input.setupCompleted === "boolean" ? { setupCompleted: input.setupCompleted } : {}), ...(typeof input.setupVersion === "number" ? { setupVersion: input.setupVersion } : {}), ...(typeof input.uiScale === "number" ? { uiScale: input.uiScale } : {}), ...(input.setupPreview ? { setupPreview: input.setupPreview } : {}), ...(typeof input.nightDimPreview === "boolean" ? { nightDimPreview: input.nightDimPreview } : {}), ...displayValues(input.display), ...(reportedTimezone ? { reportedTimezone } : {}), ...timezoneOverride, ...(input.clockFormat ? { clockFormat: input.clockFormat } : {}), ...location, ...(typeof input.nightDimEnabled === "boolean" ? { nightDimEnabled: input.nightDimEnabled } : {}), ...(input.nightDimStart ? { nightDimStart: input.nightDimStart } : {}), ...(input.nightDimEnd ? { nightDimEnd: input.nightDimEnd } : {}), ...(typeof input.nightDimOpacity === "number" ? { nightDimOpacity: input.nightDimOpacity } : {}), updatedAt: now };
+  const updates = { ...(typeof input.setupCompleted === "boolean" ? { setupCompleted: input.setupCompleted } : {}), ...(typeof input.setupVersion === "number" ? { setupVersion: input.setupVersion } : {}), ...(typeof input.uiScale === "number" ? { uiScale: input.uiScale } : {}), ...(input.setupPreview ? { setupPreview: input.setupPreview } : {}), ...(typeof input.nightDimPreview === "boolean" ? { nightDimPreview: input.nightDimPreview } : {}), ...displayValues(input.display), ...(reportedTimezone ? { reportedTimezone } : {}), ...timezoneOverride, ...(input.clockFormat ? { clockFormat: input.clockFormat } : {}), ...location, ...(typeof input.nightDimEnabled === "boolean" ? { nightDimEnabled: input.nightDimEnabled } : {}), ...(input.nightDimStart ? { nightDimStart: input.nightDimStart } : {}), ...(input.nightDimEnd ? { nightDimEnd: input.nightDimEnd } : {}), ...(typeof input.nightDimOpacity === "number" ? { nightDimOpacity: input.nightDimOpacity } : {}), updatedAt: now };
+  await database.insert(kioskDeviceSettings).values(values).onConflictDoUpdate({ target: kioskDeviceSettings.deviceId, set: updates });
   if (input.deviceName?.trim()) await database.update(devices).set({ name: input.deviceName.trim(), lastSeenAt: now }).where(eq(devices.id, deviceId));
   const profile = await readKioskDeviceProfile(deviceId);
   if (!profile) throw new Error("Kiosk profile was not available after save.");

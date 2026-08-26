@@ -16,6 +16,7 @@ export function measureKioskDisplay(setupVersion: number): KioskDisplayProfile {
   const fine = window.matchMedia("(pointer: fine)").matches;
   const touch = navigator.maxTouchPoints > 0 || "ontouchstart" in window;
   const pointer: KioskPointer = coarse ? "coarse" : fine ? "fine" : "unknown";
+  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
   return {
     viewportWidth,
     viewportHeight,
@@ -35,6 +36,7 @@ export function measureKioskDisplay(setupVersion: number): KioskDisplayProfile {
     overflowX: Math.max(0, document.documentElement.scrollWidth - viewportWidth),
     overflowY: Math.max(0, document.documentElement.scrollHeight - viewportHeight),
     setupVersion,
+    ...(timezone ? { timezone } : {}),
   };
 }
 

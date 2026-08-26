@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { kioskBootId, requireAuthenticatedSession } from "@/services/auth/server";
-import { assertDeviceOwner, readKioskDeviceProfile, saveKioskDeviceProfile, type KioskProfileInput } from "@/services/devices/kioskProfile";
+import { assertDeviceOwner, isValidKioskTimezone, readKioskDeviceProfile, saveKioskDeviceProfile, type KioskProfileInput } from "@/services/devices/kioskProfile";
 
 function profileLog(message: string) {
   if (process.env.NODE_ENV !== "production") console.info(`[kiosk-profile] ${message}`);
@@ -26,6 +26,7 @@ export async function PATCH(request: Request) {
     const { deviceId } = await targetDevice(request);
     const body = await request.json().catch(() => null) as KioskProfileInput | null;
     if (!body || typeof body !== "object") return NextResponse.json({ error: "Invalid kiosk profile." }, { status: 400 });
+    if ((body.timezoneOverride !== undefined && body.timezoneOverride !== null && !isValidKioskTimezone(body.timezoneOverride)) || (body.timezone !== undefined && !isValidKioskTimezone(body.timezone))) return NextResponse.json({ error: "Time zone must be a valid IANA identifier." }, { status: 400 });
     const profile = await saveKioskDeviceProfile(deviceId, body);
     return NextResponse.json({ profile }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) { if (error instanceof Response) return error; return NextResponse.json({ error: "Kiosk profile could not be saved." }, { status: 503 }); }

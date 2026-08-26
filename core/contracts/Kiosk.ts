@@ -27,6 +27,7 @@ export interface KioskDisplayProfile {
   overflowX: number;
   overflowY: number;
   setupVersion: number;
+  timezone?: string;
 }
 
 export interface KioskDeviceProfile {
@@ -38,7 +39,10 @@ export interface KioskDeviceProfile {
   display?: KioskDisplayProfile;
   timezone?: string;
   clockFormat?: "12h" | "24h";
-  location?: { latitude: number; longitude: number; label?: string; source: KioskLocationSource };
+  location?: { latitude: number; longitude: number; label?: string; region?: string; country?: string; timezone?: string; source: KioskLocationSource };
+  reportedTimezone?: string;
+  timezoneOverride?: string;
+  effectiveTimezone?: string;
   nightDimEnabled: boolean;
   nightDimStart: string;
   nightDimEnd: string;

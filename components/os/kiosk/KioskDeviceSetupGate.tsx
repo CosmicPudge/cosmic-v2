@@ -46,7 +46,7 @@ export default function KioskDeviceSetupGate({ deviceId, children }: Props) {
     const reportKey = `${next.viewportWidth}x${next.viewportHeight}:${next.devicePixelRatio}:${next.orientation}:${next.touch}:${next.pointer}`;
     if (reportedDisplayRef.current !== reportKey) {
       reportedDisplayRef.current = reportKey;
-      void fetch(kioskProfileUrl(), { method: "PATCH", credentials: "include", cache: "no-store", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ display: next }) }).catch(() => undefined);
+      void fetch(kioskProfileUrl(), { method: "PATCH", credentials: "include", cache: "no-store", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ display: next, reportedTimezone: next.timezone }) }).catch(() => undefined);
     }
     return () => {
       window.clearTimeout(timer);
