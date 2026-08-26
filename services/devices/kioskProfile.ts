@@ -1,10 +1,10 @@
 import "server-only";
 
 import { and, eq, isNull } from "drizzle-orm";
-import type { KioskDeviceProfile, KioskDisplayProfile, KioskLocationSource, KioskSetupPreview } from "@/core/contracts/Kiosk";
+import type { KioskDeviceProfile, KioskDisplayProfile, KioskLocationMode, KioskLocationSource, KioskSetupPreview } from "@/core/contracts/Kiosk";
 import { getDatabase, isDatabaseConfigured } from "@/services/database/client";
-import { devices, kioskDeviceSettings } from "@/services/database/schema";
-import { TEMPORARY_KIOSK_LOCATION } from "@/services/kioskLocation";
+import { devices, kioskDeviceSettings, phoneLocations } from "@/services/database/schema";
+import { isFreshKioskPhoneLocation, TEMPORARY_KIOSK_LOCATION } from "@/services/kioskLocation";
 
 export interface KioskProfileInput {
   setupCompleted?: boolean;
@@ -18,6 +18,7 @@ export interface KioskProfileInput {
   reportedTimezone?: string;
   timezoneOverride?: string | null;
   clockFormat?: "12h" | "24h";
+  locationMode?: KioskLocationMode;
   location?: { latitude: number; longitude: number; label?: string; region?: string; country?: string; timezone?: string; source: KioskLocationSource } | null;
   reportedLocation?: { latitude: number; longitude: number; label?: string; region?: string; country?: string; timezone?: string; source: "detected" };
   nightDimEnabled?: boolean;
@@ -36,7 +37,7 @@ export function isValidKioskTimezone(value: unknown): value is string {
   try { new Intl.DateTimeFormat("en-US", { timeZone: value }).format(); return true; } catch { return false; }
 }
 
-async function reverseGeocode(latitude: number, longitude: number) {
+export async function reverseGeocode(latitude: number, longitude: number) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 4000);
   try {
@@ -63,15 +64,33 @@ export async function readKioskDeviceProfile(deviceId: string): Promise<KioskDev
   const database = requireDatabase();
   const [row] = await database.select().from(kioskDeviceSettings).where(eq(kioskDeviceSettings.deviceId, deviceId)).limit(1);
   if (!row) return null;
-  const [device] = await database.select({ name: devices.name }).from(devices).where(eq(devices.id, deviceId)).limit(1);
+  const [device] = await database.select({ name: devices.name, userId: devices.userId }).from(devices).where(eq(devices.id, deviceId)).limit(1);
+  const [phoneLocation] = device?.userId ? await database.select().from(phoneLocations).where(eq(phoneLocations.userId, device.userId)).limit(1) : [];
   const hasLocation = typeof row.locationLatitude === "number" && typeof row.locationLongitude === "number" && row.locationSource;
   const hasReportedLocation = typeof row.reportedLocationLatitude === "number" && typeof row.reportedLocationLongitude === "number";
   const reportedTimezone = isValidKioskTimezone(row.reportedTimezone) ? row.reportedTimezone : undefined;
   const timezoneOverride = isValidKioskTimezone(row.timezoneOverride) ? row.timezoneOverride : isValidKioskTimezone(row.timezone) ? row.timezone : undefined;
   const effectiveTimezone = timezoneOverride ?? reportedTimezone ?? (isValidKioskTimezone(row.locationTimezone) ? row.locationTimezone : undefined) ?? TEMPORARY_KIOSK_LOCATION.timezone;
+  const locationMode: KioskLocationMode = row.locationMode === "fixed" || row.locationMode === "follow-phone" ? row.locationMode : "account";
+  const configuredLocation = hasLocation ? { latitude: row.locationLatitude!, longitude: row.locationLongitude!, ...(row.locationLabel ? { label: row.locationLabel } : {}), ...(row.locationRegion ? { region: row.locationRegion } : {}), ...(row.locationCountry ? { country: row.locationCountry } : {}), ...(row.locationTimezone ? { timezone: row.locationTimezone } : {}), source: row.locationSource === "account" ? "account" as const : "device" as const } : null;
+  const reportedLocation = hasReportedLocation ? { latitude: row.reportedLocationLatitude!, longitude: row.reportedLocationLongitude!, ...(row.reportedLocationLabel ? { label: row.reportedLocationLabel } : {}), ...(row.reportedLocationRegion ? { region: row.reportedLocationRegion } : {}), ...(row.reportedLocationCountry ? { country: row.reportedLocationCountry } : {}), ...(row.reportedLocationTimezone ? { timezone: row.reportedLocationTimezone } : {}) } : null;
+  const freshPhone = phoneLocation && isFreshKioskPhoneLocation(phoneLocation.reportedAt) ? phoneLocation : null;
+  const stalePhone = phoneLocation && !freshPhone ? phoneLocation : null;
+  const effectiveBase = locationMode === "follow-phone" ? freshPhone ?? configuredLocation ?? reportedLocation ?? (phoneLocation ?? null) : configuredLocation ?? (locationMode === "account" ? reportedLocation : null);
+  const effectiveLocation = effectiveBase ? {
+    latitude: effectiveBase.latitude,
+    longitude: effectiveBase.longitude,
+    ...(effectiveBase.label ? { label: effectiveBase.label } : {}),
+    ...(effectiveBase.region ? { region: effectiveBase.region } : {}),
+    ...(effectiveBase.country ? { country: effectiveBase.country } : {}),
+    ...(effectiveBase.timezone ? { timezone: effectiveBase.timezone } : {}),
+    source: effectiveBase === freshPhone ? "phone" as const : effectiveBase === configuredLocation ? configuredLocation.source : effectiveBase === reportedLocation ? "device" as const : "phone" as const,
+    ...(effectiveBase === freshPhone || effectiveBase === stalePhone ? { reportedAt: phoneLocation!.reportedAt.toISOString(), ...(effectiveBase === stalePhone ? { stale: true } : {}) } : {}),
+  } : { ...TEMPORARY_KIOSK_LOCATION, source: "kiosk-fallback" as const };
   return {
     deviceId,
     ...(device?.name ? { deviceName: device.name } : {}),
+    locationMode,
     setupCompleted: row.setupCompleted,
     setupVersion: row.setupVersion,
     uiScale: row.uiScale,
@@ -90,6 +109,7 @@ export async function readKioskDeviceProfile(deviceId: string): Promise<KioskDev
     ...(timezoneOverride ? { timezoneOverride } : {}),
     ...(row.clockFormat ? { clockFormat: row.clockFormat as "12h" | "24h" } : {}),
     ...(hasLocation ? { location: { latitude: row.locationLatitude!, longitude: row.locationLongitude!, ...(row.locationLabel ? { label: row.locationLabel } : {}), ...(row.locationRegion ? { region: row.locationRegion } : {}), ...(row.locationCountry ? { country: row.locationCountry } : {}), ...(row.locationTimezone ? { timezone: row.locationTimezone } : {}), source: row.locationSource as KioskLocationSource } } : {}),
+    effectiveLocation,
     ...(hasReportedLocation ? { reportedLocation: { latitude: row.reportedLocationLatitude!, longitude: row.reportedLocationLongitude!, ...(row.reportedLocationLabel ? { label: row.reportedLocationLabel } : {}), ...(row.reportedLocationRegion ? { region: row.reportedLocationRegion } : {}), ...(row.reportedLocationCountry ? { country: row.reportedLocationCountry } : {}), ...(row.reportedLocationTimezone ? { timezone: row.reportedLocationTimezone } : {}), source: "detected" as const } } : {}),
     nightDimEnabled: row.nightDimEnabled,
     nightDimStart: row.nightDimStart,
@@ -127,8 +147,9 @@ export async function saveKioskDeviceProfile(deviceId: string, input: KioskProfi
   const reportedLocation = input.reportedLocation ? { reportedLocationLatitude: input.reportedLocation.latitude, reportedLocationLongitude: input.reportedLocation.longitude, reportedLocationLabel: input.reportedLocation.label ?? resolvedReported?.label ?? null, reportedLocationRegion: input.reportedLocation.region ?? resolvedReported?.region ?? null, reportedLocationCountry: input.reportedLocation.country ?? resolvedReported?.country ?? null, reportedLocationTimezone: input.reportedLocation.timezone ?? null } : {};
   const reportedTimezone = isValidKioskTimezone(input.reportedTimezone) ? input.reportedTimezone : undefined;
   const timezoneOverride = input.timezoneOverride === null ? { timezoneOverride: null } : isValidKioskTimezone(input.timezoneOverride ?? input.timezone) ? { timezoneOverride: input.timezoneOverride ?? input.timezone } : {};
-  const values = { deviceId, ...(typeof input.setupCompleted === "boolean" ? { setupCompleted: input.setupCompleted } : {}), ...(typeof input.setupVersion === "number" ? { setupVersion: input.setupVersion } : {}), ...(typeof input.uiScale === "number" ? { uiScale: input.uiScale } : {}), ...(input.setupPreview ? { setupPreview: input.setupPreview } : {}), ...(typeof input.nightDimPreview === "boolean" ? { nightDimPreview: input.nightDimPreview } : {}), ...displayValues(input.display), ...(reportedTimezone ? { reportedTimezone } : {}), ...timezoneOverride, ...(input.clockFormat ? { clockFormat: input.clockFormat } : {}), ...location, ...reportedLocation, ...(typeof input.nightDimEnabled === "boolean" ? { nightDimEnabled: input.nightDimEnabled } : {}), ...(input.nightDimStart ? { nightDimStart: input.nightDimStart } : {}), ...(input.nightDimEnd ? { nightDimEnd: input.nightDimEnd } : {}), ...(typeof input.nightDimOpacity === "number" ? { nightDimOpacity: input.nightDimOpacity } : {}), updatedAt: now };
-  const updates = { ...(typeof input.setupCompleted === "boolean" ? { setupCompleted: input.setupCompleted } : {}), ...(typeof input.setupVersion === "number" ? { setupVersion: input.setupVersion } : {}), ...(typeof input.uiScale === "number" ? { uiScale: input.uiScale } : {}), ...(input.setupPreview ? { setupPreview: input.setupPreview } : {}), ...(typeof input.nightDimPreview === "boolean" ? { nightDimPreview: input.nightDimPreview } : {}), ...displayValues(input.display), ...(reportedTimezone ? { reportedTimezone } : {}), ...timezoneOverride, ...(input.clockFormat ? { clockFormat: input.clockFormat } : {}), ...location, ...reportedLocation, ...(typeof input.nightDimEnabled === "boolean" ? { nightDimEnabled: input.nightDimEnabled } : {}), ...(input.nightDimStart ? { nightDimStart: input.nightDimStart } : {}), ...(input.nightDimEnd ? { nightDimEnd: input.nightDimEnd } : {}), ...(typeof input.nightDimOpacity === "number" ? { nightDimOpacity: input.nightDimOpacity } : {}), updatedAt: now };
+  const locationMode = input.locationMode === "fixed" || input.locationMode === "follow-phone" || input.locationMode === "account" ? { locationMode: input.locationMode } : {};
+  const values = { deviceId, ...locationMode, ...(typeof input.setupCompleted === "boolean" ? { setupCompleted: input.setupCompleted } : {}), ...(typeof input.setupVersion === "number" ? { setupVersion: input.setupVersion } : {}), ...(typeof input.uiScale === "number" ? { uiScale: input.uiScale } : {}), ...(input.setupPreview ? { setupPreview: input.setupPreview } : {}), ...(typeof input.nightDimPreview === "boolean" ? { nightDimPreview: input.nightDimPreview } : {}), ...displayValues(input.display), ...(reportedTimezone ? { reportedTimezone } : {}), ...timezoneOverride, ...(input.clockFormat ? { clockFormat: input.clockFormat } : {}), ...location, ...reportedLocation, ...(typeof input.nightDimEnabled === "boolean" ? { nightDimEnabled: input.nightDimEnabled } : {}), ...(input.nightDimStart ? { nightDimStart: input.nightDimStart } : {}), ...(input.nightDimEnd ? { nightDimEnd: input.nightDimEnd } : {}), ...(typeof input.nightDimOpacity === "number" ? { nightDimOpacity: input.nightDimOpacity } : {}), updatedAt: now };
+  const updates = { ...locationMode, ...(typeof input.setupCompleted === "boolean" ? { setupCompleted: input.setupCompleted } : {}), ...(typeof input.setupVersion === "number" ? { setupVersion: input.setupVersion } : {}), ...(typeof input.uiScale === "number" ? { uiScale: input.uiScale } : {}), ...(input.setupPreview ? { setupPreview: input.setupPreview } : {}), ...(typeof input.nightDimPreview === "boolean" ? { nightDimPreview: input.nightDimPreview } : {}), ...displayValues(input.display), ...(reportedTimezone ? { reportedTimezone } : {}), ...timezoneOverride, ...(input.clockFormat ? { clockFormat: input.clockFormat } : {}), ...location, ...reportedLocation, ...(typeof input.nightDimEnabled === "boolean" ? { nightDimEnabled: input.nightDimEnabled } : {}), ...(input.nightDimStart ? { nightDimStart: input.nightDimStart } : {}), ...(input.nightDimEnd ? { nightDimEnd: input.nightDimEnd } : {}), ...(typeof input.nightDimOpacity === "number" ? { nightDimOpacity: input.nightDimOpacity } : {}), updatedAt: now };
   await database.insert(kioskDeviceSettings).values(values).onConflictDoUpdate({ target: kioskDeviceSettings.deviceId, set: updates });
   if (input.deviceName?.trim()) await database.update(devices).set({ name: input.deviceName.trim(), lastSeenAt: now }).where(eq(devices.id, deviceId));
   const profile = await readKioskDeviceProfile(deviceId);

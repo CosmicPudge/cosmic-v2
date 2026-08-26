@@ -15,7 +15,7 @@ const DEVELOPMENT_LOCATION: UserLocation = {
   lon: -111.3994,
 };
 
-type KioskProfileResponse = { profile?: { location?: KioskProfileLocation | null; reportedLocation?: KioskProfileLocation | null } | null };
+type KioskProfileResponse = { profile?: { effectiveLocation?: KioskProfileLocation | null } | null };
 type KioskProfileLocation = { latitude?: number; longitude?: number };
 
 function weatherLog(message: string) {
@@ -45,15 +45,15 @@ export default function useLocation() {
     const kiosk = typeof window !== "undefined" && window.location.pathname === "/os/kiosk";
     if (kiosk) {
       let active = true;
-      const controller = new AbortController();
-      const timeout = window.setTimeout(() => controller.abort(), 5000);
       const resolveKioskLocation = async () => {
         let profileLocation: UserLocation | null = null;
+        const controller = new AbortController();
+        const timeout = window.setTimeout(() => controller.abort(), 5000);
         try {
           const response = await fetch(kioskApiUrl("/api/devices/kiosk-profile"), { credentials: "include", cache: "no-store", signal: controller.signal });
           if (response.ok) {
             const body = await response.json() as KioskProfileResponse;
-            profileLocation = toUserLocation(body.profile?.location) ?? toUserLocation(body.profile?.reportedLocation);
+            profileLocation = toUserLocation(body.profile?.effectiveLocation);
           }
         } catch {
           // The temporary fallback keeps kiosk weather usable when the profile cannot be read.
@@ -67,7 +67,8 @@ export default function useLocation() {
         setLocation(resolved);
       };
       void resolveKioskLocation();
-      return () => { active = false; controller.abort(); window.clearTimeout(timeout); };
+      const refresh = window.setInterval(() => void resolveKioskLocation(), 45_000);
+      return () => { active = false; window.clearInterval(refresh); };
     }
 
     if (!navigator.geolocation) {

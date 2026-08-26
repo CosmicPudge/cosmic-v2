@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { KioskDeviceProfile, KioskDisplayProfile } from "@/core/contracts/Kiosk";
 import { CURRENT_KIOSK_SETUP_VERSION } from "@/core/contracts/Kiosk";
 import { DashboardReadinessProvider } from "@/components/dashboard/readiness/DashboardReadiness";
@@ -8,7 +8,7 @@ import { WidgetProvider } from "@/components/os/ui/widget/WidgetContext";
 import ClockWidget from "@/components/os/widgets/clock/ClockWidget";
 import WeatherWidget from "@/components/os/widgets/weather/WeatherWidget";
 import CalendarWidget from "@/components/os/widgets/calendar/CalendarWidget";
-import { kioskProfileUrl, measureKioskDisplay } from "./kioskProfile";
+import { kioskProfileUrl, measureKioskDisplay, observeKioskDisplay } from "./kioskProfile";
 
 interface Props { deviceId: string; children: React.ReactNode; }
 export default function KioskDeviceSetupGate({ deviceId, children }: Props) {
@@ -74,20 +74,13 @@ export default function KioskDeviceSetupGate({ deviceId, children }: Props) {
     }, () => undefined, { enableHighAccuracy: false, timeout: 8000, maximumAge: 300000 });
   }, [profile]);
 
-  const refreshDisplay = useCallback(() => {
-    if (profile === undefined) return;
-    const next = measureKioskDisplay(profile?.setupVersion ?? 0);
-    setDisplay(next);
-    setChanged(Boolean(profile?.display && (Math.abs((profile.display.viewportWidth ?? 0) - next.viewportWidth) > 80 || Math.abs((profile.display.viewportHeight ?? 0) - next.viewportHeight) > 80 || profile.display.orientation !== next.orientation)));
-  }, [profile]);
   useEffect(() => {
     if (!profile) return;
-    const onResize = () => refreshDisplay();
-    window.addEventListener("resize", onResize);
-    window.addEventListener("orientationchange", onResize);
-    window.visualViewport?.addEventListener("resize", onResize);
-    return () => { window.removeEventListener("resize", onResize); window.removeEventListener("orientationchange", onResize); window.visualViewport?.removeEventListener("resize", onResize); };
-  }, [profile, refreshDisplay]);
+    return observeKioskDisplay(profile.setupVersion, (next) => {
+      setDisplay(next);
+      setChanged(Boolean(profile.display && (Math.abs((profile.display.viewportWidth ?? 0) - next.viewportWidth) > 80 || Math.abs((profile.display.viewportHeight ?? 0) - next.viewportHeight) > 80 || profile.display.orientation !== next.orientation)));
+    });
+  }, [profile]);
 
   if (error) return <SetupError message={error} onRetry={() => { setError(null); setRefreshKey((key) => key + 1); }} />;
   if (profile === undefined || !display) return <div className="grid min-h-[100dvh] place-items-center bg-[#030511] text-sm text-white/55">Preparing display setup…</div>;

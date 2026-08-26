@@ -4,6 +4,8 @@ export type KioskOrientation = "landscape" | "portrait";
 export type KioskDensity = "compact" | "standard" | "large";
 export type KioskPointer = "coarse" | "fine" | "unknown";
 export type KioskLocationSource = "detected" | "account" | "manual";
+export type KioskLocationMode = "fixed" | "account" | "follow-phone";
+export type KioskResolvedLocationSource = "phone" | "device" | "account" | "kiosk-fallback";
 export type KioskSetupPreview = "normal" | "fit" | "clock" | "weather" | "calendar";
 
 export interface KioskDisplayProfile {
@@ -24,6 +26,7 @@ export interface KioskDisplayProfile {
   visualViewportWidth?: number;
   visualViewportHeight?: number;
   visualViewportScale?: number;
+  screenOrientation?: string;
   overflowX: number;
   overflowY: number;
   setupVersion: number;
@@ -40,7 +43,9 @@ export interface KioskDeviceProfile {
   timezone?: string;
   clockFormat?: "12h" | "24h";
   location?: { latitude: number; longitude: number; label?: string; region?: string; country?: string; timezone?: string; source: KioskLocationSource };
+  locationMode?: KioskLocationMode;
   reportedLocation?: { latitude: number; longitude: number; label?: string; region?: string; country?: string; timezone?: string; source: "detected" };
+  effectiveLocation?: { latitude: number; longitude: number; label?: string; region?: string; country?: string; timezone?: string; source: KioskResolvedLocationSource; reportedAt?: string; stale?: boolean };
   reportedTimezone?: string;
   timezoneOverride?: string;
   effectiveTimezone?: string;

@@ -33,10 +33,29 @@ export function measureKioskDisplay(setupVersion: number): KioskDisplayProfile {
     touch,
     pointer,
     ...(visual ? { visualViewportWidth: Math.round(visual.width), visualViewportHeight: Math.round(visual.height), visualViewportScale: visual.scale } : {}),
+    ...(window.screen?.orientation?.type ? { screenOrientation: window.screen.orientation.type } : {}),
     overflowX: Math.max(0, document.documentElement.scrollWidth - viewportWidth),
     overflowY: Math.max(0, document.documentElement.scrollHeight - viewportHeight),
     setupVersion,
     ...(timezone ? { timezone } : {}),
+  };
+}
+
+export function observeKioskDisplay(setupVersion: number, onChange: (profile: KioskDisplayProfile) => void) {
+  let timer: number | undefined;
+  const schedule = () => {
+    if (timer) window.clearTimeout(timer);
+    timer = window.setTimeout(() => onChange(measureKioskDisplay(setupVersion)), 150);
+  };
+  window.addEventListener("resize", schedule);
+  window.addEventListener("orientationchange", schedule);
+  window.visualViewport?.addEventListener("resize", schedule);
+  schedule();
+  return () => {
+    if (timer) window.clearTimeout(timer);
+    window.removeEventListener("resize", schedule);
+    window.removeEventListener("orientationchange", schedule);
+    window.visualViewport?.removeEventListener("resize", schedule);
   };
 }
 

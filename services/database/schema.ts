@@ -37,6 +37,20 @@ export const devices = pgTable("devices", {
   revokedAt: timestamp("revoked_at", { withTimezone: true }),
 }, (table) => [index("devices_user_id_index").on(table.userId), index("devices_active_index").on(table.revokedAt)]);
 
+export const phoneLocations = pgTable("phone_locations", {
+  userId: text("user_id").primaryKey().references(() => users.id, { onDelete: "cascade" }),
+  latitude: doublePrecision("latitude").notNull(),
+  longitude: doublePrecision("longitude").notNull(),
+  accuracy: doublePrecision("accuracy"),
+  label: text("label"),
+  city: text("city"),
+  region: text("region"),
+  country: text("country"),
+  timezone: text("timezone"),
+  reportedAt: timestamp("reported_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [check("phone_locations_latitude_check", sql`${table.latitude} between -90 and 90`), check("phone_locations_longitude_check", sql`${table.longitude} between -180 and 180`), index("phone_locations_reported_at_index").on(table.reportedAt)]);
+
 export const kioskDeviceSettings = pgTable("kiosk_device_settings", {
   deviceId: text("device_id").primaryKey().references(() => devices.id, { onDelete: "cascade" }),
   setupCompleted: boolean("setup_completed").notNull().default(false),
@@ -58,6 +72,7 @@ export const kioskDeviceSettings = pgTable("kiosk_device_settings", {
   reportedTimezone: text("reported_timezone"),
   timezoneOverride: text("timezone_override"),
   clockFormat: text("clock_format"),
+  locationMode: text("location_mode").notNull().default("account"),
   locationLatitude: doublePrecision("location_latitude"),
   locationLongitude: doublePrecision("location_longitude"),
   locationLabel: text("location_label"),

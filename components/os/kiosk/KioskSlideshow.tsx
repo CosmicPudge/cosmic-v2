@@ -326,7 +326,8 @@ export default function KioskSlideshow() {
 
     const deltaX = gesture.lastX - gesture.startX;
     const deltaY = gesture.lastY - gesture.startY;
-    if (Math.abs(deltaX) <= Math.abs(deltaY) || Math.abs(deltaX) < 50) return;
+    const threshold = Math.max(50, window.innerWidth * 0.05);
+    if (Math.abs(deltaX) <= Math.abs(deltaY) || Math.abs(deltaX) < threshold) return;
     goToRelativeSlide(deltaX < 0 ? 1 : -1, true);
   }, [goToRelativeSlide]);
 
@@ -377,7 +378,7 @@ export default function KioskSlideshow() {
 
   return (
     <div
-      className="kiosk-slideshow relative h-[100dvh] w-full overflow-hidden"
+      className="kiosk-slideshow absolute inset-0 h-[100dvh] w-[100dvw] overflow-hidden"
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={finishPointerGesture}

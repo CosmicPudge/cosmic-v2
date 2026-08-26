@@ -54,3 +54,7 @@ export async function deleteProviderConnectionCredentials(userId: string, connec
   const rows = await getDatabase().delete(providerCredentials).where(eq(providerCredentials.connectionId, connectionId)).returning({ connectionId: providerCredentials.connectionId });
   return Boolean(rows[0]);
 }
+
+export async function markProviderReconnectRequired(userId: string, connectionId: string) {
+  await getDatabase().update(providerConnections).set({ reconnectRequired: true, status: "reconnect-required", updatedAt: new Date() }).where(and(eq(providerConnections.userId, userId), eq(providerConnections.id, connectionId)));
+}

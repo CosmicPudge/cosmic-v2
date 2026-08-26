@@ -21,7 +21,7 @@ export default function KioskShell({
 
   return (
     <div
-      className="kiosk-shell relative h-[100dvh] min-h-0 w-[100dvw] max-w-none overflow-hidden bg-transparent text-white"
+      className="kiosk-shell fixed inset-0 h-[100dvh] min-h-0 w-[100dvw] max-w-none overflow-hidden bg-transparent text-white"
       data-compact={compact}
       data-touch={snapshot.input.touchPrimary}
       data-reduced-motion={snapshot.power.reducedMotion || snapshot.power.effective === "reduced"}
