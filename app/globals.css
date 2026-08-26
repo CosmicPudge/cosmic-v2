@@ -808,6 +808,8 @@ html[data-cosmic-reduced-effects="true"] *::after {
 .kiosk-night-dimmer { background: rgba(0,0,0,.35); }
 .kiosk-slide-content { scrollbar-width: none; }
 .kiosk-slide-content::-webkit-scrollbar { display: none; }
+.kiosk-music-art { width: min(42%, 22rem); aspect-ratio: 1; }
+.kiosk-music-widget .kiosk-scene-image { filter: blur(3px); transform: scale(1.03); }
 
 .kiosk-shell[data-compact="true"] .kiosk-slide { padding: max(.25rem, env(safe-area-inset-top)) max(.25rem, env(safe-area-inset-right)) max(.25rem, env(safe-area-inset-bottom)) max(.25rem, env(safe-area-inset-left)); }
 .kiosk-shell[data-compact="true"] .kiosk-slide-card,
@@ -821,6 +823,9 @@ html[data-cosmic-reduced-effects="true"] *::after {
 .kiosk-shell[data-compact="true"] .kiosk-slide-header p,
 .kiosk-shell[data-compact="true"] .kiosk-sports-view > section > header p { font-size: .5rem; letter-spacing: .14em; }
 .kiosk-shell[data-compact="true"] .kiosk-slide-content { padding: .45rem; overflow: hidden; }
+.kiosk-shell[data-compact="true"] .kiosk-music-scene { padding: .8rem; }
+.kiosk-shell[data-compact="true"] .kiosk-music-art { width: min(42%, 13rem); border-radius: .55rem; }
+.kiosk-shell[data-compact="true"] .kiosk-music-scene > div:nth-child(2) { gap: 1rem; }
 
 .kiosk-shell[data-compact="true"] .kiosk-sports-view { padding: max(.25rem, env(safe-area-inset-top)) max(.25rem, env(safe-area-inset-right)) max(.25rem, env(safe-area-inset-bottom)) max(.25rem, env(safe-area-inset-left)); }
 .kiosk-shell[data-compact="true"] .kiosk-sports-view > section { min-height: 0; }
