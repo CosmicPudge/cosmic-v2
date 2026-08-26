@@ -6,10 +6,12 @@ import { expiredSessionCookie } from "@/services/auth/localStore";
 
 export async function GET(request: Request) {
   try {
-    const bootId = new URL(request.url).searchParams.get("cosmic-boot") ?? undefined;
+    const searchParams = new URL(request.url).searchParams;
+    const kioskRequest = searchParams.get("cosmic-kiosk") === "1";
+    const bootId = kioskRequest ? searchParams.get("cosmic-boot") ?? "" : undefined;
     const session = await getSession(request, bootId);
     const headers = new Headers({ "Cache-Control": "no-store" });
-    if (bootId !== undefined && !session) headers.set("Set-Cookie", expiredSessionCookie());
+    if (kioskRequest && !session) headers.set("Set-Cookie", expiredSessionCookie());
     return Response.json({ repositoryMode: getAuthRepositoryMode(), database: await checkDatabase(), ...(session ? { authenticated: true, isAdmin: await isAdminAccount(session.account.id), ...session } : { authenticated: false, isAdmin: false }) }, { headers });
   } catch {
     return Response.json({ error: "Account session service is unavailable." }, { status: 503, headers: { "Cache-Control": "no-store" } });
