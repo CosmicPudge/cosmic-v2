@@ -26,6 +26,7 @@ function formatWidgetTitle(id: string) {
       className={[
         "absolute inset-0",
         "kiosk-slide",
+        widget.id === "clock" ? "kiosk-slide-clock" : "",
         "transition-[transform,opacity]",
         "ease-[cubic-bezier(.22,.61,.36,1)]",
         active && !exiting

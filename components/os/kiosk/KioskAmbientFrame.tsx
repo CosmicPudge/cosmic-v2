@@ -1,10 +1,16 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
 interface Props {
   children: React.ReactNode;
+}
+
+const KioskAmbientContext = createContext<{ setPersistentClockHidden: (_hidden: boolean) => void }>({ setPersistentClockHidden: () => undefined });
+
+export function useKioskAmbientFrame() {
+  return useContext(KioskAmbientContext);
 }
 
 function simulatedHour(value: string | null) {
@@ -24,6 +30,8 @@ function KioskClock({ now }: { now: Date | null }) {
 export default function KioskAmbientFrame({ children }: Props) {
   const searchParams = useSearchParams();
   const [now, setNow] = useState<Date | null>(null);
+  const [persistentClockHidden, setPersistentClockHiddenState] = useState(false);
+  const setPersistentClockHidden = useCallback((hidden: boolean) => setPersistentClockHiddenState(hidden), []);
   const overrideHour = simulatedHour(searchParams.get("simulate-kiosk-hour"));
 
   useEffect(() => {
@@ -42,12 +50,12 @@ export default function KioskAmbientFrame({ children }: Props) {
   }, [now, overrideHour]);
 
   return (
-    <div className="kiosk-ambient-frame relative h-[100svh] w-full overflow-hidden">
-      {children}
+    <KioskAmbientContext.Provider value={{ setPersistentClockHidden }}>
+      <div className="kiosk-ambient-frame relative h-[100svh] w-full overflow-hidden">
+        {children}
       <div className={`kiosk-night-dimmer pointer-events-none absolute inset-0 z-40 transition-opacity duration-[1500ms] motion-reduce:transition-none ${night ? "opacity-100" : "opacity-0"}`} aria-hidden="true" />
-      <div className="pointer-events-none absolute inset-x-0 top-2 z-50 flex justify-center">
-        <KioskClock now={now} />
+        {!persistentClockHidden && <div className="pointer-events-none absolute inset-x-0 top-2 z-50 flex justify-center"><KioskClock now={now} /></div>}
       </div>
-    </div>
+    </KioskAmbientContext.Provider>
   );
 }

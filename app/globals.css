@@ -231,6 +231,33 @@ html, body { width: 100%; min-height: 100%; }
 .kiosk-slide[data-kiosk-scene="notifications"] .kiosk-scene-surface { background: radial-gradient(circle at 80% 22%, rgba(251,113,133,.16), transparent 24%), linear-gradient(145deg, #211020, #080813 68%) !important; }
 .kiosk-slide[data-kiosk-scene="briefing"] .kiosk-scene-surface { background: radial-gradient(ellipse at 58% 16%, rgba(232,121,249,.16), transparent 30%), linear-gradient(145deg, #1b1232, #070817 68%) !important; }
 
+/* The clock slide is a scene, not a dashboard card. The image remains sharp and the UI floats above it. */
+.kiosk-slide-clock .kiosk-slide-header { display: none; }
+.kiosk-slide-clock .kiosk-slide-content { padding: 0; }
+.kiosk-slide-clock .kiosk-slide-card,
+.kiosk-slide-clock [data-widget-accent="clock"],
+.kiosk-slide-clock [data-widget-accent="clock"] > div {
+  border-radius: 0 !important;
+  border-color: transparent !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+}
+.kiosk-slide-clock .kiosk-scene-surface { background: #05091a !important; }
+.kiosk-slide-clock .kiosk-scene-image { opacity: 1 !important; filter: none !important; }
+.kiosk-slide-clock .kiosk-scene-surface::before { background: radial-gradient(ellipse at 50% 42%, transparent 20%, rgba(0,0,12,.16) 70%), linear-gradient(180deg, rgba(0,0,0,.1), transparent 38%, rgba(0,0,0,.38)); opacity: 1; }
+.kiosk-slide-clock .kiosk-scene-surface::after { background: radial-gradient(ellipse at center, transparent 44%, rgba(0,0,8,.38) 100%), linear-gradient(180deg, transparent 56%, rgba(0,0,8,.4)); opacity: 1; }
+.kiosk-slide-clock .kiosk-scene-motif,
+.kiosk-slide-clock .kiosk-scene-glow,
+.kiosk-slide-clock .kiosk-scene-illustration { display: none; }
+.kiosk-clock-scene-time { font-size: clamp(4rem, 12vw, 10rem); line-height: .88; text-shadow: 0 0 26px rgba(225,240,255,.24); }
+
+@media (max-width: 900px) and (max-height: 600px) {
+  .kiosk-slide-clock .kiosk-clock-scene { padding-bottom: 3.5rem; }
+  .kiosk-slide-clock .kiosk-clock-scene-time { font-size: clamp(3.5rem, 16vw, 6.5rem); }
+  .kiosk-slide-clock .kiosk-scene-surface::before { background: linear-gradient(180deg, rgba(0,0,0,.08), transparent 42%, rgba(0,0,8,.3)); }
+}
+
 @media (max-width: 900px) and (max-height: 600px) {
   .kiosk-slide .kiosk-scene-motif { opacity: .2; }
   .kiosk-slide .kiosk-scene-image { filter: none !important; opacity: .24; }

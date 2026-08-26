@@ -17,6 +17,7 @@ import type {
 } from "@/core/contracts/Sports";
 
 import KioskSlide from "./KioskSlide";
+import { useKioskAmbientFrame } from "./KioskAmbientFrame";
 import KioskSportsOverride from "./KioskSportsOverride";
 
 import {
@@ -140,6 +141,7 @@ function createTestEvent(
 
 export default function KioskSlideshow() {
   const searchParams = useSearchParams();
+  const { setPersistentClockHidden } = useKioskAmbientFrame();
 
   const { data: sportsData } = useSports({
     refreshMs: (snapshot) => snapshot?.live.length ? 10_000 : 60_000,
@@ -291,6 +293,13 @@ export default function KioskSlideshow() {
     widgets.length,
   ]);
 
+  const currentWidget = widgets[safeCurrentIndex];
+
+  useEffect(() => {
+    setPersistentClockHidden(currentWidget?.id === "clock");
+    return () => setPersistentClockHidden(false);
+  }, [currentWidget?.id, setPersistentClockHidden]);
+
   if (liveEvent) {
     return (
       <KioskSportsOverride
@@ -319,8 +328,6 @@ export default function KioskSlideshow() {
       </div>
     );
   }
-
-  const currentWidget = widgets[safeCurrentIndex];
 
   const previousWidget =
     safePreviousIndex !== null
