@@ -10,8 +10,9 @@ mkdir -p ~/.local/bin ~/.config/systemd/user ~/.config/cosmic-kiosk
 cat > ~/.local/bin/cosmic-kiosk <<'EOF'
 #!/bin/bash
 set -eu
-COSMIC_URL="https://cosmicpudge.shop/os/kiosk?cosmic-kiosk=1"
-sleep 5
+BOOT_ID="$(cat /proc/sys/kernel/random/boot_id)"
+COSMIC_URL="https://cosmicpudge.shop/os/kiosk?cosmic-kiosk=1&cosmic-boot=${BOOT_ID}"
+sleep 1
 exec /usr/bin/chromium \
   --kiosk \
   --no-first-run \
@@ -72,6 +73,10 @@ journalctl --user -u cosmic-kiosk.service -f
 
 Chromium uses the persistent `~/.config/cosmic-kiosk` profile so permissions
 survive restarts. The launcher intentionally does not use `--no-sandbox`.
+The boot ID is supplied by Linux and stays stable if Chromium crashes and is
+restarted during the same OS boot. Cosmic requires a fresh phone/browser
+approval when the boot ID changes after a Raspberry Pi reboot; the registered
+device itself is retained.
 
 The kiosk adapts from the browser viewport, shared Cosmic display profile, and
 input capabilities. It does not use Raspberry Pi user-agent detection.

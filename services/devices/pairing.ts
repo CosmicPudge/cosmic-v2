@@ -15,14 +15,15 @@ function normalizeUserCode(value: string) { return value.replace(/[^A-Z0-9]/gi, 
 function formatUserCode(value: string) { return `${value.slice(0, 4)}-${value.slice(4)}`; }
 function randomUserCode() { return Array.from({ length: 6 }, () => ALPHABET[randomBytes(1)[0] % ALPHABET.length]).join(""); }
 function requireDatabase() { if (!isDatabaseConfigured()) throw new Error("Device pairing requires durable PostgreSQL storage."); return getDatabase(); }
+export function normalizeBootId(value: unknown) { return typeof value === "string" && /^[A-Za-z0-9_-]{1,128}$/.test(value) ? value : null; }
 
-export async function createDevicePairing() {
+export async function createDevicePairing(bootId: string, existingDeviceId?: string) {
   const database = requireDatabase();
   for (let attempt = 0; attempt < 5; attempt += 1) {
     const deviceCode = randomBytes(32).toString("base64url");
     const userCode = randomUserCode();
     try {
-      const [row] = await database.insert(devicePairings).values({ id: `pair_${randomUUID()}`, deviceCodeHash: hash(deviceCode), userCode, expiresAt: new Date(Date.now() + DEVICE_PAIRING_TTL_MS), deviceType: "display" }).returning({ id: devicePairings.id, userCode: devicePairings.userCode, expiresAt: devicePairings.expiresAt });
+      const [row] = await database.insert(devicePairings).values({ id: `pair_${randomUUID()}`, deviceCodeHash: hash(deviceCode), userCode, expiresAt: new Date(Date.now() + DEVICE_PAIRING_TTL_MS), deviceType: "display", bootId, ...(existingDeviceId ? { deviceId: existingDeviceId } : {}) }).returning({ id: devicePairings.id, userCode: devicePairings.userCode, expiresAt: devicePairings.expiresAt });
       const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://cosmicpudge.shop";
       return { deviceCode, userCode: formatUserCode(row.userCode), verificationUrl: `${baseUrl}/activate?code=${encodeURIComponent(formatUserCode(row.userCode))}`, expiresAt: row.expiresAt.toISOString(), pollInterval: DEVICE_POLL_INTERVAL_SECONDS };
     } catch (error) {
@@ -69,9 +70,12 @@ export async function consumeApprovedPairing(deviceCode: string) {
   const result = await database.transaction(async (tx) => {
     const [pairing] = await tx.update(devicePairings).set({ status: "consumed", consumedAt: new Date() }).where(and(eq(devicePairings.deviceCodeHash, hash(deviceCode)), eq(devicePairings.status, "approved"), isNull(devicePairings.consumedAt))).returning();
     if (!pairing?.userId) return null;
-    const [device] = await tx.insert(devices).values({ id: `device_${randomUUID()}`, userId: pairing.userId, name: pairing.deviceName ?? "Cosmic Display", type: pairing.deviceType }).returning({ id: devices.id });
-    await tx.insert(sessions).values({ id: `session_${randomUUID()}`, userId: pairing.userId, sessionTokenHash: hashSessionToken(token), expiresAt, sessionType: "device", deviceId: device.id, userAgent: "Cosmic Display" });
-    return { token, expiresAt: expiresAt.toISOString() };
+    const [existingDevice] = pairing.deviceId ? await tx.select({ id: devices.id }).from(devices).where(and(eq(devices.id, pairing.deviceId), eq(devices.userId, pairing.userId), isNull(devices.revokedAt))).limit(1) : [];
+    const deviceId = existingDevice?.id ?? `device_${randomUUID()}`;
+    if (existingDevice) await tx.update(devices).set({ lastSeenAt: new Date() }).where(eq(devices.id, deviceId));
+    else await tx.insert(devices).values({ id: deviceId, userId: pairing.userId, name: pairing.deviceName ?? "Cosmic Display", type: pairing.deviceType });
+    await tx.insert(sessions).values({ id: `session_${randomUUID()}`, userId: pairing.userId, sessionTokenHash: hashSessionToken(token), expiresAt, sessionType: "device", deviceId, authenticatedBootId: pairing.bootId, userAgent: "Cosmic Display" });
+    return { token, expiresAt: expiresAt.toISOString(), deviceId };
   });
   return result;
 }

@@ -1,5 +1,5 @@
 import { getPairingStatus, consumeApprovedPairing } from "@/services/devices/pairing";
-import { sessionCookie } from "@/services/auth/localStore";
+import { deviceCookie, sessionCookie } from "@/services/auth/localStore";
 import { allowRateLimit, requestRateKey } from "@/services/security/rateLimit";
 
 export async function POST(request: Request) {
@@ -11,6 +11,7 @@ export async function POST(request: Request) {
     if (status.status !== "approved") return Response.json(status, { headers: { "Cache-Control": "no-store" } });
     const session = await consumeApprovedPairing(body.deviceCode);
     if (!session) return Response.json({ status: "expired" }, { headers: { "Cache-Control": "no-store" } });
-    return Response.json({ status: "approved" }, { headers: { "Set-Cookie": sessionCookie(session.token, session.expiresAt), "Cache-Control": "no-store" } });
+    const headers = new Headers({ "Cache-Control": "no-store" }); headers.append("Set-Cookie", sessionCookie(session.token, session.expiresAt)); headers.append("Set-Cookie", deviceCookie(session.deviceId));
+    return Response.json({ status: "approved" }, { headers });
   } catch { return Response.json({ error: "Device pairing is unavailable." }, { status: 503 }); }
 }

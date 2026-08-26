@@ -24,6 +24,7 @@ export const sessions = pgTable("sessions", {
   userAgent: text("user_agent"),
   sessionType: text("session_type").notNull().default("user"),
   deviceId: text("device_id"),
+  authenticatedBootId: text("authenticated_boot_id"),
 }, (table) => [uniqueIndex("sessions_token_hash_unique").on(table.sessionTokenHash), index("sessions_user_id_index").on(table.userId), index("sessions_expires_at_index").on(table.expiresAt), index("sessions_device_id_index").on(table.deviceId), check("sessions_type_check", sql`${table.sessionType} in ('user', 'device')`)]);
 
 export const devices = pgTable("devices", {
@@ -47,6 +48,8 @@ export const devicePairings = pgTable("device_pairings", {
   userId: text("user_id").references(() => users.id, { onDelete: "set null" }),
   deviceName: text("device_name"),
   deviceType: text("device_type").notNull().default("display"),
+  deviceId: text("device_id"),
+  bootId: text("boot_id").notNull(),
   lastPolledAt: timestamp("last_polled_at", { withTimezone: true }),
   consumedAt: timestamp("consumed_at", { withTimezone: true }),
 }, (table) => [uniqueIndex("device_pairings_device_hash_unique").on(table.deviceCodeHash), uniqueIndex("device_pairings_user_code_unique").on(table.userCode), index("device_pairings_status_expires_index").on(table.status, table.expiresAt), index("device_pairings_user_id_index").on(table.userId), check("device_pairings_status_check", sql`${table.status} in ('pending', 'approved', 'expired', 'denied', 'consumed')`)]);

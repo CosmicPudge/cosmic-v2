@@ -2,10 +2,13 @@
 
 import { useEffect, useState } from "react";
 import QRCode from "qrcode";
+import { useSearchParams } from "next/navigation";
 
 type Pairing = { deviceCode: string; userCode: string; verificationUrl: string; expiresAt: string; pollInterval: number };
 
 export default function DevicePairingScreen() {
+  const searchParams = useSearchParams();
+  const bootId = searchParams.get("cosmic-boot") ?? "";
   const [pairing, setPairing] = useState<Pairing | null>(null);
   const [qr, setQr] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -14,7 +17,7 @@ export default function DevicePairingScreen() {
     let active = true;
     async function start() {
       try {
-        const response = await fetch("/api/devices/pair", { method: "POST", cache: "no-store" });
+        const response = await fetch("/api/devices/pair", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ bootId }), cache: "no-store" });
         const next = await response.json() as Pairing & { error?: string };
         if (!response.ok) throw new Error(next.error ?? "Pairing is unavailable.");
         if (!active) return;

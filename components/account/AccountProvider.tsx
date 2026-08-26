@@ -16,7 +16,8 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
   const syncSession = useCallback(async (showLoading: boolean) => {
     if (showLoading) setLoading(true);
     try {
-      const response = await fetch("/api/account/session", { cache: "no-store" });
+      const bootQuery = window.location.pathname === "/os/kiosk" ? `?cosmic-boot=${encodeURIComponent(new URLSearchParams(window.location.search).get("cosmic-boot") ?? "")}` : "";
+      const response = await fetch(`/api/account/session${bootQuery}`, { cache: "no-store" });
       const payload = await response.json() as { authenticated?: boolean; account?: CosmicAccount; expiresAt?: string; isAdmin?: boolean };
       const nextAccount = payload.authenticated && payload.account ? payload.account : null;
       setAccount(nextAccount);

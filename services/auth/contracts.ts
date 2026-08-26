@@ -20,6 +20,7 @@ export interface CreateSessionInput {
   userAgent?: string;
   sessionType?: "user" | "device";
   deviceId?: string;
+  authenticatedBootId?: string;
 }
 
 export interface AuthRepository {

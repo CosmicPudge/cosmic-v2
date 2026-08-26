@@ -16,4 +16,5 @@ export interface CosmicSession {
   userAgent?: string;
   sessionType?: "user" | "device";
   deviceId?: string;
+  authenticatedBootId?: string;
 }

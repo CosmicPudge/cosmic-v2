@@ -33,3 +33,6 @@ export function parseSessionCookie(request: Request) { const raw = request.heade
 function cookieValue(token: string, maxAge: number) { const secure = process.env.NODE_ENV === "production" ? "; Secure" : ""; return `${getSessionCookieName()}=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAge}${secure}`; }
 export function sessionCookie(token: string, expiresAt: string) { return cookieValue(token, Math.max(0, Math.floor((Date.parse(expiresAt) - Date.now()) / 1000))); }
 export function expiredSessionCookie() { return cookieValue("", 0); }
+export function getDeviceCookieName() { return "cosmic_device_id"; }
+export function parseDeviceCookie(request: Request) { const raw = request.headers.get("cookie") ?? ""; const match = raw.split(";").map((part) => part.trim()).find((part) => part.startsWith(`${getDeviceCookieName()}=`)); return match ? decodeURIComponent(match.slice(getDeviceCookieName().length + 1)) : null; }
+export function deviceCookie(deviceId: string) { const secure = process.env.NODE_ENV === "production" ? "; Secure" : ""; return `${getDeviceCookieName()}=${encodeURIComponent(deviceId)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=31536000${secure}`; }
