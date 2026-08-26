@@ -120,6 +120,13 @@
       "when": 1787546000000,
       "tag": "0017_account_clock_alarms",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1787547000000,
+      "tag": "0018_kiosk_device_settings",
+      "breakpoints": true
     }
   ]
 }

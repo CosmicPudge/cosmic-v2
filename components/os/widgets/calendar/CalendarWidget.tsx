@@ -10,6 +10,7 @@ import CalendarToday from "./CalendarToday";
 import CalendarUpcoming from "./CalendarUpcoming";
 import CalendarAgenda from "./CalendarAgenda";
 import CalendarFooter from "./CalendarFooter";
+import KioskCalendarScene from "./KioskCalendarScene";
 
 import useCalendar from "@/hooks/os/useCalendar";
 import { useDashboardWidgetReadiness } from "@/components/dashboard/readiness/DashboardReadiness";
@@ -22,6 +23,10 @@ export default function CalendarWidget() {
     error,
   } = useCalendar();
   useDashboardWidgetReadiness("calendar", loading ? "loading" : error && !calendar ? "degraded" : "ready");
+
+  if (presentation === "kiosk") {
+    return <KioskCalendarScene calendar={calendar} loading={loading} error={error} />;
+  }
 
   return (
     <Widget accent="calendar">
@@ -60,7 +65,7 @@ export default function CalendarWidget() {
               currentEvent={calendar?.currentEvent}
               loading={loading}
               error={error}
-              kiosk={presentation === "kiosk"}
+              kiosk={false}
             />
           </div>
         )}

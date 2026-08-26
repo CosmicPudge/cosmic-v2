@@ -347,7 +347,7 @@ export default function KioskSlideshow() {
 
   if (widgets.length === 0) {
     return (
-      <div className="grid min-h-[100svh] place-items-center px-6 text-center">
+      <div className="grid min-h-[100dvh] place-items-center px-6 text-center">
         <div>
           <p className="text-sm font-semibold uppercase tracking-[0.22em] text-cyan-100/45">
             Cosmic Kiosk
@@ -377,7 +377,7 @@ export default function KioskSlideshow() {
 
   return (
     <div
-      className="kiosk-slideshow relative h-[100svh] w-full overflow-hidden"
+      className="kiosk-slideshow relative h-[100dvh] w-full overflow-hidden"
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={finishPointerGesture}

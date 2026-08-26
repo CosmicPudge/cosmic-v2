@@ -273,6 +273,32 @@ html, body { width: 100%; min-height: 100%; }
 .kiosk-slide[data-kiosk-scene="weather"] .kiosk-scene-illustration { display: none; }
 .kiosk-weather-temperature { font-size: clamp(4.25rem, 12vw, 9rem); line-height: .82; text-shadow: 0 0 28px rgba(225,240,255,.22); }
 
+/* Calendar keeps modest structure for the timeline while leaving the workspace image visible. */
+.kiosk-slide[data-kiosk-scene="calendar"] .kiosk-slide-header { display: none; }
+.kiosk-slide[data-kiosk-scene="calendar"] .kiosk-slide-content { padding: 0; }
+.kiosk-slide[data-kiosk-scene="calendar"] .kiosk-slide-card,
+.kiosk-slide[data-kiosk-scene="calendar"] [data-widget-accent="calendar"],
+.kiosk-slide[data-kiosk-scene="calendar"] [data-widget-accent="calendar"] > div {
+  border-radius: 0 !important;
+  border-color: transparent !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+}
+.kiosk-slide[data-kiosk-scene="calendar"] .kiosk-scene-surface { background: #071426 !important; }
+.kiosk-slide[data-kiosk-scene="calendar"] .kiosk-scene-image { opacity: .94 !important; filter: none !important; }
+.kiosk-slide[data-kiosk-scene="calendar"] .kiosk-scene-surface::before { background: linear-gradient(90deg, rgba(2,8,20,.48), transparent 58%), linear-gradient(180deg, rgba(2,8,20,.08), transparent 48%, rgba(1,4,12,.4)); opacity: 1; }
+.kiosk-slide[data-kiosk-scene="calendar"] .kiosk-scene-surface::after { background: radial-gradient(ellipse at center, transparent 40%, rgba(0,0,8,.3) 100%), linear-gradient(180deg, transparent 62%, rgba(0,0,8,.32)); opacity: 1; }
+.kiosk-slide[data-kiosk-scene="calendar"] .kiosk-scene-motif,
+.kiosk-slide[data-kiosk-scene="calendar"] .kiosk-scene-glow,
+.kiosk-slide[data-kiosk-scene="calendar"] .kiosk-scene-illustration { display: none; }
+
+@media (max-width: 900px) and (max-height: 600px) {
+  .kiosk-slide[data-kiosk-scene="calendar"] .kiosk-scene-image { opacity: .84 !important; }
+  .kiosk-slide[data-kiosk-scene="calendar"] .kiosk-calendar-scene { padding: 1.1rem 1.1rem .8rem; }
+  .kiosk-slide[data-kiosk-scene="calendar"] .kiosk-calendar-scene > div:first-child p:first-child { font-size: .58rem; }
+}
+
 @media (max-width: 900px) and (max-height: 600px) {
   .kiosk-slide-clock .kiosk-clock-scene { padding-bottom: 3.5rem; }
   .kiosk-slide-clock .kiosk-clock-scene-time { font-size: clamp(3.5rem, 16vw, 6.5rem); }
@@ -776,6 +802,8 @@ html[data-cosmic-reduced-effects="true"] *::after {
 .kiosk-slideshow,
 .kiosk-sports-view { overscroll-behavior: none; touch-action: pan-y; }
 .kiosk-slide { height: 100%; width: 100%; }
+.kiosk-shell { height: 100dvh; min-height: 0; width: 100dvw; max-width: none; }
+.kiosk-setup { --kiosk-ui-scale: 1; }
 .kiosk-slide-card { max-width: none; border: 0; border-radius: 0; background: transparent; box-shadow: none; backdrop-filter: none; }
 .kiosk-night-dimmer { background: rgba(0,0,0,.35); }
 .kiosk-slide-content { scrollbar-width: none; }
@@ -811,7 +839,7 @@ html[data-cosmic-reduced-effects="true"] *::after {
 .kiosk-f1-view > section { background: linear-gradient(135deg, rgba(127,29,29,.28), rgba(3,8,18,.88) 55%); }
 .kiosk-nascar-view > section { background: linear-gradient(135deg, rgba(234,88,12,.22), rgba(3,8,18,.88) 55%); }
 .kiosk-football-view .bg-red-400, .kiosk-f1-view .bg-red-400, .kiosk-nascar-view .bg-red-400 { box-shadow: 0 0 10px rgba(248,113,113,.7); }
-.baseball-broadcast-wrap { height: 100svh; width: 100%; padding: clamp(.25rem, 1.2vw, 1rem); }
+.baseball-broadcast-wrap { height: 100dvh; width: 100%; padding: clamp(.25rem, 1.2vw, 1rem); }
 .baseball-broadcast { display: grid; grid-template-rows: 6% minmax(0, 1fr) 6%; height: 100%; width: 100%; overflow: hidden; border: 1px solid rgba(255,255,255,.12); border-radius: clamp(.7rem, 2.3vw, 2.2rem); background: linear-gradient(90deg, color-mix(in srgb, var(--away-bg-start, var(--away-secondary)) 72%, #02040a) 0%, color-mix(in srgb, var(--away-bg-end, var(--away-primary)) 42%, #02040a) 22%, #02040a 43%, #02040a 57%, color-mix(in srgb, var(--home-bg-end, var(--home-primary)) 42%, #02040a) 78%, color-mix(in srgb, var(--home-bg-start, var(--home-secondary)) 72%, #02040a) 100%); box-shadow: 0 18px 60px rgba(0,0,0,.3); }
 .broadcast-header, .broadcast-footer { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding-inline: clamp(.75rem, 3vw, 3rem); background: rgba(1,4,12,.78); color: rgba(255,255,255,.58); font-size: clamp(.55rem, .9vw, .82rem); font-weight: 700; letter-spacing: .2em; text-transform: uppercase; }
 .broadcast-header { border-bottom: 1px solid rgba(255,255,255,.08); }

@@ -7,13 +7,14 @@ import DevicePairingScreen from "./DevicePairingScreen";
 import KioskSlideshow from "./KioskSlideshow";
 import { KIOSK_SESSION_STORAGE_KEY } from "./KioskShell";
 import KioskAmbientFrame from "./KioskAmbientFrame";
+import KioskDeviceSetupGate from "./KioskDeviceSetupGate";
 
 function authLog(message: string) {
   if (process.env.NODE_ENV !== "production") console.info(`[kiosk-auth] ${message}`);
 }
 
 export default function KioskAuthGate() {
-  const { loading, account, sessionType, refresh } = useCosmicAccount();
+  const { loading, account, sessionType, deviceId, refresh } = useCosmicAccount();
   const [browserSessionReady, setBrowserSessionReady] = useState<boolean | null>(null);
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -40,15 +41,17 @@ export default function KioskAuthGate() {
     }
     throw new Error("Device session validation is still pending.");
   }, [refresh]);
-  if (browserSessionReady === null || loading) return <div className="grid min-h-[100svh] place-items-center text-sm text-white/50">Checking Cosmic device authorization…</div>;
+  if (browserSessionReady === null || loading) return <div className="grid min-h-[100dvh] place-items-center text-sm text-white/50">Checking Cosmic device authorization…</div>;
   if (!browserSessionReady || !account || sessionType !== "device") return <DevicePairingScreen onAuthenticated={revalidateDeviceSession} />;
   return (
     // Kiosk widgets need the readiness context, but kiosk presentation does not
     // gate mounting on dashboard-critical readiness.
     <DashboardReadinessProvider criticalWidgetIds={[]}>
-      <KioskAmbientFrame>
-        <KioskSlideshow />
-      </KioskAmbientFrame>
+      <KioskDeviceSetupGate deviceId={deviceId!}>
+        <KioskAmbientFrame>
+          <KioskSlideshow />
+        </KioskAmbientFrame>
+      </KioskDeviceSetupGate>
     </DashboardReadinessProvider>
   );
 }

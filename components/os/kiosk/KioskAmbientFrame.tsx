@@ -51,7 +51,7 @@ export default function KioskAmbientFrame({ children }: Props) {
 
   return (
     <KioskAmbientContext.Provider value={{ setPersistentClockHidden }}>
-      <div className="kiosk-ambient-frame relative h-[100svh] w-full overflow-hidden">
+      <div className="kiosk-ambient-frame relative h-[100dvh] w-full overflow-hidden">
         {children}
       <div className={`kiosk-night-dimmer pointer-events-none absolute inset-0 z-40 transition-opacity duration-[1500ms] motion-reduce:transition-none ${night ? "opacity-100" : "opacity-0"}`} aria-hidden="true" />
         {!persistentClockHidden && <div className="pointer-events-none absolute inset-x-0 top-2 z-50 flex justify-center"><KioskClock now={now} /></div>}

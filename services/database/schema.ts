@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { boolean, check, index, integer, jsonb, pgTable, primaryKey, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { boolean, check, doublePrecision, index, integer, jsonb, pgTable, primaryKey, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 
 export const users = pgTable("users", {
   id: text("id").primaryKey(),
@@ -36,6 +36,35 @@ export const devices = pgTable("devices", {
   lastSeenAt: timestamp("last_seen_at", { withTimezone: true }).notNull().defaultNow(),
   revokedAt: timestamp("revoked_at", { withTimezone: true }),
 }, (table) => [index("devices_user_id_index").on(table.userId), index("devices_active_index").on(table.revokedAt)]);
+
+export const kioskDeviceSettings = pgTable("kiosk_device_settings", {
+  deviceId: text("device_id").primaryKey().references(() => devices.id, { onDelete: "cascade" }),
+  setupCompleted: boolean("setup_completed").notNull().default(false),
+  setupVersion: integer("setup_version").notNull().default(0),
+  viewportWidth: integer("viewport_width"),
+  viewportHeight: integer("viewport_height"),
+  physicalScreenWidth: integer("physical_screen_width"),
+  physicalScreenHeight: integer("physical_screen_height"),
+  devicePixelRatio: doublePrecision("device_pixel_ratio"),
+  aspectRatio: doublePrecision("aspect_ratio"),
+  orientation: text("orientation"),
+  density: text("density"),
+  uiScale: doublePrecision("ui_scale").notNull().default(1),
+  touchDetected: boolean("touch_detected"),
+  pointer: text("pointer"),
+  timezone: text("timezone"),
+  clockFormat: text("clock_format"),
+  locationLatitude: doublePrecision("location_latitude"),
+  locationLongitude: doublePrecision("location_longitude"),
+  locationLabel: text("location_label"),
+  locationSource: text("location_source"),
+  nightDimEnabled: boolean("night_dim_enabled").notNull().default(true),
+  nightDimStart: text("night_dim_start").notNull().default("20:00"),
+  nightDimEnd: text("night_dim_end").notNull().default("06:00"),
+  nightDimOpacity: doublePrecision("night_dim_opacity").notNull().default(0.35),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [index("kiosk_device_settings_updated_index").on(table.updatedAt), check("kiosk_device_settings_orientation_check", sql`${table.orientation} is null or ${table.orientation} in ('landscape', 'portrait')`), check("kiosk_device_settings_density_check", sql`${table.density} is null or ${table.density} in ('compact', 'standard', 'large')`), check("kiosk_device_settings_pointer_check", sql`${table.pointer} is null or ${table.pointer} in ('coarse', 'fine', 'unknown')`), check("kiosk_device_settings_clock_format_check", sql`${table.clockFormat} is null or ${table.clockFormat} in ('12h', '24h')`), check("kiosk_device_settings_ui_scale_check", sql`${table.uiScale} >= 0.9 and ${table.uiScale} <= 1.1`), check("kiosk_device_settings_dim_opacity_check", sql`${table.nightDimOpacity} >= 0 and ${table.nightDimOpacity} <= 1`)]);
 
 export const devicePairings = pgTable("device_pairings", {
   id: text("id").primaryKey(),

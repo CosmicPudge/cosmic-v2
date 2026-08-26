@@ -20,3 +20,4 @@ export * from "./Context";
 export * from "./AI";
 export * from "./Account";
 export * from "./Entitlements";
+export * from "./Kiosk";

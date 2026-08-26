@@ -173,3 +173,12 @@ The policy grants only this Cosmic origin. It does not use
 `--use-fake-ui-for-media-stream`, does not grant arbitrary websites access,
 and does not override the application rule that missing camera, microphone, or
 location hardware is a normal unavailable capability.
+
+## Touch alignment diagnostics
+
+Cosmic's first-run display setup can verify that browser pointer events land
+near its visible touch targets, but a website cannot recalibrate Linux
+touchscreen hardware. If the target test shows a consistent offset, calibrate
+the touchscreen through the Raspberry Pi's Wayland/libinput configuration or
+the display vendor's supported tooling, then restart the kiosk. Do not attempt
+to rewrite libinput or labwc configuration from the web application.

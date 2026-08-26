@@ -21,7 +21,7 @@ export default function KioskShell({
 
   return (
     <div
-      className="kiosk-shell relative min-h-[100svh] overflow-hidden bg-transparent text-white"
+      className="kiosk-shell relative h-[100dvh] min-h-0 w-[100dvw] max-w-none overflow-hidden bg-transparent text-white"
       data-compact={compact}
       data-touch={snapshot.input.touchPrimary}
       data-reduced-motion={snapshot.power.reducedMotion || snapshot.power.effective === "reduced"}
@@ -30,7 +30,7 @@ export default function KioskShell({
     >
       <div className="pointer-events-none absolute inset-0 z-[1] bg-[linear-gradient(90deg,rgba(1,3,12,.16),transparent_45%,rgba(1,3,12,.22))]" />
 
-      <main className="relative z-10 min-h-[100svh]">
+      <main className="relative z-10 h-full min-h-0 w-full">
         {children}
       </main>
     </div>
