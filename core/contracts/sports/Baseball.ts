@@ -25,6 +25,27 @@ export interface BaseballTeamState {
   hits?: number;
   errors?: number;
   record?: string;
+  uniform?: BaseballUniform;
+}
+
+export interface BaseballUniformAsset {
+  id?: string;
+  code?: string;
+  text?: string;
+  typeCode?: string;
+  typeText?: string;
+  active?: boolean;
+}
+
+/**
+ * Uniform identity supplied by the MLB Stats API. The API does not provide
+ * presentation colors, so consumers must retain the standard team theme when
+ * no trusted uniform-to-theme mapping exists.
+ */
+export interface BaseballUniform {
+  teamId?: string;
+  teamName?: string;
+  assets: BaseballUniformAsset[];
 }
 
 export interface BaseballBaseRunner {

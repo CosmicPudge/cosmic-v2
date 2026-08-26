@@ -6,9 +6,10 @@ import type {
   BaseballBases,
   BaseballLiveData,
   BaseballPlayerRef,
+  BaseballUniform,
 } from "@/core/contracts/sports/Baseball";
 import TeamLogo from "@/components/apps/sports/TeamLogo";
-import { getMlbTeamTheme } from "@/services/sports/providers/mlb/teamThemes";
+import { resolveMlbGameTeamTheme } from "@/services/sports/providers/mlb/teamThemes";
 
 interface KioskBaseballViewProps {
   event: SportsEvent;
@@ -21,18 +22,7 @@ interface TeamDisplay {
   abbreviation?: string;
   score?: number;
   record?: string;
-}
-
-const ANGELS_RED = "#BA0021";
-const ANGELS_NAVY = "#003263";
-
-function isAngels(team?: TeamDisplay) {
-  return Boolean(
-    team &&
-      (team.id === "108" ||
-        team.abbreviation?.toUpperCase() === "LAA" ||
-        team.name.toLowerCase().includes("angels")),
-  );
+  uniform?: BaseballUniform;
 }
 
 function splitTeamName(name: string) {
@@ -58,10 +48,10 @@ function playerLastName(player?: BaseballPlayerRef) {
 }
 
 export default function KioskBaseballView({ event, live }: KioskBaseballViewProps) {
-  const away: TeamDisplay = { ...(live?.away.team ?? event.awayTeam ?? { name: "Away" }), score: event.awayTeam?.score, record: event.awayTeam?.record };
-  const home: TeamDisplay = { ...(live?.home.team ?? event.homeTeam ?? { name: "Home" }), score: event.homeTeam?.score, record: event.homeTeam?.record };
-  const awayTheme = getMlbTeamTheme(away);
-  const homeTheme = getMlbTeamTheme(home);
+  const away: TeamDisplay = { ...(live?.away.team ?? event.awayTeam ?? { name: "Away" }), score: event.awayTeam?.score, record: event.awayTeam?.record, uniform: live?.away.uniform };
+  const home: TeamDisplay = { ...(live?.home.team ?? event.homeTeam ?? { name: "Home" }), score: event.homeTeam?.score, record: event.homeTeam?.record, uniform: live?.home.uniform };
+  const awayTheme = resolveMlbGameTeamTheme(away, away.uniform);
+  const homeTheme = resolveMlbGameTeamTheme(home, home.uniform);
   const batter = live?.matchup?.batter;
   const pitcher = live?.matchup?.pitcher;
   const pitcherStats = pitcher?.id
@@ -70,10 +60,24 @@ export default function KioskBaseballView({ event, live }: KioskBaseballViewProp
     : undefined;
 
   const style = {
-    "--away-primary": isAngels(away) ? ANGELS_RED : awayTheme.primary,
-    "--away-secondary": isAngels(away) ? ANGELS_NAVY : awayTheme.secondary,
-    "--home-primary": isAngels(home) ? ANGELS_RED : homeTheme.primary,
-    "--home-secondary": isAngels(home) ? ANGELS_NAVY : homeTheme.secondary,
+    "--away-primary": awayTheme.primary,
+    "--away-secondary": awayTheme.secondary,
+    "--away-accent": awayTheme.accent,
+    "--away-text": "text" in awayTheme ? awayTheme.text : awayTheme.textOnPrimary,
+    "--away-muted-text": "mutedText" in awayTheme ? awayTheme.mutedText : "rgba(255,255,255,.62)",
+    "--away-bg-start": "backgroundStart" in awayTheme ? awayTheme.backgroundStart : awayTheme.secondary,
+    "--away-bg-end": "backgroundEnd" in awayTheme ? awayTheme.backgroundEnd : awayTheme.primary,
+    "--away-panel-tint": "panelTint" in awayTheme ? awayTheme.panelTint : awayTheme.accent,
+    "--away-watermark-tint": "watermarkTint" in awayTheme ? awayTheme.watermarkTint : awayTheme.accent,
+    "--home-primary": homeTheme.primary,
+    "--home-secondary": homeTheme.secondary,
+    "--home-accent": homeTheme.accent,
+    "--home-text": "text" in homeTheme ? homeTheme.text : homeTheme.textOnPrimary,
+    "--home-muted-text": "mutedText" in homeTheme ? homeTheme.mutedText : "rgba(255,255,255,.62)",
+    "--home-bg-start": "backgroundStart" in homeTheme ? homeTheme.backgroundStart : homeTheme.secondary,
+    "--home-bg-end": "backgroundEnd" in homeTheme ? homeTheme.backgroundEnd : homeTheme.primary,
+    "--home-panel-tint": "panelTint" in homeTheme ? homeTheme.panelTint : homeTheme.accent,
+    "--home-watermark-tint": "watermarkTint" in homeTheme ? homeTheme.watermarkTint : homeTheme.accent,
   } as CSSProperties;
 
   return (
@@ -120,16 +124,15 @@ function BroadcastHeader() {
   );
 }
 
-function TeamZone({ team, theme, side, score }: { team: TeamDisplay; theme: ReturnType<typeof getMlbTeamTheme>; side: "away" | "home"; score?: number }) {
+function TeamZone({ team, theme, side, score }: { team: TeamDisplay; theme: ReturnType<typeof resolveMlbGameTeamTheme>; side: "away" | "home"; score?: number }) {
   const { city, nickname } = splitTeamName(team.name);
-  const angels = isAngels(team);
   return (
     <section className={`team-zone team-zone-${side}`} aria-label={`${team.name}, ${score ?? "score unavailable"}`}>
       <div className="team-zone-content">
         {side === "away" ? <Logo team={team} theme={theme} /> : null}
         <div className="team-copy">
           <p className="team-city">{city || team.name}</p>
-          <h1 className="team-nickname" style={{ color: angels ? ANGELS_RED : theme.accent }}>{nickname}</h1>
+          <h1 className="team-nickname" style={{ color: theme.accent }}>{nickname}</h1>
           <p className="team-abbreviation">{team.abbreviation ?? nickname.slice(0, 3).toUpperCase()}</p>
           <p className="team-score">{score ?? "—"}</p>
           {team.record ? <p className="team-record">{team.record}</p> : null}
@@ -140,7 +143,7 @@ function TeamZone({ team, theme, side, score }: { team: TeamDisplay; theme: Retu
   );
 }
 
-function Logo({ team, theme }: { team: TeamDisplay; theme: ReturnType<typeof getMlbTeamTheme> }) {
+function Logo({ team, theme }: { team: TeamDisplay; theme: ReturnType<typeof resolveMlbGameTeamTheme> }) {
   return theme.logo ? (
     <img className="team-logo" src={theme.logo} alt="" draggable={false} />
   ) : (

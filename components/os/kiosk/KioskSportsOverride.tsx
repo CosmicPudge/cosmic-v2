@@ -64,11 +64,14 @@ function createTestBaseballLive(event: SportsEvent, side: string | null): Baseba
   const home = side === "home" ? angels : opponent;
   return {
     eventId: event.id, sport: "mlb", generatedAt: new Date().toISOString(), stale: false, sources: [],
-    away: { team: { id: away?.abbreviation?.toUpperCase() === "LAA" ? "108" : "136", name: away?.name ?? "Seattle Mariners", abbreviation: away?.abbreviation ?? "SEA" }, score: away?.score ?? (away === angels ? 5 : 3), hits: 7 },
-    home: { team: { id: home?.abbreviation?.toUpperCase() === "LAA" ? "108" : "136", name: home?.name ?? "Los Angeles Angels", abbreviation: home?.abbreviation ?? "LAA" }, score: home?.score ?? (home === angels ? 5 : 3), hits: 8 },
+    away: { team: { id: away?.abbreviation?.toUpperCase() === "LAA" ? "108" : "136", name: away?.name ?? "Seattle Mariners", abbreviation: away?.abbreviation ?? "SEA" }, score: away?.score ?? (away === angels ? 5 : 3), hits: 7, errors: 0 },
+    home: { team: { id: home?.abbreviation?.toUpperCase() === "LAA" ? "108" : "136", name: home?.name ?? "Los Angeles Angels", abbreviation: home?.abbreviation ?? "LAA" }, score: home?.score ?? (home === angels ? 5 : 3), hits: 8, errors: 1 },
     inning: 7, inningHalf: "top", count: { balls: 2, strikes: 1, outs: 1 },
     bases: { first: { base: 1, confirmed: true }, third: { base: 3, confirmed: true } },
-    matchup: { batter: { name: "Mike Trout", shortName: "M. Trout" }, pitcher: { name: "Luis Castillo", shortName: "L. Castillo" } },
+    matchup: { batter: { name: "Mike Trout", shortName: "M. Trout" }, pitcher: { id: "kiosk-test-pitcher", name: "Luis Castillo", shortName: "L. Castillo" } },
     latestPlay: { description: "Trout singles to center. Neto to third.", shortDescription: "Single", inning: 7, inningHalf: "top" },
+    latestPitch: { velocityMph: 95.6, typeName: "Four-seam fastball", pitchNumber: 27 },
+    linescore: { innings: Array.from({ length: 9 }, (_, index) => ({ inning: index + 1, away: { runs: index === 1 ? 1 : index === 4 ? 2 : 0 }, home: { runs: index === 1 ? 0 : index === 4 ? 2 : 0 } })), away: { runs: 3, hits: 7, errors: 0 }, home: { runs: 5, hits: 8, errors: 1 } },
+    boxScore: { away: { players: [] }, home: { players: [{ player: { id: "kiosk-test-pitcher", name: "Luis Castillo" }, pitching: { pitchesThrown: 27, era: "3.54" } }] } },
   };
 }

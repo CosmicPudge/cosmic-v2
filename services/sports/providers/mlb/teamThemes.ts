@@ -1,3 +1,6 @@
+import type { BaseballUniform } from "@/core/contracts/sports/Baseball";
+import { resolveMlbUniformTheme } from "./uniformThemes";
+
 export interface MlbTeamTheme {
   teamId: string;
   abbreviation: string;
@@ -34,10 +37,11 @@ export function getMlbTeamTheme(team?: { id?: string; abbreviation?: string }): 
   return (team?.id ? byId.get(team.id) : undefined) ?? (team?.abbreviation ? byAbbreviation.get(team.abbreviation.toUpperCase()) : undefined) ?? fallback;
 }
 
-/** Uniform metadata is intentionally reserved for a future trusted provider. We never infer jerseys. */
-export function resolveMlbGameTeamTheme(team: { id?: string; abbreviation?: string }, uniform?: Partial<MlbTeamTheme>) {
+/** Resolve a real uniform mapping before the standard team palette. */
+export function resolveMlbGameTeamTheme(team: { id?: string; abbreviation?: string }, uniform?: BaseballUniform) {
   const base = getMlbTeamTheme(team);
-  return uniform ? { ...base, ...uniform } : base;
+  const uniformTheme = resolveMlbUniformTheme(team.id ?? uniform?.teamId, uniform);
+  return uniformTheme ? { ...base, ...uniformTheme } : base;
 }
 
 export { themes as MLB_TEAM_THEMES };

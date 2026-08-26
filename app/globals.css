@@ -723,7 +723,7 @@ html[data-cosmic-reduced-effects="true"] *::after {
 .kiosk-nascar-view > section { background: linear-gradient(135deg, rgba(234,88,12,.22), rgba(3,8,18,.88) 55%); }
 .kiosk-football-view .bg-red-400, .kiosk-f1-view .bg-red-400, .kiosk-nascar-view .bg-red-400 { box-shadow: 0 0 10px rgba(248,113,113,.7); }
 .baseball-broadcast-wrap { height: 100svh; width: 100%; padding: clamp(.25rem, 1.2vw, 1rem); }
-.baseball-broadcast { display: grid; grid-template-rows: 6% minmax(0, 1fr) 6%; height: 100%; width: 100%; overflow: hidden; border: 1px solid rgba(255,255,255,.12); border-radius: clamp(.7rem, 2.3vw, 2.2rem); background: linear-gradient(90deg, color-mix(in srgb, var(--away-secondary) 75%, #02040a) 0%, color-mix(in srgb, var(--away-primary) 45%, #02040a) 22%, #02040a 43%, #02040a 57%, color-mix(in srgb, var(--home-primary) 45%, #02040a) 78%, color-mix(in srgb, var(--home-secondary) 75%, #02040a) 100%); box-shadow: 0 18px 60px rgba(0,0,0,.3); }
+.baseball-broadcast { display: grid; grid-template-rows: 6% minmax(0, 1fr) 6%; height: 100%; width: 100%; overflow: hidden; border: 1px solid rgba(255,255,255,.12); border-radius: clamp(.7rem, 2.3vw, 2.2rem); background: linear-gradient(90deg, color-mix(in srgb, var(--away-bg-start, var(--away-secondary)) 72%, #02040a) 0%, color-mix(in srgb, var(--away-bg-end, var(--away-primary)) 42%, #02040a) 22%, #02040a 43%, #02040a 57%, color-mix(in srgb, var(--home-bg-end, var(--home-primary)) 42%, #02040a) 78%, color-mix(in srgb, var(--home-bg-start, var(--home-secondary)) 72%, #02040a) 100%); box-shadow: 0 18px 60px rgba(0,0,0,.3); }
 .broadcast-header, .broadcast-footer { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding-inline: clamp(.75rem, 3vw, 3rem); background: rgba(1,4,12,.78); color: rgba(255,255,255,.58); font-size: clamp(.55rem, .9vw, .82rem); font-weight: 700; letter-spacing: .2em; text-transform: uppercase; }
 .broadcast-header { border-bottom: 1px solid rgba(255,255,255,.08); }
 .broadcast-footer { border-top: 1px solid rgba(255,255,255,.08); color: rgba(255,255,255,.48); font-weight: 500; }
@@ -734,15 +734,15 @@ html[data-cosmic-reduced-effects="true"] *::after {
 .baseball-broadcast-main { position: relative; display: grid; grid-template-rows: minmax(0, 1fr) auto auto minmax(0, .34fr); min-height: 0; overflow: hidden; padding: clamp(.4rem, 1.5vw, 1.5rem) clamp(.6rem, 2.5vw, 2.5rem); }
 .broadcast-upper { position: relative; z-index: 1; display: grid; grid-template-columns: minmax(0, 1fr) minmax(14rem, 1.05fr) minmax(0, 1fr); min-height: 0; align-items: center; }
 .team-zone { display: flex; min-width: 0; align-items: center; }
-.team-zone-away { justify-content: flex-start; }
-.team-zone-home { justify-content: flex-end; }
+.team-zone-away { justify-content: flex-start; background: linear-gradient(90deg, color-mix(in srgb, var(--away-bg-start, transparent) 28%, transparent), transparent 85%); --team-text: var(--away-text, #fff); --team-muted-text: var(--away-muted-text, rgba(255,255,255,.62)); }
+.team-zone-home { justify-content: flex-end; background: linear-gradient(270deg, color-mix(in srgb, var(--home-bg-start, transparent) 28%, transparent), transparent 85%); --team-text: var(--home-text, #fff); --team-muted-text: var(--home-muted-text, rgba(255,255,255,.62)); }
 .team-zone-content { display: flex; min-width: 0; align-items: center; gap: clamp(.35rem, 1.3vw, 1.5rem); }
 .team-zone-home .team-zone-content { flex-direction: row-reverse; }
 .team-copy { min-width: 0; }
-.team-city, .team-abbreviation, .team-record { margin: 0; color: rgba(255,255,255,.62); font-size: clamp(.52rem, 1vw, .95rem); font-weight: 700; letter-spacing: .18em; text-transform: uppercase; }
+.team-city, .team-abbreviation, .team-record { margin: 0; color: var(--team-muted-text, rgba(255,255,255,.62)); font-size: clamp(.52rem, 1vw, .95rem); font-weight: 700; letter-spacing: .18em; text-transform: uppercase; }
 .team-nickname { margin: .12rem 0 .15rem; font-size: clamp(1.45rem, 4vw, 4.2rem); font-weight: 950; line-height: .82; letter-spacing: -.06em; text-transform: uppercase; }
 .team-abbreviation { color: rgba(255,255,255,.66); }
-.team-score { margin: clamp(.35rem, 1vh, .8rem) 0 0; color: #fff; font-size: clamp(3.8rem, 10vw, 9rem); font-weight: 950; line-height: .72; letter-spacing: -.1em; }
+.team-score { margin: clamp(.35rem, 1vh, .8rem) 0 0; color: var(--team-text, #fff); font-size: clamp(3.8rem, 10vw, 9rem); font-weight: 950; line-height: .72; letter-spacing: -.1em; }
 .team-record { margin-top: .7rem; letter-spacing: .1em; }
 .team-logo { height: clamp(4rem, 13vh, 10rem); width: clamp(4rem, 13vh, 10rem); object-fit: contain; filter: drop-shadow(0 8px 12px rgba(0,0,0,.3)); }
 .team-logo-fallback { display: grid; height: clamp(4rem, 13vh, 10rem); width: clamp(4rem, 13vh, 10rem); place-items: center; border: 1px solid rgba(255,255,255,.18); border-radius: 999px; background: rgba(0,0,0,.25); font-weight: 900; }
@@ -765,7 +765,7 @@ html[data-cosmic-reduced-effects="true"] *::after {
 .matchup-zone { position: relative; z-index: 2; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: clamp(.5rem, 2vw, 2rem); padding: clamp(.6rem, 1.6vh, 1.4rem) 5%; border-top: 1px solid rgba(255,255,255,.12); border-bottom: 1px solid rgba(255,255,255,.08); background: linear-gradient(90deg, transparent, rgba(2,5,13,.45), transparent); text-align: center; }
 .player-matchup { min-width: 0; }
 .matchup-label, .last-play-zone > p, .linescore-zone h2, .pitch-zone h2, .pitch-zone p { margin: 0; color: rgba(255,255,255,.45); font-size: clamp(.48rem, .8vw, .75rem); font-weight: 800; letter-spacing: .18em; text-transform: uppercase; }
-.matchup-label { color: #f43f5e; }
+.matchup-label { color: var(--away-accent, currentColor); }
 .player-first { margin: .25rem 0 0; color: rgba(255,255,255,.72); font-size: clamp(.55rem, 1vw, .9rem); text-transform: uppercase; }
 .player-last { margin: 0; color: #fff; font-size: clamp(1rem, 2vw, 2.1rem); font-weight: 950; line-height: .85; letter-spacing: -.04em; text-transform: uppercase; }
 .player-meta { margin: .35rem 0 0; color: rgba(255,255,255,.58); font-size: clamp(.48rem, .8vw, .72rem); text-transform: uppercase; }
@@ -773,11 +773,15 @@ html[data-cosmic-reduced-effects="true"] *::after {
 .matchup-vs { display: grid; height: clamp(2rem, 4vw, 3.8rem); width: clamp(2rem, 4vw, 3.8rem); place-items: center; transform: rotate(45deg); border: 1px solid rgba(255,255,255,.28); color: rgba(255,255,255,.7); font-size: .7rem; font-weight: 800; }
 .matchup-vs > span { transform: rotate(-45deg); }
 .last-play-zone { z-index: 2; width: min(32rem, 80%); margin: clamp(.4rem, 1vh, .8rem) auto; padding: .55rem 1rem; border: 1px solid rgba(255,255,255,.13); border-radius: .9rem; background: rgba(2,5,13,.62); text-align: center; }
-.last-play-zone > p { color: #f43f5e; }
+.last-play-zone > p { color: var(--away-accent, currentColor); }
 .last-play-zone span { display: block; overflow: hidden; margin-top: .3rem; color: rgba(255,255,255,.78); font-size: clamp(.58rem, 1vw, .85rem); text-overflow: ellipsis; white-space: nowrap; }
 .broadcast-lower { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(8rem, .85fr) minmax(0, 1.35fr); min-height: 0; align-items: stretch; gap: clamp(.35rem, 1vw, 1rem); padding-top: clamp(.4rem, 1vh, .8rem); }
 .linescore-zone, .stats-zone, .pitch-zone { min-width: 0; border: 1px solid rgba(255,255,255,.12); border-radius: .7rem; background: rgba(2,5,13,.42); padding: clamp(.4rem, 1vw, 1rem); }
-.linescore-zone h2, .pitch-zone h2 { margin-bottom: .4rem; color: #f43f5e; text-align: center; }
+.linescore-zone { border-color: color-mix(in srgb, var(--away-panel-tint, #fff) 55%, rgba(255,255,255,.12)); }
+.pitch-zone { border-color: color-mix(in srgb, var(--home-panel-tint, #fff) 55%, rgba(255,255,255,.12)); }
+.linescore-zone h2, .pitch-zone h2 { margin-bottom: .4rem; text-align: center; }
+.linescore-zone h2 { color: var(--away-accent, currentColor); }
+.pitch-zone h2 { color: var(--home-accent, currentColor); }
 .linescore-table { display: grid; grid-template-columns: max-content minmax(0, 1fr); grid-template-rows: auto auto auto; gap: .15rem .35rem; font-size: clamp(.48rem, .8vw, .75rem); }
 .linescore-numbers { display: grid; grid-template-columns: repeat(var(--inning-count), minmax(0, 1fr)) repeat(3, minmax(0, 1.25fr)); gap: .15rem; text-align: center; }
 .linescore-table > strong { align-self: center; color: rgba(255,255,255,.78); }
@@ -793,8 +797,8 @@ html[data-cosmic-reduced-effects="true"] *::after {
 .pitch-zone span { color: rgba(255,255,255,.55); font-size: clamp(.45rem, .7vw, .68rem); font-weight: 500; }
 .baseball-watermark { position: absolute; z-index: 0; opacity: .08; pointer-events: none; }
 .baseball-watermark .team-logo { height: min(45vh, 30rem); width: min(45vh, 30rem); }
-.baseball-watermark-away { bottom: 2%; left: -4%; }
-.baseball-watermark-home { right: -4%; bottom: 2%; }
+.baseball-watermark-away { bottom: 2%; left: -4%; filter: drop-shadow(0 0 22px var(--away-watermark-tint, #fff)); }
+.baseball-watermark-home { right: -4%; bottom: 2%; filter: drop-shadow(0 0 22px var(--home-watermark-tint, #fff)); }
 .baseball-broadcast-main > .baseball-watermark-home { filter: hue-rotate(0deg); }
 
 @media (max-width: 700px), (max-height: 560px) {

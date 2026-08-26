@@ -9,6 +9,7 @@ import type {
     BaseballPlay,
     BaseballPlayerRef,
 } from "@/core/contracts/sports/Baseball";
+import { getMlbGameUniforms } from "./uniforms";
 
 const MLB_STATS_BASE = "https://statsapi.mlb.com";
 
@@ -708,6 +709,8 @@ export async function getMLBLiveData(
     const boxscore =
         liveData.boxscore ?? {};
 
+    const uniforms = await getMlbGameUniforms(gamePk);
+
     const linescore =
         liveData.linescore ?? {};
 
@@ -878,6 +881,8 @@ export async function getMLBLiveData(
                 numberOrUndefined(
                     awayLine.errors,
                 ),
+
+            uniform: uniforms.away,
         },
 
         home: {
@@ -910,6 +915,8 @@ export async function getMLBLiveData(
                 numberOrUndefined(
                     homeLine.errors,
                 ),
+
+            uniform: uniforms.home,
         },
 
         inning:
