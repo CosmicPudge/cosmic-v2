@@ -3,6 +3,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { KioskDeviceProfile, KioskDisplayProfile } from "@/core/contracts/Kiosk";
 import { CURRENT_KIOSK_SETUP_VERSION } from "@/core/contracts/Kiosk";
+import { DashboardReadinessProvider } from "@/components/dashboard/readiness/DashboardReadiness";
+import { WidgetProvider } from "@/components/os/ui/widget/WidgetContext";
+import ClockWidget from "@/components/os/widgets/clock/ClockWidget";
+import WeatherWidget from "@/components/os/widgets/weather/WeatherWidget";
+import CalendarWidget from "@/components/os/widgets/calendar/CalendarWidget";
 import { kioskProfileUrl, measureKioskDisplay } from "./kioskProfile";
 
 interface Props { deviceId: string; children: React.ReactNode; }
@@ -13,6 +18,7 @@ export default function KioskDeviceSetupGate({ deviceId, children }: Props) {
   const [changed, setChanged] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const reportedDisplayRef = useRef("");
+  const reportedLocationRef = useRef(false);
   useEffect(() => {
     let active = true;
     let timer: number | undefined;
@@ -60,6 +66,14 @@ export default function KioskDeviceSetupGate({ deviceId, children }: Props) {
     };
   }, [deviceId, profile]);
 
+  useEffect(() => {
+    if (profile === undefined || profile?.reportedLocation || reportedLocationRef.current || !navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition((position) => {
+      reportedLocationRef.current = true;
+      void fetch(kioskProfileUrl(), { method: "PATCH", credentials: "include", cache: "no-store", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ reportedLocation: { latitude: position.coords.latitude, longitude: position.coords.longitude, source: "detected" } }) }).catch(() => undefined);
+    }, () => undefined, { enableHighAccuracy: false, timeout: 8000, maximumAge: 300000 });
+  }, [profile]);
+
   const refreshDisplay = useCallback(() => {
     if (profile === undefined) return;
     const next = measureKioskDisplay(profile?.setupVersion ?? 0);
@@ -84,9 +98,10 @@ export default function KioskDeviceSetupGate({ deviceId, children }: Props) {
 
 function KioskSetupPreview({ profile, display }: { profile: KioskDeviceProfile; display: KioskDisplayProfile }) {
   const preview = profile.setupPreview ?? "normal";
+  const PreviewWidget = preview === "clock" ? ClockWidget : preview === "weather" ? WeatherWidget : preview === "calendar" ? CalendarWidget : null;
   return <div className="kiosk-setup-preview fixed inset-0 overflow-hidden bg-[#030511] text-white" data-kiosk-setup-preview={preview} data-night-preview={profile.nightDimPreview}>
     {preview === "fit" ? <div className="absolute inset-3 border-2 border-cyan-200/75 sm:inset-6"><span className="absolute left-1 top-1 h-5 w-5 border-l-2 border-t-2 border-cyan-200"/><span className="absolute right-1 top-1 h-5 w-5 border-r-2 border-t-2 border-cyan-200"/><span className="absolute bottom-1 left-1 h-5 w-5 border-b-2 border-l-2 border-cyan-200"/><span className="absolute bottom-1 right-1 h-5 w-5 border-b-2 border-r-2 border-cyan-200"/><span className="absolute left-1/2 top-1/2 size-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-cyan-200"/></div> : null}
-    <div className="relative z-10 grid h-full place-items-center p-6 text-center"><div><p className="text-xs uppercase tracking-[.35em] text-cyan-200/70">Cosmic OS</p><h1 className="mt-4 text-3xl font-semibold sm:text-5xl">{profile.deviceName ?? "This Cosmic Display"}</h1><p className="mt-3 text-sm uppercase tracking-[.24em] text-white/55">{preview === "fit" ? "Screen fit test" : preview === "normal" ? "Setting up this display" : `${preview} preview`}</p><p className="mt-5 text-sm text-white/45">Continue setup on your phone.</p><p className="mt-3 text-xs text-white/30">{display.viewportWidth} × {display.viewportHeight} · {display.density} · {display.orientation}</p></div></div>
+    {PreviewWidget ? <div className="relative z-10 h-full w-full p-4 sm:p-8"><DashboardReadinessProvider criticalWidgetIds={[]}><WidgetProvider size="large" presentation="kiosk"><PreviewWidget /></WidgetProvider></DashboardReadinessProvider><p className="pointer-events-none absolute inset-x-0 bottom-4 text-center text-xs uppercase tracking-[.2em] text-white/45">Preview · Continue setup on your phone</p></div> : <div className="relative z-10 grid h-full place-items-center p-6 text-center"><div><p className="text-xs uppercase tracking-[.35em] text-cyan-200/70">Cosmic OS</p><h1 className="mt-4 text-3xl font-semibold sm:text-5xl">{profile.deviceName ?? "This Cosmic Display"}</h1><p className="mt-3 text-sm uppercase tracking-[.24em] text-white/55">{preview === "fit" ? "Screen fit test" : "Setting up this display"}</p><p className="mt-5 text-sm text-white/45">Continue setup on your phone.</p><p className="mt-3 text-xs text-white/30">{display.viewportWidth} × {display.viewportHeight} · {display.density} · {display.orientation}</p></div></div>}
     {profile.nightDimPreview ? <div className="pointer-events-none absolute inset-0 z-20 bg-black/[.35]" /> : null}
   </div>;
 }

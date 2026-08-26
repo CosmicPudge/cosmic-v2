@@ -141,6 +141,13 @@
       "when": 1787549000000,
       "tag": "0020_kiosk_location_timezone",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1787550000000,
+      "tag": "0021_kiosk_reported_location",
+      "breakpoints": true
     }
   ]
 }

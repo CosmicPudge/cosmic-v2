@@ -40,6 +40,7 @@ export interface KioskDeviceProfile {
   timezone?: string;
   clockFormat?: "12h" | "24h";
   location?: { latitude: number; longitude: number; label?: string; region?: string; country?: string; timezone?: string; source: KioskLocationSource };
+  reportedLocation?: { latitude: number; longitude: number; label?: string; region?: string; country?: string; timezone?: string; source: "detected" };
   reportedTimezone?: string;
   timezoneOverride?: string;
   effectiveTimezone?: string;
