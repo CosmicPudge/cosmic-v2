@@ -11,7 +11,7 @@ type SetupStep = "welcome" | "fit" | "touch" | "location" | "time" | "hardware" 
 type KioskLocation = NonNullable<KioskDeviceProfile["location"]>;
 
 export default function KioskDeviceSetupGate({ deviceId, children }: Props) {
-  const [profile, setProfile] = useState<KioskDeviceProfile | null>(null);
+  const [profile, setProfile] = useState<KioskDeviceProfile | null | undefined>(undefined);
   const [display, setDisplay] = useState<KioskDisplayProfile | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [changed, setChanged] = useState(false);
@@ -19,22 +19,25 @@ export default function KioskDeviceSetupGate({ deviceId, children }: Props) {
   useEffect(() => {
     let active = true;
     void fetch(kioskProfileUrl(), { credentials: "include", cache: "no-store" }).then(async (response) => {
-      if (!response.ok) throw new Error("Kiosk setup profile is unavailable.");
-      return response.json() as Promise<{ profile: KioskDeviceProfile }>;
-    }).then((body) => { if (active) setProfile(body.profile); }).catch((caught) => { if (active) setError(caught instanceof Error ? caught.message : "Kiosk setup profile is unavailable."); });
+      const body = await response.json() as { profile?: KioskDeviceProfile | null; needsSetup?: boolean; errorCode?: string };
+      if (!response.ok) throw new Error(`${body.errorCode ?? `PROFILE_AUTH_${response.status}`}`);
+      if (!("profile" in body) || typeof body.needsSetup !== "boolean") throw new Error("PROFILE_RESPONSE_INVALID");
+      return body;
+    }).then((body) => { if (active) setProfile(body.profile ?? null); }).catch((caught) => { if (active) setError(caught instanceof Error ? caught.message : "PROFILE_REQUEST_FAILED"); });
     return () => { active = false; };
   }, [deviceId, refreshKey]);
 
   useEffect(() => {
-    if (!profile) return;
-    const next = measureKioskDisplay(profile.setupVersion);
+    if (profile === undefined) return;
+    const setupProfile = profile ?? { deviceId, setupCompleted: false, setupVersion: 0, uiScale: 1, nightDimEnabled: true, nightDimStart: "20:00", nightDimEnd: "06:00", nightDimOpacity: 0.35 };
+    const next = measureKioskDisplay(setupProfile.setupVersion);
     document.documentElement.dataset.kioskDensity = next.density;
     document.documentElement.dataset.kioskOrientation = next.orientation;
     document.documentElement.dataset.kioskTouch = String(next.touch);
     document.documentElement.style.setProperty("--kiosk-vw", `${next.viewportWidth}px`);
     document.documentElement.style.setProperty("--kiosk-vh", `${next.viewportHeight}px`);
     document.documentElement.style.setProperty("--kiosk-dpr", String(next.devicePixelRatio));
-    document.documentElement.style.setProperty("--kiosk-ui-scale", String(profile.uiScale ?? 1));
+    document.documentElement.style.setProperty("--kiosk-ui-scale", String(setupProfile.uiScale ?? 1));
     const timer = window.setTimeout(() => setDisplay(next), 0);
     return () => {
       window.clearTimeout(timer);
@@ -46,13 +49,13 @@ export default function KioskDeviceSetupGate({ deviceId, children }: Props) {
       document.documentElement.style.removeProperty("--kiosk-dpr");
       document.documentElement.style.removeProperty("--kiosk-ui-scale");
     };
-  }, [profile]);
+  }, [deviceId, profile]);
 
   const refreshDisplay = useCallback(() => {
-    if (!profile) return;
-    const next = measureKioskDisplay(profile.setupVersion);
+    if (profile === undefined) return;
+    const next = measureKioskDisplay(profile?.setupVersion ?? 0);
     setDisplay(next);
-    setChanged(Boolean(profile.display && (Math.abs((profile.display.viewportWidth ?? 0) - next.viewportWidth) > 80 || Math.abs((profile.display.viewportHeight ?? 0) - next.viewportHeight) > 80 || profile.display.orientation !== next.orientation)));
+    setChanged(Boolean(profile?.display && (Math.abs((profile.display.viewportWidth ?? 0) - next.viewportWidth) > 80 || Math.abs((profile.display.viewportHeight ?? 0) - next.viewportHeight) > 80 || profile.display.orientation !== next.orientation)));
   }, [profile]);
   useEffect(() => {
     if (!profile) return;
@@ -64,9 +67,10 @@ export default function KioskDeviceSetupGate({ deviceId, children }: Props) {
   }, [profile, refreshDisplay]);
 
   if (error) return <SetupError message={error} onRetry={() => { setError(null); setRefreshKey((key) => key + 1); }} />;
-  if (!profile || !display) return <div className="grid min-h-[100dvh] place-items-center bg-[#030511] text-sm text-white/55">Preparing display setup…</div>;
-  if (profile.setupCompleted && profile.setupVersion >= CURRENT_KIOSK_SETUP_VERSION && !changed) return <>{children}</>;
-  return <KioskSetupWizard profile={profile} display={display} displayChanged={changed} onFinished={(next) => { setProfile(next); setChanged(false); }} />;
+  if (profile === undefined || !display) return <div className="grid min-h-[100dvh] place-items-center bg-[#030511] text-sm text-white/55">Preparing display setup…</div>;
+  const setupProfile = profile ?? { deviceId, setupCompleted: false, setupVersion: 0, uiScale: 1, nightDimEnabled: true, nightDimStart: "20:00", nightDimEnd: "06:00", nightDimOpacity: 0.35 };
+  if (setupProfile.setupCompleted && setupProfile.setupVersion >= CURRENT_KIOSK_SETUP_VERSION && !changed) return <>{children}</>;
+  return <KioskSetupWizard profile={setupProfile} display={display} displayChanged={changed} onFinished={(next) => { setProfile(next); setChanged(false); }} />;
 }
 
 function KioskSetupWizard({ profile, display, displayChanged, onFinished }: { profile: KioskDeviceProfile; display: KioskDisplayProfile; displayChanged: boolean; onFinished: (profile: KioskDeviceProfile) => void }) {
@@ -111,4 +115,4 @@ function KioskSetupWizard({ profile, display, displayChanged, onFinished }: { pr
 function SetupPanel({ title, description, body }: { title: string; description: string; body: React.ReactNode }) { return <section className="mx-auto flex h-full max-w-3xl flex-col justify-center"><h2 className="text-2xl font-semibold sm:text-4xl">{title}</h2><p className="mt-2 max-w-xl text-sm leading-6 text-white/55">{description}</p><div className="mt-6 rounded-2xl border border-white/10 bg-white/[.035] p-4 sm:p-6">{body}</div></section>; }
 function Metric({ label, value }: { label: string; value: string }) { return <div className="rounded-xl border border-white/10 bg-black/10 p-3"><p className="text-[.58rem] uppercase tracking-[.2em] text-white/40">{label}</p><p className="mt-1 truncate text-sm text-white/85">{value}</p></div>; }
 function Capability({ label, value }: { label: string; value: boolean | string }) { return <div className="flex items-center justify-between rounded-xl border border-white/10 px-3 py-2 text-sm"><span>{label}</span><span className={value === true || String(value).startsWith("Available") ? "text-emerald-200" : "text-white/45"}>{value === true ? "Available" : value === false ? "Not detected" : value}</span></div>; }
-function SetupError({ message, onRetry }: { message: string; onRetry: () => void }) { return <div className="grid min-h-[100dvh] place-items-center bg-[#030511] p-6 text-center"><div><p className="text-sm text-rose-200">{message}</p><button type="button" onClick={onRetry} className="mt-4 rounded-lg border border-white/10 px-3 py-2 text-sm text-white/75">Retry</button></div></div>; }
+function SetupError({ message, onRetry }: { message: string; onRetry: () => void }) { return <div className="grid min-h-[100dvh] place-items-center bg-[#030511] p-6 text-center"><div><p className="text-sm text-rose-200">Kiosk setup unavailable</p><p className="mt-2 text-xs uppercase tracking-[.18em] text-white/45">Code: {message}</p><button type="button" onClick={onRetry} className="mt-4 rounded-lg border border-white/10 px-3 py-2 text-sm text-white/75">Retry</button></div></div>; }

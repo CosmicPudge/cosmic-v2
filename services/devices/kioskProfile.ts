@@ -5,8 +5,6 @@ import type { KioskDeviceProfile, KioskDisplayProfile, KioskLocationSource } fro
 import { getDatabase, isDatabaseConfigured } from "@/services/database/client";
 import { devices, kioskDeviceSettings } from "@/services/database/schema";
 
-export const CURRENT_KIOSK_SETUP_VERSION = 1;
-
 export interface KioskProfileInput {
   setupCompleted?: boolean;
   setupVersion?: number;
@@ -31,10 +29,10 @@ export async function assertDeviceOwner(deviceId: string, userId: string) {
   return Boolean(device);
 }
 
-export async function readKioskDeviceProfile(deviceId: string): Promise<KioskDeviceProfile> {
+export async function readKioskDeviceProfile(deviceId: string): Promise<KioskDeviceProfile | null> {
   const database = requireDatabase();
   const [row] = await database.select().from(kioskDeviceSettings).where(eq(kioskDeviceSettings.deviceId, deviceId)).limit(1);
-  if (!row) return { deviceId, setupCompleted: false, setupVersion: 0, uiScale: 1, nightDimEnabled: true, nightDimStart: "20:00", nightDimEnd: "06:00", nightDimOpacity: 0.35 };
+  if (!row) return null;
   const hasLocation = typeof row.locationLatitude === "number" && typeof row.locationLongitude === "number" && row.locationSource;
   return {
     deviceId,
@@ -80,5 +78,7 @@ export async function saveKioskDeviceProfile(deviceId: string, input: KioskProfi
   const now = new Date();
   const location = input.location === null ? { locationLatitude: null, locationLongitude: null, locationLabel: null, locationSource: null } : input.location ? { locationLatitude: input.location.latitude, locationLongitude: input.location.longitude, locationLabel: input.location.label ?? null, locationSource: input.location.source } : {};
   await database.insert(kioskDeviceSettings).values({ deviceId, ...(typeof input.setupCompleted === "boolean" ? { setupCompleted: input.setupCompleted } : {}), ...(typeof input.setupVersion === "number" ? { setupVersion: input.setupVersion } : {}), ...(typeof input.uiScale === "number" ? { uiScale: input.uiScale } : {}), ...displayValues(input.display), ...(input.timezone ? { timezone: input.timezone } : {}), ...(input.clockFormat ? { clockFormat: input.clockFormat } : {}), ...location, ...(typeof input.nightDimEnabled === "boolean" ? { nightDimEnabled: input.nightDimEnabled } : {}), ...(input.nightDimStart ? { nightDimStart: input.nightDimStart } : {}), ...(input.nightDimEnd ? { nightDimEnd: input.nightDimEnd } : {}), ...(typeof input.nightDimOpacity === "number" ? { nightDimOpacity: input.nightDimOpacity } : {}), updatedAt: now }).onConflictDoUpdate({ target: kioskDeviceSettings.deviceId, set: { ...(typeof input.setupCompleted === "boolean" ? { setupCompleted: input.setupCompleted } : {}), ...(typeof input.setupVersion === "number" ? { setupVersion: input.setupVersion } : {}), ...(typeof input.uiScale === "number" ? { uiScale: input.uiScale } : {}), ...displayValues(input.display), ...(input.timezone ? { timezone: input.timezone } : {}), ...(input.clockFormat ? { clockFormat: input.clockFormat } : {}), ...location, ...(typeof input.nightDimEnabled === "boolean" ? { nightDimEnabled: input.nightDimEnabled } : {}), ...(input.nightDimStart ? { nightDimStart: input.nightDimStart } : {}), ...(input.nightDimEnd ? { nightDimEnd: input.nightDimEnd } : {}), ...(typeof input.nightDimOpacity === "number" ? { nightDimOpacity: input.nightDimOpacity } : {}), updatedAt: now } });
-  return readKioskDeviceProfile(deviceId);
+  const profile = await readKioskDeviceProfile(deviceId);
+  if (!profile) throw new Error("Kiosk profile was not available after save.");
+  return profile;
 }

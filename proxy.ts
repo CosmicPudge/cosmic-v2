@@ -11,7 +11,8 @@ const PUBLIC_API_ROUTES = new Set([
 ]);
 
 function isDeviceReadApi(pathname: string) {
-  return pathname === "/api/weather"
+  return pathname === "/api/devices/kiosk-profile"
+    || pathname === "/api/weather"
     || pathname === "/api/sports"
     || pathname.startsWith("/api/sports/event/")
     || pathname === "/api/calendar"

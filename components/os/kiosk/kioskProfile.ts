@@ -1,4 +1,5 @@
 import type { KioskDensity, KioskDisplayProfile, KioskPointer } from "@/core/contracts/Kiosk";
+import { kioskApiUrl } from "@/services/kioskRequest";
 
 export function classifyKioskDensity(width: number, height: number, aspectRatio: number): KioskDensity {
   if (height <= 560 || (height <= 640 && aspectRatio >= 1.45)) return "compact";
@@ -38,7 +39,5 @@ export function measureKioskDisplay(setupVersion: number): KioskDisplayProfile {
 }
 
 export function kioskProfileUrl() {
-  const params = new URLSearchParams(window.location.search);
-  params.set("cosmic-kiosk", "1");
-  return `/api/devices/kiosk-profile?${params.toString()}`;
+  return kioskApiUrl("/api/devices/kiosk-profile");
 }
