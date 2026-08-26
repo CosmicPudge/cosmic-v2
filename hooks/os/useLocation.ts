@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useCosmicScope, createScopedStorageKey } from "@/services/storage/scope";
+import { kioskApiUrl } from "@/services/kioskRequest";
+import { TEMPORARY_KIOSK_LOCATION } from "@/services/kioskLocation";
 
 export interface UserLocation {
   lat: number;
@@ -12,6 +14,9 @@ const DEVELOPMENT_LOCATION: UserLocation = {
   lat: 40.9177,
   lon: -111.3994,
 };
+
+type KioskProfileResponse = { profile?: { location?: KioskProfileLocation | null; reportedLocation?: KioskProfileLocation | null } | null };
+type KioskProfileLocation = { latitude?: number; longitude?: number };
 
 function weatherLog(message: string) {
   if (process.env.NODE_ENV !== "production") console.info(`[weather] ${message}`);
@@ -37,6 +42,34 @@ export default function useLocation() {
     useState<UserLocation | null>(null);
 
   useEffect(() => {
+    const kiosk = typeof window !== "undefined" && window.location.pathname === "/os/kiosk";
+    if (kiosk) {
+      let active = true;
+      const controller = new AbortController();
+      const timeout = window.setTimeout(() => controller.abort(), 5000);
+      const resolveKioskLocation = async () => {
+        let profileLocation: UserLocation | null = null;
+        try {
+          const response = await fetch(kioskApiUrl("/api/devices/kiosk-profile"), { credentials: "include", cache: "no-store", signal: controller.signal });
+          if (response.ok) {
+            const body = await response.json() as KioskProfileResponse;
+            profileLocation = toUserLocation(body.profile?.location) ?? toUserLocation(body.profile?.reportedLocation);
+          }
+        } catch {
+          // The temporary fallback keeps kiosk weather usable when the profile cannot be read.
+        } finally {
+          window.clearTimeout(timeout);
+        }
+        if (!active) return;
+        const saved = readSavedLocation(scope.id);
+        const resolved = profileLocation ?? saved ?? { lat: TEMPORARY_KIOSK_LOCATION.latitude, lon: TEMPORARY_KIOSK_LOCATION.longitude };
+        weatherLog("location-state=available");
+        setLocation(resolved);
+      };
+      void resolveKioskLocation();
+      return () => { active = false; controller.abort(); window.clearTimeout(timeout); };
+    }
+
     if (!navigator.geolocation) {
       const fallback = resolveFallback(scope.id);
       window.setTimeout(() => setLocation(fallback), 0);
@@ -64,6 +97,12 @@ export default function useLocation() {
   }, [scope.id]);
 
   return location;
+}
+
+function toUserLocation(value?: KioskProfileLocation | null): UserLocation | null {
+  return typeof value?.latitude === "number" && Number.isFinite(value.latitude) && typeof value.longitude === "number" && Number.isFinite(value.longitude)
+    ? { lat: value.latitude, lon: value.longitude }
+    : null;
 }
 
 function readSavedLocation(scopeId: string): UserLocation | null {

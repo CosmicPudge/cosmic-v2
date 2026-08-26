@@ -103,7 +103,6 @@ export default function KioskBaseballView({ event, live }: KioskBaseballViewProp
 
           <div className="broadcast-lower">
             <LineScoreZone live={live} away={away} home={home} />
-            <GameStatsZone live={live} />
             <PitchInfoZone pitch={live?.latestPitch} pitchCount={pitcherStats?.pitchesThrown} />
           </div>
         </main>
@@ -188,20 +187,13 @@ function LastPlayZone({ description }: { description?: string }) {
 function LineScoreZone({ live, away, home }: { live?: BaseballLiveData; away: TeamDisplay; home: TeamDisplay }) {
   const innings = live?.linescore?.innings ?? [];
   if (!live || !innings.length) return null;
-  return <section className="linescore-zone"><h2>RUNS BY INNING</h2><div className="linescore-table" style={{ "--inning-count": innings.length } as CSSProperties}><div /><div className="linescore-numbers">{innings.map((inning) => <span key={inning.inning}>{inning.inning}</span>)}<span>R</span><span>H</span><span>E</span></div><strong>{away.abbreviation ?? away.name.slice(0, 3)}</strong><div className="linescore-numbers">{innings.map((inning) => <span key={inning.inning}>{inning.away?.runs ?? "—"}</span>)}<span>{live.away.score}</span><span>{live.away.hits ?? "—"}</span><span>{live.away.errors ?? "—"}</span></div><strong>{home.abbreviation ?? home.name.slice(0, 3)}</strong><div className="linescore-numbers">{innings.map((inning) => <span key={inning.inning}>{inning.home?.runs ?? "—"}</span>)}<span>{live.home.score}</span><span>{live.home.hits ?? "—"}</span><span>{live.home.errors ?? "—"}</span></div></div></section>;
+  return <section className="linescore-zone"><h2>LINESCORE</h2><div className="linescore-table" style={{ "--inning-count": innings.length } as CSSProperties}><div /><div className="linescore-numbers">{innings.map((inning) => <span key={inning.inning}>{inning.inning}</span>)}<span>R</span><span>H</span><span>E</span></div><strong>{away.abbreviation ?? away.name.slice(0, 3)}</strong><div className="linescore-numbers">{innings.map((inning) => <span key={inning.inning}>{inning.away?.runs ?? "—"}</span>)}<span>{live.away.score}</span><span>{live.away.hits ?? "—"}</span><span>{live.away.errors ?? "—"}</span></div><strong>{home.abbreviation ?? home.name.slice(0, 3)}</strong><div className="linescore-numbers">{innings.map((inning) => <span key={inning.inning}>{inning.home?.runs ?? "—"}</span>)}<span>{live.home.score}</span><span>{live.home.hits ?? "—"}</span><span>{live.home.errors ?? "—"}</span></div></div></section>;
 }
-
-function GameStatsZone({ live }: { live?: BaseballLiveData }) {
-  if (!live || (live.away.hits === undefined && live.home.hits === undefined && live.away.errors === undefined && live.home.errors === undefined)) return null;
-  return <section className="stats-zone"><StatCell label="HITS" value={`${live.away.hits ?? "—"} · ${live.home.hits ?? "—"}`} /><StatCell label="ERRORS" value={`${live.away.errors ?? "—"} · ${live.home.errors ?? "—"}`} /></section>;
-}
-
-function StatCell({ label, value }: { label: string; value: string }) { return <div className="stat-cell"><p>{label}</p><strong>{value}</strong></div>; }
 
 function PitchInfoZone({ pitch, pitchCount }: { pitch?: BaseballLiveData["latestPitch"]; pitchCount?: number }) {
   if (!pitch && pitchCount === undefined) return null;
   const pitchType = pitch?.typeName ?? pitch?.description ?? "";
-  return <section className="pitch-zone"><h2>PITCH INFO</h2><div><p>LAST PITCH</p><strong>{pitch?.velocityMph !== undefined ? `${pitch.velocityMph} MPH` : ""}</strong><span className="pitch-type-desktop">{pitchType}</span></div><div className="pitch-type-compact"><p>PITCH TYPE</p><strong>{pitchType}</strong></div><div><p>PITCH COUNT</p><strong>{pitchCount ?? ""}</strong></div></section>;
+  return <section className="pitch-zone"><h2>LAST PITCH</h2><div><p>VELOCITY</p><strong>{pitch?.velocityMph !== undefined ? `${pitch.velocityMph} MPH` : ""}</strong><span className="pitch-type-desktop">{pitchType}</span></div><div className="pitch-type-compact"><p>PITCH TYPE</p><strong>{pitchType}</strong></div><div><p>PITCH COUNT</p><strong>{pitchCount ?? ""}</strong></div></section>;
 }
 
 function BroadcastFooter({ event, live }: { event: SportsEvent; live?: BaseballLiveData }) {

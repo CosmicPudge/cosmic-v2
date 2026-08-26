@@ -4,6 +4,7 @@ import { and, eq, isNull } from "drizzle-orm";
 import type { KioskDeviceProfile, KioskDisplayProfile, KioskLocationSource, KioskSetupPreview } from "@/core/contracts/Kiosk";
 import { getDatabase, isDatabaseConfigured } from "@/services/database/client";
 import { devices, kioskDeviceSettings } from "@/services/database/schema";
+import { TEMPORARY_KIOSK_LOCATION } from "@/services/kioskLocation";
 
 export interface KioskProfileInput {
   setupCompleted?: boolean;
@@ -67,7 +68,7 @@ export async function readKioskDeviceProfile(deviceId: string): Promise<KioskDev
   const hasReportedLocation = typeof row.reportedLocationLatitude === "number" && typeof row.reportedLocationLongitude === "number";
   const reportedTimezone = isValidKioskTimezone(row.reportedTimezone) ? row.reportedTimezone : undefined;
   const timezoneOverride = isValidKioskTimezone(row.timezoneOverride) ? row.timezoneOverride : isValidKioskTimezone(row.timezone) ? row.timezone : undefined;
-  const effectiveTimezone = timezoneOverride ?? reportedTimezone ?? (isValidKioskTimezone(row.locationTimezone) ? row.locationTimezone : undefined);
+  const effectiveTimezone = timezoneOverride ?? reportedTimezone ?? (isValidKioskTimezone(row.locationTimezone) ? row.locationTimezone : undefined) ?? TEMPORARY_KIOSK_LOCATION.timezone;
   return {
     deviceId,
     ...(device?.name ? { deviceName: device.name } : {}),
