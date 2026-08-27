@@ -31,7 +31,11 @@ export default function KioskDeviceSetupGate({ deviceId, children }: Props) {
         if (!active) return;
         setProfile(body.profile ?? null);
         if (body.needsSetup) timer = window.setTimeout(() => void load(), 2000);
-      } catch (caught) { if (active) setError(caught instanceof Error ? caught.message : "PROFILE_REQUEST_FAILED"); }
+      } catch (caught) {
+        if (!active) return;
+        setError(caught instanceof Error ? caught.message : "PROFILE_REQUEST_FAILED");
+        timer = window.setTimeout(() => { if (active) { setError(null); void load(); } }, 5000);
+      }
     };
     void load();
     return () => { active = false; if (timer) window.clearTimeout(timer); };
@@ -99,4 +103,4 @@ function KioskSetupPreview({ profile, display }: { profile: KioskDeviceProfile; 
   </div>;
 }
 
-function SetupError({ message, onRetry }: { message: string; onRetry: () => void }) { return <div className="grid min-h-[100dvh] place-items-center bg-[#030511] p-6 text-center"><div><p className="text-sm text-rose-200">Kiosk setup unavailable</p><p className="mt-2 text-xs uppercase tracking-[.18em] text-white/45">Code: {message}</p><button type="button" onClick={onRetry} className="mt-4 rounded-lg border border-white/10 px-3 py-2 text-sm text-white/75">Retry</button></div></div>; }
+function SetupError({ message, onRetry }: { message: string; onRetry: () => void }) { return <div className="grid min-h-[100dvh] place-items-center bg-[#030511] p-6 text-center"><div><p className="text-sm text-cyan-100/85">Reconnecting to your display…</p><p className="mt-2 text-xs uppercase tracking-[.18em] text-white/45">Temporary profile issue · retrying automatically</p><p className="mt-2 text-[10px] uppercase tracking-[.14em] text-white/30">{message}</p><button type="button" onClick={onRetry} className="mt-4 rounded-lg border border-white/10 px-3 py-2 text-sm text-white/75">Retry now</button></div></div>; }

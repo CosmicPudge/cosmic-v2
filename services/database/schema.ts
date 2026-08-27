@@ -29,13 +29,17 @@ export const sessions = pgTable("sessions", {
 
 export const devices = pgTable("devices", {
   id: text("id").primaryKey(),
-  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  userId: text("user_id").references(() => users.id, { onDelete: "set null" }),
+  publicNumber: text("public_number").notNull(),
+  credentialHash: text("credential_hash"),
+  credentialRevokedAt: timestamp("credential_revoked_at", { withTimezone: true }),
+  ownershipStatus: text("ownership_status").notNull().default("owned"),
   name: text("name").notNull().default("Cosmic Display"),
   type: text("type").notNull().default("display"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   lastSeenAt: timestamp("last_seen_at", { withTimezone: true }).notNull().defaultNow(),
   revokedAt: timestamp("revoked_at", { withTimezone: true }),
-}, (table) => [index("devices_user_id_index").on(table.userId), index("devices_active_index").on(table.revokedAt)]);
+}, (table) => [uniqueIndex("devices_public_number_unique").on(table.publicNumber), index("devices_user_id_index").on(table.userId), index("devices_active_index").on(table.revokedAt), check("devices_ownership_status_check", sql`${table.ownershipStatus} in ('owned', 'unclaimed', 'resetting')`)]);
 
 export const phoneLocations = pgTable("phone_locations", {
   userId: text("user_id").primaryKey().references(() => users.id, { onDelete: "cascade" }),

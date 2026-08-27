@@ -118,6 +118,53 @@ device itself is retained.
 The kiosk adapts from the browser viewport, shared Cosmic display profile, and
 input capabilities. It does not use Raspberry Pi user-agent detection.
 
+## Persistent device identity and physical reset contract
+
+After first approval, the server assigns a permanent public number such as
+`COSMIC-482731`. This is a support/reference identifier and is different from
+the short-lived activation code, database device ID, boot ID, and private
+credential. The web app stores the private credential in an HttpOnly cookie as
+a compatibility fallback; it is never rendered, put in a QR/URL, or logged.
+
+For hardware-grade persistence, a future Pi helper must own the credential in a
+root-readable or service-private file (for example, `/var/lib/cosmic-device/
+credential` with mode `0600`) and keep the device number only as metadata. The
+helper can bootstrap a session by calling:
+
+```text
+POST /api/devices/bootstrap
+Authorization: Bearer <private credential>
+{"bootId":"<current /proc/sys/kernel/random/boot_id>"}
+```
+
+The server returns a short-lived device session and never returns the
+credential. The browser fallback calls the same endpoint using its HttpOnly
+credential cookie. The new boot ID is bound to the new session; the permanent
+device record and owner remain unchanged.
+
+The physical reset endpoint is:
+
+```text
+POST /api/devices/reset
+X-Cosmic-Device-Credential: <private credential>
+```
+
+It must be called only by the helper over TLS. A public device number,
+activation code, browser account session, or credential cookie is insufficient.
+On success the server revokes old sessions, clears account-scoped kiosk
+settings, preserves the public number, marks the device unclaimed, and returns
+one newly rotated credential for the helper to store. The helper must replace
+its old credential atomically, restart Chromium, and enter the activation
+screen. If the network is unavailable, the helper must keep a local
+`pending-reset` marker, stop Chromium from displaying the old account, retry
+the reset when online, and delete the marker only after the server confirms
+success. That offline local quarantine is not implemented by this web repo.
+
+The owner-facing **Prepare for new owner** action performs the server-side
+equivalent: it revokes sessions, clears kiosk settings and credential material,
+removes ownership while retaining the public number, and makes the device
+claimable again. It does not implement a physical button or GPIO reset.
+
 ## Development simulator
 
 The simulator is development-only and must not synthesize production data:

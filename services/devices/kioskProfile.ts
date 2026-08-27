@@ -64,7 +64,7 @@ export async function readKioskDeviceProfile(deviceId: string): Promise<KioskDev
   const database = requireDatabase();
   const [row] = await database.select().from(kioskDeviceSettings).where(eq(kioskDeviceSettings.deviceId, deviceId)).limit(1);
   if (!row) return null;
-  const [device] = await database.select({ name: devices.name, userId: devices.userId }).from(devices).where(eq(devices.id, deviceId)).limit(1);
+  const [device] = await database.select({ name: devices.name, publicNumber: devices.publicNumber, userId: devices.userId }).from(devices).where(eq(devices.id, deviceId)).limit(1);
   const [phoneLocation] = device?.userId ? await database.select().from(phoneLocations).where(eq(phoneLocations.userId, device.userId)).limit(1) : [];
   const hasLocation = typeof row.locationLatitude === "number" && typeof row.locationLongitude === "number" && row.locationSource;
   const hasReportedLocation = typeof row.reportedLocationLatitude === "number" && typeof row.reportedLocationLongitude === "number";
@@ -89,6 +89,7 @@ export async function readKioskDeviceProfile(deviceId: string): Promise<KioskDev
   } : { ...TEMPORARY_KIOSK_LOCATION, source: "kiosk-fallback" as const };
   return {
     deviceId,
+    ...(device?.publicNumber ? { deviceNumber: device.publicNumber } : {}),
     ...(device?.name ? { deviceName: device.name } : {}),
     locationMode,
     setupCompleted: row.setupCompleted,

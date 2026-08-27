@@ -5,6 +5,7 @@ import {
 } from "react";
 import { useEffect } from "react";
 import { useSystem } from "@/components/os/system/SystemProvider";
+import KioskErrorBoundary from "./KioskErrorBoundary";
 
 export const KIOSK_SESSION_STORAGE_KEY = "cosmic:kiosk-session";
 
@@ -44,7 +45,7 @@ export default function KioskShell({
       <div className="pointer-events-none absolute inset-0 z-[1] bg-[linear-gradient(90deg,rgba(1,3,12,.16),transparent_45%,rgba(1,3,12,.22))]" />
 
       <main className="relative z-10 h-full min-h-0 w-full">
-        {children}
+        <KioskErrorBoundary>{children}</KioskErrorBoundary>
       </main>
     </div>
   );

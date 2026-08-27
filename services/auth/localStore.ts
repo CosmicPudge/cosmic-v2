@@ -36,4 +36,8 @@ export function expiredSessionCookie() { return cookieValue("", 0); }
 export function getDeviceCookieName() { return "cosmic_device_id"; }
 export function parseDeviceCookie(request: Request) { const raw = request.headers.get("cookie") ?? ""; const match = raw.split(";").map((part) => part.trim()).find((part) => part.startsWith(`${getDeviceCookieName()}=`)); return match ? decodeURIComponent(match.slice(getDeviceCookieName().length + 1)) : null; }
 export function deviceCookie(deviceId: string) { const secure = process.env.NODE_ENV === "production" ? "; Secure" : ""; return `${getDeviceCookieName()}=${encodeURIComponent(deviceId)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=31536000${secure}`; }
+export function getDeviceCredentialCookieName() { return "cosmic_device_credential"; }
+export function parseDeviceCredentialCookie(request: Request) { const raw = request.headers.get("cookie") ?? ""; const match = raw.split(";").map((part) => part.trim()).find((part) => part.startsWith(`${getDeviceCredentialCookieName()}=`)); return match ? decodeURIComponent(match.slice(getDeviceCredentialCookieName().length + 1)) : null; }
+export function deviceCredentialCookie(credential: string) { const secure = process.env.NODE_ENV === "production" ? "; Secure" : ""; return `${getDeviceCredentialCookieName()}=${encodeURIComponent(credential)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=315360000${secure}`; }
+export function expiredDeviceCredentialCookie() { return deviceCredentialCookie("").replace("Max-Age=315360000", "Max-Age=0"); }
 export const DEVICE_SESSION_COOKIE_MAX_AGE_SECONDS = 24 * 60 * 60;

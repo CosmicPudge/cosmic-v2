@@ -424,6 +424,10 @@ export default function KioskSlideshow() {
 
   const previousWidget = safePreviousIndex !== null ? widgets[safePreviousIndex] : null;
 
+  if (process.env.NODE_ENV !== "production" && searchParams.get("cosmic-test-crash") === "root") {
+    throw new Error("Development kiosk root crash test");
+  }
+
   if (!currentWidget) {
     return null;
   }

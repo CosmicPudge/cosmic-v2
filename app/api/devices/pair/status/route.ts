@@ -15,6 +15,7 @@ export async function POST(request: Request) {
     const response = NextResponse.json({ status: "approved" }, { headers: { "Cache-Control": "no-store" } });
     response.cookies.set({ name: "cosmic_session", value: session.token, httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/", maxAge: Math.min(DEVICE_SESSION_COOKIE_MAX_AGE_SECONDS, Math.max(0, Math.floor((Date.parse(session.expiresAt) - Date.now()) / 1000))) });
     response.cookies.set({ name: "cosmic_device_id", value: session.deviceId, httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/", maxAge: 31536000 });
+    response.cookies.set({ name: "cosmic_device_credential", value: session.credential, httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/", maxAge: 315360000 });
     if (process.env.NODE_ENV !== "production") console.info(`[pair] cookie-set=true HTTP POST /api/devices/pair/status status=${response.status}`);
     return response;
   } catch (error) {

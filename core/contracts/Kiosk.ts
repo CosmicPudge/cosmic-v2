@@ -37,6 +37,7 @@ export interface KioskDisplayProfile {
 
 export interface KioskDeviceProfile {
   deviceId: string;
+  deviceNumber?: string;
   deviceName?: string;
   setupCompleted: boolean;
   setupVersion: number;

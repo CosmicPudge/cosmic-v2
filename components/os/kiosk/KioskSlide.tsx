@@ -1,7 +1,10 @@
 "use client";
 
 import type { DashboardWidget } from "@/config/widgets";
+import type { ComponentType } from "react";
 import { WidgetProvider } from "@/components/os/ui/widget/WidgetContext";
+import KioskWidgetErrorBoundary from "./KioskWidgetErrorBoundary";
+import { useSearchParams } from "next/navigation";
 
 interface KioskSlideProps {
   widget: DashboardWidget;
@@ -15,6 +18,8 @@ export default function KioskSlide({
   exiting,
 }: KioskSlideProps) {
   const WidgetComponent = widget.component;
+  const searchParams = useSearchParams();
+  const testCrash = process.env.NODE_ENV !== "production" && searchParams.get("cosmic-test-crash") === "widget";
 function formatWidgetTitle(id: string) {
   return id
     .split("-")
@@ -69,7 +74,7 @@ function formatWidgetTitle(id: string) {
           <div className="flex h-full min-h-0 w-full items-stretch">
             <div className="h-full min-h-0 w-full">
               <WidgetProvider size="medium" presentation="kiosk" active={active && !exiting}>
-                <WidgetComponent />
+                <KioskWidgetErrorBoundary widgetId={widget.id}><KioskWidgetContent WidgetComponent={WidgetComponent} testCrash={testCrash} /></KioskWidgetErrorBoundary>
               </WidgetProvider>
             </div>
           </div>
@@ -77,4 +82,9 @@ function formatWidgetTitle(id: string) {
       </div>
     </section>
   );
+}
+
+function KioskWidgetContent({ WidgetComponent, testCrash }: { WidgetComponent: ComponentType; testCrash: boolean }) {
+  if (testCrash) throw new Error("Development kiosk widget crash test");
+  return <WidgetComponent />;
 }
