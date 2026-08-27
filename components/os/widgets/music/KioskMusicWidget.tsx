@@ -41,9 +41,28 @@ export default function KioskMusicWidget({ music }: { music: ReturnType<typeof u
   const state = classifyMusicState({ track: renderableTrack ?? undefined, connected: music.connected, playing, error: Boolean(music.error) });
 
   useEffect(() => {
+    if (process.env.NODE_ENV !== "production") console.info(`[kiosk-music] mount id=${source}`);
+    return () => { if (process.env.NODE_ENV !== "production") console.info(`[kiosk-music] unmount id=${source}`); };
+  }, [source]);
+  useEffect(() => { if (process.env.NODE_ENV !== "production") console.info(`[kiosk-music] state id=${source} track=${track?.title ?? "none"}`); }, [source, track?.id, track?.title]);
+  useEffect(() => {
     setMusicPlaying(source, Boolean(active && playing));
     return () => setMusicPlaying(source, false);
   }, [active, playing, setMusicPlaying, source]);
+  useEffect(() => {
+    if (process.env.NODE_ENV === "production") return;
+    const frame = window.requestAnimationFrame(() => {
+      const scenes = [...document.querySelectorAll<HTMLElement>(".kiosk-music-scene")];
+      const playingScenes = [...document.querySelectorAll<HTMLElement>(".kiosk-music-playing")];
+      const playbackDetected = [...document.querySelectorAll<HTMLElement>(".kiosk-music-provider-state")].filter((element) => element.textContent?.includes("Playback detected")).length;
+      console.info(`[kiosk-music-dom] scenes=${scenes.length} playing=${playingScenes.length} playbackDetected=${playbackDetected}`);
+      for (const element of playingScenes) {
+        const slide = element.closest<HTMLElement>(".kiosk-slide");
+        console.info(`[kiosk-music-dom] playingParent=${element.parentElement?.className ?? "none"} slide=${slide?.dataset.kioskScene ?? "none"} slideClasses=${slide?.className ?? "none"}`);
+      }
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [renderableTrack?.id, state]);
   useEffect(() => {
     if (process.env.NODE_ENV === "production") return;
     const measure = () => {
