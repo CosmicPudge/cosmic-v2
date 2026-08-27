@@ -6,6 +6,17 @@ function profileLog(message: string) {
   if (process.env.NODE_ENV !== "production") console.info(`[kiosk-profile] ${message}`);
 }
 
+function profileErrorLog(error: unknown) {
+  if (process.env.NODE_ENV === "production") return;
+  const candidate = error as { name?: unknown; code?: unknown; message?: unknown };
+  const name = typeof candidate?.name === "string" ? candidate.name : "UnknownError";
+  const code = typeof candidate?.code === "string" ? candidate.code : "none";
+  const message = typeof candidate?.message === "string"
+    ? candidate.message.replace(/postgres(?:ql)?:\/\/\S+/gi, "[redacted-url]").replace(/\s+/g, " ").slice(0, 240)
+    : "Unknown database error";
+  profileLog(`query-failed name=${name} code=${code} message=${JSON.stringify(message)}`);
+}
+
 async function targetDevice(request: Request) {
   const session = await requireAuthenticatedSession(request, { allowDevice: true, bootId: kioskBootId(request) });
   const url = new URL(request.url);
@@ -18,7 +29,7 @@ async function targetDevice(request: Request) {
 
 export async function GET(request: Request) {
   try { const { deviceId } = await targetDevice(request); const profile = await readKioskDeviceProfile(deviceId); const needsSetup = !profile || !profile.setupCompleted || profile.setupVersion < 1; profileLog(`profileFound=${Boolean(profile)} needsSetup=${needsSetup} status=200 errorCode=null`); return NextResponse.json({ profile, needsSetup }, { headers: { "Cache-Control": "no-store" } }); }
-  catch (error) { if (error instanceof Response) { profileLog(`profileFound=false needsSetup=false status=${error.status} errorCode=PROFILE_AUTH_${error.status}`); return error; } profileLog("profileFound=false needsSetup=false status=500 errorCode=PROFILE_QUERY_FAILED"); return NextResponse.json({ error: "Kiosk profile is unavailable.", errorCode: "PROFILE_QUERY_FAILED" }, { status: 500, headers: { "Cache-Control": "no-store" } }); }
+  catch (error) { if (error instanceof Response) { profileLog(`profileFound=false needsSetup=false status=${error.status} errorCode=PROFILE_AUTH_${error.status}`); return error; } profileErrorLog(error); profileLog("profileFound=false needsSetup=false status=500 errorCode=PROFILE_QUERY_FAILED"); return NextResponse.json({ error: "Kiosk profile is unavailable.", errorCode: "PROFILE_QUERY_FAILED" }, { status: 500, headers: { "Cache-Control": "no-store" } }); }
 }
 
 export async function PATCH(request: Request) {
