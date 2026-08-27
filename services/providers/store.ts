@@ -58,3 +58,13 @@ export async function deleteProviderConnectionCredentials(userId: string, connec
 export async function markProviderReconnectRequired(userId: string, connectionId: string) {
   await getDatabase().update(providerConnections).set({ reconnectRequired: true, status: "reconnect-required", updatedAt: new Date() }).where(and(eq(providerConnections.userId, userId), eq(providerConnections.id, connectionId)));
 }
+
+export async function updateProviderConnection(userId: string, connectionId: string, input: { displayName?: string; status?: string; reconnectRequired?: boolean }) {
+  const rows = await getDatabase().update(providerConnections).set({ ...input, updatedAt: new Date() }).where(and(eq(providerConnections.userId, userId), eq(providerConnections.id, connectionId))).returning();
+  return rows[0] ?? null;
+}
+
+export async function markProviderRefresh(userId: string, connectionId: string) {
+  const rows = await getDatabase().update(providerConnections).set({ lastSuccessfulRefreshAt: new Date(), status: "connected", reconnectRequired: false, updatedAt: new Date() }).where(and(eq(providerConnections.userId, userId), eq(providerConnections.id, connectionId))).returning();
+  return rows[0] ?? null;
+}

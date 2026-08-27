@@ -36,6 +36,7 @@ export interface CalendarEvent {
   calendarId?: string;
 
   writable?: boolean;
+  readOnly?: boolean;
 
   writeId?: string;
 

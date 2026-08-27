@@ -8,27 +8,45 @@ import { SubscriptionCalendarProvider } from "./subscriptionCalendarProvider";
 import { TestCalendarProvider } from "./testCalendarProvider";
 import { getCalendarSubscriptions } from "./subscriptionConfig";
 import { getProviderCredentials, listProviderConnections } from "@/services/providers/store";
+import type { CalendarSubscription } from "./subscriptions";
 
 export interface CalendarCredentialPayload { username: string; password: string; serverUrl: string; defaultCalendarName?: string; }
 
-function withSubscriptions(privateProvider: CalendarProvider): CalendarProvider {
-  const subscriptions = getCalendarSubscriptions();
+async function getAccountSubscriptions(userId: string): Promise<CalendarSubscription[]> {
+  const connections = (await listProviderConnections(userId)).filter(
+    (item) => item.provider === "calendar" && item.providerType === "subscription" && item.status === "connected",
+  );
+  const subscriptions = await Promise.all(connections.map(async (connection) => {
+    const credentials = await getProviderCredentials<{ url?: string; category?: CalendarSubscription["category"]; priority?: CalendarSubscription["priority"] }>(userId, connection.id);
+    if (!credentials?.url || !connection.displayName) return null;
+    return { id: connection.id, name: connection.displayName, url: credentials.url, enabled: true, category: credentials.category, priority: credentials.priority ?? "normal" } satisfies CalendarSubscription;
+  }));
+  return subscriptions.flatMap((subscription) => subscription ? [subscription] : []);
+}
+
+async function withSubscriptions(privateProvider: CalendarProvider, userId: string): Promise<CalendarProvider> {
+  const subscriptions = [...getCalendarSubscriptions(), ...(await getAccountSubscriptions(userId))];
   return subscriptions.length ? new CombinedCalendarProvider([privateProvider, new SubscriptionCalendarProvider(subscriptions)]) : privateProvider;
 }
 
 export async function getAccountCalendarContext(userId: string, connectionId?: string) {
-  const connections = (await listProviderConnections(userId)).filter((item) => item.provider === "calendar");
+  const connections = (await listProviderConnections(userId)).filter((item) => item.provider === "calendar" && item.providerType !== "subscription");
   const connection = connectionId ? connections.find((item) => item.id === connectionId) : connections[0];
   if (!connection) return null;
   const credentials = await getProviderCredentials<CalendarCredentialPayload>(userId, connection.id);
   if (!credentials) return null;
   const provider = new AppleCalendarProvider({ ...credentials, ownerKey: `${userId}:${connection.id}` });
-  return { connection, provider: withSubscriptions(provider), writer: new AppleCalendarWriter({ ...credentials, ownerKey: `${userId}:${connection.id}` }) };
+  return { connection, provider: await withSubscriptions(provider, userId), writer: new AppleCalendarWriter({ ...credentials, ownerKey: `${userId}:${connection.id}` }) };
 }
 
 export async function getCalendarEngineForRequest(userId?: string, connectionId?: string) {
   const context = userId ? await getAccountCalendarContext(userId, connectionId) : null;
-  const provider = context?.provider ?? (process.env.NODE_ENV === "production" ? null : getDevelopmentProvider());
+  let provider: CalendarProvider | null | undefined = context?.provider;
+  if (!provider && userId) {
+    const subscriptions = [...getCalendarSubscriptions(), ...(await getAccountSubscriptions(userId))];
+    if (subscriptions.length) provider = new SubscriptionCalendarProvider(subscriptions);
+  }
+  if (!provider) provider = process.env.NODE_ENV === "production" ? null : await getDevelopmentProvider();
   if (!provider) return null;
   const engine = new CalendarEngine();
   engine.setProvider(provider);
@@ -36,8 +54,9 @@ export async function getCalendarEngineForRequest(userId?: string, connectionId?
   return { engine, context };
 }
 
-function getDevelopmentProvider(): CalendarProvider {
+async function getDevelopmentProvider(): Promise<CalendarProvider> {
   const appleConfigured = Boolean(process.env.APPLE_CALENDAR_USERNAME && process.env.APPLE_CALENDAR_PASSWORD);
   const apple = appleConfigured ? new AppleCalendarProvider({ ownerKey: "development-environment" }) : new TestCalendarProvider();
-  return withSubscriptions(apple);
+  const subscriptions = getCalendarSubscriptions();
+  return subscriptions.length ? new CombinedCalendarProvider([apple, new SubscriptionCalendarProvider(subscriptions)]) : apple;
 }

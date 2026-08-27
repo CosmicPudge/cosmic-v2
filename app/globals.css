@@ -854,6 +854,17 @@ html[data-cosmic-reduced-effects="true"] *::after {
 .kiosk-slide-content::-webkit-scrollbar { display: none; }
 .kiosk-music-art { width: min(42%, 22rem); aspect-ratio: 1; }
 .kiosk-music-widget .kiosk-scene-image { filter: blur(3px); transform: scale(1.03); }
+.kiosk-music-backgrounds { z-index: 0; }
+.kiosk-music-background { position: absolute; inset: 0; height: 100%; width: 100%; object-fit: cover; transition: opacity .7s ease, transform .7s ease; }
+.kiosk-music-background-previous { opacity: 1; transform: scale(1); }
+.kiosk-music-background-current { opacity: 1; transform: scale(1); }
+.kiosk-music-background-enter { opacity: 0; transform: scale(1.03); animation: kiosk-music-background-settle .7s ease forwards; }
+.kiosk-music-layer { z-index: 2; opacity: 1; transform: translateX(0) scale(1); transition: opacity .7s ease, transform .7s ease; }
+.kiosk-music-overlay { z-index: 1; }
+.kiosk-music-layer-out { opacity: 0; transform: translateX(-10px) scale(.97); pointer-events: none; }
+.kiosk-music-layer-in { animation: kiosk-music-layer-arrive .7s ease both; }
+@keyframes kiosk-music-background-settle { from { opacity: 0; transform: scale(1.03); } to { opacity: 1; transform: scale(1); } }
+@keyframes kiosk-music-layer-arrive { from { opacity: 0; transform: translateX(12px) scale(.97); } to { opacity: 1; transform: translateX(0) scale(1); } }
 .kiosk-music-provider-mark { width: clamp(4.5rem, 10vw, 8rem); height: clamp(4.5rem, 10vw, 8rem); filter: drop-shadow(0 0 28px color-mix(in srgb, var(--music-provider-accent, #1ed760) 25%, transparent)); }
 .kiosk-music-artists .kiosk-music-artist-avatar + .kiosk-music-artist-avatar { margin-left: -.75rem; }
 .kiosk-music-cosmic-mark { display: grid; width: clamp(4.5rem, 10vw, 8rem); height: clamp(4.5rem, 10vw, 8rem); place-items: center; border: 1px solid rgba(240,171,252,.35); border-radius: 1.5rem; color: #f0abfc; font-size: clamp(2.5rem, 6vw, 5rem); box-shadow: 0 0 36px rgba(240,171,252,.16); }
@@ -1118,3 +1129,4 @@ html[data-cosmic-reduced-effects="true"] *::after {
 @keyframes cosmic-transition-in { from { opacity: 0; } to { opacity: 1; } }
 @keyframes cosmic-transition-drift { from { transform: translate3d(0, 0, 0) scale(1); } to { transform: translate3d(3%, -2%, 0) scale(1.04); } }
 @media (prefers-reduced-motion: reduce) { .cosmic-transition-surface, .cosmic-transition-progress span { animation: none; transition-duration: 120ms; } }
+@media (prefers-reduced-motion: reduce) { .kiosk-music-background, .kiosk-music-layer { animation: none !important; transition: opacity .2s ease !important; transform: none !important; } }

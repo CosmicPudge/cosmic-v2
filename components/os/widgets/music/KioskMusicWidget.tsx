@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useState, type CSSProperties } from "react";
+import { useEffect, useId, useRef, useState, type CSSProperties } from "react";
 import type { MusicArtist, MusicProviderKind } from "@/core/contracts/Music";
 import { useKioskSlideshowControl } from "@/components/os/kiosk/KioskSlideshowContext";
 import { useWidgetContext } from "@/components/os/ui/widget/WidgetContext";
@@ -25,15 +25,73 @@ export default function KioskMusicWidget({ music }: { music: ReturnType<typeof u
   const playing = Boolean(music.playback?.playing);
   const hasTrack = Boolean(track?.title && track.artists?.length);
   const hasTemporaryError = Boolean(music.error);
+  const scene = useMusicScene(hasTrack ? track : undefined, hasTrack ? "track" : music.connected && playing ? "playback-detected" : "idle");
   useEffect(() => { setMusicPlaying(source, Boolean(active && playing)); return () => setMusicPlaying(source, false); }, [active, playing, setMusicPlaying, source]);
-  const duration = music.playback?.durationMs ?? track?.durationMs;
-  const progressMs = useSmoothProgress(music.playback?.positionMs ?? 0, duration, playing, track?.id);
-  return <Widget accent="music" className="kiosk-music-widget" contentPadding={false} hover={false} imageUrl={hasTrack ? track?.artworkUrl : undefined} imageOpacity={1} imageBlur={0}>
+  const currentScene = scene.current.key === (track?.id ?? (music.connected && playing ? "playback-detected" : "idle")) ? { ...scene.current, ...(track ? { track } : {}) } : scene.current;
+  return <Widget accent="music" className="kiosk-music-widget" contentPadding={false} hover={false} imageOpacity={1} imageBlur={0}>
     <div className="kiosk-music-scene relative flex h-full min-h-0 flex-col overflow-hidden text-white" data-music-provider={provider?.id ?? "none"}>
+      {scene.previous ? <MusicSceneLayer scene={scene.previous} className="kiosk-music-layer kiosk-music-layer-out" music={music} provider={provider} configured={music.configured} connected={music.connected} playing={playing} error={hasTemporaryError} /> : null}
+      <MusicSceneLayer scene={currentScene} className={`kiosk-music-layer ${scene.transitioning ? "kiosk-music-layer-in" : ""}`} music={music} provider={provider} configured={music.configured} connected={music.connected} playing={playing} error={hasTemporaryError} />
+      <div className="kiosk-music-backgrounds absolute inset-0" aria-hidden="true">
+        {scene.previous?.track?.artworkUrl ? <img className="kiosk-music-background kiosk-music-background-previous" src={scene.previous.track.artworkUrl} alt="" draggable={false} onError={(event) => { event.currentTarget.style.display = "none"; }} /> : null}
+        {scene.current.track?.artworkUrl ? <img className={`kiosk-music-background kiosk-music-background-current ${scene.transitioning ? "kiosk-music-background-enter" : ""}`} src={scene.current.track.artworkUrl} alt="" draggable={false} onError={(event) => { event.currentTarget.style.display = "none"; }} /> : null}
+      </div>
       <div className="kiosk-music-overlay absolute inset-0" aria-hidden="true" />
-      {hasTrack ? <PlayingScene music={music} track={track!} duration={duration} progressMs={progressMs} playing={playing} reconnecting={hasTemporaryError} /> : <ProviderScene provider={provider} connected={music.connected} configured={music.configured} playing={playing} error={hasTemporaryError} />}
     </div>
   </Widget>;
+}
+
+interface MusicScene {
+  key: string;
+  track?: NonNullable<ReturnType<typeof useMusic>["playback"]>["track"];
+  mode: "track" | "playback-detected" | "idle";
+}
+
+function MusicSceneLayer({ scene, className, music, provider, configured, connected, playing, error }: { scene: MusicScene; className: string; music: ReturnType<typeof useMusic>; provider: ProviderPresentation | null; configured: boolean; connected: boolean; playing: boolean; error: boolean }) {
+  const duration = scene.track?.durationMs;
+  const progressMs = useSmoothProgress(music.playback?.positionMs ?? 0, duration, playing && scene.track?.id === music.playback?.track?.id, scene.track?.id);
+  return <div className={`${className} absolute inset-0`} data-music-scene-key={scene.key}>{scene.track ? <PlayingScene music={music} track={scene.track} duration={duration} progressMs={progressMs} playing={playing} reconnecting={error} /> : <ProviderScene provider={provider} connected={connected} configured={configured} playing={playing} error={error} />}</div>;
+}
+
+function useMusicScene(track: MusicScene["track"], mode: MusicScene["mode"]) {
+  const sceneKey = track?.id ?? mode;
+  const initialScene: MusicScene = { key: sceneKey, ...(track ? { track } : {}), mode };
+  const nextSceneRef = useRef<MusicScene>(initialScene);
+  const [current, setCurrent] = useState<MusicScene>(initialScene);
+  const [previous, setPrevious] = useState<MusicScene>();
+  const [transitioning, setTransitioning] = useState(false);
+  const currentKey = current.key;
+  useEffect(() => { nextSceneRef.current = { key: sceneKey, ...(track ? { track } : {}), mode }; }, [mode, sceneKey, track]);
+  useEffect(() => {
+    const incoming = nextSceneRef.current;
+    if (incoming.key === currentKey) return;
+    let cancelled = false;
+    let transitionTimer: number | undefined;
+    const finish = () => {
+      if (cancelled) return;
+      setPrevious(current);
+      setCurrent(incoming);
+      setTransitioning(true);
+      transitionTimer = window.setTimeout(() => {
+        setPrevious(undefined);
+        setTransitioning(false);
+      }, 700);
+    };
+    const artwork = incoming.track?.artworkUrl;
+    if (!artwork || typeof Image === "undefined") {
+      finish();
+    } else {
+      const image = new Image();
+      let settled = false;
+      const settle = () => { if (settled) return; settled = true; finish(); };
+      image.onload = settle;
+      image.onerror = settle;
+      image.src = artwork;
+      transitionTimer = window.setTimeout(settle, 800);
+    }
+    return () => { cancelled = true; if (transitionTimer !== undefined) window.clearTimeout(transitionTimer); };
+  }, [current, currentKey, sceneKey]);
+  return { current, previous, transitioning };
 }
 
 function PlayingScene({ music, track, duration, progressMs, playing, reconnecting }: { music: ReturnType<typeof useMusic>; track: NonNullable<ReturnType<typeof useMusic>["playback"]>["track"] & object; duration?: number; progressMs: number; playing: boolean; reconnecting: boolean }) {
@@ -45,7 +103,7 @@ function ArtistProfiles({ track }: { track: NonNullable<ReturnType<typeof useMus
   return <div className="kiosk-music-artists mt-5 flex items-center gap-3">{artists.map((artist, index) => <ArtistAvatar key={`${artist.id ?? artist.name}-${index}`} artist={artist} />)}{track.artists.length > 2 ? <span className="text-xs text-white/55">+{track.artists.length - 2}</span> : null}</div>;
 }
 
-function ArtistAvatar({ artist }: { artist: { name: string; imageUrl?: string } }) {
+function ArtistAvatar({ artist }: { artist: { name: string; imageUrl?: string | null } }) {
   const [failed, setFailed] = useState(false);
   const initials = artist.name.split(/\s+/).map((part) => part[0]).filter(Boolean).slice(0, 2).join("").toUpperCase();
   return <div className="kiosk-music-artist-avatar grid size-[clamp(2.75rem,5vw,4.5rem)] shrink-0 place-items-center overflow-hidden rounded-full border border-white/30 bg-white/10 text-[clamp(.7rem,1.3vw,1rem)] font-semibold text-white/75">{artist.imageUrl && !failed ? <img src={artist.imageUrl} alt={`${artist.name} profile`} draggable={false} className="h-full w-full object-cover" onError={() => setFailed(true)} /> : initials}</div>;

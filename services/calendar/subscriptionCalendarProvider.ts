@@ -7,30 +7,24 @@ import type {
 import {
   normalizeCalDavCalendarData,
 } from "./icalNormalizer";
+import { fetchSubscriptionText } from "./subscriptionSecurity";
 
 import type { CalendarSubscription } from "./subscriptions";
 
-const CACHE_DURATION_MS = 15 * 60 * 1000;
+const CACHE_DURATION_MS = 45 * 60 * 1000;
 
 interface SubscriptionIcsCache {
   ics: string;
   expiresAt: number;
 }
 
+const subscriptionCache = new Map<string, SubscriptionIcsCache>();
+const subscriptionPending = new Map<string, Promise<string>>();
+
 export class SubscriptionCalendarProvider
   implements CalendarProvider
 {
   private readonly subscriptions: CalendarSubscription[];
-
-  private cache = new Map<
-    string,
-    SubscriptionIcsCache
-  >();
-
-  private pending = new Map<
-    string,
-    Promise<string>
-  >();
 
   constructor(
     subscriptions: CalendarSubscription[]
@@ -129,19 +123,20 @@ export class SubscriptionCalendarProvider
       source: "subscription" as const,
       category: subscription.category ?? "sports",
       priority: subscription.priority,
+      readOnly: true,
     }));
   }
 
   private async getSubscriptionIcs(
     subscription: CalendarSubscription
   ): Promise<string> {
-    const cached = this.cache.get(subscription.id);
+    const cached = subscriptionCache.get(subscription.id);
 
     if (cached && Date.now() < cached.expiresAt) {
       return cached.ics;
     }
 
-    const pending = this.pending.get(subscription.id);
+    const pending = subscriptionPending.get(subscription.id);
 
     if (pending) {
       return pending;
@@ -149,11 +144,11 @@ export class SubscriptionCalendarProvider
 
     const request = this.fetchSubscription(subscription).finally(
       () => {
-        this.pending.delete(subscription.id);
+        subscriptionPending.delete(subscription.id);
       }
     );
 
-    this.pending.set(subscription.id, request);
+    subscriptionPending.set(subscription.id, request);
 
     return request;
   }
@@ -161,27 +156,9 @@ export class SubscriptionCalendarProvider
   private async fetchSubscription(
     subscription: CalendarSubscription
   ): Promise<string> {
-    const response = await fetch(
-      subscription.url,
-      {
-        cache: "no-store",
-        headers: {
-          Accept:
-            "text/calendar, text/plain, */*",
-        },
-      }
-    );
+    const { text: ics } = await fetchSubscriptionText(subscription.url);
 
-    if (!response.ok) {
-      throw new Error(
-        `Calendar subscription "${subscription.name}" failed: ${response.status} ${response.statusText}`
-      );
-    }
-
-    const ics =
-      await response.text();
-
-    this.cache.set(
+    subscriptionCache.set(
       subscription.id,
       {
         ics,
