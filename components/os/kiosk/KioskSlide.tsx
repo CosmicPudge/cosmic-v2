@@ -2,7 +2,6 @@
 
 import type { DashboardWidget } from "@/config/widgets";
 import { WidgetProvider } from "@/components/os/ui/widget/WidgetContext";
-import { useEffect, useId } from "react";
 
 interface KioskSlideProps {
   widget: DashboardWidget;
@@ -16,11 +15,6 @@ export default function KioskSlide({
   exiting,
 }: KioskSlideProps) {
   const WidgetComponent = widget.component;
-  const instanceId = useId();
-  useEffect(() => {
-    if (process.env.NODE_ENV !== "production") console.info(`[kiosk-slide] mount id=${instanceId} widget=${widget.id} active=${active} outgoing=${exiting}`);
-    return () => { if (process.env.NODE_ENV !== "production") console.info(`[kiosk-slide] unmount id=${instanceId} widget=${widget.id}`); };
-  }, [active, exiting, instanceId, widget.id]);
 function formatWidgetTitle(id: string) {
   return id
     .split("-")
@@ -74,9 +68,9 @@ function formatWidgetTitle(id: string) {
         <div className="kiosk-slide-content relative flex min-h-0 flex-1 items-stretch justify-stretch overflow-hidden p-[clamp(.75rem,2vw,2rem)]">
           <div className="flex h-full min-h-0 w-full items-stretch">
             <div className="h-full min-h-0 w-full">
-              {widget.id === "music" && !(active && !exiting) ? null : <WidgetProvider size="medium" presentation="kiosk" active={active && !exiting}>
+              <WidgetProvider size="medium" presentation="kiosk" active={active && !exiting}>
                 <WidgetComponent />
-              </WidgetProvider>}
+              </WidgetProvider>
             </div>
           </div>
         </div>

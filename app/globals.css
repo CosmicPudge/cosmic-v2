@@ -319,24 +319,6 @@ html, body { width: 100%; min-height: 100%; }
 .kiosk-setup-preview[data-kiosk-setup-preview="calendar"] .kiosk-scene-surface::before { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(2,8,20,.48), transparent 58%), linear-gradient(180deg, rgba(2,8,20,.08), transparent 48%, rgba(1,4,12,.4)); opacity: 1; }
 .kiosk-setup-preview[data-kiosk-setup-preview="calendar"] .kiosk-scene-surface::after { content: ""; position: absolute; inset: 0; background: radial-gradient(ellipse at center, transparent 40%, rgba(0,0,8,.3) 100%), linear-gradient(180deg, transparent 62%, rgba(0,0,8,.32)); opacity: 1; }
 
-/* Music is a full-viewport scene; its artwork and readable content replace the generic kiosk card chrome. */
-.kiosk-slide[data-kiosk-scene="music"] .kiosk-slide-header { display: none; }
-.kiosk-slide[data-kiosk-scene="music"] .kiosk-slide-card,
-.kiosk-slide[data-kiosk-scene="music"] [data-widget-accent="music"],
-.kiosk-slide[data-kiosk-scene="music"] [data-widget-accent="music"] > div {
-  border-radius: 0 !important;
-  border-color: transparent !important;
-  background: transparent !important;
-  box-shadow: none !important;
-  backdrop-filter: none !important;
-}
-.kiosk-slide[data-kiosk-scene="music"] .kiosk-scene-image { filter: none !important; opacity: 1 !important; transform: none !important; }
-.kiosk-slide[data-kiosk-scene="music"] .kiosk-scene-surface { background: #090510 !important; }
-.kiosk-slide[data-kiosk-scene="music"] .kiosk-scene-motif,
-.kiosk-slide[data-kiosk-scene="music"] .kiosk-scene-glow,
-.kiosk-slide[data-kiosk-scene="music"] .kiosk-scene-illustration { display: none; }
-.kiosk-music-overlay { background: linear-gradient(90deg, rgba(0,0,0,.78), rgba(0,0,0,.28) 54%, rgba(0,0,0,.6)), linear-gradient(180deg, rgba(0,0,0,.18), transparent 48%, rgba(0,0,0,.48)); }
-
 @media (max-width: 900px) and (max-height: 600px) {
   .kiosk-slide[data-kiosk-scene="calendar"] .kiosk-scene-image { opacity: .84 !important; }
   .kiosk-slide[data-kiosk-scene="calendar"] .kiosk-calendar-scene { padding: 1.1rem 1.1rem .8rem; }
@@ -852,20 +834,6 @@ html[data-cosmic-reduced-effects="true"] *::after {
 .kiosk-night-dimmer { background: rgba(0,0,0,.35); }
 .kiosk-slide-content { padding: 0; scrollbar-width: none; }
 .kiosk-slide-content::-webkit-scrollbar { display: none; }
-.kiosk-music-art { width: min(42%, 22rem); aspect-ratio: 1; }
-.kiosk-music-details { align-self: center; justify-self: stretch; text-align: left; }
-.kiosk-music-backgrounds { z-index: 0; }
-.kiosk-music-background { position: absolute; inset: 0; height: 100%; width: 100%; object-fit: cover; }
-.kiosk-music-background-current { opacity: 1; transform: scale(1); }
-.kiosk-music-layer { position: absolute !important; inset: 0 !important; z-index: 2; }
-.kiosk-music-playing { position: absolute !important; inset: 0 !important; height: 100% !important; width: 100% !important; }
-.kiosk-music-overlay { z-index: 1; }
-.kiosk-music-provider-mark { width: clamp(4.5rem, 10vw, 8rem); height: clamp(4.5rem, 10vw, 8rem); filter: drop-shadow(0 0 28px color-mix(in srgb, var(--music-provider-accent, #1ed760) 25%, transparent)); }
-.kiosk-music-artists .kiosk-music-artist-avatar + .kiosk-music-artist-avatar { margin-left: -.75rem; }
-.kiosk-music-cosmic-mark { display: grid; width: clamp(4.5rem, 10vw, 8rem); height: clamp(4.5rem, 10vw, 8rem); place-items: center; border: 1px solid rgba(240,171,252,.35); border-radius: 1.5rem; color: #f0abfc; font-size: clamp(2.5rem, 6vw, 5rem); box-shadow: 0 0 36px rgba(240,171,252,.16); }
-.kiosk-music-widget [data-music-provider="spotify"] .kiosk-music-overlay { background: linear-gradient(90deg, rgba(0,0,0,.78), rgba(0,12,5,.35) 55%, rgba(0,0,0,.7)), radial-gradient(ellipse at 70% 40%, rgba(30,215,96,.14), transparent 42%), linear-gradient(180deg, rgba(0,0,0,.15), transparent 45%, rgba(0,0,0,.5)); }
-.kiosk-music-widget [data-music-provider="none"] .kiosk-music-overlay { background: radial-gradient(ellipse at 50% 38%, rgba(30,215,96,.1), transparent 40%), linear-gradient(145deg, #04150c, #020605 72%); }
-
 .kiosk-shell[data-compact="true"] .kiosk-slide-card,
 .kiosk-shell[data-compact="true"] .kiosk-sports-view > section { border-radius: .7rem; backdrop-filter: blur(6px); box-shadow: 0 10px 30px rgba(0,0,0,.22); }
 .kiosk-shell[data-compact="true"] .kiosk-slide-card { border-radius: 0; backdrop-filter: none; box-shadow: none; }
@@ -877,19 +845,6 @@ html[data-cosmic-reduced-effects="true"] *::after {
 .kiosk-shell[data-compact="true"] .kiosk-slide-header p,
 .kiosk-shell[data-compact="true"] .kiosk-sports-view > section > header p { font-size: .5rem; letter-spacing: .14em; }
 .kiosk-shell[data-compact="true"] .kiosk-slide-content { padding: 0; overflow: hidden; }
-.kiosk-shell[data-compact="true"] .kiosk-music-art { width: min(42%, 13rem); border-radius: .55rem; }
-.kiosk-shell[data-compact="true"] .kiosk-music-playing { gap: 1rem; padding: .8rem; }
-.kiosk-shell[data-compact="true"] .kiosk-music-art { width: min(38vw, 10rem); }
-.kiosk-shell[data-compact="true"] .kiosk-music-progress { margin-top: 1rem; }
-.kiosk-shell[data-compact="true"] .kiosk-music-artists { margin-top: .8rem; }
-.kiosk-shell[data-compact="true"] .kiosk-music-artists .kiosk-music-artist-avatar + .kiosk-music-artist-avatar { margin-left: -.55rem; }
-
-@media (orientation: portrait) {
-  .kiosk-music-playing { grid-template-columns: 1fr; gap: 1rem; overflow-y: auto; padding: clamp(1rem, 6vw, 3rem); }
-  .kiosk-music-art { width: min(62vw, 42vh, 22rem); }
-  .kiosk-music-primary { justify-self: center; }
-}
-
 .kiosk-shell[data-compact="true"] .kiosk-sports-view > section { min-height: 0; }
 .kiosk-shell[data-compact="true"] .kiosk-sports-view > section > div { padding: .45rem .65rem; }
 .kiosk-shell[data-compact="true"] .kiosk-sports-view > section > footer { padding: .3rem .65rem; }

@@ -10,7 +10,6 @@ export interface KioskSlideshowState {
   paused: boolean;
   pauseReason: KioskSlideshowPauseReason;
   currentSlide: string | null;
-  holdMusicWhilePlaying: boolean;
   lastSeenAt: string | null;
   lastBootId: string | null;
   command: KioskSlideshowCommand | null;
@@ -28,7 +27,6 @@ function stateFromRow(row: typeof kioskDeviceSettings.$inferSelect | undefined):
     paused: row?.slideshowPaused ?? false,
     pauseReason: (row?.slideshowPauseReason as KioskSlideshowPauseReason | null | undefined) ?? null,
     currentSlide: row?.slideshowCurrentSlide ?? null,
-    holdMusicWhilePlaying: row?.slideshowHoldMusicWhilePlaying ?? false,
     lastSeenAt: row?.slideshowLastSeenAt?.toISOString() ?? null,
     lastBootId: row?.slideshowLastBootId ?? null,
     command: (row?.slideshowCommand as KioskSlideshowCommand | null | undefined) ?? null,
@@ -63,7 +61,7 @@ export async function readKioskSlideshowState(deviceId: string, bootId?: string)
   return stateFromRow(row);
 }
 
-export async function applyKioskSlideshowCommand(deviceId: string, command: Exclude<KioskSlideshowCommand, "resume"> | "resume", holdMusicWhilePlaying?: boolean) {
+export async function applyKioskSlideshowCommand(deviceId: string, command: Exclude<KioskSlideshowCommand, "resume"> | "resume") {
   const db = database();
   const row = await ensureRow(deviceId);
   const now = new Date();
@@ -72,17 +70,10 @@ export async function applyKioskSlideshowCommand(deviceId: string, command: Excl
     slideshowCommandRevision: sql`${kioskDeviceSettings.slideshowCommandRevision} + 1`,
     ...(command === "pause" ? { slideshowPaused: true, slideshowPauseReason: "manual" } : {}),
     ...(command === "resume" ? { slideshowPaused: false, slideshowPauseReason: null } : {}),
-    ...(typeof holdMusicWhilePlaying === "boolean" ? { slideshowHoldMusicWhilePlaying: holdMusicWhilePlaying } : {}),
     updatedAt: now,
   };
   const [updated] = await db.update(kioskDeviceSettings).set(updates).where(eq(kioskDeviceSettings.deviceId, deviceId)).returning();
   return stateFromRow(updated ?? row);
-}
-
-export async function setKioskHoldMusic(deviceId: string, holdMusicWhilePlaying: boolean) {
-  const db = database();
-  const [updated] = await db.update(kioskDeviceSettings).set({ slideshowHoldMusicWhilePlaying: holdMusicWhilePlaying, updatedAt: new Date() }).where(eq(kioskDeviceSettings.deviceId, deviceId)).returning();
-  return stateFromRow(updated ?? await ensureRow(deviceId));
 }
 
 export async function reportKioskSlideshowState(deviceId: string, input: { bootId: string; currentSlide: string; paused: boolean; pauseReason: KioskSlideshowPauseReason; appliedCommandRevision: number }) {
