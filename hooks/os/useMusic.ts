@@ -115,7 +115,6 @@ export function useMusic({ refreshMs, enabled = true }: UseMusicOptions = {}) {
 
   return {
     snapshot,
-    debug: snapshot?.debug,
     loading,
     refreshing,
     error,

@@ -854,7 +854,6 @@ html[data-cosmic-reduced-effects="true"] *::after {
 .kiosk-slide-content::-webkit-scrollbar { display: none; }
 .kiosk-music-art { width: min(42%, 22rem); aspect-ratio: 1; }
 .kiosk-music-details { align-self: center; justify-self: stretch; text-align: left; }
-.kiosk-music-widget .kiosk-scene-image { filter: blur(3px); transform: scale(1.03); }
 .kiosk-music-backgrounds { z-index: 0; }
 .kiosk-music-background { position: absolute; inset: 0; height: 100%; width: 100%; object-fit: cover; }
 .kiosk-music-background-current { opacity: 1; transform: scale(1); }
