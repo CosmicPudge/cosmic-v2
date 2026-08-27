@@ -6,6 +6,9 @@ import { useMusic } from "@/hooks/os/useMusic";
 
 export default function KioskMusicWidget({ music }: { music: ReturnType<typeof useMusic> }) {
   const track = music.playback?.track;
+  const disconnected = !music.connected;
+  const providerFailure = music.connected && Boolean(music.error);
+  const statusLabel = disconnected ? music.reconnectRequired ? "SPOTIFY RECONNECT REQUIRED" : music.error?.includes("not configured") ? "SPOTIFY NOT CONFIGURED" : "SPOTIFY NOT CONNECTED" : providerFailure ? "SPOTIFY TEMPORARILY UNAVAILABLE" : track ? music.playback?.playing ? "PLAYING" : "PAUSED" : "COSMIC MUSIC";
   const duration = music.playback?.durationMs ?? track?.durationMs;
   const progressMs = useSmoothProgress(music.playback?.positionMs ?? 0, duration, Boolean(music.playback?.playing), track?.id);
   const stale = Boolean(music.requestError && track);
@@ -15,8 +18,8 @@ export default function KioskMusicWidget({ music }: { music: ReturnType<typeof u
       <div className="relative z-10 flex min-h-0 flex-1 items-center gap-6 sm:gap-12">
         <div className="kiosk-music-art shrink-0 overflow-hidden rounded-xl bg-black/40 shadow-2xl">{track?.artworkUrl ? <img src={track.artworkUrl} alt="" draggable={false} className="h-full w-full object-cover" onError={(event) => { event.currentTarget.style.display = "none"; }} /> : <span className="grid h-full w-full place-items-center text-5xl text-fuchsia-100/65">♫</span>}</div>
         <div className="min-w-0 flex-1">
-          <p className="text-[.65rem] font-semibold uppercase tracking-[.3em] text-fuchsia-200/75">{!music.connected ? "SPOTIFY NOT CONNECTED" : track ? music.playback?.playing ? "PLAYING" : "PAUSED" : "COSMIC MUSIC"}</p>
-          <h1 className="mt-3 line-clamp-2 text-[clamp(1.5rem,4vw,3.4rem)] font-semibold leading-tight">{!music.connected ? "Connect Spotify from Cosmic Account Settings" : track ? track.title : "Nothing playing"}</h1>
+          <p className="text-[.65rem] font-semibold uppercase tracking-[.3em] text-fuchsia-200/75">{statusLabel}</p>
+          <h1 className="mt-3 line-clamp-2 text-[clamp(1.5rem,4vw,3.4rem)] font-semibold leading-tight">{disconnected ? "Connect Spotify from Cosmic Account Settings" : providerFailure ? "Music temporarily unavailable" : track ? track.title : "Nothing playing"}</h1>
           <p className="mt-2 truncate text-[clamp(.9rem,2vw,1.35rem)] text-white/75">{track?.artists.join(", ") ?? (music.error ? "Cosmic will retry automatically." : "Music is idle")}</p>
           {track?.album ? <p className="mt-2 truncate text-sm uppercase tracking-[.16em] text-white/50">{track.album}</p> : null}
           {stale ? <p className="mt-3 text-xs uppercase tracking-[.18em] text-amber-100/65">Reconnecting…</p> : null}

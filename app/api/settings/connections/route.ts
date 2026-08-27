@@ -5,6 +5,7 @@ import { getCurrentCosmicAccount } from "@/services/auth/server";
 import { deleteProviderConnection, listProviderConnections } from "@/services/providers/store";
 import { isCredentialEncryptionConfigured } from "@/services/providers/credentialCrypto";
 import { clearWritableEventTargets } from "@/services/calendar/writableEventRegistry";
+import { normalizeProviderId } from "@/services/providers/normalize";
 
 export const dynamic = "force-dynamic";
 
@@ -34,7 +35,7 @@ function unavailableStatus(provider: string, detail: string, available = false) 
 }
 
 function ownedConnectionStatus(connections: Array<{ provider: string; providerType: string | null; status: string; reconnectRequired: boolean; displayName: string | null }>) {
-  const find = (provider: string) => connections.find((connection) => connection.provider === provider);
+  const find = (provider: string) => connections.find((connection) => normalizeProviderId(connection.provider) === provider);
   const spotify = find("spotify");
   const gmail = find("gmail");
   const calendar = find("calendar");
