@@ -48,8 +48,8 @@ export function useMusic({ refreshMs, enabled = true }: UseMusicOptions = {}) {
         const next = await response.json() as MusicSnapshot;
         if (requestSequence < latestAcceptedSequenceRef.current) return;
         latestAcceptedSequenceRef.current = requestSequence;
-        if (process.env.NODE_ENV !== "production") console.info(`[use-music] receivedTrackPresent=${Boolean(next.playback.track)} trackIdSuffix=${next.playback.track?.id?.slice(-4) ?? "none"}`);
-        setSnapshot((current) => next.error && current?.playback.track ? { ...current, error: next.error } : next);
+        if (process.env.NODE_ENV !== "production") console.info(`[use-music] direct-response trackPresent=${Boolean(next.playback.track)} trackIdSuffix=${next.playback.track?.id?.slice(-4) ?? "none"} title=${JSON.stringify(next.playback.track?.title ?? null)}`);
+        setSnapshot(next);
         setRequestError(undefined);
       } catch (cause) {
         setRequestError(cause instanceof Error ? cause.message : "Music is unavailable.");
@@ -81,6 +81,10 @@ export function useMusic({ refreshMs, enabled = true }: UseMusicOptions = {}) {
   useEffect(() => { const timer = window.setTimeout(() => { setSnapshot(null); setLoading(true); setRequestError(undefined); hasLoaded.current = false; }, 0); return () => window.clearTimeout(timer); }, [scope.id]);
 
   useVisiblePolling(refresh, refreshMs ?? 0, { enabled: enabled && refreshMs !== undefined });
+
+  useEffect(() => {
+    if (process.env.NODE_ENV !== "production") console.info(`[use-music] hook-state trackPresent=${Boolean(snapshot?.playback.track)} trackIdSuffix=${snapshot?.playback.track?.id?.slice(-4) ?? "none"} title=${JSON.stringify(snapshot?.playback.track?.title ?? null)}`);
+  }, [snapshot?.playback.track, snapshot?.playback.track?.id, snapshot?.playback.track?.title]);
 
   const command = useCallback(async (action: string, value?: number) => {
     if (actionLoading) {

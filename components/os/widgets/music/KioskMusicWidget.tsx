@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useState, type CSSProperties } from "react";
+import { useEffect, useId, useRef, useState, type CSSProperties, type RefObject } from "react";
 import type { MusicArtist, MusicProviderKind, MusicTrack } from "@/core/contracts/Music";
 import { useKioskSlideshowControl } from "@/components/os/kiosk/KioskSlideshowContext";
 import { useWidgetContext } from "@/components/os/ui/widget/WidgetContext";
@@ -33,6 +33,7 @@ export default function KioskMusicWidget({ music }: { music: ReturnType<typeof u
   const { active } = useWidgetContext();
   const source = useId();
   const { setMusicPlaying } = useKioskSlideshowControl();
+  const compositionRef = useRef<HTMLDivElement>(null);
   const track = music.playback?.track;
   const renderableTrack = isRenderableTrack(track) ? track : null;
   const provider = resolveProvider(music.provider);
@@ -44,6 +45,18 @@ export default function KioskMusicWidget({ music }: { music: ReturnType<typeof u
     setMusicPlaying(source, Boolean(active && playing));
     return () => setMusicPlaying(source, false);
   }, [active, playing, setMusicPlaying, source]);
+  useEffect(() => {
+    if (process.env.NODE_ENV === "production") return;
+    const measure = () => {
+      const rect = compositionRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      const viewportHeight = window.innerHeight;
+      console.info(`[kiosk-music-bounds] viewportHeight=${viewportHeight} contentTop=${Math.round(rect.top)} contentHeight=${Math.round(rect.height)} contentCenterY=${Math.round(rect.top + rect.height / 2)} viewportCenterY=${Math.round(viewportHeight / 2)} offset=${Math.round(rect.top + rect.height / 2 - viewportHeight / 2)}`);
+    };
+    const frame = window.requestAnimationFrame(measure);
+    window.addEventListener("resize", measure);
+    return () => { window.cancelAnimationFrame(frame); window.removeEventListener("resize", measure); };
+  }, [renderableTrack?.id]);
 
   return <Widget accent="music" className="kiosk-music-widget" contentPadding={false} hover={false} imageOpacity={1} imageBlur={0}>
     <div className="kiosk-music-scene relative flex h-full min-h-0 flex-col overflow-hidden text-white" data-music-provider={provider?.id ?? "none"} data-music-state={state}>
@@ -52,18 +65,18 @@ export default function KioskMusicWidget({ music }: { music: ReturnType<typeof u
       </div>
       <div className="kiosk-music-overlay absolute inset-0" aria-hidden="true" />
       <div className="kiosk-music-layer relative z-[2] flex h-full min-h-0 flex-1">
-        {renderableTrack ? <PlayingScene music={music} track={renderableTrack} playing={playing} /> : <ProviderScene provider={provider} configured={music.configured} connected={music.connected} playing={playing} state={providerState} />}
+        {renderableTrack ? <PlayingScene contentRef={compositionRef} music={music} track={renderableTrack} playing={playing} /> : <ProviderScene provider={provider} configured={music.configured} connected={music.connected} playing={playing} state={providerState} />}
       </div>
     </div>
   </Widget>;
 }
 
-function PlayingScene({ music, track, playing }: { music: ReturnType<typeof useMusic>; track: MusicTrack; playing: boolean }) {
+function PlayingScene({ contentRef, music, track, playing }: { contentRef: RefObject<HTMLDivElement | null>; music: ReturnType<typeof useMusic>; track: MusicTrack; playing: boolean }) {
   const progressMs = music.playback?.positionMs ?? 0;
   const durationMs = music.playback?.durationMs ?? track.durationMs;
   const interpolatedProgress = useSmoothProgress(progressMs, durationMs, playing, track.id);
 
-  return <div className="kiosk-music-playing absolute inset-0 z-10 grid w-full min-h-0 grid-cols-[minmax(0,44fr)_minmax(0,56fr)] items-center gap-[clamp(1rem,3.5vw,4rem)] p-[clamp(.75rem,2vw,2.25rem)]">
+  return <div ref={contentRef} className="kiosk-music-playing absolute inset-0 z-10 grid w-full min-h-0 grid-cols-[minmax(0,44fr)_minmax(0,56fr)] items-center gap-[clamp(1rem,3.5vw,4rem)] p-[clamp(.75rem,2vw,2.25rem)]">
     <div className="kiosk-music-primary min-w-0 justify-self-center">
       <div className="kiosk-music-art aspect-square w-[min(64dvh,34dvw,32rem)] overflow-hidden rounded-[clamp(.5rem,1vw,1rem)] bg-black/35 shadow-2xl">
         {track.artworkUrl ? <img src={track.artworkUrl} alt="" draggable={false} className="h-full w-full object-cover" onError={(event) => { event.currentTarget.style.display = "none"; }} /> : <span className="grid h-full w-full place-items-center text-6xl text-white/45">♫</span>}
