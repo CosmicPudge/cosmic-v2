@@ -6,13 +6,14 @@ import type { WidgetAccent } from "./types";
 
 export type WidgetPresentation = "dashboard" | "kiosk";
 
-const WidgetContext = createContext<{ size: WidgetSize; accent?: WidgetAccent; presentation: WidgetPresentation }>({
+const WidgetContext = createContext<{ size: WidgetSize; accent?: WidgetAccent; presentation: WidgetPresentation; active: boolean }>({
   size: "medium",
   presentation: "dashboard",
+  active: true,
 });
 
-export function WidgetProvider({ children, size, accent, presentation = "dashboard" }: { children: React.ReactNode; size: WidgetSize; accent?: WidgetAccent; presentation?: WidgetPresentation }) {
-  return <WidgetContext.Provider value={{ size, accent, presentation }}>{children}</WidgetContext.Provider>;
+export function WidgetProvider({ children, size, accent, presentation = "dashboard", active = true }: { children: React.ReactNode; size: WidgetSize; accent?: WidgetAccent; presentation?: WidgetPresentation; active?: boolean }) {
+  return <WidgetContext.Provider value={{ size, accent, presentation, active }}>{children}</WidgetContext.Provider>;
 }
 
 export function useWidgetContext() {

@@ -9,9 +9,10 @@ import { kioskApiUrl } from "@/services/kioskRequest";
 
 interface UseMusicOptions {
   refreshMs?: number;
+  enabled?: boolean;
 }
 
-export function useMusic({ refreshMs }: UseMusicOptions = {}) {
+export function useMusic({ refreshMs, enabled = true }: UseMusicOptions = {}) {
   const [snapshot, setSnapshot] = useState<MusicSnapshot | null>(null);
   const hasLoaded = useRef(false);
   const refreshPromiseRef = useRef<Promise<void> | null>(null);
@@ -41,7 +42,8 @@ export function useMusic({ refreshMs }: UseMusicOptions = {}) {
           throw new Error("Music is unavailable.");
         }
 
-        setSnapshot(await response.json() as MusicSnapshot);
+        const next = await response.json() as MusicSnapshot;
+        setSnapshot((current) => next.error && current?.playback.track ? { ...current, error: next.error } : next);
         setRequestError(undefined);
       } catch (cause) {
         setRequestError(cause instanceof Error ? cause.message : "Music is unavailable.");
@@ -61,18 +63,18 @@ export function useMusic({ refreshMs }: UseMusicOptions = {}) {
   }, []);
 
   useEffect(() => {
-    if (refreshMs !== undefined) return;
+    if (!enabled || refreshMs !== undefined) return;
 
     const initial = window.setTimeout(() => {
       void refresh();
     }, 0);
 
     return () => window.clearTimeout(initial);
-  }, [refresh, refreshMs, scope.id]);
+  }, [enabled, refresh, refreshMs, scope.id]);
 
   useEffect(() => { const timer = window.setTimeout(() => { setSnapshot(null); setLoading(true); setRequestError(undefined); hasLoaded.current = false; }, 0); return () => window.clearTimeout(timer); }, [scope.id]);
 
-  useVisiblePolling(refresh, refreshMs ?? 0, { enabled: refreshMs !== undefined });
+  useVisiblePolling(refresh, refreshMs ?? 0, { enabled: enabled && refreshMs !== undefined });
 
   const command = useCallback(async (action: string, value?: number) => {
     if (actionLoading) {

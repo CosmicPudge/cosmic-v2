@@ -68,7 +68,7 @@ function formatWidgetTitle(id: string) {
         <div className="kiosk-slide-content relative flex min-h-0 flex-1 items-stretch justify-stretch overflow-hidden p-[clamp(.75rem,2vw,2rem)]">
           <div className="flex h-full min-h-0 w-full items-stretch">
             <div className="h-full min-h-0 w-full">
-              <WidgetProvider size="medium" presentation="kiosk">
+              <WidgetProvider size="medium" presentation="kiosk" active={active && !exiting}>
                 <WidgetComponent />
               </WidgetProvider>
             </div>
