@@ -1,11 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import Widget from "@/components/os/ui/widget/Widget";
 import { useMusic } from "@/hooks/os/useMusic";
+import { useKioskSlideshowControl } from "@/components/os/kiosk/KioskSlideshowContext";
+import { useWidgetContext } from "@/components/os/ui/widget/WidgetContext";
 
 export default function KioskMusicWidget({ music }: { music: ReturnType<typeof useMusic> }) {
+  const { active } = useWidgetContext();
+  const source = useId();
+  const { setMusicPlaying } = useKioskSlideshowControl();
   const track = music.playback?.track;
+  useEffect(() => {
+    setMusicPlaying(source, Boolean(active && music.playback?.playing));
+    return () => setMusicPlaying(source, false);
+  }, [active, music.playback?.playing, setMusicPlaying, source]);
   const disconnected = !music.connected;
   const providerFailure = music.connected && Boolean(music.error) && !track;
   const statusLabel = disconnected ? music.reconnectRequired ? "SPOTIFY RECONNECT REQUIRED" : music.error?.includes("not configured") ? "SPOTIFY NOT CONFIGURED" : "SPOTIFY NOT CONNECTED" : providerFailure ? "SPOTIFY TEMPORARILY UNAVAILABLE" : track ? music.playback?.playing ? "PLAYING" : "PAUSED" : "COSMIC MUSIC";

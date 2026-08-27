@@ -7,6 +7,8 @@ export type KioskLocationSource = "detected" | "account" | "manual";
 export type KioskLocationMode = "fixed" | "account" | "follow-phone";
 export type KioskResolvedLocationSource = "phone" | "device" | "account" | "kiosk-fallback";
 export type KioskSetupPreview = "normal" | "fit" | "clock" | "weather" | "calendar";
+export type KioskSlideshowPauseReason = "manual" | "music-playing" | "preview" | null;
+export type KioskSlideshowCommand = "pause" | "resume" | "next" | "previous";
 
 export interface KioskDisplayProfile {
   viewportWidth: number;

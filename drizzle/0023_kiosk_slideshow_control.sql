@@ -1,0 +1,11 @@
+ALTER TABLE "kiosk_device_settings" ADD COLUMN "slideshow_paused" boolean DEFAULT false NOT NULL;
+ALTER TABLE "kiosk_device_settings" ADD COLUMN "slideshow_pause_reason" text;
+ALTER TABLE "kiosk_device_settings" ADD COLUMN "slideshow_current_slide" text;
+ALTER TABLE "kiosk_device_settings" ADD COLUMN "slideshow_last_seen_at" timestamp with time zone;
+ALTER TABLE "kiosk_device_settings" ADD COLUMN "slideshow_last_boot_id" text;
+ALTER TABLE "kiosk_device_settings" ADD COLUMN "slideshow_command" text;
+ALTER TABLE "kiosk_device_settings" ADD COLUMN "slideshow_command_revision" integer DEFAULT 0 NOT NULL;
+ALTER TABLE "kiosk_device_settings" ADD COLUMN "slideshow_applied_command_revision" integer DEFAULT 0 NOT NULL;
+ALTER TABLE "kiosk_device_settings" ADD COLUMN "slideshow_hold_music_while_playing" boolean DEFAULT false NOT NULL;
+ALTER TABLE "kiosk_device_settings" ADD CONSTRAINT "kiosk_device_settings_pause_reason_check" CHECK ("kiosk_device_settings"."slideshow_pause_reason" is null or "kiosk_device_settings"."slideshow_pause_reason" in ('manual', 'music-playing', 'preview'));
+ALTER TABLE "kiosk_device_settings" ADD CONSTRAINT "kiosk_device_settings_command_check" CHECK ("kiosk_device_settings"."slideshow_command" is null or "kiosk_device_settings"."slideshow_command" in ('pause', 'resume', 'next', 'previous'));

@@ -1,6 +1,7 @@
 import { getPairingStatus, consumeApprovedPairing } from "@/services/devices/pairing";
 import { allowRateLimit, requestRateKey } from "@/services/security/rateLimit";
 import { NextResponse } from "next/server";
+import { DEVICE_SESSION_COOKIE_MAX_AGE_SECONDS } from "@/services/auth/localStore";
 
 export async function POST(request: Request) {
   if (!allowRateLimit(`pair:poll:${requestRateKey(request)}`, 30, 60_000)) return Response.json({ status: "pending" }, { status: 429, headers: { "Retry-After": "4", "Cache-Control": "no-store" } });
@@ -12,7 +13,7 @@ export async function POST(request: Request) {
     const session = await consumeApprovedPairing(body.deviceCode);
     if (!session) { const response = Response.json({ status: "expired" }, { headers: { "Cache-Control": "no-store" } }); if (process.env.NODE_ENV !== "production") console.info(`[pair] HTTP POST /api/devices/pair/status status=${response.status} state=expired`); return response; }
     const response = NextResponse.json({ status: "approved" }, { headers: { "Cache-Control": "no-store" } });
-    response.cookies.set({ name: "cosmic_session", value: session.token, httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/" });
+    response.cookies.set({ name: "cosmic_session", value: session.token, httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/", maxAge: Math.min(DEVICE_SESSION_COOKIE_MAX_AGE_SECONDS, Math.max(0, Math.floor((Date.parse(session.expiresAt) - Date.now()) / 1000))) });
     response.cookies.set({ name: "cosmic_device_id", value: session.deviceId, httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/", maxAge: 31536000 });
     if (process.env.NODE_ENV !== "production") console.info(`[pair] cookie-set=true HTTP POST /api/devices/pair/status status=${response.status}`);
     return response;

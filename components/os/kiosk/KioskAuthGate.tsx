@@ -1,11 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback } from "react";
 import { useCosmicAccount } from "@/components/account/AccountProvider";
 import { DashboardReadinessProvider } from "@/components/dashboard/readiness/DashboardReadiness";
 import DevicePairingScreen from "./DevicePairingScreen";
 import KioskSlideshow from "./KioskSlideshow";
-import { KIOSK_SESSION_STORAGE_KEY } from "./KioskShell";
 import KioskAmbientFrame from "./KioskAmbientFrame";
 import KioskDeviceSetupGate from "./KioskDeviceSetupGate";
 
@@ -15,13 +14,6 @@ function authLog(message: string) {
 
 export default function KioskAuthGate() {
   const { loading, account, sessionType, deviceId, refresh } = useCosmicAccount();
-  const [browserSessionReady, setBrowserSessionReady] = useState<boolean | null>(null);
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      setBrowserSessionReady(window.sessionStorage.getItem(KIOSK_SESSION_STORAGE_KEY) === "true");
-    }, 0);
-    return () => window.clearTimeout(timer);
-  }, []);
   const revalidateDeviceSession = useCallback(async () => {
     const bootId = new URLSearchParams(window.location.search).get("cosmic-boot") ?? "";
     authLog("revalidate-start");
@@ -31,7 +23,6 @@ export default function KioskAuthGate() {
       const bootMatch = payload.authenticatedBootId === bootId;
       authLog(`attempt=${attempt + 1} httpStatus=${response.status} authenticated=${payload.authenticated === true} sessionType=${payload.sessionType ?? "none"} authenticatedBootId=${payload.authenticatedBootId ?? "null"} expectedBootId=${bootId}`);
       if (response.ok && payload.authenticated === true && payload.sessionType === "device" && bootMatch) {
-        window.sessionStorage.setItem(KIOSK_SESSION_STORAGE_KEY, "true");
         authLog("account-refresh");
         await refresh();
         authLog("authenticated");
@@ -41,8 +32,8 @@ export default function KioskAuthGate() {
     }
     throw new Error("Device session validation is still pending.");
   }, [refresh]);
-  if (browserSessionReady === null || loading) return <div className="grid min-h-[100dvh] place-items-center text-sm text-white/50">Checking Cosmic device authorization…</div>;
-  if (!browserSessionReady || !account || sessionType !== "device") return <DevicePairingScreen onAuthenticated={revalidateDeviceSession} />;
+  if (loading) return <div className="grid min-h-[100dvh] place-items-center text-sm text-white/50">Checking Cosmic device authorization…</div>;
+  if (!account || sessionType !== "device") return <DevicePairingScreen onAuthenticated={revalidateDeviceSession} />;
   return (
     // Kiosk widgets need the readiness context, but kiosk presentation does not
     // gate mounting on dashboard-critical readiness.

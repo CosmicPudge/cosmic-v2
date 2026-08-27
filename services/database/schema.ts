@@ -90,9 +90,18 @@ export const kioskDeviceSettings = pgTable("kiosk_device_settings", {
   nightDimStart: text("night_dim_start").notNull().default("20:00"),
   nightDimEnd: text("night_dim_end").notNull().default("06:00"),
   nightDimOpacity: doublePrecision("night_dim_opacity").notNull().default(0.35),
+  slideshowPaused: boolean("slideshow_paused").notNull().default(false),
+  slideshowPauseReason: text("slideshow_pause_reason"),
+  slideshowCurrentSlide: text("slideshow_current_slide"),
+  slideshowLastSeenAt: timestamp("slideshow_last_seen_at", { withTimezone: true }),
+  slideshowLastBootId: text("slideshow_last_boot_id"),
+  slideshowCommand: text("slideshow_command"),
+  slideshowCommandRevision: integer("slideshow_command_revision").notNull().default(0),
+  slideshowAppliedCommandRevision: integer("slideshow_applied_command_revision").notNull().default(0),
+  slideshowHoldMusicWhilePlaying: boolean("slideshow_hold_music_while_playing").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-}, (table) => [index("kiosk_device_settings_updated_index").on(table.updatedAt), check("kiosk_device_settings_orientation_check", sql`${table.orientation} is null or ${table.orientation} in ('landscape', 'portrait')`), check("kiosk_device_settings_density_check", sql`${table.density} is null or ${table.density} in ('compact', 'standard', 'large')`), check("kiosk_device_settings_pointer_check", sql`${table.pointer} is null or ${table.pointer} in ('coarse', 'fine', 'unknown')`), check("kiosk_device_settings_clock_format_check", sql`${table.clockFormat} is null or ${table.clockFormat} in ('12h', '24h')`), check("kiosk_device_settings_preview_check", sql`${table.setupPreview} in ('normal', 'fit', 'clock', 'weather', 'calendar')`), check("kiosk_device_settings_ui_scale_check", sql`${table.uiScale} >= 0.9 and ${table.uiScale} <= 1.1`), check("kiosk_device_settings_dim_opacity_check", sql`${table.nightDimOpacity} >= 0 and ${table.nightDimOpacity} <= 1`)]);
+}, (table) => [index("kiosk_device_settings_updated_index").on(table.updatedAt), check("kiosk_device_settings_orientation_check", sql`${table.orientation} is null or ${table.orientation} in ('landscape', 'portrait')`), check("kiosk_device_settings_density_check", sql`${table.density} is null or ${table.density} in ('compact', 'standard', 'large')`), check("kiosk_device_settings_pointer_check", sql`${table.pointer} is null or ${table.pointer} in ('coarse', 'fine', 'unknown')`), check("kiosk_device_settings_clock_format_check", sql`${table.clockFormat} is null or ${table.clockFormat} in ('12h', '24h')`), check("kiosk_device_settings_preview_check", sql`${table.setupPreview} in ('normal', 'fit', 'clock', 'weather', 'calendar')`), check("kiosk_device_settings_ui_scale_check", sql`${table.uiScale} >= 0.9 and ${table.uiScale} <= 1.1`), check("kiosk_device_settings_dim_opacity_check", sql`${table.nightDimOpacity} >= 0 and ${table.nightDimOpacity} <= 1`), check("kiosk_device_settings_pause_reason_check", sql`${table.slideshowPauseReason} is null or ${table.slideshowPauseReason} in ('manual', 'music-playing', 'preview')`), check("kiosk_device_settings_command_check", sql`${table.slideshowCommand} is null or ${table.slideshowCommand} in ('pause', 'resume', 'next', 'previous')`)]);
 
 export const devicePairings = pgTable("device_pairings", {
   id: text("id").primaryKey(),
