@@ -238,10 +238,17 @@ export default function KioskSlideshow() {
   const gestureRef = useRef<{ pointerId: number; startX: number; startY: number; lastX: number; lastY: number } | null>(null);
   const [timerEpoch, setTimerEpoch] = useState(0);
   const [manualPaused, setManualPaused] = useState(false);
+  const [holdMusicWhilePlaying, setHoldMusicWhilePlaying] = useState(false);
+  const [musicSources, setMusicSources] = useState<Record<string, boolean>>({});
   const appliedCommandRevisionRef = useRef(0);
   const bootId = searchParams.get("cosmic-boot")?.trim() ?? "";
-  const paused = manualPaused;
-  const pauseReason: KioskSlideshowPauseReason = manualPaused ? "manual" : null;
+  const setMusicPlaying = useCallback((source: string, playing: boolean) => {
+    setMusicSources((current) => current[source] === playing ? current : { ...current, [source]: playing });
+  }, []);
+  const musicPlaying = Object.values(musicSources).some(Boolean);
+  const musicHold = holdMusicWhilePlaying && musicPlaying;
+  const paused = manualPaused || musicHold;
+  const pauseReason: KioskSlideshowPauseReason = manualPaused ? "manual" : musicHold ? "music-playing" : null;
   const pause = useCallback(() => { setManualPaused(true); }, []);
   const resume = useCallback(() => { setManualPaused(false); setTimerEpoch((epoch) => epoch + 1); }, []);
   const togglePause = useCallback(() => { setManualPaused((current) => !current); setTimerEpoch((epoch) => epoch + 1); }, []);
@@ -323,7 +330,8 @@ export default function KioskSlideshow() {
       try {
         const response = await fetch(`/api/devices/kiosk-control?cosmic-kiosk=1&cosmic-boot=${encodeURIComponent(bootId)}`, { cache: "no-store", credentials: "include" });
         if (!response.ok || cancelled) return;
-        const state = await response.json() as { paused: boolean; pauseReason: KioskSlideshowPauseReason; command?: "pause" | "resume" | "next" | "previous" | null; commandRevision: number; appliedCommandRevision: number };
+        const state = await response.json() as { paused: boolean; pauseReason: KioskSlideshowPauseReason; holdMusicWhilePlaying: boolean; command?: "pause" | "resume" | "next" | "previous" | null; commandRevision: number; appliedCommandRevision: number };
+        setHoldMusicWhilePlaying(state.holdMusicWhilePlaying);
         let nextPaused = stateRef.current.paused;
         let nextReason = stateRef.current.pauseReason;
         if (state.pauseReason === "manual" || (state.pauseReason === null && state.command === "resume")) {
@@ -420,7 +428,7 @@ export default function KioskSlideshow() {
     return null;
   }
 
-  const control = { currentSlide: currentWidget.id, paused, pauseReason, pause, resume, togglePause };
+  const control = { currentSlide: currentWidget.id, paused, pauseReason, pause, resume, togglePause, setMusicPlaying };
   return (
     <KioskSlideshowProvider value={control}>
     <div

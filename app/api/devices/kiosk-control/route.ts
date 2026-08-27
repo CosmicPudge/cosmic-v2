@@ -1,11 +1,11 @@
 import { kioskBootId, requireAuthenticatedSession, requireCosmicAccount } from "@/services/auth/server";
 import { assertSameOrigin } from "@/services/security/origin";
 import { assertDeviceOwner } from "@/services/devices/kioskProfile";
-import { applyKioskSlideshowCommand, readKioskSlideshowState, reportKioskSlideshowState } from "@/services/devices/kioskSlideshow";
+import { applyKioskSlideshowCommand, readKioskSlideshowState, reportKioskSlideshowState, setKioskHoldMusic } from "@/services/devices/kioskSlideshow";
 import type { KioskSlideshowCommand, KioskSlideshowPauseReason } from "@/core/contracts/Kiosk";
 
 const commands = new Set<KioskSlideshowCommand>(["pause", "resume", "next", "previous"]);
-const pauseReasons = new Set<Exclude<KioskSlideshowPauseReason, null>>(["manual", "preview"]);
+const pauseReasons = new Set<Exclude<KioskSlideshowPauseReason, null>>(["manual", "music-playing", "preview"]);
 
 async function sessionForRequest(request: Request) {
   return requireAuthenticatedSession(request, { allowDevice: true, bootId: kioskBootId(request) });
@@ -39,12 +39,20 @@ export async function POST(request: Request) {
       const state = await reportKioskSlideshowState(session.deviceId, { bootId, currentSlide: body.currentSlide.slice(0, 80), paused: body.paused, pauseReason: body.pauseReason as KioskSlideshowPauseReason, appliedCommandRevision: Math.floor(body.appliedCommandRevision) });
       return Response.json(state, { headers: { "Cache-Control": "no-store" } });
     }
+    if (action === "set-hold") {
+      if (session.sessionType === "device") return Response.json({ error: "A kiosk cannot change remote settings." }, { status: 403 });
+      const account = await requireCosmicAccount(request);
+      const deviceId = typeof body?.deviceId === "string" ? body.deviceId : null;
+      if (!deviceId || typeof body?.holdMusicWhilePlaying !== "boolean" || !(await assertDeviceOwner(deviceId, account.id))) return Response.json({ error: "Invalid device setting." }, { status: 400 });
+      return Response.json(await setKioskHoldMusic(deviceId, body.holdMusicWhilePlaying), { headers: { "Cache-Control": "no-store" } });
+    }
     if (!commands.has(action as KioskSlideshowCommand)) return Response.json({ error: "Unknown kiosk control action." }, { status: 400 });
     if (session.sessionType === "device") return Response.json({ error: "A kiosk cannot issue remote control commands." }, { status: 403 });
     const account = await requireCosmicAccount(request);
     const deviceId = typeof body?.deviceId === "string" ? body.deviceId : null;
     if (!deviceId || !(await assertDeviceOwner(deviceId, account.id))) return Response.json({ error: "Device not found." }, { status: 404 });
-    return Response.json(await applyKioskSlideshowCommand(deviceId, action as KioskSlideshowCommand), { headers: { "Cache-Control": "no-store" } });
+    const holdMusicWhilePlaying = typeof body?.holdMusicWhilePlaying === "boolean" ? body.holdMusicWhilePlaying : undefined;
+    return Response.json(await applyKioskSlideshowCommand(deviceId, action as KioskSlideshowCommand, holdMusicWhilePlaying), { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     if (error instanceof Response) return error;
     return Response.json({ error: "Kiosk control action failed." }, { status: 503 });

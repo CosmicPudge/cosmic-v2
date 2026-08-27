@@ -11,6 +11,7 @@ export interface KioskSlideshowControl {
   pause: () => void;
   resume: () => void;
   togglePause: () => void;
+  setMusicPlaying: (source: string, playing: boolean) => void;
 }
 
 const KioskSlideshowContext = createContext<KioskSlideshowControl | null>(null);
@@ -25,5 +26,6 @@ export function useKioskSlideshowControl() {
     pause: () => undefined,
     resume: () => undefined,
     togglePause: () => undefined,
+    setMusicPlaying: () => undefined,
   } satisfies KioskSlideshowControl;
 }
