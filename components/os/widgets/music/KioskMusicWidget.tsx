@@ -38,8 +38,7 @@ export default function KioskMusicWidget({ music }: { music: ReturnType<typeof u
   const renderableTrack = isRenderableTrack(track) ? track : null;
   const provider = resolveProvider(music.provider);
   const playing = Boolean(music.playback?.playing);
-  const state = classifyMusicState({ track: renderableTrack ?? undefined, connected: music.connected, playing, error: Boolean(music.providerError ?? music.requestError) });
-  const providerState = state === "track" ? "idle" : state;
+  const state = classifyMusicState({ track: renderableTrack ?? undefined, connected: music.connected, playing, error: Boolean(music.error) });
 
   useEffect(() => {
     setMusicPlaying(source, Boolean(active && playing));
@@ -64,11 +63,23 @@ export default function KioskMusicWidget({ music }: { music: ReturnType<typeof u
         {renderableTrack?.artworkUrl ? <img className="kiosk-music-background kiosk-music-background-current" src={renderableTrack.artworkUrl} alt="" draggable={false} onError={(event) => { event.currentTarget.style.display = "none"; }} /> : null}
       </div>
       <div className="kiosk-music-overlay absolute inset-0" aria-hidden="true" />
-      <div className="kiosk-music-layer relative z-[2] flex h-full min-h-0 flex-1">
-        {renderableTrack ? <PlayingScene contentRef={compositionRef} music={music} track={renderableTrack} playing={playing} /> : <ProviderScene provider={provider} configured={music.configured} connected={music.connected} playing={playing} state={providerState} />}
+      <div className="kiosk-music-layer absolute inset-0 z-[2]">
+        <MusicStateContent state={state} provider={provider} configured={music.configured} connected={music.connected} playing={playing} track={renderableTrack} music={music} contentRef={compositionRef} />
       </div>
     </div>
   </Widget>;
+}
+
+function MusicStateContent({ state, provider, configured, connected, playing, track, music, contentRef }: { state: MusicSceneState; provider: ProviderPresentation | null; configured: boolean; connected: boolean; playing: boolean; track: MusicTrack | null; music: ReturnType<typeof useMusic>; contentRef: RefObject<HTMLDivElement | null> }) {
+  switch (state) {
+    case "track":
+      return track ? <PlayingScene contentRef={contentRef} music={music} track={track} playing={playing} /> : null;
+    case "playback-detected":
+    case "error":
+    case "idle":
+    case "no-provider":
+      return <ProviderScene provider={provider} configured={configured} connected={connected} playing={playing} state={state} />;
+  }
 }
 
 function PlayingScene({ contentRef, music, track, playing }: { contentRef: RefObject<HTMLDivElement | null>; music: ReturnType<typeof useMusic>; track: MusicTrack; playing: boolean }) {

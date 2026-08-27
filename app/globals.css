@@ -857,7 +857,8 @@ html[data-cosmic-reduced-effects="true"] *::after {
 .kiosk-music-backgrounds { z-index: 0; }
 .kiosk-music-background { position: absolute; inset: 0; height: 100%; width: 100%; object-fit: cover; }
 .kiosk-music-background-current { opacity: 1; transform: scale(1); }
-.kiosk-music-layer { z-index: 2; }
+.kiosk-music-layer { position: absolute; inset: 0; z-index: 2; }
+.kiosk-music-playing { position: absolute; inset: 0; height: 100%; width: 100%; }
 .kiosk-music-overlay { z-index: 1; }
 .kiosk-music-provider-mark { width: clamp(4.5rem, 10vw, 8rem); height: clamp(4.5rem, 10vw, 8rem); filter: drop-shadow(0 0 28px color-mix(in srgb, var(--music-provider-accent, #1ed760) 25%, transparent)); }
 .kiosk-music-artists .kiosk-music-artist-avatar + .kiosk-music-artist-avatar { margin-left: -.75rem; }
