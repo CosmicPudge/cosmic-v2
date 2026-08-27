@@ -140,14 +140,15 @@ async function snapshotWithToken(current: Token, refreshAccessToken?: () => Prom
     const requestStartedAt = new Date().toISOString();
     const requestStartedMs = Date.now();
     const response = await fetch("https://api.spotify.com/v1/me/player", { cache: "no-store", headers: { Authorization: `Bearer ${current.access_token}` } });
-    if (response.status === 204) { if (process.env.NODE_ENV !== "production") console.info(`[spotify-playback] requestStartedAt=${requestStartedAt} durationMs=${Date.now() - requestStartedMs} status=204 itemPresent=false itemType=none trackIdSuffix=none progressMs=0 isPlaying=false`); return { provider: "spotify", connected: true, capabilities: caps, playback: { playing: false, positionMs: 0, updatedAt: new Date().toISOString() } }; }
+    if (response.status === 204) { const requestDurationMs = Date.now() - requestStartedMs; if (process.env.NODE_ENV !== "production") console.info(`[spotify-playback] requestStartedAt=${requestStartedAt} durationMs=${requestDurationMs} status=204 itemPresent=false itemType=none trackIdSuffix=none progressMs=0 isPlaying=false`); return { provider: "spotify", connected: true, capabilities: caps, playback: { playing: false, positionMs: 0, updatedAt: new Date().toISOString() }, debug: { requestId: 0, fetchedAt: requestStartedAt, trackPresent: false, trackIdSuffix: "none", spotifyTrackSuffix: "none", requestDurationMs } }; }
     if (response.status === 401) return disconnected("Spotify authorization needs to reconnect.");
     if (response.status === 429) return temporaryFailure("Spotify is rate limited. Retrying automatically.");
     if (response.status >= 500) return temporaryFailure("Spotify is temporarily unavailable. Retrying automatically.");
     if (!response.ok) return temporaryFailure("Spotify playback is temporarily unavailable.");
     const payload = await response.json() as Parameters<typeof normalizePlayback>[0] & { currently_playing_type?: string };
     if (process.env.NODE_ENV !== "production") console.info(`[spotify-playback] requestStartedAt=${requestStartedAt} durationMs=${Date.now() - requestStartedMs} status=${response.status} itemPresent=${Boolean(payload.item)} itemType=${payload.currently_playing_type ?? (payload.item ? "track" : "none")} trackIdSuffix=${trackSuffix(payload.item?.id)} progressMs=${payload.progress_ms ?? 0} isPlaying=${Boolean(payload.is_playing)}`);
-    return await normalizePlayback(payload, current.access_token, refreshAccessToken);
+    const normalized = await normalizePlayback(payload, current.access_token, refreshAccessToken);
+    return { ...normalized, debug: { requestId: 0, fetchedAt: requestStartedAt, trackPresent: Boolean(payload.item), trackIdSuffix: trackSuffix(payload.item?.id), spotifyTrackSuffix: trackSuffix(payload.item?.id), requestDurationMs: Date.now() - requestStartedMs } };
   } catch { return temporaryFailure("Spotify playback is temporarily unavailable."); }
 }
 
