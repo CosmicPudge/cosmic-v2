@@ -426,6 +426,12 @@ export default function KioskSlideshow() {
     safePreviousIndex !== null
       ? widgets[safePreviousIndex]
       : null;
+  // A Music widget must never have two live slide bodies. This also protects
+  // against a stale or repeated index during a rapid transition.
+  const renderPreviousWidget =
+    previousWidget && previousWidget.id !== currentWidget?.id
+      ? previousWidget
+      : null;
 
   if (!currentWidget) {
     return null;
@@ -443,10 +449,10 @@ export default function KioskSlideshow() {
       style={{ touchAction: "pan-y" }}
       aria-label="Cosmic kiosk slideshow"
     >
-      {previousWidget ? (
+      {renderPreviousWidget ? (
         <KioskSlide
-          key={`previous-${previousWidget.id}-${safePreviousIndex}`}
-          widget={previousWidget}
+          key={`previous-${renderPreviousWidget.id}-${safePreviousIndex}`}
+          widget={renderPreviousWidget}
           active={false}
           exiting
         />
