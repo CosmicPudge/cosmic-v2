@@ -16,6 +16,8 @@ export function useMusic({ refreshMs, enabled = true }: UseMusicOptions = {}) {
   const [snapshot, setSnapshot] = useState<MusicSnapshot | null>(null);
   const hasLoaded = useRef(false);
   const refreshPromiseRef = useRef<Promise<void> | null>(null);
+  const requestSequenceRef = useRef(0);
+  const latestAcceptedSequenceRef = useRef(0);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [requestError, setRequestError] = useState<string>();
@@ -27,6 +29,7 @@ export function useMusic({ refreshMs, enabled = true }: UseMusicOptions = {}) {
     if (refreshPromiseRef.current) return refreshPromiseRef.current;
 
     const initial = !hasLoaded.current;
+    const requestSequence = ++requestSequenceRef.current;
 
     if (initial) {
       setLoading(true);
@@ -43,6 +46,8 @@ export function useMusic({ refreshMs, enabled = true }: UseMusicOptions = {}) {
         }
 
         const next = await response.json() as MusicSnapshot;
+        if (requestSequence < latestAcceptedSequenceRef.current) return;
+        latestAcceptedSequenceRef.current = requestSequence;
         if (process.env.NODE_ENV !== "production") console.info(`[use-music] receivedTrackPresent=${Boolean(next.playback.track)} trackIdSuffix=${next.playback.track?.id?.slice(-4) ?? "none"}`);
         setSnapshot((current) => next.error && current?.playback.track ? { ...current, error: next.error } : next);
         setRequestError(undefined);
@@ -110,6 +115,7 @@ export function useMusic({ refreshMs, enabled = true }: UseMusicOptions = {}) {
 
   return {
     snapshot,
+    debug: snapshot?.debug,
     loading,
     refreshing,
     error,
