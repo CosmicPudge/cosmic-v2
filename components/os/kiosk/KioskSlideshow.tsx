@@ -153,7 +153,6 @@ export default function KioskSlideshow() {
   const widgets = useMemo(() => {
     return dashboardWidgets
       .filter((widget) =>
-        widget.id !== "music" &&
         WIDGET_REGISTRY.some(
           (entry) =>
             entry.id === widget.id &&
@@ -415,16 +414,7 @@ export default function KioskSlideshow() {
     );
   }
 
-  const previousWidget =
-    safePreviousIndex !== null
-      ? widgets[safePreviousIndex]
-      : null;
-  // A Music widget must never have two live slide bodies. This also protects
-  // against a stale or repeated index during a rapid transition.
-  const renderPreviousWidget =
-    previousWidget && previousWidget.id !== currentWidget?.id
-      ? previousWidget
-      : null;
+  const previousWidget = safePreviousIndex !== null ? widgets[safePreviousIndex] : null;
 
   if (!currentWidget) {
     return null;
@@ -442,10 +432,10 @@ export default function KioskSlideshow() {
       style={{ touchAction: "pan-y" }}
       aria-label="Cosmic kiosk slideshow"
     >
-      {renderPreviousWidget ? (
+      {previousWidget ? (
         <KioskSlide
-          key={`previous-${renderPreviousWidget.id}-${safePreviousIndex}`}
-          widget={renderPreviousWidget}
+          key={`previous-${previousWidget.id}-${safePreviousIndex}`}
+          widget={previousWidget}
           active={false}
           exiting
         />
