@@ -223,7 +223,6 @@ html, body { width: 100%; min-height: 100%; }
 .kiosk-slide[data-kiosk-scene="calendar"] .kiosk-scene-surface { background-image: linear-gradient(rgba(103,232,249,.035) 1px, transparent 1px), linear-gradient(90deg, rgba(103,232,249,.035) 1px, transparent 1px), linear-gradient(145deg, #0b1730, #040817 68%) !important; background-size: 42px 42px, 42px 42px, auto !important; }
 .kiosk-slide[data-kiosk-scene="finance"] .kiosk-scene-surface { background-image: repeating-linear-gradient(165deg, transparent 0 42px, rgba(34,211,238,.045) 43px 44px), linear-gradient(145deg, #11142b, #050914 68%) !important; }
 .kiosk-slide[data-kiosk-scene="garage"] .kiosk-scene-surface { background-image: linear-gradient(rgba(96,165,250,.035) 1px, transparent 1px), linear-gradient(90deg, rgba(96,165,250,.035) 1px, transparent 1px), linear-gradient(145deg, #0d1b30, #050812 68%) !important; background-size: 34px 34px, 34px 34px, auto !important; }
-.kiosk-slide[data-kiosk-scene="music"] .kiosk-scene-surface { background: radial-gradient(ellipse at 50% 70%, rgba(240,171,252,.13), transparent 34%), linear-gradient(145deg, #1a0b25, #070513 68%) !important; }
 .kiosk-slide[data-kiosk-scene="sports"] .kiosk-scene-surface { background: linear-gradient(145deg, #071d25, #050b18 68%) !important; }
 .kiosk-slide[data-kiosk-scene="notes"] .kiosk-scene-surface { background-image: linear-gradient(rgba(196,181,253,.035) 1px, transparent 1px), linear-gradient(145deg, #17152b, #070814 68%) !important; background-size: 100% 30px, auto !important; }
 .kiosk-slide[data-kiosk-scene="projects"] .kiosk-scene-surface { background: radial-gradient(circle at 78% 24%, rgba(34,211,238,.13), transparent 20%), linear-gradient(145deg, #151032, #060817 68%) !important; }
@@ -859,6 +858,7 @@ html[data-cosmic-reduced-effects="true"] *::after {
 .kiosk-music-scene { position: relative; width: 100%; height: 100%; min-width: 0; min-height: 0; overflow: hidden; isolation: isolate; background: radial-gradient(circle at 70% 35%, rgba(30,215,96,.12), transparent 34%), #050708; }
 .kiosk-music-background { position: absolute; z-index: 0; inset: 0; width: 100%; height: 100%; object-fit: cover; transform: scale(1.01); }
 .kiosk-music-overlay { position: absolute; z-index: 1; inset: 0; background: linear-gradient(90deg, rgba(0,0,0,.7), rgba(0,0,0,.24) 52%, rgba(0,0,0,.64)), linear-gradient(180deg, rgba(0,0,0,.2), transparent 48%, rgba(0,0,0,.5)); }
+.kiosk-music-transition { position: absolute; z-index: 3; inset: -30%; pointer-events: none; background: radial-gradient(circle at center, rgba(196,181,253,.3) 0, rgba(34,211,238,.12) 18%, rgba(0,0,0,.72) 44%, transparent 70%); opacity: 0; animation: kiosk-music-reveal 800ms cubic-bezier(.22,.61,.36,1) both; }
 .kiosk-music-content { position: absolute; inset: 0; display: grid; align-items: center; width: 100%; height: 100%; min-width: 0; min-height: 0; padding: clamp(.75rem, 2vw, 2.25rem); }
 .kiosk-music-playing { display: grid; grid-template-columns: minmax(0, 44fr) minmax(0, 56fr); align-items: center; width: 100%; height: 100%; min-width: 0; min-height: 0; gap: clamp(1rem, 3.5vw, 4rem); animation: kiosk-music-enter 500ms ease both; }
 .kiosk-music-artist-section { position: relative; display: grid; place-items: center; min-width: 0; min-height: 0; }
@@ -884,6 +884,14 @@ html[data-cosmic-reduced-effects="true"] *::after {
 .kiosk-music-status-state h1 { font-size: clamp(1.35rem, 3.5vw, 3.2rem); }
 .kiosk-music-status-state > p:last-child { max-width: 34rem; margin: .8rem 0 0; color: rgba(255,255,255,.55); font-size: clamp(.8rem, 1.4vw, 1.05rem); line-height: 1.5; }
 
+/* Music owns the kiosk scene surface, matching the fullscreen Weather/Clock pattern. */
+.kiosk-slide[data-kiosk-scene="music"] .kiosk-slide-header { display: none; }
+.kiosk-slide[data-kiosk-scene="music"] .kiosk-slide-content { padding: 0; }
+.kiosk-slide[data-kiosk-scene="music"] .kiosk-slide-card,
+.kiosk-slide[data-kiosk-scene="music"] [data-widget-accent="music"],
+.kiosk-slide[data-kiosk-scene="music"] [data-widget-accent="music"] > div { border: 0 !important; border-radius: 0 !important; background: transparent !important; box-shadow: none !important; backdrop-filter: none !important; }
+.kiosk-slide[data-kiosk-scene="music"] [data-widget-accent="music"] .kiosk-scene-surface { display: none; }
+
 @media (orientation: portrait) {
   .kiosk-music-content { overflow-y: auto; }
   .kiosk-music-playing { grid-template-columns: 1fr; height: auto; min-height: 100%; gap: 1.25rem; }
@@ -902,6 +910,8 @@ html[data-cosmic-reduced-effects="true"] *::after {
   .kiosk-music-device { margin-top: .8rem; }
 }
 @keyframes kiosk-music-enter { from { opacity: 0; transform: scale(.985) translateY(.5rem); } to { opacity: 1; transform: scale(1) translateY(0); } }
+@keyframes kiosk-music-reveal { 0% { opacity: 1; transform: scale(.55); } 55% { opacity: .72; transform: scale(1); } 100% { opacity: 0; transform: scale(1.35); } }
+@media (prefers-reduced-motion: reduce) { .kiosk-music-playing, .kiosk-music-transition { animation-duration: 120ms; } }
 .kiosk-shell[data-compact="true"] .kiosk-sports-view [class*="mt-[clamp"] { margin-top: .65rem; }
 .kiosk-shell[data-compact="true"] .kiosk-sports-view [class*="py-6"] { padding-block: .35rem; }
 .kiosk-shell[data-compact="true"] .kiosk-sports-view [class*="rounded-[2rem]"] { border-radius: .65rem; }

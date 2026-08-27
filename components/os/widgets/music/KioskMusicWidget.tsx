@@ -47,6 +47,7 @@ export default function KioskMusicWidget({ music }: { music: ReturnType<typeof u
     <div className="kiosk-music-scene">
       {hasRenderableTrack(track) && track.artworkUrl ? <img className="kiosk-music-background" src={track.artworkUrl} alt="" draggable={false} onError={(event) => { event.currentTarget.style.display = "none"; }} /> : null}
       <div className="kiosk-music-overlay" aria-hidden="true" />
+      <div key={`${track?.id ?? "none"}:${state}`} className="kiosk-music-transition" aria-hidden="true" />
       <div className="kiosk-music-content" style={{ "--kiosk-music-accent": accent } as CSSProperties}>
         {state === "track" && hasRenderableTrack(track) ? <PlayingState key={track.id} music={music} track={track} provider={provider} /> : state !== "track" ? <StatusState state={state} provider={provider} /> : null}
       </div>
