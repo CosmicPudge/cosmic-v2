@@ -23,6 +23,7 @@ export default function KioskCalendarScene({ calendar, loading, error }: Props) 
   const shownEvents = timedEvents.slice(0, 5);
   const overflowCount = Math.max(0, timedEvents.length - shownEvents.length);
   const nextEvent = calendar?.currentEvent ?? calendar?.nextEvent;
+  const timeZone = calendar?.timeZone;
 
   return (
     <Widget accent="calendar" className="kiosk-calendar-widget" contentPadding={false} sceneVariant="cinematic" imageUrl="/kiosk/scenes/calendar/calendar-cosmic-workspace.png" imagePosition="center center" imageOpacity={1} imageBlur={0}>
@@ -30,10 +31,10 @@ export default function KioskCalendarScene({ calendar, loading, error }: Props) 
         <div className="relative z-10 flex items-start justify-between gap-4">
           <div>
             <p className="text-[clamp(.7rem,1.25vw,.9rem)] font-semibold uppercase tracking-[.26em] text-cyan-100/75">Calendar</p>
-            <p className="mt-1 text-[clamp(1.1rem,2.5vw,1.8rem)] font-medium tracking-tight text-white/95">{displayDate?.toLocaleDateString(undefined, { weekday: "long" }) ?? "Today"}</p>
-            <p className="text-[clamp(.75rem,1.5vw,1.05rem)] uppercase tracking-[.2em] text-white/60">{displayDate?.toLocaleDateString(undefined, { month: "long", day: "numeric" }) ?? ""}</p>
+            <p className="mt-1 text-[clamp(1.1rem,2.5vw,1.8rem)] font-medium tracking-tight text-white/95">{formatDate(displayDate, { weekday: "long" }, timeZone) ?? "Today"}</p>
+            <p className="text-[clamp(.75rem,1.5vw,1.05rem)] uppercase tracking-[.2em] text-white/60">{formatDate(displayDate, { month: "long", day: "numeric" }, timeZone) ?? ""}</p>
           </div>
-          {error && calendar ? <p className="pt-1 text-[.58rem] uppercase tracking-[.16em] text-amber-100/70">Updating</p> : null}
+          {error && calendar ? <p className="pt-1 text-[.58rem] uppercase tracking-[.16em] text-amber-100/70">Updating</p> : calendar?.accountCalendarError ? <p className="pt-1 text-[.58rem] uppercase tracking-[.16em] text-amber-100/70">Account calendar retrying</p> : calendar?.sportsCalendarError ? <p className="pt-1 text-[.58rem] uppercase tracking-[.16em] text-amber-100/70">Sports retrying</p> : null}
         </div>
 
         {loading && !calendar ? (
@@ -41,22 +42,22 @@ export default function KioskCalendarScene({ calendar, loading, error }: Props) 
         ) : error && !calendar ? (
           <div className="relative z-10 flex flex-1 items-center justify-center text-center text-sm text-white/70">Calendar temporarily unavailable<br /><span className="text-xs text-white/45">Cosmic will retry automatically.</span></div>
         ) : !calendar || (shownEvents.length === 0 && allDayEvents.length === 0 && !nextEvent) ? (
-          <div className="relative z-10 flex flex-1 items-center justify-center text-center"><div><p className="text-xl font-light text-white/90">Nothing scheduled</p><p className="mt-1 text-sm text-white/55">Your calendar is clear.</p></div></div>
+          <div className="relative z-10 flex flex-1 items-center justify-center text-center"><div><p className="text-xl font-light text-white/90">YOUR DAY IS CLEAR</p><p className="mt-1 text-sm text-white/55">Nothing scheduled.</p>{calendar?.accountCalendarConnected === false ? <p className="mt-2 text-xs text-white/40">Account Calendar not connected.</p> : null}</div></div>
         ) : (
           <div className="relative z-10 mt-4 grid min-h-0 flex-1 gap-5 sm:grid-cols-[minmax(0,1.35fr)_minmax(13rem,.8fr)] sm:gap-8">
             <section className="min-h-0" aria-label="Today’s schedule">
               <p className="mb-2 text-[.58rem] font-semibold uppercase tracking-[.24em] text-white/50">Today’s schedule</p>
               {allDayEvents.length > 0 && <div className="mb-2 truncate rounded-lg border border-cyan-100/15 bg-cyan-100/[.07] px-3 py-1.5 text-xs text-cyan-50">All day · {allDayEvents.map((event) => event.title).join(" · ")}</div>}
               <div className="space-y-1.5">
-                {shownEvents.map((event) => <TimelineEvent key={event.id} event={event} current={event.id === calendar.currentEvent?.id} />)}
+                {shownEvents.map((event) => <TimelineEvent key={event.id} event={event} current={event.id === calendar.currentEvent?.id} timeZone={timeZone} />)}
               </div>
               {shownEvents.length === 0 && allDayEvents.length === 0 ? <p className="text-sm text-white/55">Nothing scheduled today.</p> : null}
               {overflowCount > 0 && <p className="mt-2 text-xs text-white/50">+{overflowCount} more today</p>}
             </section>
 
             <aside className="flex min-h-0 flex-col gap-3">
-              {nextEvent ? <NextEvent event={nextEvent} current={nextEvent.id === calendar.currentEvent?.id} /> : null}
-              {displayDate ? <DateStrip now={displayDate} events={[...todayEvents, ...(calendar?.upcoming ?? [])]} /> : null}
+              {nextEvent ? <NextEvent event={nextEvent} current={nextEvent.id === calendar.currentEvent?.id} timeZone={timeZone} /> : null}
+              {displayDate ? <DateStrip now={displayDate} events={[...todayEvents, ...(calendar?.upcoming ?? [])]} timeZone={timeZone} /> : null}
             </aside>
           </div>
         )}
@@ -65,29 +66,36 @@ export default function KioskCalendarScene({ calendar, loading, error }: Props) 
   );
 }
 
-function TimelineEvent({ event, current }: { event: CalendarEvent; current: boolean }) {
-  return <div className={`flex min-w-0 items-center gap-3 rounded-xl border px-3 py-2 ${current ? "border-cyan-200/45 bg-cyan-100/[.13]" : "border-white/10 bg-black/20"}`}><span className={`h-7 w-1 shrink-0 rounded-full ${current ? "bg-cyan-200" : "bg-white/25"}`} /><span className="w-[4.6rem] shrink-0 text-[.68rem] tabular-nums text-white/55">{formatEventTime(event)}</span><span className="min-w-0 flex-1 truncate text-[clamp(.72rem,1.35vw,.95rem)] font-medium text-white/90">{event.title}</span>{event.location ? <span className="hidden max-w-[8rem] truncate text-[.62rem] text-white/45 md:block">{event.location}</span> : null}</div>;
+function TimelineEvent({ event, current, timeZone }: { event: CalendarEvent; current: boolean; timeZone?: string }) {
+  const sports = event.category === "sports";
+  const sourceLabel = event.calendarName ?? (event.source === "sports" ? "Sports" : undefined);
+  return <div className={`flex min-w-0 items-center gap-3 rounded-xl border px-3 py-2 ${current ? "border-cyan-200/45 bg-cyan-100/[.13]" : "border-white/10 bg-black/20"}`}><span className={`h-7 w-1 shrink-0 rounded-full ${current ? "bg-cyan-200" : sports ? "bg-violet-300/75" : "bg-white/25"}`} /><span className="w-[4.6rem] shrink-0 text-[.68rem] tabular-nums text-white/55">{formatEventTime(event, timeZone)}</span><span className="min-w-0 flex-1 truncate text-[clamp(.72rem,1.35vw,.95rem)] font-medium text-white/90">{event.title}</span>{sourceLabel ? <span className={`hidden max-w-[7rem] truncate text-[.58rem] uppercase tracking-[.12em] sm:block ${sports ? "text-violet-100/55" : "text-white/40"}`}>{sourceLabel}</span> : null}{event.location ? <span className="hidden max-w-[8rem] truncate text-[.62rem] text-white/45 md:block">{event.location}</span> : null}</div>;
 }
 
-function NextEvent({ event, current }: { event: CalendarEvent; current: boolean }) {
-  return <div className="rounded-xl border border-violet-100/20 bg-violet-100/[.08] p-3"><p className="text-[.58rem] font-semibold uppercase tracking-[.24em] text-violet-100/65">{current ? "Now" : "Next"}</p><p className="mt-1 truncate text-[clamp(.85rem,1.6vw,1.1rem)] font-medium text-white/95">{event.title}</p><p className="mt-1 text-xs tabular-nums text-white/60">{formatEventTime(event)}</p>{event.location ? <p className="mt-1 truncate text-xs text-white/45">{event.location}</p> : null}</div>;
+function NextEvent({ event, current, timeZone }: { event: CalendarEvent; current: boolean; timeZone?: string }) {
+  return <div className="rounded-xl border border-violet-100/20 bg-violet-100/[.08] p-3"><p className="text-[.58rem] font-semibold uppercase tracking-[.24em] text-violet-100/65">{current ? "Now" : "Next"}</p><p className="mt-1 truncate text-[clamp(.85rem,1.6vw,1.1rem)] font-medium text-white/95">{event.title}</p><p className="mt-1 text-xs tabular-nums text-white/60">{formatEventTime(event, timeZone)}</p>{event.location ? <p className="mt-1 truncate text-xs text-white/45">{event.location}</p> : null}</div>;
 }
 
-function DateStrip({ now, events }: { now: Date; events: CalendarEvent[] }) {
+function DateStrip({ now, events, timeZone }: { now: Date; events: CalendarEvent[]; timeZone?: string }) {
   const days = Array.from({ length: 7 }, (_, index) => {
     const date = new Date(now);
     date.setHours(0, 0, 0, 0);
     date.setDate(date.getDate() + index);
     return date;
   });
-  return <div className="mt-auto rounded-xl border border-white/10 bg-black/20 p-3"><p className="text-[.58rem] font-semibold uppercase tracking-[.24em] text-white/50">{now.toLocaleDateString(undefined, { month: "long", year: "numeric" })}</p><div className="mt-2 grid grid-cols-7 gap-1">{days.map((date) => { const count = events.filter((event) => sameDay(event.start, date)).length; const today = sameDay(date, now); return <div key={date.toISOString()} className={`rounded-lg px-1 py-1.5 text-center ${today ? "bg-cyan-200/20 text-cyan-50" : "text-white/55"}`}><p className="text-[.5rem] uppercase">{date.toLocaleDateString(undefined, { weekday: "short" }).slice(0, 2)}</p><p className="mt-0.5 text-xs tabular-nums">{date.getDate()}</p><p className="mt-0.5 h-1 text-[.5rem] text-cyan-200/80">{count > 0 ? count : ""}</p></div>; })}</div></div>;
+  return <div className="mt-auto rounded-xl border border-white/10 bg-black/20 p-3"><p className="text-[.58rem] font-semibold uppercase tracking-[.24em] text-white/50">{formatDate(now, { month: "long", year: "numeric" }, timeZone)}</p><div className="mt-2 grid grid-cols-7 gap-1">{days.map((date) => { const count = events.filter((event) => sameDay(event.start, date, timeZone)).length; const today = sameDay(date, now, timeZone); return <div key={date.toISOString()} className={`rounded-lg px-1 py-1.5 text-center ${today ? "bg-cyan-200/20 text-cyan-50" : "text-white/55"}`}><p className="text-[.5rem] uppercase">{formatDate(date, { weekday: "short" }, timeZone)?.slice(0, 2)}</p><p className="mt-0.5 text-xs tabular-nums">{formatDate(date, { day: "numeric" }, timeZone)}</p><p className="mt-0.5 h-1 text-[.5rem] text-cyan-200/80">{count > 0 ? count : ""}</p></div>; })}</div></div>;
 }
 
-function formatEventTime(event: CalendarEvent) {
+function formatEventTime(event: CalendarEvent, timeZone?: string) {
   if (event.allDay) return "All day";
-  return event.start.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  return event.start.toLocaleTimeString([], { hour: "numeric", minute: "2-digit", ...(timeZone ? { timeZone } : {}) });
 }
 
-function sameDay(left: Date, right: Date) {
-  return left.getFullYear() === right.getFullYear() && left.getMonth() === right.getMonth() && left.getDate() === right.getDate();
+function sameDay(left: Date, right: Date, timeZone?: string) {
+  return formatDate(left, { year: "numeric", month: "2-digit", day: "2-digit" }, timeZone) === formatDate(right, { year: "numeric", month: "2-digit", day: "2-digit" }, timeZone);
+}
+
+function formatDate(value: Date | null, options: Intl.DateTimeFormatOptions, timeZone?: string) {
+  if (!value) return null;
+  return value.toLocaleDateString(undefined, { ...options, ...(timeZone ? { timeZone } : {}) });
 }

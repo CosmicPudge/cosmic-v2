@@ -1,21 +1,31 @@
 import type { CalendarDateRange } from "@/engines/calendar";
-import { getCurrentCosmicAccount, kioskBootId } from "@/services/auth/server";
+import type { CalendarEvent } from "@/core/contracts";
+import { getCurrentCosmicSession, kioskBootId } from "@/services/auth/server";
 import { getCalendarEngineForRequest } from "@/services/calendar/accountProvider";
+import { buildKioskCalendarSnapshot } from "@/services/calendar/sportsCalendar";
+import { getSportsSnapshot } from "@/services/sports/snapshot";
+import { getAccountPreferences } from "@/services/settings/accountPreferences";
+import { referencePreferences } from "@/services/settings/preferences";
+import { readKioskDeviceProfile } from "@/services/devices/kioskProfile";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(
   request: Request
 ) {
-  const account = await getCurrentCosmicAccount(request, { allowDevice: true, bootId: kioskBootId(request) });
+  const url = new URL(request.url);
+  const isKiosk = url.searchParams.get("cosmic-kiosk") === "1";
+  const session = await getCurrentCosmicSession(request, { allowDevice: true, bootId: kioskBootId(request) });
+  const account = session?.account;
   if (process.env.NODE_ENV === "production" && !account) return Response.json({ error: "Authentication required for private calendar access." }, { status: 401 });
-  const calendar = await getCalendarEngineForRequest(account?.id, new URL(request.url).searchParams.get("connectionId") ?? undefined);
-  if (!calendar) return Response.json({ error: "Calendar is not connected.", events: [] }, { status: 200 });
+  let calendar: Awaited<ReturnType<typeof getCalendarEngineForRequest>> = null;
+  let accountCalendarError = false;
   try {
-    const url = new URL(
-      request.url
-    );
-
+    calendar = await getCalendarEngineForRequest(account?.id, url.searchParams.get("connectionId") ?? undefined);
+  } catch {
+    accountCalendarError = true;
+  }
+  try {
     const startParam =
       url.searchParams.get("start");
 
@@ -28,6 +38,7 @@ export async function GET(
      * Used by the full Calendar application.
      */
     if (startParam || endParam) {
+      if (!calendar) return Response.json({ error: "Calendar is not connected.", events: [] }, { status: 200 });
       if (!startParam || !endParam) {
         return Response.json(
           {
@@ -77,12 +88,30 @@ export async function GET(
       });
     }
 
-    /*
-     * Existing dashboard behavior.
-     */
-    return Response.json(
-      await calendar.engine.getSnapshot()
-    );
+    if (!isKiosk) {
+      if (!calendar) return Response.json({ error: "Calendar is not connected.", events: [] }, { status: 200 });
+      return Response.json(await calendar.engine.getSnapshot());
+    }
+
+    let accountEvents: CalendarEvent[] = [];
+    if (calendar) {
+      try { accountEvents = await calendar.engine.getEvents(); }
+      catch { accountCalendarError = true; }
+    }
+    let sports = null;
+    let sportsCalendarError = false;
+    if (account) {
+      try {
+        const preferences = process.env.DATABASE_URL ? await getAccountPreferences(account.id) : referencePreferences;
+        sports = await getSportsSnapshot(new Date(), preferences);
+      } catch { sportsCalendarError = true; /* Sports are optional and must not take down account Calendar. */ }
+    }
+    let timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    if (session?.sessionType === "device" && session.deviceId) {
+      try { timeZone = (await readKioskDeviceProfile(session.deviceId))?.effectiveTimezone ?? timeZone; }
+      catch { /* The fallback timezone is the browser/server timezone. */ }
+    }
+    return Response.json(buildKioskCalendarSnapshot(accountEvents, sports, new Date(), timeZone, Boolean(calendar), accountCalendarError, sportsCalendarError));
   } catch (error) {
     console.error(
       "Calendar request failed:",

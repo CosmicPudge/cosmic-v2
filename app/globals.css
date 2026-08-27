@@ -855,6 +855,7 @@ html[data-cosmic-reduced-effects="true"] *::after {
 .kiosk-music-art { width: min(42%, 22rem); aspect-ratio: 1; }
 .kiosk-music-widget .kiosk-scene-image { filter: blur(3px); transform: scale(1.03); }
 .kiosk-music-provider-mark { width: clamp(4.5rem, 10vw, 8rem); height: clamp(4.5rem, 10vw, 8rem); filter: drop-shadow(0 0 28px color-mix(in srgb, var(--music-provider-accent, #1ed760) 25%, transparent)); }
+.kiosk-music-artists .kiosk-music-artist-avatar + .kiosk-music-artist-avatar { margin-left: -.75rem; }
 .kiosk-music-cosmic-mark { display: grid; width: clamp(4.5rem, 10vw, 8rem); height: clamp(4.5rem, 10vw, 8rem); place-items: center; border: 1px solid rgba(240,171,252,.35); border-radius: 1.5rem; color: #f0abfc; font-size: clamp(2.5rem, 6vw, 5rem); box-shadow: 0 0 36px rgba(240,171,252,.16); }
 .kiosk-music-widget [data-music-provider="spotify"] .kiosk-music-overlay { background: linear-gradient(90deg, rgba(0,0,0,.78), rgba(0,12,5,.35) 55%, rgba(0,0,0,.7)), radial-gradient(ellipse at 70% 40%, rgba(30,215,96,.14), transparent 42%), linear-gradient(180deg, rgba(0,0,0,.15), transparent 45%, rgba(0,0,0,.5)); }
 .kiosk-music-widget [data-music-provider="none"] .kiosk-music-overlay { background: radial-gradient(ellipse at 50% 38%, rgba(30,215,96,.1), transparent 40%), linear-gradient(145deg, #04150c, #020605 72%); }
@@ -874,6 +875,8 @@ html[data-cosmic-reduced-effects="true"] *::after {
 .kiosk-shell[data-compact="true"] .kiosk-music-playing { gap: 1rem; padding: .8rem; }
 .kiosk-shell[data-compact="true"] .kiosk-music-art { width: min(38vw, 10rem); }
 .kiosk-shell[data-compact="true"] .kiosk-music-progress { margin-top: 1rem; }
+.kiosk-shell[data-compact="true"] .kiosk-music-artists { margin-top: .8rem; }
+.kiosk-shell[data-compact="true"] .kiosk-music-artists .kiosk-music-artist-avatar + .kiosk-music-artist-avatar { margin-left: -.55rem; }
 
 @media (orientation: portrait) {
   .kiosk-music-playing { grid-template-columns: 1fr; gap: 1rem; overflow-y: auto; padding: clamp(1rem, 6vw, 3rem); }

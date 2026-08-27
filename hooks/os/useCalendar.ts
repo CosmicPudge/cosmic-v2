@@ -31,6 +31,10 @@ interface CalendarResponse {
     start: string;
     end: string;
   };
+  timeZone?: string;
+  accountCalendarConnected?: boolean;
+  accountCalendarError?: boolean;
+  sportsCalendarError?: boolean;
 }
 
 function hydrateEvent(
@@ -63,6 +67,10 @@ function hydrateSnapshot(
           ),
         }
       : {}),
+    ...(snapshot.timeZone ? { timeZone: snapshot.timeZone } : {}),
+    ...(snapshot.accountCalendarConnected !== undefined ? { accountCalendarConnected: snapshot.accountCalendarConnected } : {}),
+    ...(snapshot.accountCalendarError !== undefined ? { accountCalendarError: snapshot.accountCalendarError } : {}),
+    ...(snapshot.sportsCalendarError !== undefined ? { sportsCalendarError: snapshot.sportsCalendarError } : {}),
   };
 }
 

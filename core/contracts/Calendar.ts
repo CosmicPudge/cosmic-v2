@@ -1,7 +1,8 @@
 export type CalendarEventSource =
   | "apple"
   | "subscription"
-  | "test";
+  | "test"
+  | "sports";
 
 export type CalendarEventPriority =
   | "low"
@@ -42,6 +43,11 @@ export interface CalendarEvent {
 
   source?: CalendarEventSource;
 
+  sourceId?: string;
+  sourceProvider?: string;
+  sourceUrl?: string;
+  sportsStatus?: string;
+
   priority?: CalendarEventPriority;
 
   startTimeZone?: string;
@@ -67,6 +73,12 @@ export interface CalendarSnapshot {
   currentEvent?: CalendarEvent;
 
   nextEvent?: CalendarEvent;
+
+  /** Present on kiosk snapshots so event dates follow the display timezone. */
+  timeZone?: string;
+  accountCalendarConnected?: boolean;
+  accountCalendarError?: boolean;
+  sportsCalendarError?: boolean;
 }
 
 export interface CalendarAvailability {
