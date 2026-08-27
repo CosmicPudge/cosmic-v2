@@ -1,10 +1,11 @@
 import "server-only";
 
-import { createHash, randomBytes, randomInt, randomUUID } from "crypto";
+import { createHash, randomBytes, randomUUID } from "crypto";
 import { and, eq, gt, isNull } from "drizzle-orm";
 import { devices, devicePairings, kioskDeviceSettings, sessions } from "@/services/database/schema";
 import { getDatabase, isDatabaseConfigured } from "@/services/database/client";
 import { hashSessionToken } from "@/services/auth/localStore";
+import { resolvePairingIdentity } from "./pairingPolicy";
 
 export const DEVICE_PAIRING_TTL_MS = 10 * 60 * 1000;
 export const DEVICE_POLL_INTERVAL_SECONDS = 4;
@@ -18,29 +19,33 @@ function hash(value: string) { return createHash("sha256").update(value).digest(
 function normalizeUserCode(value: string) { return value.replace(/[^A-Z0-9]/gi, "").toUpperCase(); }
 function formatUserCode(value: string) { return `${value.slice(0, 4)}-${value.slice(4)}`; }
 function randomUserCode() { return Array.from({ length: 6 }, () => ALPHABET[randomBytes(1)[0] % ALPHABET.length]).join(""); }
-function randomPublicNumber() { return `COSMIC-${randomInt(100000, 1000000)}`; }
 function newDeviceCredential() { return randomBytes(32).toString("base64url"); }
 function requireDatabase() { if (!isDatabaseConfigured()) throw new Error("Device pairing requires durable PostgreSQL storage."); return getDatabase(); }
 export function normalizeBootId(value: unknown) { return typeof value === "string" && /^[A-Za-z0-9_-]{1,128}$/.test(value) ? value : null; }
 
-export async function createDevicePairing(bootId: string, existingDeviceId?: string) {
+export type DevicePairingCreation =
+  | { status: "identity_missing"; reason: "device_hint_missing" | "device_hint_unknown" }
+  | { status: "created"; deviceCode: string; userCode: string; deviceNumber: string; verificationUrl: string; expiresAt: string; pollInterval: number };
+
+export async function createDevicePairing(bootId: string, existingDeviceId?: string): Promise<DevicePairingCreation> {
+  if (!existingDeviceId) return { status: "identity_missing", reason: "device_hint_missing" };
   const database = requireDatabase();
   for (let attempt = 0; attempt < 5; attempt += 1) {
     const deviceCode = randomBytes(32).toString("base64url");
     const userCode = randomUserCode();
     try {
       const result = await database.transaction(async (tx) => {
-        const [existing] = existingDeviceId ? await tx.select({ id: devices.id, publicNumber: devices.publicNumber }).from(devices).where(and(eq(devices.id, existingDeviceId), isNull(devices.revokedAt))).limit(1) : [];
-        const deviceId = existing?.id ?? `device_${randomUUID()}`;
-        const publicNumber = existing?.publicNumber ?? randomPublicNumber();
-        if (!existing) await tx.insert(devices).values({ id: deviceId, publicNumber, credentialHash: hash(newDeviceCredential()), ownershipStatus: "unclaimed", userId: null, name: "Cosmic Display", type: "display" });
-        const [row] = await tx.insert(devicePairings).values({ id: `pair_${randomUUID()}`, deviceCodeHash: hash(deviceCode), userCode, expiresAt: new Date(Date.now() + DEVICE_PAIRING_TTL_MS), deviceType: "display", bootId, deviceId }).returning({ id: devicePairings.id, userCode: devicePairings.userCode, expiresAt: devicePairings.expiresAt });
-        return { row, deviceId, publicNumber };
+        const [existing] = await tx.select({ id: devices.id, publicNumber: devices.publicNumber }).from(devices).where(and(eq(devices.id, existingDeviceId), isNull(devices.revokedAt))).limit(1);
+        const identity = resolvePairingIdentity(existingDeviceId, existing);
+        if (identity.kind === "identity_missing") return { status: identity.kind, reason: identity.reason };
+        const [row] = await tx.insert(devicePairings).values({ id: `pair_${randomUUID()}`, deviceCodeHash: hash(deviceCode), userCode, expiresAt: new Date(Date.now() + DEVICE_PAIRING_TTL_MS), deviceType: "display", bootId, deviceId: identity.deviceId }).returning({ id: devicePairings.id, userCode: devicePairings.userCode, expiresAt: devicePairings.expiresAt });
+        return { status: "created" as const, row, deviceId: identity.deviceId, publicNumber: existing.publicNumber };
       });
+      if (result.status === "identity_missing") return result;
       const row = result.row;
       const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://cosmicpudge.shop";
       pairLog(`created id=${row.id} status=pending boot=${bootId}`);
-      return { deviceCode, userCode: formatUserCode(row.userCode), deviceNumber: result.publicNumber, verificationUrl: `${baseUrl}/activate?code=${encodeURIComponent(formatUserCode(row.userCode))}`, expiresAt: row.expiresAt.toISOString(), pollInterval: DEVICE_POLL_INTERVAL_SECONDS };
+      return { status: "created", deviceCode, userCode: formatUserCode(row.userCode), deviceNumber: result.publicNumber, verificationUrl: `${baseUrl}/activate?code=${encodeURIComponent(formatUserCode(row.userCode))}`, expiresAt: row.expiresAt.toISOString(), pollInterval: DEVICE_POLL_INTERVAL_SECONDS };
     } catch (error) {
       if (attempt === 4) throw error;
     }
@@ -70,20 +75,13 @@ export async function approveDevicePairing(userCodeInput: string, userId: string
   return database.transaction(async (tx) => {
     const [row] = await tx.select().from(devicePairings).where(and(eq(devicePairings.userCode, userCode), eq(devicePairings.status, "pending"), gt(devicePairings.expiresAt, new Date()))).for("update").limit(1);
     if (!row) return false;
-    let deviceId: string | undefined;
-    if (row.deviceId) {
-      const [device] = await tx.select({ id: devices.id, userId: devices.userId, revokedAt: devices.revokedAt }).from(devices).where(eq(devices.id, row.deviceId)).limit(1);
-      // A public pairing code must never transfer an existing device to a
-      // different account. The owner must explicitly revoke/reset it first.
-      if (device && !device.revokedAt && device.userId !== userId) return false;
-      deviceId = device && !device.revokedAt && (!device.userId || device.userId === userId) ? device.id : undefined;
-    }
-    if (!deviceId) {
-      deviceId = `device_${randomUUID()}`;
-      await tx.insert(devices).values({ id: deviceId, userId, publicNumber: randomPublicNumber(), credentialHash: hash(newDeviceCredential()), ownershipStatus: "owned", name: row.deviceName?.trim() || "Cosmic Display", type: row.deviceType });
-    } else {
-      await tx.update(devices).set({ userId, ownershipStatus: "owned", revokedAt: null }).where(eq(devices.id, deviceId));
-    }
+    if (!row.deviceId) return false;
+    const [device] = await tx.select({ id: devices.id, userId: devices.userId, revokedAt: devices.revokedAt }).from(devices).where(eq(devices.id, row.deviceId)).limit(1);
+    // A public pairing code must never transfer an existing device to a
+    // different account. The owner must explicitly revoke/reset it first.
+    if (!device || device.revokedAt || (device.userId && device.userId !== userId)) return false;
+    const deviceId = device.id;
+    await tx.update(devices).set({ userId, ownershipStatus: "owned", revokedAt: null }).where(eq(devices.id, deviceId));
     const [updated] = await tx.update(devicePairings).set({ status: "approved", userId, approvedAt: new Date(), deviceName: "Cosmic Display", deviceId }).where(and(eq(devicePairings.id, row.id), eq(devicePairings.status, "pending"), gt(devicePairings.expiresAt, new Date()))).returning({ id: devicePairings.id, deviceId: devicePairings.deviceId });
     if (!updated) return false;
     pairLog(`approved id=${updated.id} status=approved`);
@@ -111,11 +109,12 @@ export async function consumeApprovedPairing(deviceCode: string) {
       pairLog(`consume-start id=${pairing.id}`);
       pairLog("consume-check-expiry ok=true");
       step = "device";
-      const [existingDevice] = pairing.deviceId ? await tx.select({ id: devices.id, publicNumber: devices.publicNumber }).from(devices).where(and(eq(devices.id, pairing.deviceId), eq(devices.userId, pairing.userId), isNull(devices.revokedAt))).limit(1) : [];
-      const deviceId = existingDevice?.id ?? `device_${randomUUID()}`;
+      if (!pairing.deviceId) return null;
+      const [existingDevice] = await tx.select({ id: devices.id, publicNumber: devices.publicNumber }).from(devices).where(and(eq(devices.id, pairing.deviceId), eq(devices.userId, pairing.userId), isNull(devices.revokedAt))).limit(1);
+      if (!existingDevice) return null;
+      const deviceId = existingDevice.id;
       const credential = newDeviceCredential();
-      if (existingDevice) await tx.update(devices).set({ lastSeenAt: new Date(), credentialHash: hash(credential), credentialRevokedAt: null, ownershipStatus: "owned", revokedAt: null }).where(eq(devices.id, deviceId));
-      else await tx.insert(devices).values({ id: deviceId, userId: pairing.userId, publicNumber: randomPublicNumber(), credentialHash: hash(credential), ownershipStatus: "owned", name: pairing.deviceName?.trim() || "Cosmic Display", type: pairing.deviceType });
+      await tx.update(devices).set({ lastSeenAt: new Date(), credentialHash: hash(credential), credentialRevokedAt: null, ownershipStatus: "owned", revokedAt: null }).where(eq(devices.id, deviceId));
       pairLog(`consume-device deviceId=${deviceId}`);
       step = "session-create";
       pairLog("consume-session-create start");

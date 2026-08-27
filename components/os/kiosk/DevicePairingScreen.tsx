@@ -5,6 +5,7 @@ import QRCode from "qrcode";
 import { useSearchParams } from "next/navigation";
 
 type Pairing = { deviceCode: string; userCode: string; deviceNumber: string; verificationUrl: string; expiresAt: string; pollInterval: number };
+type PairingResponse = (Pairing & { status?: "created"; error?: string }) | { status?: "identity_missing"; reason?: string; error?: string };
 
 export default function DevicePairingScreen({ onAuthenticated }: { onAuthenticated: () => Promise<void> }) {
   const searchParams = useSearchParams();
@@ -13,6 +14,7 @@ export default function DevicePairingScreen({ onAuthenticated }: { onAuthenticat
   const [qr, setQr] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [connecting, setConnecting] = useState(false);
+  const [identityRecovery, setIdentityRecovery] = useState(false);
   const pollInFlight = useRef(false);
 
   useEffect(() => {
@@ -26,8 +28,12 @@ export default function DevicePairingScreen({ onAuthenticated }: { onAuthenticat
           return;
         }
         const response = await fetch("/api/devices/pair", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ bootId }), credentials: "include", cache: "no-store" });
-        const next = await response.json() as Pairing & { error?: string };
-        if (!response.ok) throw new Error(next.error ?? "Pairing is unavailable.");
+        const next = await response.json() as PairingResponse | { status?: "identity_missing"; reason?: string; error?: string };
+        if (!response.ok) {
+          if (next.status === "identity_missing") { setIdentityRecovery(true); return; }
+          throw new Error(next.error ?? "Pairing is unavailable.");
+        }
+        if (!("deviceCode" in next)) throw new Error("Pairing is unavailable.");
         if (!active) return;
         setPairing(next);
         setQr(await QRCode.toDataURL(next.verificationUrl, { margin: 1, width: 280, color: { dark: "#07101d", light: "#f4fbff" } }));
@@ -87,6 +93,8 @@ export default function DevicePairingScreen({ onAuthenticated }: { onAuthenticat
       <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-white/55">Scan the QR code with your phone to connect this display to your Cosmic account.</p>
       {error ? (
         <div className="mt-5 rounded-xl border border-rose-200/15 bg-rose-200/[.05] p-4 text-sm text-rose-100"><p>{error}</p><button type="button" className="mt-3 rounded-lg border border-white/15 px-3 py-2 text-xs text-white/80" onClick={() => window.location.reload()}>Try again</button></div>
+      ) : identityRecovery ? (
+        <div className="mx-auto mt-8 max-w-xl rounded-2xl border border-amber-200/20 bg-amber-200/[.06] p-6 text-left"><p className="text-xs font-semibold uppercase tracking-[.25em] text-amber-100/70">Cosmic Display</p><h1 className="mt-3 text-2xl font-black tracking-tight text-white">Device identity needs recovery</h1><p className="mt-3 text-sm leading-6 text-white/60">This display&apos;s saved module identity is no longer available. No new device was created. An account owner or Cosmic administrator must restore and re-bind this physical display before pairing can continue.</p><p className="mt-4 text-xs uppercase tracking-[.2em] text-white/35">Safe recovery required · no credentials shown</p></div>
       ) : pairing ? (
         <div className="kiosk-pairing-grid mt-4 items-center"><div>{qr ? <img className="mx-auto rounded-2xl bg-white p-1" src={qr} alt="QR code for Cosmic display activation" /> : <div className="mx-auto size-[180px] animate-pulse rounded-2xl bg-white/10" />}</div><div className="text-left"><p className="text-xs uppercase tracking-[.25em] text-white/40">Device</p><p className="mt-1 text-lg font-bold text-white">{pairing.deviceNumber}</p><p className="mt-4 text-sm text-white/55">Or visit</p><p className="mt-1 break-all text-sm text-cyan-100/80">{activationUrl}</p><p className="mt-4 text-xs uppercase tracking-[.25em] text-white/40">Activation code</p><p className="mt-1 text-3xl font-black tracking-[.25em] text-white">{pairing.userCode}</p><p className="mt-4 text-sm text-cyan-100/70">Waiting for connection…</p></div></div>
       ) : <p className="mt-6 text-sm text-white/45">Preparing a secure activation session…</p>}
