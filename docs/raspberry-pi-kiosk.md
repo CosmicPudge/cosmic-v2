@@ -142,6 +142,21 @@ credential. The browser fallback calls the same endpoint using its HttpOnly
 credential cookie. The new boot ID is bound to the new session; the permanent
 device record and owner remain unchanged.
 
+Devices created before persistent credentials were introduced have a null
+credential hash after migration. While that device still has a valid
+device-session/boot, provision it exactly once with:
+
+```text
+POST /api/devices/provision?cosmic-kiosk=1&cosmic-boot=<current boot id>
+Cookie: cosmic_session=<current device session>
+```
+
+The server generates the credential randomly, preserves the existing device
+number, and returns the one-time credential only to this authenticated
+provisioning caller. The Pi helper must immediately store it in private 0600
+state and never put it in browser-visible UI, a URL, or logs. Repeating the
+call after provisioning does not return the credential again.
+
 The physical reset endpoint is:
 
 ```text

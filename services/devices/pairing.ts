@@ -168,6 +168,18 @@ export async function authenticateDeviceCredential(credential: string, bootId: s
   return { ...session, deviceNumber: device.publicNumber };
 }
 
+export async function provisionDeviceCredential(userId: string, deviceId: string) {
+  const database = requireDatabase();
+  return database.transaction(async (tx) => {
+    const [device] = await tx.select({ id: devices.id, publicNumber: devices.publicNumber, credentialHash: devices.credentialHash }).from(devices).where(and(eq(devices.id, deviceId), eq(devices.userId, userId), eq(devices.ownershipStatus, "owned"), isNull(devices.revokedAt))).for("update").limit(1);
+    if (!device) return null;
+    if (device.credentialHash) return { deviceId: device.id, deviceNumber: device.publicNumber, provisioned: false as const };
+    const credential = newDeviceCredential();
+    await tx.update(devices).set({ credentialHash: hash(credential), credentialRevokedAt: null, lastSeenAt: new Date() }).where(and(eq(devices.id, device.id), isNull(devices.credentialHash)));
+    return { deviceId: device.id, deviceNumber: device.publicNumber, credential, provisioned: true as const };
+  });
+}
+
 async function createDeviceSession(userId: string, deviceId: string, bootId: string, userAgent?: string) {
   const token = randomBytes(32).toString("base64url");
   const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
