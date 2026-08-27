@@ -161,11 +161,12 @@ export const revokeDevice = prepareDeviceForNewOwner;
 
 export async function authenticateDeviceCredential(credential: string, bootId: string, userAgent?: string) {
   const database = requireDatabase();
-  const [device] = await database.select({ id: devices.id, userId: devices.userId, publicNumber: devices.publicNumber }).from(devices).where(and(eq(devices.credentialHash, hash(credential)), eq(devices.ownershipStatus, "owned"), isNull(devices.credentialRevokedAt), isNull(devices.revokedAt))).limit(1);
-  if (!device?.userId) return null;
+  const [device] = await database.select({ id: devices.id, userId: devices.userId, publicNumber: devices.publicNumber, ownershipStatus: devices.ownershipStatus }).from(devices).where(and(eq(devices.credentialHash, hash(credential)), isNull(devices.credentialRevokedAt), isNull(devices.revokedAt))).limit(1);
+  if (!device) return null;
+  if (device.ownershipStatus !== "owned" || !device.userId) return { state: device.ownershipStatus as "unclaimed" | "resetting", deviceId: device.id, deviceNumber: device.publicNumber };
   const session = await createDeviceSession(device.userId, device.id, bootId, userAgent);
   await database.update(devices).set({ lastSeenAt: new Date() }).where(eq(devices.id, device.id));
-  return { ...session, deviceNumber: device.publicNumber };
+  return { ...session, state: "owned" as const, deviceNumber: device.publicNumber };
 }
 
 export async function provisionDeviceCredential(userId: string, deviceId: string) {

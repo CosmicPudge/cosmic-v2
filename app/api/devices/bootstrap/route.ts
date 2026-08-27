@@ -18,7 +18,8 @@ export async function POST(request: Request) {
   try {
     const session = await authenticateDeviceCredential(credential, bootId, request.headers.get("user-agent") ?? undefined);
     if (!session) return Response.json({ authenticated: false }, { status: 401, headers: { "Cache-Control": "no-store" } });
-    const response = NextResponse.json({ authenticated: true, sessionType: "device", deviceId: session.deviceId, deviceNumber: session.deviceNumber }, { headers: { "Cache-Control": "no-store" } });
+    if (session.state !== "owned") return NextResponse.json({ authenticated: false, state: session.state, deviceId: session.deviceId, deviceNumber: session.deviceNumber }, { headers: { "Cache-Control": "no-store" } });
+    const response = NextResponse.json({ authenticated: true, state: "owned", sessionType: "device", deviceId: session.deviceId, deviceNumber: session.deviceNumber }, { headers: { "Cache-Control": "no-store" } });
     response.headers.append("Set-Cookie", sessionCookie(session.token, session.expiresAt));
     response.headers.append("Set-Cookie", deviceCredentialCookie(credential));
     return response;

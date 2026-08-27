@@ -20,7 +20,8 @@ export default function DevicePairingScreen({ onAuthenticated }: { onAuthenticat
     async function start() {
       try {
         const bootstrap = await fetch("/api/devices/bootstrap", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ bootId }), credentials: "include", cache: "no-store" });
-        if (bootstrap.ok) {
+        const bootstrapBody = await bootstrap.json().catch(() => null) as { state?: string } | null;
+        if (bootstrap.ok && bootstrapBody?.state === "owned") {
           await onAuthenticated();
           return;
         }
