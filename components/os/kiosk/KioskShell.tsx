@@ -3,6 +3,7 @@
 import {
   type ReactNode,
 } from "react";
+import { useEffect } from "react";
 import { useSystem } from "@/components/os/system/SystemProvider";
 
 export const KIOSK_SESSION_STORAGE_KEY = "cosmic:kiosk-session";
@@ -13,6 +14,18 @@ export default function KioskShell({
   children: ReactNode;
 }) {
   const { snapshot } = useSystem();
+
+  useEffect(() => {
+    document.documentElement.dataset.cosmicKiosk = "true";
+    document.body.dataset.cosmicKiosk = "true";
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      delete document.documentElement.dataset.cosmicKiosk;
+      delete document.body.dataset.cosmicKiosk;
+      document.body.style.overflow = previousOverflow;
+    };
+  }, []);
 
   const compact = snapshot.display.profile === "compact"
     || snapshot.display.profile === "display"

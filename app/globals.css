@@ -806,12 +806,11 @@ html[data-cosmic-reduced-effects="true"] *::after {
 .kiosk-setup { --kiosk-ui-scale: 1; }
 .kiosk-slide-card { max-width: none; border: 0; border-radius: 0; background: transparent; box-shadow: none; backdrop-filter: none; }
 .kiosk-night-dimmer { background: rgba(0,0,0,.35); }
-.kiosk-slide-content { scrollbar-width: none; }
+.kiosk-slide-content { padding: 0; scrollbar-width: none; }
 .kiosk-slide-content::-webkit-scrollbar { display: none; }
 .kiosk-music-art { width: min(42%, 22rem); aspect-ratio: 1; }
 .kiosk-music-widget .kiosk-scene-image { filter: blur(3px); transform: scale(1.03); }
 
-.kiosk-shell[data-compact="true"] .kiosk-slide { padding: max(.25rem, env(safe-area-inset-top)) max(.25rem, env(safe-area-inset-right)) max(.25rem, env(safe-area-inset-bottom)) max(.25rem, env(safe-area-inset-left)); }
 .kiosk-shell[data-compact="true"] .kiosk-slide-card,
 .kiosk-shell[data-compact="true"] .kiosk-sports-view > section { border-radius: .7rem; backdrop-filter: blur(6px); box-shadow: 0 10px 30px rgba(0,0,0,.22); }
 .kiosk-shell[data-compact="true"] .kiosk-slide-card { border-radius: 0; backdrop-filter: none; box-shadow: none; }
@@ -822,12 +821,11 @@ html[data-cosmic-reduced-effects="true"] *::after {
 .kiosk-shell[data-compact="true"] .kiosk-slide-header h1 { font-size: .9rem; line-height: 1.1; }
 .kiosk-shell[data-compact="true"] .kiosk-slide-header p,
 .kiosk-shell[data-compact="true"] .kiosk-sports-view > section > header p { font-size: .5rem; letter-spacing: .14em; }
-.kiosk-shell[data-compact="true"] .kiosk-slide-content { padding: .45rem; overflow: hidden; }
+.kiosk-shell[data-compact="true"] .kiosk-slide-content { padding: 0; overflow: hidden; }
 .kiosk-shell[data-compact="true"] .kiosk-music-scene { padding: .8rem; }
 .kiosk-shell[data-compact="true"] .kiosk-music-art { width: min(42%, 13rem); border-radius: .55rem; }
 .kiosk-shell[data-compact="true"] .kiosk-music-scene > div:nth-child(2) { gap: 1rem; }
 
-.kiosk-shell[data-compact="true"] .kiosk-sports-view { padding: max(.25rem, env(safe-area-inset-top)) max(.25rem, env(safe-area-inset-right)) max(.25rem, env(safe-area-inset-bottom)) max(.25rem, env(safe-area-inset-left)); }
 .kiosk-shell[data-compact="true"] .kiosk-sports-view > section { min-height: 0; }
 .kiosk-shell[data-compact="true"] .kiosk-sports-view > section > div { padding: .45rem .65rem; }
 .kiosk-shell[data-compact="true"] .kiosk-sports-view > section > footer { padding: .3rem .65rem; }
@@ -844,8 +842,8 @@ html[data-cosmic-reduced-effects="true"] *::after {
 .kiosk-f1-view > section { background: linear-gradient(135deg, rgba(127,29,29,.28), rgba(3,8,18,.88) 55%); }
 .kiosk-nascar-view > section { background: linear-gradient(135deg, rgba(234,88,12,.22), rgba(3,8,18,.88) 55%); }
 .kiosk-football-view .bg-red-400, .kiosk-f1-view .bg-red-400, .kiosk-nascar-view .bg-red-400 { box-shadow: 0 0 10px rgba(248,113,113,.7); }
-.baseball-broadcast-wrap { height: 100dvh; width: 100%; padding: clamp(.25rem, 1.2vw, 1rem); }
-.baseball-broadcast { display: grid; grid-template-rows: 6% minmax(0, 1fr) 6%; height: 100%; width: 100%; overflow: hidden; border: 1px solid rgba(255,255,255,.12); border-radius: clamp(.7rem, 2.3vw, 2.2rem); background: linear-gradient(90deg, color-mix(in srgb, var(--away-bg-start, var(--away-secondary)) 72%, #02040a) 0%, color-mix(in srgb, var(--away-bg-end, var(--away-primary)) 42%, #02040a) 22%, #02040a 43%, #02040a 57%, color-mix(in srgb, var(--home-bg-end, var(--home-primary)) 42%, #02040a) 78%, color-mix(in srgb, var(--home-bg-start, var(--home-secondary)) 72%, #02040a) 100%); box-shadow: 0 18px 60px rgba(0,0,0,.3); }
+.baseball-broadcast-wrap { height: 100dvh; width: 100%; padding: 0; }
+.baseball-broadcast { display: grid; grid-template-rows: 6% minmax(0, 1fr) 6%; height: 100%; width: 100%; overflow: hidden; border: 1px solid rgba(255,255,255,.12); border-radius: 0; background: linear-gradient(90deg, color-mix(in srgb, var(--away-bg-start, var(--away-secondary)) 72%, #02040a) 0%, color-mix(in srgb, var(--away-bg-end, var(--away-primary)) 42%, #02040a) 22%, #02040a 43%, #02040a 57%, color-mix(in srgb, var(--home-bg-end, var(--home-primary)) 42%, #02040a) 78%, color-mix(in srgb, var(--home-bg-start, var(--home-secondary)) 72%, #02040a) 100%); box-shadow: 0 18px 60px rgba(0,0,0,.3); }
 .broadcast-header, .broadcast-footer { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding-inline: clamp(.75rem, 3vw, 3rem); background: rgba(1,4,12,.78); color: rgba(255,255,255,.58); font-size: clamp(.55rem, .9vw, .82rem); font-weight: 700; letter-spacing: .2em; text-transform: uppercase; }
 .broadcast-header { border-bottom: 1px solid rgba(255,255,255,.08); }
 .broadcast-footer { border-top: 1px solid rgba(255,255,255,.08); color: rgba(255,255,255,.48); font-weight: 500; }

@@ -17,6 +17,11 @@ export function measureKioskDisplay(setupVersion: number): KioskDisplayProfile {
   const touch = navigator.maxTouchPoints > 0 || "ontouchstart" in window;
   const pointer: KioskPointer = coarse ? "coarse" : fine ? "fine" : "unknown";
   const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const root = document.querySelector<HTMLElement>(".kiosk-shell")?.getBoundingClientRect();
+  const scene = document.querySelector<HTMLElement>(".kiosk-slideshow, .kiosk-sports-view, .kiosk-setup-preview")?.getBoundingClientRect();
+  if (process.env.NODE_ENV !== "production") {
+    console.info(`[kiosk-viewport] viewport=${viewportWidth}x${viewportHeight} visual=${visual ? `${Math.round(visual.width)}x${Math.round(visual.height)}` : "none"} root=${root ? `${Math.round(root.x)},${Math.round(root.y)},${Math.round(root.width)}x${Math.round(root.height)}` : "missing"} scene=${scene ? `${Math.round(scene.x)},${Math.round(scene.y)},${Math.round(scene.width)}x${Math.round(scene.height)}` : "missing"} document=${document.documentElement.clientWidth}x${document.documentElement.clientHeight} overflow=${Math.max(0, document.documentElement.scrollWidth - viewportWidth)}x${Math.max(0, document.documentElement.scrollHeight - viewportHeight)}`);
+  }
   return {
     viewportWidth,
     viewportHeight,
