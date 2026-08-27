@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
 import { useCosmicAccount } from "@/components/account/AccountProvider";
 import { DashboardReadinessProvider } from "@/components/dashboard/readiness/DashboardReadiness";
 import DevicePairingScreen from "./DevicePairingScreen";
@@ -32,6 +32,11 @@ export default function KioskAuthGate() {
     }
     throw new Error("Device session validation is still pending.");
   }, [refresh]);
+  useEffect(() => {
+    if (loading || !account || sessionType !== "device" || !deviceId) return;
+    const bootId = new URLSearchParams(window.location.search).get("cosmic-boot") ?? "";
+    void fetch(`/api/devices/provision?cosmic-kiosk=1&cosmic-boot=${encodeURIComponent(bootId)}`, { method: "POST", credentials: "include", cache: "no-store" }).catch(() => undefined);
+  }, [account, deviceId, loading, sessionType]);
   if (loading) return <div className="grid min-h-[100dvh] place-items-center text-sm text-white/50">Checking Cosmic device authorization…</div>;
   if (!account || sessionType !== "device") return <DevicePairingScreen onAuthenticated={revalidateDeviceSession} />;
   return (
