@@ -25,77 +25,26 @@ export default function KioskMusicWidget({ music }: { music: ReturnType<typeof u
   const playing = Boolean(music.playback?.playing);
   const hasTrack = Boolean(track?.title && track.artists?.length);
   const hasTemporaryError = Boolean(music.error);
-  const scene = useMusicScene(hasTrack ? track : undefined, hasTrack ? "track" : music.connected && playing ? "playback-detected" : "idle");
+  const sceneState = hasTrack ? "track" : music.connected && playing ? "playback-detected" : "idle";
+  const lastTrackId = useRef<string | undefined>(undefined);
   useEffect(() => { setMusicPlaying(source, Boolean(active && playing)); return () => setMusicPlaying(source, false); }, [active, playing, setMusicPlaying, source]);
-  const currentScene = scene.current.key === (track?.id ?? (music.connected && playing ? "playback-detected" : "idle")) ? { ...scene.current, ...(track ? { track } : {}) } : scene.current;
+  useEffect(() => { if (process.env.NODE_ENV !== "production") { const changed = lastTrackId.current !== undefined && lastTrackId.current !== track?.id; console.info(`[music-poll] responseTrackPresent=${Boolean(track)} responseTrackChanged=${changed}`); console.info(`[kiosk-music] state=${sceneState} currentTrackPresent=${Boolean(track)} renderedTrackMatchesCurrent=true artworkPresent=${Boolean(track?.artworkUrl)} artistProfiles=${track?.artistProfiles?.length ?? 0}`); lastTrackId.current = track?.id; } }, [sceneState, track]);
   return <Widget accent="music" className="kiosk-music-widget" contentPadding={false} hover={false} imageOpacity={1} imageBlur={0}>
     <div className="kiosk-music-scene relative flex h-full min-h-0 flex-col overflow-hidden text-white" data-music-provider={provider?.id ?? "none"}>
-      {scene.previous ? <MusicSceneLayer scene={scene.previous} className="kiosk-music-layer kiosk-music-layer-out" music={music} provider={provider} configured={music.configured} connected={music.connected} playing={playing} error={hasTemporaryError} /> : null}
-      <MusicSceneLayer scene={currentScene} className={`kiosk-music-layer ${scene.transitioning ? "kiosk-music-layer-in" : ""}`} music={music} provider={provider} configured={music.configured} connected={music.connected} playing={playing} error={hasTemporaryError} />
       <div className="kiosk-music-backgrounds absolute inset-0" aria-hidden="true">
-        {scene.previous?.track?.artworkUrl ? <img className="kiosk-music-background kiosk-music-background-previous" src={scene.previous.track.artworkUrl} alt="" draggable={false} onError={(event) => { event.currentTarget.style.display = "none"; }} /> : null}
-        {scene.current.track?.artworkUrl ? <img className={`kiosk-music-background kiosk-music-background-current ${scene.transitioning ? "kiosk-music-background-enter" : ""}`} src={scene.current.track.artworkUrl} alt="" draggable={false} onError={(event) => { event.currentTarget.style.display = "none"; }} /> : null}
+        {track?.artworkUrl ? <img className="kiosk-music-background kiosk-music-background-current" src={track.artworkUrl} alt="" draggable={false} onError={(event) => { event.currentTarget.style.display = "none"; }} /> : null}
       </div>
       <div className="kiosk-music-overlay absolute inset-0" aria-hidden="true" />
+      <div className="kiosk-music-layer relative z-[2] flex h-full min-h-0 flex-1">
+        {hasTrack ? <PlayingScene music={music} track={track!} duration={music.playback?.durationMs ?? track?.durationMs} progressMs={music.playback?.positionMs ?? 0} playing={playing} reconnecting={hasTemporaryError} /> : <ProviderScene provider={provider} connected={music.connected} configured={music.configured} playing={playing} error={hasTemporaryError} />}
+      </div>
     </div>
   </Widget>;
 }
 
-interface MusicScene {
-  key: string;
-  track?: NonNullable<ReturnType<typeof useMusic>["playback"]>["track"];
-  mode: "track" | "playback-detected" | "idle";
-}
-
-function MusicSceneLayer({ scene, className, music, provider, configured, connected, playing, error }: { scene: MusicScene; className: string; music: ReturnType<typeof useMusic>; provider: ProviderPresentation | null; configured: boolean; connected: boolean; playing: boolean; error: boolean }) {
-  const duration = scene.track?.durationMs;
-  const progressMs = useSmoothProgress(music.playback?.positionMs ?? 0, duration, playing && scene.track?.id === music.playback?.track?.id, scene.track?.id);
-  return <div className={`${className} absolute inset-0`} data-music-scene-key={scene.key}>{scene.track ? <PlayingScene music={music} track={scene.track} duration={duration} progressMs={progressMs} playing={playing} reconnecting={error} /> : <ProviderScene provider={provider} connected={connected} configured={configured} playing={playing} error={error} />}</div>;
-}
-
-function useMusicScene(track: MusicScene["track"], mode: MusicScene["mode"]) {
-  const sceneKey = track?.id ?? mode;
-  const initialScene: MusicScene = { key: sceneKey, ...(track ? { track } : {}), mode };
-  const nextSceneRef = useRef<MusicScene>(initialScene);
-  const [current, setCurrent] = useState<MusicScene>(initialScene);
-  const [previous, setPrevious] = useState<MusicScene>();
-  const [transitioning, setTransitioning] = useState(false);
-  const currentKey = current.key;
-  useEffect(() => { nextSceneRef.current = { key: sceneKey, ...(track ? { track } : {}), mode }; }, [mode, sceneKey, track]);
-  useEffect(() => {
-    const incoming = nextSceneRef.current;
-    if (incoming.key === currentKey) return;
-    let cancelled = false;
-    let transitionTimer: number | undefined;
-    const finish = () => {
-      if (cancelled) return;
-      setPrevious(current);
-      setCurrent(incoming);
-      setTransitioning(true);
-      transitionTimer = window.setTimeout(() => {
-        setPrevious(undefined);
-        setTransitioning(false);
-      }, 700);
-    };
-    const artwork = incoming.track?.artworkUrl;
-    if (!artwork || typeof Image === "undefined") {
-      finish();
-    } else {
-      const image = new Image();
-      let settled = false;
-      const settle = () => { if (settled) return; settled = true; finish(); };
-      image.onload = settle;
-      image.onerror = settle;
-      image.src = artwork;
-      transitionTimer = window.setTimeout(settle, 800);
-    }
-    return () => { cancelled = true; if (transitionTimer !== undefined) window.clearTimeout(transitionTimer); };
-  }, [current, currentKey, sceneKey]);
-  return { current, previous, transitioning };
-}
-
 function PlayingScene({ music, track, duration, progressMs, playing, reconnecting }: { music: ReturnType<typeof useMusic>; track: NonNullable<ReturnType<typeof useMusic>["playback"]>["track"] & object; duration?: number; progressMs: number; playing: boolean; reconnecting: boolean }) {
-  return <div className="kiosk-music-playing relative z-10 grid min-h-0 flex-1 grid-cols-[minmax(0,45fr)_minmax(0,55fr)] items-center gap-[clamp(1.25rem,5vw,5rem)] p-[clamp(1.25rem,6vw,6rem)]"><div className="kiosk-music-primary min-w-0 justify-self-center"><div className="kiosk-music-art aspect-square w-[min(42vw,42vh,32rem)] overflow-hidden rounded-[clamp(.5rem,1vw,1rem)] bg-black/35 shadow-2xl">{track.artworkUrl ? <img src={track.artworkUrl} alt="" draggable={false} className="h-full w-full object-cover" onError={(event) => { event.currentTarget.style.display = "none"; }} /> : <span className="grid h-full place-items-center text-6xl text-white/45">♫</span>}</div></div><div className="min-w-0 max-w-3xl"><p className="text-[.7rem] font-semibold uppercase tracking-[.3em] text-emerald-200/85">{playing ? "PLAYING" : "PAUSED"}</p>{reconnecting ? <p className="mt-2 text-xs uppercase tracking-[.2em] text-amber-100/70">Reconnecting…</p> : null}<h1 className="mt-4 line-clamp-2 text-[clamp(1.8rem,4.8vw,5rem)] font-semibold leading-[.98] tracking-[-.03em]">{track.title}</h1><ArtistProfiles track={track} /><p className="mt-2 truncate text-[clamp(1rem,2.1vw,1.6rem)] text-white/80">{track.artists.join(", ")}</p>{track.album ? <p className="mt-2 truncate text-[clamp(.75rem,1.3vw,1rem)] uppercase tracking-[.18em] text-white/50">{track.album}</p> : null}{duration ? <ProgressBar progressMs={progressMs} duration={duration} /> : null}{music.playback?.deviceName ? <p className="mt-5 text-xs uppercase tracking-[.18em] text-white/40">Playing on {music.playback.deviceName}</p> : null}</div></div>;
+  const interpolatedProgress = useSmoothProgress(progressMs, duration, playing, track.id);
+  return <div className="kiosk-music-playing relative z-10 grid min-h-0 flex-1 grid-cols-[minmax(0,44fr)_minmax(0,56fr)] items-center gap-[clamp(1rem,3.5vw,4rem)] p-[clamp(.75rem,2vw,2.25rem)]"><div className="kiosk-music-primary min-w-0 justify-self-center"><div className="kiosk-music-art aspect-square w-[min(42vw,42vh,32rem)] overflow-hidden rounded-[clamp(.5rem,1vw,1rem)] bg-black/35 shadow-2xl">{track.artworkUrl ? <img src={track.artworkUrl} alt="" draggable={false} className="h-full w-full object-cover" onError={(event) => { event.currentTarget.style.display = "none"; }} /> : <span className="grid h-full w-full place-items-center text-6xl text-white/45">♫</span>}</div></div><div className="kiosk-music-details min-w-0 max-w-3xl"><p className="text-[.7rem] font-semibold uppercase tracking-[.3em] text-emerald-200/85">{playing ? "PLAYING" : "PAUSED"}</p>{reconnecting ? <p className="mt-2 text-xs uppercase tracking-[.2em] text-amber-100/70">Reconnecting…</p> : null}<h1 className="mt-4 line-clamp-2 text-[clamp(1.8rem,4.8vw,5rem)] font-semibold leading-[.98] tracking-[-.03em]">{track.title}</h1><ArtistProfiles track={track} /><p className="mt-2 truncate text-[clamp(1rem,2.1vw,1.6rem)] text-white/80">{track.artists.join(", ")}</p>{track.album ? <p className="mt-2 truncate text-[clamp(.75rem,1.3vw,1rem)] uppercase tracking-[.18em] text-white/50">{track.album}</p> : null}{duration ? <ProgressBar progressMs={interpolatedProgress} duration={duration} /> : null}{music.playback?.deviceName ? <p className="mt-5 text-xs uppercase tracking-[.18em] text-white/40">Playing on {music.playback.deviceName}</p> : null}</div></div>;
 }
 
 function ArtistProfiles({ track }: { track: NonNullable<ReturnType<typeof useMusic>["playback"]>["track"] & object }) {
