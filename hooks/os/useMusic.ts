@@ -43,6 +43,7 @@ export function useMusic({ refreshMs, enabled = true }: UseMusicOptions = {}) {
         }
 
         const next = await response.json() as MusicSnapshot;
+        if (process.env.NODE_ENV !== "production") console.info(`[use-music] receivedTrackPresent=${Boolean(next.playback.track)} trackIdSuffix=${next.playback.track?.id?.slice(-4) ?? "none"}`);
         setSnapshot((current) => next.error && current?.playback.track ? { ...current, error: next.error } : next);
         setRequestError(undefined);
       } catch (cause) {

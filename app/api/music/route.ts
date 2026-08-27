@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import { accountSnapshot } from "@/services/music/spotify";
 import { kioskBootId, requireAuthenticatedSession } from "@/services/auth/server";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 function musicLog(message: string) { if (process.env.NODE_ENV !== "production") console.info(`[kiosk-music] ${message}`); }
 
 export async function GET(request: Request) {
@@ -10,5 +13,7 @@ export async function GET(request: Request) {
   if (!process.env.DATABASE_URL) return NextResponse.json({ provider: "spotify", connected: false, capabilities: {}, playback: { playing: false, positionMs: 0, updatedAt: "" }, error: "Account music storage is unavailable." }, { headers: { "Cache-Control": "no-store" } });
   const snapshot = await accountSnapshot(session.account.id);
   musicLog(`spotifyConnection=${snapshot.connected || Boolean(snapshot.error && /temporarily|rate limited/i.test(snapshot.error))} playbackStatus=${snapshot.connected ? snapshot.playback.track ? 200 : 204 : "not-requested"}`);
-  return NextResponse.json(snapshot, { headers: { "Cache-Control": "no-store" } });
+  const trackId = snapshot.playback.track?.id;
+  if (process.env.NODE_ENV !== "production") musicLog(`returnedTrackPresent=${Boolean(trackId)} trackIdSuffix=${trackId ? trackId.slice(-4) : "none"}`);
+  return NextResponse.json({ ...snapshot, ...(process.env.NODE_ENV !== "production" ? { debug: { fetchedAt: new Date().toISOString(), trackPresent: Boolean(trackId), trackIdSuffix: trackId ? trackId.slice(-4) : "none" } } : {}) }, { headers: { "Cache-Control": "no-store, max-age=0" } });
 }

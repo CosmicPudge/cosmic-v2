@@ -14,6 +14,7 @@ const ARTIST_CACHE_MS = 60 * 60 * 1000;
 const ARTIST_FAILURE_CACHE_MS = 60 * 1000;
 const artistCache = new Map<string, { profile?: MusicArtist; expiresAt: number }>();
 const artistRequests = new Map<string, Promise<Map<string, MusicArtist>>>();
+function trackSuffix(id?: string) { return id ? id.slice(-4) : "none"; }
 
 export const configured = () => Boolean(process.env.SPOTIFY_CLIENT_ID && process.env.SPOTIFY_CLIENT_SECRET && process.env.SPOTIFY_REDIRECT_URI);
 export const readToken = (): Token | undefined => { try { return JSON.parse(readFileSync(path, "utf8")) as Token; } catch { return undefined; } };
@@ -115,21 +116,38 @@ async function getArtistProfiles(ids: string[], accessToken: string, refreshAcce
   return profiles;
 }
 
+function getCachedArtistProfiles(ids: string[]) {
+  const now = Date.now();
+  const profiles = new Map<string, MusicArtist>();
+  for (const id of new Set(ids)) {
+    const cached = artistCache.get(id);
+    if (cached && cached.expiresAt > now && cached.profile) profiles.set(id, cached.profile);
+  }
+  return profiles;
+}
+
 async function normalizePlayback(data: { is_playing: boolean; progress_ms: number; item?: { id: string; name: string; duration_ms: number; artists: { id?: string; name: string }[]; album?: { name: string; images?: { url: string; width?: number; height?: number }[] } }; device?: { name: string; volume_percent?: number } }, accessToken: string, refreshAccessToken?: () => Promise<string>): Promise<MusicSnapshot> {
-  const profiles = data.item ? await getArtistProfiles(data.item.artists.map((artist) => artist.id ?? ""), accessToken, refreshAccessToken) : new Map<string, MusicArtist>();
-  const artistProfiles = data.item?.artists.map((artist) => artist.id ? profiles.get(artist.id) ?? { id: artist.id, name: artist.name } : { name: artist.name });
+  const artistIds = data.item?.artists.map((artist) => artist.id ?? "") ?? [];
+  const profiles = getCachedArtistProfiles(artistIds);
+  if (data.item) void getArtistProfiles(artistIds, accessToken, refreshAccessToken);
+  const artistProfiles = data.item?.artists.map((artist) => artist.id ? profiles.get(artist.id) ?? { id: artist.id, name: artist.name, imageUrl: null } : { name: artist.name, imageUrl: null });
+  if (process.env.NODE_ENV !== "production") console.info(`[music-normalized] trackPresent=${Boolean(data.item)} trackIdSuffix=${trackSuffix(data.item?.id)} titlePresent=${Boolean(data.item?.name)} artistCount=${data.item?.artists.length ?? 0} artworkPresent=${Boolean(data.item?.album?.images?.length)}`);
   return { provider: "spotify", connected: true, capabilities: caps, playback: { playing: data.is_playing, positionMs: data.progress_ms ?? 0, durationMs: data.item?.duration_ms, volume: data.device?.volume_percent, deviceName: data.device?.name, updatedAt: new Date().toISOString(), track: data.item ? { id: data.item.id, title: data.item.name, artists: data.item.artists.map((artist) => artist.name), ...(artistProfiles?.length ? { artistProfiles } : {}), album: data.item.album?.name, artworkUrl: selectSpotifyArtwork(data.item.album?.images), durationMs: data.item.duration_ms, provider: "spotify" } : undefined } };
 }
 
 async function snapshotWithToken(current: Token, refreshAccessToken?: () => Promise<string>): Promise<MusicSnapshot> {
   try {
-    const response = await fetch("https://api.spotify.com/v1/me/player", { headers: { Authorization: `Bearer ${current.access_token}` } });
-    if (response.status === 204) return { provider: "spotify", connected: true, capabilities: caps, playback: { playing: false, positionMs: 0, updatedAt: new Date().toISOString() } };
+    const requestStartedAt = new Date().toISOString();
+    const requestStartedMs = Date.now();
+    const response = await fetch("https://api.spotify.com/v1/me/player", { cache: "no-store", headers: { Authorization: `Bearer ${current.access_token}` } });
+    if (response.status === 204) { if (process.env.NODE_ENV !== "production") console.info(`[spotify-playback] requestStartedAt=${requestStartedAt} durationMs=${Date.now() - requestStartedMs} status=204 itemPresent=false itemType=none trackIdSuffix=none progressMs=0 isPlaying=false`); return { provider: "spotify", connected: true, capabilities: caps, playback: { playing: false, positionMs: 0, updatedAt: new Date().toISOString() } }; }
     if (response.status === 401) return disconnected("Spotify authorization needs to reconnect.");
     if (response.status === 429) return temporaryFailure("Spotify is rate limited. Retrying automatically.");
     if (response.status >= 500) return temporaryFailure("Spotify is temporarily unavailable. Retrying automatically.");
     if (!response.ok) return temporaryFailure("Spotify playback is temporarily unavailable.");
-    return await normalizePlayback(await response.json() as Parameters<typeof normalizePlayback>[0], current.access_token, refreshAccessToken);
+    const payload = await response.json() as Parameters<typeof normalizePlayback>[0] & { currently_playing_type?: string };
+    if (process.env.NODE_ENV !== "production") console.info(`[spotify-playback] requestStartedAt=${requestStartedAt} durationMs=${Date.now() - requestStartedMs} status=${response.status} itemPresent=${Boolean(payload.item)} itemType=${payload.currently_playing_type ?? (payload.item ? "track" : "none")} trackIdSuffix=${trackSuffix(payload.item?.id)} progressMs=${payload.progress_ms ?? 0} isPlaying=${Boolean(payload.is_playing)}`);
+    return await normalizePlayback(payload, current.access_token, refreshAccessToken);
   } catch { return temporaryFailure("Spotify playback is temporarily unavailable."); }
 }
 
