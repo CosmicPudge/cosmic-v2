@@ -858,15 +858,13 @@ html[data-cosmic-reduced-effects="true"] *::after {
 .kiosk-music-background { position: absolute; inset: 0; height: 100%; width: 100%; object-fit: cover; transition: opacity .7s ease, transform .7s ease; }
 .kiosk-music-background-previous { opacity: 1; transform: scale(1); }
 .kiosk-music-background-current { opacity: 1; transform: scale(1); }
-.kiosk-music-background-enter { clip-path: circle(0% at 50% 50%); animation: kiosk-music-center-reveal 1.1s cubic-bezier(.22,.72,.2,1) forwards; }
+.kiosk-music-background-enter { opacity: 0; transform: scale(1.03); animation: kiosk-music-background-settle .7s ease forwards; }
 .kiosk-music-layer { z-index: 2; opacity: 1; transform: translateX(0) scale(1); transition: opacity .7s ease, transform .7s ease; }
 .kiosk-music-overlay { z-index: 1; }
-.kiosk-music-layer-out { pointer-events: none; animation: kiosk-music-edge-melt 1.1s cubic-bezier(.4,0,.7,1) forwards; mask-mode: luminance; -webkit-mask-mode: luminance; }
-.kiosk-music-layer-in { clip-path: circle(0% at 50% 50%); animation: kiosk-music-center-reveal 1.1s cubic-bezier(.22,.72,.2,1) forwards; }
-.kiosk-music-background-previous { animation: kiosk-music-background-edge-melt 1.1s cubic-bezier(.4,0,.7,1) forwards; mask-mode: luminance; -webkit-mask-mode: luminance; }
-@keyframes kiosk-music-center-reveal { 0% { clip-path: circle(0% at 50% 50%); opacity: .12; } 18% { clip-path: circle(28% at 50% 50%); opacity: .86; } 72% { clip-path: circle(92% at 50% 50%); opacity: 1; } 100% { clip-path: circle(150% at 50% 50%); opacity: 1; } }
-@keyframes kiosk-music-edge-melt { 0% { opacity: 1; transform: scale(1); mask-image: radial-gradient(ellipse at 50% 50%, transparent 0%, transparent 8%, rgba(0,0,0,.92) 22%, #000 42%, #000 100%); } 22% { opacity: .92; transform: translateY(3px) scale(1.01); mask-image: radial-gradient(ellipse at 49% 51%, transparent 0%, transparent 21%, rgba(0,0,0,.8) 35%, #000 53%, #000 100%); } 68% { opacity: .45; transform: translateY(7px) scale(1.025); mask-image: radial-gradient(ellipse at 51% 49%, transparent 0%, transparent 56%, rgba(0,0,0,.55) 69%, #000 84%, #000 100%); } 100% { opacity: 0; transform: translateY(10px) scale(1.04); mask-image: radial-gradient(ellipse at 50% 50%, transparent 0%, transparent 100%, transparent 100%); } }
-@keyframes kiosk-music-background-edge-melt { 0% { opacity: 1; transform: scale(1); } 30% { opacity: .8; transform: scale(1.015); } 100% { opacity: 0; transform: scale(1.04); } }
+.kiosk-music-layer-out { opacity: 0; transform: translateX(-10px) scale(.97); pointer-events: none; }
+.kiosk-music-layer-in { animation: kiosk-music-layer-arrive .7s ease both; }
+@keyframes kiosk-music-background-settle { from { opacity: 0; transform: scale(1.03); } to { opacity: 1; transform: scale(1); } }
+@keyframes kiosk-music-layer-arrive { from { opacity: 0; transform: translateX(12px) scale(.97); } to { opacity: 1; transform: translateX(0) scale(1); } }
 .kiosk-music-provider-mark { width: clamp(4.5rem, 10vw, 8rem); height: clamp(4.5rem, 10vw, 8rem); filter: drop-shadow(0 0 28px color-mix(in srgb, var(--music-provider-accent, #1ed760) 25%, transparent)); }
 .kiosk-music-artists .kiosk-music-artist-avatar + .kiosk-music-artist-avatar { margin-left: -.75rem; }
 .kiosk-music-cosmic-mark { display: grid; width: clamp(4.5rem, 10vw, 8rem); height: clamp(4.5rem, 10vw, 8rem); place-items: center; border: 1px solid rgba(240,171,252,.35); border-radius: 1.5rem; color: #f0abfc; font-size: clamp(2.5rem, 6vw, 5rem); box-shadow: 0 0 36px rgba(240,171,252,.16); }
@@ -1131,6 +1129,4 @@ html[data-cosmic-reduced-effects="true"] *::after {
 @keyframes cosmic-transition-in { from { opacity: 0; } to { opacity: 1; } }
 @keyframes cosmic-transition-drift { from { transform: translate3d(0, 0, 0) scale(1); } to { transform: translate3d(3%, -2%, 0) scale(1.04); } }
 @media (prefers-reduced-motion: reduce) { .cosmic-transition-surface, .cosmic-transition-progress span { animation: none; transition-duration: 120ms; } }
-@media (prefers-reduced-motion: reduce) { .kiosk-music-background, .kiosk-music-layer { transition: opacity .2s ease !important; transform: none !important; mask-image: none !important; -webkit-mask-image: none !important; } .kiosk-music-layer-out, .kiosk-music-background-previous { animation: kiosk-music-reduced-out .2s ease forwards !important; } .kiosk-music-layer-in, .kiosk-music-background-enter { animation: kiosk-music-reduced-in .2s ease forwards !important; clip-path: none !important; } }
-@keyframes kiosk-music-reduced-out { from { opacity: 1; } to { opacity: 0; } }
-@keyframes kiosk-music-reduced-in { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .kiosk-music-background, .kiosk-music-layer { animation: none !important; transition: opacity .2s ease !important; transform: none !important; } }
