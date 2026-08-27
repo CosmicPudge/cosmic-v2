@@ -293,6 +293,32 @@ html, body { width: 100%; min-height: 100%; }
 .kiosk-slide[data-kiosk-scene="calendar"] .kiosk-scene-glow,
 .kiosk-slide[data-kiosk-scene="calendar"] .kiosk-scene-illustration { display: none; }
 
+/* Setup previews render the same kiosk scene components without a KioskSlide wrapper. */
+.kiosk-setup-preview[data-kiosk-preview="true"] [data-widget-accent],
+.kiosk-setup-preview[data-kiosk-preview="true"] [data-widget-accent] > div {
+  border-radius: 0 !important;
+  border-color: transparent !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+}
+.kiosk-setup-preview[data-kiosk-preview="true"] .kiosk-scene-surface { isolation: isolate; }
+.kiosk-setup-preview[data-kiosk-preview="true"] .kiosk-scene-image { z-index: 0; object-fit: cover; filter: none !important; }
+.kiosk-setup-preview[data-kiosk-preview="true"] .kiosk-scene-motif,
+.kiosk-setup-preview[data-kiosk-preview="true"] .kiosk-scene-glow,
+.kiosk-setup-preview[data-kiosk-preview="true"] .kiosk-scene-illustration { display: none; }
+.kiosk-setup-preview[data-kiosk-setup-preview="clock"] .kiosk-scene-surface { background: #05091a !important; }
+.kiosk-setup-preview[data-kiosk-setup-preview="clock"] .kiosk-scene-surface::before { content: ""; position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 42%, transparent 20%, rgba(0,0,12,.16) 70%), linear-gradient(180deg, rgba(0,0,0,.1), transparent 38%, rgba(0,0,0,.38)); opacity: 1; }
+.kiosk-setup-preview[data-kiosk-setup-preview="clock"] .kiosk-scene-surface::after { content: ""; position: absolute; inset: 0; background: radial-gradient(ellipse at center, transparent 44%, rgba(0,0,8,.38) 100%), linear-gradient(180deg, transparent 56%, rgba(0,0,8,.4)); opacity: 1; }
+.kiosk-setup-preview[data-kiosk-setup-preview="weather"] .kiosk-scene-surface { background: #0a1b2c !important; }
+.kiosk-setup-preview[data-kiosk-setup-preview="weather"] .kiosk-scene-image { opacity: .92 !important; }
+.kiosk-setup-preview[data-kiosk-setup-preview="weather"] .kiosk-scene-surface::before { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(0,0,10,.3), transparent 54%), linear-gradient(180deg, rgba(0,0,10,.1), transparent 45%, rgba(0,0,8,.42)); opacity: 1; }
+.kiosk-setup-preview[data-kiosk-setup-preview="weather"] .kiosk-scene-surface::after { content: ""; position: absolute; inset: 0; background: radial-gradient(ellipse at center, transparent 42%, rgba(0,0,8,.32) 100%), linear-gradient(180deg, transparent 58%, rgba(0,0,8,.38)); opacity: 1; }
+.kiosk-setup-preview[data-kiosk-setup-preview="calendar"] .kiosk-scene-surface { background: #071426 !important; }
+.kiosk-setup-preview[data-kiosk-setup-preview="calendar"] .kiosk-scene-image { opacity: .94 !important; }
+.kiosk-setup-preview[data-kiosk-setup-preview="calendar"] .kiosk-scene-surface::before { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(2,8,20,.48), transparent 58%), linear-gradient(180deg, rgba(2,8,20,.08), transparent 48%, rgba(1,4,12,.4)); opacity: 1; }
+.kiosk-setup-preview[data-kiosk-setup-preview="calendar"] .kiosk-scene-surface::after { content: ""; position: absolute; inset: 0; background: radial-gradient(ellipse at center, transparent 40%, rgba(0,0,8,.3) 100%), linear-gradient(180deg, transparent 62%, rgba(0,0,8,.32)); opacity: 1; }
+
 /* Music is a full-viewport scene; its artwork and readable content replace the generic kiosk card chrome. */
 .kiosk-slide[data-kiosk-scene="music"] .kiosk-slide-header { display: none; }
 .kiosk-slide[data-kiosk-scene="music"] .kiosk-slide-card,
@@ -828,6 +854,10 @@ html[data-cosmic-reduced-effects="true"] *::after {
 .kiosk-slide-content::-webkit-scrollbar { display: none; }
 .kiosk-music-art { width: min(42%, 22rem); aspect-ratio: 1; }
 .kiosk-music-widget .kiosk-scene-image { filter: blur(3px); transform: scale(1.03); }
+.kiosk-music-provider-mark { width: clamp(4.5rem, 10vw, 8rem); height: clamp(4.5rem, 10vw, 8rem); filter: drop-shadow(0 0 28px color-mix(in srgb, var(--music-provider-accent, #1ed760) 25%, transparent)); }
+.kiosk-music-cosmic-mark { display: grid; width: clamp(4.5rem, 10vw, 8rem); height: clamp(4.5rem, 10vw, 8rem); place-items: center; border: 1px solid rgba(240,171,252,.35); border-radius: 1.5rem; color: #f0abfc; font-size: clamp(2.5rem, 6vw, 5rem); box-shadow: 0 0 36px rgba(240,171,252,.16); }
+.kiosk-music-widget [data-music-provider="spotify"] .kiosk-music-overlay { background: linear-gradient(90deg, rgba(0,0,0,.78), rgba(0,12,5,.35) 55%, rgba(0,0,0,.7)), radial-gradient(ellipse at 70% 40%, rgba(30,215,96,.14), transparent 42%), linear-gradient(180deg, rgba(0,0,0,.15), transparent 45%, rgba(0,0,0,.5)); }
+.kiosk-music-widget [data-music-provider="none"] .kiosk-music-overlay { background: radial-gradient(ellipse at 50% 38%, rgba(30,215,96,.1), transparent 40%), linear-gradient(145deg, #04150c, #020605 72%); }
 
 .kiosk-shell[data-compact="true"] .kiosk-slide-card,
 .kiosk-shell[data-compact="true"] .kiosk-sports-view > section { border-radius: .7rem; backdrop-filter: blur(6px); box-shadow: 0 10px 30px rgba(0,0,0,.22); }
@@ -841,11 +871,15 @@ html[data-cosmic-reduced-effects="true"] *::after {
 .kiosk-shell[data-compact="true"] .kiosk-sports-view > section > header p { font-size: .5rem; letter-spacing: .14em; }
 .kiosk-shell[data-compact="true"] .kiosk-slide-content { padding: 0; overflow: hidden; }
 .kiosk-shell[data-compact="true"] .kiosk-music-art { width: min(42%, 13rem); border-radius: .55rem; }
-.kiosk-shell[data-compact="true"] .kiosk-music-scene > div:nth-child(2) { gap: 1rem; }
-.kiosk-shell[data-compact="true"] .kiosk-music-scene { padding: .8rem; }
-.kiosk-shell[data-compact="true"] .kiosk-music-art { width: min(100%, 10rem); margin-bottom: .8rem; }
+.kiosk-shell[data-compact="true"] .kiosk-music-playing { gap: 1rem; padding: .8rem; }
+.kiosk-shell[data-compact="true"] .kiosk-music-art { width: min(38vw, 10rem); }
 .kiosk-shell[data-compact="true"] .kiosk-music-progress { margin-top: 1rem; }
-.kiosk-shell[data-compact="true"] .kiosk-music-lyrics p:last-child { margin-top: .75rem; font-size: .9rem; }
+
+@media (orientation: portrait) {
+  .kiosk-music-playing { grid-template-columns: 1fr; gap: 1rem; overflow-y: auto; padding: clamp(1rem, 6vw, 3rem); }
+  .kiosk-music-art { width: min(62vw, 42vh, 22rem); }
+  .kiosk-music-primary { justify-self: center; }
+}
 
 .kiosk-shell[data-compact="true"] .kiosk-sports-view > section { min-height: 0; }
 .kiosk-shell[data-compact="true"] .kiosk-sports-view > section > div { padding: .45rem .65rem; }

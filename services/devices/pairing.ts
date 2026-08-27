@@ -124,7 +124,7 @@ export async function consumeApprovedPairing(deviceCode: string) {
 
 export async function listDevices(userId: string) {
   const database = requireDatabase();
-  return database.select({ id: devices.id, name: devices.name, type: devices.type, createdAt: devices.createdAt, lastSeenAt: devices.lastSeenAt, revokedAt: devices.revokedAt }).from(devices).where(eq(devices.userId, userId)).orderBy(devices.createdAt);
+  return database.select({ id: devices.id, name: devices.name, type: devices.type, createdAt: devices.createdAt, lastSeenAt: devices.lastSeenAt, revokedAt: devices.revokedAt }).from(devices).where(and(eq(devices.userId, userId), isNull(devices.revokedAt))).orderBy(devices.createdAt);
 }
 
 export async function revokeDevice(userId: string, deviceId: string) {
