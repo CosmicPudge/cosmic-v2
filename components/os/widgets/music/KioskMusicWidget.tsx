@@ -7,10 +7,10 @@ import { useWidgetContext } from "@/components/os/ui/widget/WidgetContext";
 import Widget from "@/components/os/ui/widget/Widget";
 import { useMusic } from "@/hooks/os/useMusic";
 
-interface ProviderPresentation { id: MusicProviderKind; label: string; accent: string; }
+interface ProviderPresentation { id: MusicProviderKind; label: string; accent: string; logoSrc?: string; }
 
 function resolveProvider(provider?: MusicProviderKind): ProviderPresentation | null {
-  if (provider === "spotify") return { id: "spotify", label: "Spotify", accent: "#1ed760" };
+  if (provider === "spotify") return { id: "spotify", label: "Spotify", accent: "#1ed760", logoSrc: "/kiosk/brands/spotify.svg" };
   if (provider === "appleMusic") return { id: "appleMusic", label: "Apple Music", accent: "#fa2d48" };
   if (provider === "local") return { id: "local", label: "Cosmic Music", accent: "#f0abfc" };
   return null;
@@ -44,12 +44,12 @@ function ProviderScene({ provider, connected, configured, playing, error }: { pr
   const name = provider?.label ?? "Cosmic Music";
   const waitingForMetadata = Boolean(provider && connected && playing && !error);
   const temporaryFailure = Boolean(provider && connected && error);
-  return <div className="kiosk-music-provider-state relative z-10 flex min-h-0 flex-1 flex-col items-center justify-center p-[clamp(1.5rem,7vw,7rem)] text-center" style={{ "--music-provider-accent": provider?.accent ?? "#f0abfc" } as CSSProperties}>{provider ? <ProviderMark provider={provider.id} /> : <div className="kiosk-music-cosmic-mark">♫</div>}<p className="mt-6 text-[.7rem] font-semibold uppercase tracking-[.34em] text-[color:var(--music-provider-accent)]">{name}</p><h1 className="mt-4 text-[clamp(1.5rem,3.5vw,3.4rem)] font-semibold tracking-tight">{temporaryFailure ? "Temporarily unavailable" : waitingForMetadata ? "Playback detected" : provider && connected ? "Nothing playing right now" : configured ? "Connect your music service" : "No music service connected"}</h1><p className="mt-3 max-w-xl text-[clamp(.85rem,1.5vw,1.1rem)] leading-relaxed text-white/55">{temporaryFailure ? "Cosmic will retry automatically." : waitingForMetadata ? `${name} is connected. Waiting for track information…` : provider && connected ? `Connected to your Cosmic profile. Start playing something on ${name} and it will appear here.` : "Connect Spotify from Cosmic Account Settings."}</p></div>;
+  return <div className="kiosk-music-provider-state relative z-10 flex min-h-0 flex-1 flex-col items-center justify-center p-[clamp(1.5rem,7vw,7rem)] text-center" style={{ "--music-provider-accent": provider?.accent ?? "#f0abfc" } as CSSProperties}>{provider ? <ProviderMark presentation={provider} /> : <div className="kiosk-music-cosmic-mark">♫</div>}<p className="mt-6 text-[.7rem] font-semibold uppercase tracking-[.34em] text-[color:var(--music-provider-accent)]">{name}</p><h1 className="mt-4 text-[clamp(1.5rem,3.5vw,3.4rem)] font-semibold tracking-tight">{temporaryFailure ? "Temporarily unavailable" : waitingForMetadata ? "Playback detected" : provider && connected ? "Nothing playing right now" : configured ? "Connect your music service" : "No music service connected"}</h1><p className="mt-3 max-w-xl text-[clamp(.85rem,1.5vw,1.1rem)] leading-relaxed text-white/55">{temporaryFailure ? "Cosmic will retry automatically." : waitingForMetadata ? `${name} is connected. Waiting for track information…` : provider && connected ? `Connected to your Cosmic profile. Start playing something on ${name} and it will appear here.` : "Connect Spotify from Cosmic Account Settings."}</p></div>;
 }
 
-function ProviderMark({ provider }: { provider: MusicProviderKind }) {
-  if (provider === "spotify") return <img className="kiosk-music-provider-mark" src="/kiosk/brands/spotify.svg" alt="Spotify" draggable={false} />;
-  if (provider === "appleMusic") return <div className="kiosk-music-provider-mark grid place-items-center rounded-2xl bg-gradient-to-br from-[#fa2d48] to-[#9b1bdf] text-4xl font-semibold">♪</div>;
+function ProviderMark({ presentation }: { presentation: ProviderPresentation }) {
+  if (presentation.logoSrc) return <img className="kiosk-music-provider-mark" src={presentation.logoSrc} alt={presentation.label} draggable={false} />;
+  if (presentation.id === "appleMusic") return null;
   return <div className="kiosk-music-provider-mark grid place-items-center rounded-2xl border border-fuchsia-200/30 text-4xl text-fuchsia-200">♫</div>;
 }
 
