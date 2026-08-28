@@ -175,10 +175,22 @@ export async function authenticateDeviceCredential(credential: string, bootId: s
   return { ...session, state: "owned" as const, deviceNumber: device.publicNumber };
 }
 
-export async function createDeviceSessionHandoff(credential: string, bootId: string) {
+export type DeviceSessionHandoffResult =
+  | { state: "needs_provisioning"; deviceId: string; deviceNumber: string }
+  | { state: "identity_recovery"; deviceId: string; deviceNumber: string }
+  | { token: string; deviceId: string; expiresAt: string };
+
+export async function createDeviceSessionHandoff(credential: string, bootId: string, identity?: { deviceId: string; publicNumber: string }): Promise<DeviceSessionHandoffResult | null> {
   const database = requireDatabase();
-  const [device] = await database.select({ id: devices.id, userId: devices.userId }).from(devices).where(and(eq(devices.credentialHash, hash(credential)), isNull(devices.credentialRevokedAt), isNull(devices.revokedAt))).limit(1);
-  if (!device?.userId) return null;
+  const credentialHash = hash(credential);
+  const [device] = identity
+    ? await database.select({ id: devices.id, userId: devices.userId, publicNumber: devices.publicNumber, credentialHash: devices.credentialHash, credentialRevokedAt: devices.credentialRevokedAt, revokedAt: devices.revokedAt, ownershipStatus: devices.ownershipStatus }).from(devices).where(eq(devices.id, identity.deviceId)).limit(1)
+    : await database.select({ id: devices.id, userId: devices.userId, publicNumber: devices.publicNumber, credentialHash: devices.credentialHash, credentialRevokedAt: devices.credentialRevokedAt, revokedAt: devices.revokedAt, ownershipStatus: devices.ownershipStatus }).from(devices).where(and(eq(devices.credentialHash, credentialHash), isNull(devices.credentialRevokedAt), isNull(devices.revokedAt))).limit(1);
+  if (!device) return identity ? { state: "identity_recovery", deviceId: identity.deviceId, deviceNumber: identity.publicNumber } : null;
+  if (identity && device.publicNumber !== identity.publicNumber) return { state: "identity_recovery", deviceId: identity.deviceId, deviceNumber: identity.publicNumber };
+  if (identity && device.revokedAt) return { state: "identity_recovery", deviceId: device.id, deviceNumber: device.publicNumber };
+  if (identity && (device.credentialRevokedAt || ((device.ownershipStatus !== "owned" || !device.userId) && (!device.credentialHash || device.credentialHash !== credentialHash)))) return { state: "needs_provisioning", deviceId: device.id, deviceNumber: device.publicNumber };
+  if (!device.userId || device.credentialHash !== credentialHash || device.credentialRevokedAt || device.revokedAt) return null;
   const token = randomBytes(32).toString("base64url");
   const expiresAt = new Date(Date.now() + DEVICE_HANDOFF_TTL_MS);
   await database.insert(deviceSessionHandoffs).values({ id: `handoff_${randomUUID()}`, tokenHash: hash(token), deviceId: device.id, userId: device.userId, bootId, expiresAt });

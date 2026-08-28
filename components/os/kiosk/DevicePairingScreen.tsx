@@ -6,7 +6,7 @@ import { useSearchParams } from "next/navigation";
 
 type Pairing = { deviceCode: string; userCode: string; deviceNumber: string; verificationUrl: string; expiresAt: string; pollInterval: number };
 type PairingResponse = (Pairing & { status?: "created"; error?: string }) | { status?: "identity_missing"; reason?: string; error?: string };
-type HelperHandoff = { state?: "ready" | "reconnecting" | "unauthorized" | "needs_provisioning" | "identity_recovery"; handoffToken?: string; activationUrl?: string; publicNumber?: string };
+type HelperHandoff = { state?: "ready" | "reconnecting" | "unauthorized" | "needs_provisioning" | "identity_recovery"; handoffToken?: string; activationUrl?: string; publicNumber?: string; pairingRequired?: boolean };
 
 export default function DevicePairingScreen({ onAuthenticated }: { onAuthenticated: () => Promise<void> }) {
   const searchParams = useSearchParams();
@@ -27,8 +27,8 @@ export default function DevicePairingScreen({ onAuthenticated }: { onAuthenticat
         const helper = await fetch("http://127.0.0.1:8765/v1/browser-handoff", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ bootId }), credentials: "omit", cache: "no-store" }).catch(() => null);
         const helperBody = await helper?.json().catch(() => null) as HelperHandoff | null;
         if (helper && !helper.ok && helperBody?.state === "reconnecting") { setReconnecting(true); return; }
-        if (helper && !helper.ok && helperBody?.state === "needs_provisioning") { setEnrollment({ activationUrl: helperBody.activationUrl ?? "", publicNumber: helperBody.publicNumber }); return; }
-        if (helper && !helper.ok && (helperBody?.state === "unauthorized" || helperBody?.state === "identity_recovery")) { setIdentityRecovery(true); return; }
+        if (helper && !helper.ok && helperBody?.state === "needs_provisioning" && !helperBody.pairingRequired) { setEnrollment({ activationUrl: helperBody.activationUrl ?? "", publicNumber: helperBody.publicNumber }); return; }
+        if (helper && !helper.ok && helperBody?.state === "identity_recovery") { setIdentityRecovery(true); return; }
         if (helper?.ok && helperBody?.handoffToken) {
           const handoff = await fetch("/api/devices/handoff/consume", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ bootId, handoffToken: helperBody.handoffToken }), credentials: "include", cache: "no-store" });
           if (handoff.ok) { await onAuthenticated(); return; }

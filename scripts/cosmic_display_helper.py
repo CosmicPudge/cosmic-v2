@@ -85,8 +85,40 @@ def post_json(path, body, credential=None):
     try:
         with urllib.request.urlopen(request, timeout=10) as response:
             return response.status, json.loads(response.read().decode())
-    except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, ValueError) as error:
+    except urllib.error.HTTPError as error:
+        try:
+            body = json.loads(error.read().decode())
+            if isinstance(body, dict):
+                return error.code, body
+        except (OSError, ValueError, json.JSONDecodeError):
+            pass
+        return error.code, {"error": "server_error"}
+    except (urllib.error.URLError, TimeoutError, ValueError) as error:
         return getattr(error, "code", 503), {"error": "server_unavailable"}
+
+
+def clear_owner_authentication(state):
+    authentication = state.setdefault("authentication", {})
+    authentication.pop("credential", None)
+    state.pop("credential", None)
+    state.pop("enrollment", None)
+
+
+def classify_handoff_failure(status, response):
+    state = response.get("state") if isinstance(response, dict) else None
+    if state == "needs_provisioning":
+        return "needs_provisioning"
+    if state == "identity_recovery":
+        return "identity_recovery"
+    return "reconnecting"
+
+
+def apply_handoff_failure(state, status, response):
+    lifecycle = classify_handoff_failure(status, response)
+    if lifecycle == "needs_provisioning":
+        clear_owner_authentication(state)
+        write_state(state)
+    return lifecycle
 
 
 def start_enrollment(state):
@@ -185,9 +217,10 @@ class Handler(BaseHTTPRequestHandler):
             else:
                 self._send(409, {"state": "needs_provisioning", "deviceId": module_value(state, "deviceId"), "publicNumber": module_value(state, "publicNumber"), "challengeId": enrollment["challengeId"], "activationUrl": f"{SERVER_URL}/activate/recover?challenge={enrollment['challengeId']}"})
                 return
-        status, response = post_json("/api/devices/handoff", {"bootId": current_boot}, credential)
+        status, response = post_json("/api/devices/handoff", {"bootId": current_boot, "deviceId": module_value(state, "deviceId"), "publicNumber": module_value(state, "publicNumber")}, credential)
         if status != 200:
-            self._send(status, {"state": "reconnecting" if status >= 500 else "unauthorized"})
+            lifecycle = apply_handoff_failure(state, status, response)
+            self._send(409 if lifecycle in ("needs_provisioning", "identity_recovery") else 503, {"state": lifecycle, "deviceId": module_value(state, "deviceId"), "publicNumber": module_value(state, "publicNumber"), **({"pairingRequired": True} if lifecycle == "needs_provisioning" else {})})
             return
         self._send(200, {"state": "ready", "deviceId": response.get("deviceId"), "handoffToken": response.get("handoffToken")})
 
