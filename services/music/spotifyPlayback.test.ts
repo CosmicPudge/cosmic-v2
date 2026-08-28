@@ -1,7 +1,35 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 // @ts-expect-error Node's strip-types test runner requires the explicit extension.
-import { normalizeSpotifyPlayback, spotifyRawPlaybackDiagnostics } from "./spotifyPlayback.ts";
+import { normalizeSpotifyPlayback, resolveSpotifyPlaybackFallback, spotifyRawPlaybackDiagnostics } from "./spotifyPlayback.ts";
+
+test("does not request the fallback for tracks or usable podcast items", async () => {
+  let requests = 0;
+  const requestFallback = async () => { requests += 1; return { status: 200, json: async () => ({}) }; };
+  await resolveSpotifyPlaybackFallback({ currently_playing_type: "track", item: { type: "track", id: "track-id", name: "Track" } }, requestFallback);
+  await resolveSpotifyPlaybackFallback({ currently_playing_type: "episode", item: { type: "episode", id: "episode-id", name: "Episode" } }, requestFallback);
+  assert.equal(requests, 0);
+});
+
+test("uses one fallback request to restore a podcast episode", async () => {
+  let requests = 0;
+  const result = await resolveSpotifyPlaybackFallback({ currently_playing_type: "episode", is_playing: true, progress_ms: 10 }, async () => { requests += 1; return { status: 200, json: async () => ({ currently_playing_type: "episode", is_playing: true, progress_ms: 20, item: { type: "episode", id: "episode-id", name: "Episode", duration_ms: 100, images: [{ url: "https://private.example/episode.jpg" }], show: { name: "Show", images: [{ url: "https://private.example/show.jpg" }] } } }) }; });
+  assert.equal(requests, 1);
+  assert.equal(result.fallback.status, "success");
+  assert.equal(result.data.item?.type, "episode");
+  assert.equal(result.data.item?.name, "Episode");
+  assert.equal(result.data.progress_ms, 20);
+});
+
+test("fallback failures preserve the primary metadata-less podcast state", async () => {
+  for (const status of [204, 401, 403, 429]) {
+    const result = await resolveSpotifyPlaybackFallback({ currently_playing_type: "episode", is_playing: true, progress_ms: 10, item: null }, async () => ({ status, json: async () => ({}) }));
+    assert.equal(result.data.item, null);
+  }
+  const unexpectedTrack = await resolveSpotifyPlaybackFallback({ currently_playing_type: "episode", is_playing: true, progress_ms: 10 }, async () => ({ status: 200, json: async () => ({ item: { type: "track", id: "track-id", name: "Track" } }) }));
+  assert.equal(unexpectedTrack.fallback.status, "invalid_response");
+  assert.equal(unexpectedTrack.data.item, undefined);
+});
 
 test("raw diagnostics distinguish a null Spotify item", () => {
   const diagnostics = spotifyRawPlaybackDiagnostics({ currently_playing_type: "episode", is_playing: true, progress_ms: 42_000, item: null });

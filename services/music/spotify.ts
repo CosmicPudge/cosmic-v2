@@ -3,7 +3,7 @@ import "server-only";
 import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from "fs";
 import { dirname, join } from "path";
 import type { MusicArtist, MusicCapabilities, MusicSnapshot } from "@/core/contracts/Music";
-import { normalizeSpotifyPlayback, spotifyRawPlaybackDiagnostics, type SpotifyPlaybackResponse } from "@/services/music/spotifyPlayback";
+import { normalizeSpotifyPlayback, resolveSpotifyPlaybackFallback, spotifyRawPlaybackDiagnostics, type SpotifyPlaybackResponse } from "@/services/music/spotifyPlayback";
 import { getProviderCredentials, listProviderConnections, markProviderReconnectRequired, setProviderCredentials, upsertProviderConnection } from "@/services/providers/store";
 import { normalizeProviderId } from "@/services/providers/normalize";
 
@@ -153,9 +153,14 @@ async function snapshotWithToken(current: Token, refreshAccessToken?: () => Prom
     if (response.status >= 500) return { snapshot: temporaryFailure("Spotify is temporarily unavailable. Retrying automatically.") };
     if (!response.ok) return { snapshot: temporaryFailure("Spotify playback is temporarily unavailable.") };
     const payload = await response.json() as SpotifyPlaybackResponse;
-    const rawProvider = spotifyRawPlaybackDiagnostics(payload);
+    const primaryRawProvider = spotifyRawPlaybackDiagnostics(payload);
+    const resolved = await resolveSpotifyPlaybackFallback(payload, async () => {
+      const fallbackResponse = await fetch("https://api.spotify.com/v1/me/player/currently-playing?additional_types=episode", { cache: "no-store", headers: { Authorization: `Bearer ${current.access_token}` } });
+      return { status: fallbackResponse.status, json: () => fallbackResponse.json() as Promise<unknown> };
+    });
+    const rawProvider = resolved.fallback.status === "not_attempted" ? primaryRawProvider : spotifyRawPlaybackDiagnostics(payload, resolved.fallback);
     if (process.env.NODE_ENV !== "production") console.info(`[spotify-playback] requestStartedAt=${requestStartedAt} durationMs=${Date.now() - requestStartedMs} status=${response.status} itemPresent=${Boolean(payload.item)} itemType=${payload.currently_playing_type ?? payload.item?.type ?? (payload.item ? "track" : "none")} itemIdPresent=${Boolean(payload.item?.id)} itemNamePresent=${Boolean(payload.item?.name)} showPresent=${Boolean(payload.item?.show)} episodeImageCount=${payload.item?.images?.length ?? 0} showImageCount=${payload.item?.show?.images?.length ?? 0} durationPresent=${payload.item?.duration_ms !== undefined} progressMs=${payload.progress_ms ?? 0} isPlaying=${Boolean(payload.is_playing)}`);
-    return { snapshot: await normalizePlayback(payload, current.access_token, refreshAccessToken), rawProvider };
+    return { snapshot: await normalizePlayback(resolved.data, current.access_token, refreshAccessToken), rawProvider };
   } catch { return { snapshot: temporaryFailure("Spotify playback is temporarily unavailable.") }; }
 }
 
