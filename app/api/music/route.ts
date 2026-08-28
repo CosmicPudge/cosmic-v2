@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { accountSnapshot } from "@/services/music/spotify";
+import { musicPlaybackDiagnostics } from "@/services/music/musicDiagnostics";
 import { kioskBootId, requireAuthenticatedSession } from "@/services/auth/server";
 
 export const dynamic = "force-dynamic";
@@ -14,5 +15,7 @@ export async function GET(request: Request) {
   musicLog(`spotifyConnection=${snapshot.connected || Boolean(snapshot.error && /temporarily|rate limited/i.test(snapshot.error))} playbackStatus=${snapshot.connected ? snapshot.playback.track ? 200 : 204 : "not-requested"}`);
   const trackId = snapshot.playback.track?.id;
   if (process.env.NODE_ENV !== "production") musicLog(`returnedTrackPresent=${Boolean(trackId)} trackIdSuffix=${trackId ? trackId.slice(-4) : "none"}`);
-  return NextResponse.json(snapshot, { headers: { "Cache-Control": "private, no-store, no-cache, must-revalidate, max-age=0" } });
+  const providerDiagnostics = musicPlaybackDiagnostics(snapshot.playback);
+  const responsePayload = { ...snapshot, diagnostics: { provider: providerDiagnostics, response: musicPlaybackDiagnostics(JSON.parse(JSON.stringify(snapshot.playback)) as typeof snapshot.playback) } };
+  return NextResponse.json(responsePayload, { headers: { "Cache-Control": "private, no-store, no-cache, must-revalidate, max-age=0" } });
 }
