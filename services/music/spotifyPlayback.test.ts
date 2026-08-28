@@ -1,7 +1,45 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 // @ts-expect-error Node's strip-types test runner requires the explicit extension.
-import { normalizeSpotifyPlayback } from "./spotifyPlayback.ts";
+import { normalizeSpotifyPlayback, spotifyRawPlaybackDiagnostics } from "./spotifyPlayback.ts";
+
+test("raw diagnostics distinguish a null Spotify item", () => {
+  const diagnostics = spotifyRawPlaybackDiagnostics({ currently_playing_type: "episode", is_playing: true, progress_ms: 42_000, item: null });
+  assert.equal(diagnostics.hasItem, false);
+  assert.equal(diagnostics.currentlyPlayingType, "episode");
+  assert.equal(diagnostics.hasProgressMs, true);
+});
+
+test("raw diagnostics identify a complete Spotify episode structurally", () => {
+  const diagnostics = spotifyRawPlaybackDiagnostics({ currently_playing_type: "episode", is_playing: true, progress_ms: 42_000, item: { type: "episode", id: "private-id", name: "Private episode", duration_ms: 1000, images: [{ url: "https://private.example/episode.jpg" }], show: { name: "Private show", images: [{ url: "https://private.example/show.jpg" }, { url: "https://private.example/show-2.jpg" }] } } });
+  assert.deepEqual({ hasItem: diagnostics.hasItem, itemType: diagnostics.itemType, hasItemId: diagnostics.hasItemId, hasItemName: diagnostics.hasItemName, hasItemDurationMs: diagnostics.hasItemDurationMs, hasItemImages: diagnostics.hasItemImages, itemImageCount: diagnostics.itemImageCount, hasShow: diagnostics.hasShow, hasShowName: diagnostics.hasShowName, hasShowImages: diagnostics.hasShowImages, showImageCount: diagnostics.showImageCount, hasProgressMs: diagnostics.hasProgressMs }, { hasItem: true, itemType: "episode", hasItemId: true, hasItemName: true, hasItemDurationMs: true, hasItemImages: true, itemImageCount: 1, hasShow: true, hasShowName: true, hasShowImages: true, showImageCount: 2, hasProgressMs: true });
+  const serialized = JSON.stringify(diagnostics);
+  assert.equal(serialized.includes("private-id"), false);
+  assert.equal(serialized.includes("Private episode"), false);
+  assert.equal(serialized.includes("Private show"), false);
+  assert.equal(serialized.includes("private.example"), false);
+});
+
+test("raw diagnostics identify incomplete episode fields", () => {
+  const missingId = spotifyRawPlaybackDiagnostics({ currently_playing_type: "episode", item: { type: "episode", name: "Episode" } });
+  const missingName = spotifyRawPlaybackDiagnostics({ currently_playing_type: "episode", item: { type: "episode", id: "episode-id" } });
+  assert.equal(missingId.hasItem, true);
+  assert.equal(missingId.hasItemId, false);
+  assert.equal(missingId.hasItemName, true);
+  assert.equal(missingName.hasItem, true);
+  assert.equal(missingName.hasItemId, true);
+  assert.equal(missingName.hasItemName, false);
+});
+
+test("raw diagnostics identify normal track structure", () => {
+  const diagnostics = spotifyRawPlaybackDiagnostics({ currently_playing_type: "track", item: { type: "track", id: "track-id", name: "Track", duration_ms: 1000, images: [{ url: "https://private.example/album.jpg" }] } });
+  assert.equal(diagnostics.currentlyPlayingType, "track");
+  assert.equal(diagnostics.itemType, "track");
+  assert.equal(diagnostics.hasItem, true);
+  assert.equal(diagnostics.hasItemId, true);
+  assert.equal(diagnostics.hasItemName, true);
+  assert.equal(diagnostics.hasItemDurationMs, true);
+});
 
 const base = { is_playing: true, progress_ms: 42_000, device: { name: "Cosmic Display" } };
 
@@ -37,6 +75,15 @@ test("prefers episode artwork and does not require music fields", () => {
 test("falls back to show artwork when an episode has no artwork", () => {
   const result = normalizeSpotifyPlayback({ ...base, currently_playing_type: "episode", item: { id: "episode-3", name: "Another Chapter", duration_ms: 120_000, show: { name: "Cosmic Stories", images: [{ url: "https://example.test/show.jpg", width: 640 }] } } });
   assert.equal(result.playback.track?.artworkUrl, "https://example.test/show.jpg");
+});
+
+test("preserves the real metadata-less Spotify episode shape without fabricating an item", () => {
+  const result = normalizeSpotifyPlayback({ is_playing: true, progress_ms: 42_000, currently_playing_type: "episode", item: null });
+  assert.equal(result.mediaType, "podcast");
+  assert.equal(result.playback.mediaType, "podcast");
+  assert.equal(result.playback.positionMs, 42_000);
+  assert.equal(result.playback.track, undefined);
+  assert.equal(result.playback.durationMs, undefined);
 });
 
 test("unknown Spotify media remains safe and music-compatible in the kiosk", () => {

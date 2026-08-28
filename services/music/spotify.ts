@@ -3,7 +3,7 @@ import "server-only";
 import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from "fs";
 import { dirname, join } from "path";
 import type { MusicArtist, MusicCapabilities, MusicSnapshot } from "@/core/contracts/Music";
-import { normalizeSpotifyPlayback, type SpotifyPlaybackResponse } from "@/services/music/spotifyPlayback";
+import { normalizeSpotifyPlayback, spotifyRawPlaybackDiagnostics, type SpotifyPlaybackResponse } from "@/services/music/spotifyPlayback";
 import { getProviderCredentials, listProviderConnections, markProviderReconnectRequired, setProviderCredentials, upsertProviderConnection } from "@/services/providers/store";
 import { normalizeProviderId } from "@/services/providers/normalize";
 
@@ -140,25 +140,28 @@ async function normalizePlayback(data: SpotifyPlaybackResponse, accessToken: str
   return { provider: "spotify", connected: true, capabilities: caps, playback: normalized.playback };
 }
 
-async function snapshotWithToken(current: Token, refreshAccessToken?: () => Promise<string>): Promise<MusicSnapshot> {
+type SpotifySnapshotResult = { snapshot: MusicSnapshot; rawProvider?: ReturnType<typeof spotifyRawPlaybackDiagnostics> };
+
+async function snapshotWithToken(current: Token, refreshAccessToken?: () => Promise<string>): Promise<SpotifySnapshotResult> {
   try {
     const requestStartedAt = new Date().toISOString();
     const requestStartedMs = Date.now();
     const response = await fetch("https://api.spotify.com/v1/me/player", { cache: "no-store", headers: { Authorization: `Bearer ${current.access_token}` } });
-    if (response.status === 204) { if (process.env.NODE_ENV !== "production") console.info(`[spotify-playback] requestStartedAt=${requestStartedAt} durationMs=${Date.now() - requestStartedMs} status=204 itemPresent=false itemType=none trackIdSuffix=none progressMs=0 isPlaying=false`); return { provider: "spotify", connected: true, capabilities: caps, playback: { playing: false, positionMs: 0, updatedAt: new Date().toISOString() } }; }
-    if (response.status === 401) return disconnected("Spotify authorization needs to reconnect.");
-    if (response.status === 429) return temporaryFailure("Spotify is rate limited. Retrying automatically.");
-    if (response.status >= 500) return temporaryFailure("Spotify is temporarily unavailable. Retrying automatically.");
-    if (!response.ok) return temporaryFailure("Spotify playback is temporarily unavailable.");
+    if (response.status === 204) { if (process.env.NODE_ENV !== "production") console.info(`[spotify-playback] requestStartedAt=${requestStartedAt} durationMs=${Date.now() - requestStartedMs} status=204 itemPresent=false itemType=none trackIdSuffix=none progressMs=0 isPlaying=false`); return { snapshot: { provider: "spotify", connected: true, capabilities: caps, playback: { playing: false, positionMs: 0, updatedAt: new Date().toISOString() } } }; }
+    if (response.status === 401) return { snapshot: disconnected("Spotify authorization needs to reconnect.") };
+    if (response.status === 429) return { snapshot: temporaryFailure("Spotify is rate limited. Retrying automatically.") };
+    if (response.status >= 500) return { snapshot: temporaryFailure("Spotify is temporarily unavailable. Retrying automatically.") };
+    if (!response.ok) return { snapshot: temporaryFailure("Spotify playback is temporarily unavailable.") };
     const payload = await response.json() as SpotifyPlaybackResponse;
+    const rawProvider = spotifyRawPlaybackDiagnostics(payload);
     if (process.env.NODE_ENV !== "production") console.info(`[spotify-playback] requestStartedAt=${requestStartedAt} durationMs=${Date.now() - requestStartedMs} status=${response.status} itemPresent=${Boolean(payload.item)} itemType=${payload.currently_playing_type ?? payload.item?.type ?? (payload.item ? "track" : "none")} itemIdPresent=${Boolean(payload.item?.id)} itemNamePresent=${Boolean(payload.item?.name)} showPresent=${Boolean(payload.item?.show)} episodeImageCount=${payload.item?.images?.length ?? 0} showImageCount=${payload.item?.show?.images?.length ?? 0} durationPresent=${payload.item?.duration_ms !== undefined} progressMs=${payload.progress_ms ?? 0} isPlaying=${Boolean(payload.is_playing)}`);
-    return await normalizePlayback(payload, current.access_token, refreshAccessToken);
-  } catch { return temporaryFailure("Spotify playback is temporarily unavailable."); }
+    return { snapshot: await normalizePlayback(payload, current.access_token, refreshAccessToken), rawProvider };
+  } catch { return { snapshot: temporaryFailure("Spotify playback is temporarily unavailable.") }; }
 }
 
 export async function snapshot(): Promise<MusicSnapshot> {
   if (!configured()) return disconnected("Spotify is not configured on this server.");
-  try { return await snapshotWithToken(await token()); } catch (error) { return disconnected(error instanceof Error ? error.message : "Spotify authorization needs to reconnect."); }
+  try { return (await snapshotWithToken(await token())).snapshot; } catch (error) { return disconnected(error instanceof Error ? error.message : "Spotify authorization needs to reconnect."); }
 }
 
 export async function exchange(code: string) {
@@ -188,15 +191,19 @@ async function ownedToken(userId: string) {
 }
 
 export async function accountSnapshot(userId: string): Promise<MusicSnapshot> {
-  if (!configured()) return disconnected("Spotify is not configured on this server.");
+  return (await accountSnapshotWithDiagnostics(userId)).snapshot;
+}
+
+export async function accountSnapshotWithDiagnostics(userId: string) {
+  if (!configured()) return { snapshot: disconnected("Spotify is not configured on this server.") };
   const owned = await ownedToken(userId);
-  if (!owned) return disconnected("Spotify is not connected to this Cosmic account.");
+  if (!owned) return { snapshot: disconnected("Spotify is not connected to this Cosmic account.") };
   const result = await snapshotWithToken(owned.token, async () => {
     const refreshed = await forceAccountTokenRefresh(userId, owned.connection.id, owned.token);
     owned.token = refreshed;
     return refreshed.access_token;
   });
-  if (!result.connected && /authorization needs/i.test(result.error ?? "")) await markProviderReconnectRequired(userId, owned.connection.id);
+  if (!result.snapshot.connected && /authorization needs/i.test(result.snapshot.error ?? "")) await markProviderReconnectRequired(userId, owned.connection.id);
   return result;
 }
 
