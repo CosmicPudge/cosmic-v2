@@ -42,6 +42,24 @@ class HelperLifecycleTests(unittest.TestCase):
         self.assertEqual(result, "reconnecting")
         self.assertEqual(HELPER.credential_value(self.state), "synthetic-credential")
 
+    def test_credentialless_unclaimed_device_skips_enrollment(self):
+        self.state["authentication"].pop("credential")
+        original_post_json = HELPER.post_json
+        HELPER.post_json = lambda path, body, credential=None: (200, {"state": "needs_provisioning", "pairingRequired": True})
+        try:
+            self.assertEqual(HELPER.resolve_credentialless_state(self.state), "needs_provisioning")
+        finally:
+            HELPER.post_json = original_post_json
+
+    def test_credentialless_identity_mismatch_stays_identity_recovery(self):
+        self.state["authentication"].pop("credential")
+        original_post_json = HELPER.post_json
+        HELPER.post_json = lambda path, body, credential=None: (409, {"state": "identity_recovery"})
+        try:
+            self.assertEqual(HELPER.resolve_credentialless_state(self.state), "identity_recovery")
+        finally:
+            HELPER.post_json = original_post_json
+
     def test_identity_recovery_does_not_clear_credential(self):
         result = HELPER.apply_handoff_failure(self.state, 409, {"state": "identity_recovery"})
         self.assertEqual(result, "identity_recovery")

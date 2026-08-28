@@ -158,12 +158,23 @@ export async function prepareDeviceForNewOwner(userId: string, deviceId: string)
     if (!device) return false;
     await tx.update(devices).set({ userId: null, ownershipStatus: "unclaimed", credentialHash: null, credentialRevokedAt: now, revokedAt: null, lastSeenAt: now }).where(eq(devices.id, deviceId));
     await tx.update(sessions).set({ revokedAt: now }).where(and(eq(sessions.deviceId, deviceId), isNull(sessions.revokedAt)));
+    await tx.delete(deviceSessionHandoffs).where(eq(deviceSessionHandoffs.deviceId, deviceId));
+    await tx.delete(deviceEnrollmentGrants).where(eq(deviceEnrollmentGrants.deviceId, deviceId));
+    await tx.delete(devicePairings).where(eq(devicePairings.deviceId, deviceId));
     await tx.delete(kioskDeviceSettings).where(eq(kioskDeviceSettings.deviceId, deviceId));
     return true;
   });
 }
 
 export const revokeDevice = prepareDeviceForNewOwner;
+
+export async function getDeviceProvisioningState(deviceId: string, publicNumber: string) {
+  const database = requireDatabase();
+  const [device] = await database.select({ id: devices.id, publicNumber: devices.publicNumber, userId: devices.userId, ownershipStatus: devices.ownershipStatus, revokedAt: devices.revokedAt }).from(devices).where(eq(devices.id, deviceId)).limit(1);
+  if (!device || device.publicNumber !== publicNumber || device.revokedAt) return { state: "identity_recovery" as const };
+  if (device.ownershipStatus !== "owned" || !device.userId) return { state: "needs_provisioning" as const, pairingRequired: true, deviceId: device.id, publicNumber: device.publicNumber };
+  return { state: "recovery_required" as const, pairingRequired: false, deviceId: device.id, publicNumber: device.publicNumber };
+}
 
 export async function authenticateDeviceCredential(credential: string, bootId: string, userAgent?: string) {
   const database = requireDatabase();

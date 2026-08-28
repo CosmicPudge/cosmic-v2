@@ -7,6 +7,7 @@ const PUBLIC_API_ROUTES = new Set([
   "/api/account/session", "/api/account/signin", "/api/account/signup", "/api/account/signout",
   "/api/devices/pair", "/api/devices/pair/status",
   "/api/devices/handoff", "/api/devices/handoff/consume",
+  "/api/devices/lifecycle",
   "/api/devices/bootstrap",
   "/api/devices/enrollment/challenge", "/api/devices/enrollment/grant",
   "/api/devices/enrollment/stage", "/api/devices/enrollment/redeem",

@@ -121,6 +121,20 @@ def apply_handoff_failure(state, status, response):
     return lifecycle
 
 
+def resolve_credentialless_state(state):
+    status, response = post_json("/api/devices/lifecycle", {"deviceId": module_value(state, "deviceId"), "publicNumber": module_value(state, "publicNumber")})
+    lifecycle = response.get("state") if isinstance(response, dict) else None
+    if lifecycle == "identity_recovery":
+        return "identity_recovery"
+    if status != 200:
+        return "reconnecting"
+    if lifecycle == "needs_provisioning" and response.get("pairingRequired") is True:
+        return "needs_provisioning"
+    if lifecycle == "recovery_required":
+        return "recovery_required"
+    return "reconnecting"
+
+
 def start_enrollment(state):
     enrollment = state.get("enrollment") if isinstance(state.get("enrollment"), dict) else None
     if enrollment and enrollment.get("challengeId") and enrollment.get("challenge") and enrollment.get("credential"):
@@ -208,6 +222,16 @@ class Handler(BaseHTTPRequestHandler):
             return
         credential = credential_value(state)
         if not credential:
+            lifecycle = resolve_credentialless_state(state)
+            if lifecycle == "needs_provisioning":
+                self._send(200, {"state": "needs_provisioning", "deviceId": module_value(state, "deviceId"), "publicNumber": module_value(state, "publicNumber"), "pairingRequired": True})
+                return
+            if lifecycle == "identity_recovery":
+                self._send(409, {"state": "identity_recovery"})
+                return
+            if lifecycle == "reconnecting":
+                self._send(503, {"state": "reconnecting"})
+                return
             enrollment = start_enrollment(state)
             if not enrollment:
                 self._send(503, {"state": "reconnecting"})
