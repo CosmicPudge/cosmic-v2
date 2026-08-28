@@ -50,6 +50,7 @@ export default function KioskMusicWidget({ music }: { music: ReturnType<typeof u
     <div className="kiosk-music-scene">
       {hasRenderableTrack(track) && track.artworkUrl ? <img className="kiosk-music-background" src={track.artworkUrl} alt="" draggable={false} onError={(event) => { event.currentTarget.style.display = "none"; }} /> : null}
       <div className="kiosk-music-overlay" aria-hidden="true" />
+      <div className="kiosk-music-text-scrim" aria-hidden="true" />
       <div key={`${track?.id ?? "none"}:${state}`} className="kiosk-music-transition" aria-hidden="true" />
       <div className="kiosk-music-content" style={{ "--kiosk-music-accent": accent } as CSSProperties}>
         {state === "track" && hasRenderableTrack(track) ? <PlayingState key={track.id} music={music} track={track} provider={provider} /> : state !== "track" ? <StatusState state={state} provider={provider} /> : null}
@@ -74,7 +75,7 @@ function PlayingState({ music, track, provider }: { music: ReturnType<typeof use
       {!spokenType && artists.length > 1 ? <div className="kiosk-music-supporting-artists">{artists.slice(1).map((artist, index) => <ArtistPortrait key={`${artist.id ?? artist.name}-${index}`} artist={artist} small />)}</div> : null}
     </div>
     <div className="kiosk-music-details">
-      <p className="kiosk-music-status">{provider} <span aria-hidden="true">•</span> {titleLabel} <span aria-hidden="true">•</span> {music.playback?.playing ? "PLAYING" : "PAUSED"}</p>
+      <p className="kiosk-music-status"><span className="kiosk-music-status-badge">{provider} <span aria-hidden="true">•</span> {titleLabel}</span><span className="kiosk-music-play-state">{music.playback?.playing ? "PLAYING" : "PAUSED"}</span></p>
       <h1>{track.title}</h1>
       {subtitle ? <p className="kiosk-music-artists">{subtitle}</p> : null}
       {tertiary ? <p className="kiosk-music-album">{tertiary}</p> : null}
