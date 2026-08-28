@@ -94,7 +94,15 @@ export default function DevicePairingScreen({ onAuthenticated }: { onAuthenticat
           completed = true;
           sessionStorage.removeItem("cosmic:pairing-device-code");
           setConnecting(true);
-          try { await onAuthenticated(); } catch { setConnecting(false); setError("Display connected, but session validation is still pending."); }
+          try {
+            const helper = await fetch("http://127.0.0.1:8765/v1/browser-handoff", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ bootId, pairingCode: pairing.deviceCode }), credentials: "omit", cache: "no-store" }).catch(() => null);
+            const helperBody = await helper?.json().catch(() => null) as HelperHandoff | null;
+            if (helper?.ok && helperBody?.handoffToken) {
+              const handoff = await fetch("/api/devices/handoff/consume", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ bootId, handoffToken: helperBody.handoffToken }), credentials: "include", cache: "no-store" });
+              if (!handoff.ok) throw new Error("Device session handoff failed.");
+            }
+            await onAuthenticated();
+          } catch { setConnecting(false); setError("Display connected, but session validation is still pending."); }
           return;
         }
         if (body.status === "expired" || body.status === "denied") {

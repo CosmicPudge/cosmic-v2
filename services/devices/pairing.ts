@@ -27,6 +27,7 @@ function enrollmentGrant(challengeId: string, challengeHash: string) {
   if (!secret) throw new Error("COSMIC_ENROLLMENT_SECRET is required for device enrollment.");
   return createHmac("sha256", secret).update(`${challengeId}:${challengeHash}`).digest("base64url");
 }
+function initialEnrollmentChallenge(pairingId: string) { return `initial:${pairingId}`; }
 function requireDatabase() { if (!isDatabaseConfigured()) throw new Error("Device pairing requires durable PostgreSQL storage."); return getDatabase(); }
 export function normalizeBootId(value: unknown) { return typeof value === "string" && /^[A-Za-z0-9_-]{1,128}$/.test(value) ? value : null; }
 
@@ -83,14 +84,19 @@ export async function approveDevicePairing(userCodeInput: string, userId: string
     const [row] = await tx.select().from(devicePairings).where(and(eq(devicePairings.userCode, userCode), eq(devicePairings.status, "pending"), gt(devicePairings.expiresAt, new Date()))).for("update").limit(1);
     if (!row) return false;
     if (!row.deviceId) return false;
-    const [device] = await tx.select({ id: devices.id, userId: devices.userId, revokedAt: devices.revokedAt }).from(devices).where(eq(devices.id, row.deviceId)).limit(1);
+    const [device] = await tx.select({ id: devices.id, userId: devices.userId, ownershipStatus: devices.ownershipStatus, revokedAt: devices.revokedAt }).from(devices).where(eq(devices.id, row.deviceId)).limit(1);
     // A public pairing code must never transfer an existing device to a
     // different account. The owner must explicitly revoke/reset it first.
     if (!device || device.revokedAt || (device.userId && device.userId !== userId)) return false;
     const deviceId = device.id;
+    const initialEnrollment = !device.userId || device.ownershipStatus !== "owned";
     await tx.update(devices).set({ userId, ownershipStatus: "owned", revokedAt: null }).where(eq(devices.id, deviceId));
     const [updated] = await tx.update(devicePairings).set({ status: "approved", userId, approvedAt: new Date(), deviceName: "Cosmic Display", deviceId }).where(and(eq(devicePairings.id, row.id), eq(devicePairings.status, "pending"), gt(devicePairings.expiresAt, new Date()))).returning({ id: devicePairings.id, deviceId: devicePairings.deviceId });
     if (!updated) return false;
+    if (initialEnrollment) {
+      const challenge = initialEnrollmentChallenge(updated.id);
+      await tx.insert(deviceEnrollmentGrants).values({ id: `enroll_${randomUUID()}`, deviceId, challengeHash: hash(challenge), grantHash: hash(updated.id), userId, expiresAt: new Date(Date.now() + DEVICE_ENROLLMENT_TTL_MS), approvedAt: new Date() });
+    }
     pairLog(`approved id=${updated.id} status=approved`);
     return { deviceId: updated.deviceId! };
   });
@@ -120,8 +126,7 @@ export async function consumeApprovedPairing(deviceCode: string) {
       const [existingDevice] = await tx.select({ id: devices.id, publicNumber: devices.publicNumber }).from(devices).where(and(eq(devices.id, pairing.deviceId), eq(devices.userId, pairing.userId), isNull(devices.revokedAt))).limit(1);
       if (!existingDevice) return null;
       const deviceId = existingDevice.id;
-      const credential = newDeviceCredential();
-      await tx.update(devices).set({ lastSeenAt: new Date(), credentialHash: hash(credential), credentialRevokedAt: null, ownershipStatus: "owned", revokedAt: null }).where(eq(devices.id, deviceId));
+      await tx.update(devices).set({ lastSeenAt: new Date(), credentialRevokedAt: null, ownershipStatus: "owned", revokedAt: null }).where(eq(devices.id, deviceId));
       pairLog(`consume-device deviceId=${deviceId}`);
       step = "session-create";
       pairLog("consume-session-create start");
@@ -134,7 +139,7 @@ export async function consumeApprovedPairing(deviceCode: string) {
       if (!consumed) throw new Error("Pairing could not be marked consumed.");
       pairLog(`[pair-consume] pairingId=${consumed.id} pairingConsumed=${Boolean(consumed.consumedAt)}`);
       const [device] = await tx.select({ publicNumber: devices.publicNumber }).from(devices).where(eq(devices.id, deviceId)).limit(1);
-      return { token, expiresAt: expiresAt.toISOString(), deviceId, deviceNumber: device?.publicNumber ?? "", credential };
+      return { token, expiresAt: expiresAt.toISOString(), deviceId, deviceNumber: device?.publicNumber ?? "" };
     });
   } catch (error) {
     if (process.env.NODE_ENV !== "production") {
@@ -174,6 +179,23 @@ export async function getDeviceProvisioningState(deviceId: string, publicNumber:
   if (!device || device.publicNumber !== publicNumber || device.revokedAt) return { state: "identity_recovery" as const };
   if (device.ownershipStatus !== "owned" || !device.userId) return { state: "needs_provisioning" as const, pairingRequired: true, deviceId: device.id, publicNumber: device.publicNumber };
   return { state: "recovery_required" as const, pairingRequired: false, deviceId: device.id, publicNumber: device.publicNumber };
+}
+
+export async function completeInitialDeviceEnrollment(deviceCode: string, bootId: string, deviceId: string, publicNumber: string, credentialHash: string) {
+  const database = requireDatabase();
+  const now = new Date();
+  return database.transaction(async (tx) => {
+    const [pairing] = await tx.select({ id: devicePairings.id, userId: devicePairings.userId, deviceId: devicePairings.deviceId, bootId: devicePairings.bootId }).from(devicePairings).where(and(eq(devicePairings.deviceCodeHash, hash(deviceCode)), eq(devicePairings.status, "consumed"), eq(devicePairings.bootId, bootId))).limit(1);
+    if (!pairing?.userId || pairing.deviceId !== deviceId) return null;
+    const [device] = await tx.select({ id: devices.id, publicNumber: devices.publicNumber, userId: devices.userId, credentialHash: devices.credentialHash, ownershipStatus: devices.ownershipStatus, revokedAt: devices.revokedAt }).from(devices).where(eq(devices.id, deviceId)).limit(1);
+    if (!device || device.publicNumber !== publicNumber || device.userId !== pairing.userId || device.ownershipStatus !== "owned" || device.revokedAt) return null;
+    const challenge = initialEnrollmentChallenge(pairing.id);
+    const [grant] = await tx.select({ id: deviceEnrollmentGrants.id }).from(deviceEnrollmentGrants).where(and(eq(deviceEnrollmentGrants.deviceId, deviceId), eq(deviceEnrollmentGrants.challengeHash, hash(challenge)), eq(deviceEnrollmentGrants.grantHash, hash(pairing.id)), eq(deviceEnrollmentGrants.userId, pairing.userId), isNotNull(deviceEnrollmentGrants.approvedAt), isNull(deviceEnrollmentGrants.consumedAt), gt(deviceEnrollmentGrants.expiresAt, now))).for("update").limit(1);
+    if (!grant) return device.credentialHash === credentialHash ? { deviceId, deviceNumber: device.publicNumber } : null;
+    await tx.update(devices).set({ credentialHash, credentialRevokedAt: null, lastSeenAt: now }).where(eq(devices.id, deviceId));
+    const [consumed] = await tx.update(deviceEnrollmentGrants).set({ consumedAt: now, finalizedAt: now, stagedCredentialHash: credentialHash, stagedAt: now }).where(and(eq(deviceEnrollmentGrants.id, grant.id), isNull(deviceEnrollmentGrants.consumedAt))).returning({ id: deviceEnrollmentGrants.id });
+    return consumed ? { deviceId, deviceNumber: device.publicNumber } : null;
+  });
 }
 
 export async function authenticateDeviceCredential(credential: string, bootId: string, userAgent?: string) {

@@ -135,6 +135,18 @@ def resolve_credentialless_state(state):
     return "reconnecting"
 
 
+def complete_initial_enrollment(state, pairing_code, boot_id_value):
+    credential = secrets.token_urlsafe(32)
+    status, response = post_json("/api/devices/pair/initial-enroll", {"deviceCode": pairing_code, "bootId": boot_id_value, "deviceId": module_value(state, "deviceId"), "publicNumber": module_value(state, "publicNumber"), "credentialHash": hashlib.sha256(credential.encode()).hexdigest()})
+    if status != 200 or not isinstance(response, dict) or response.get("enrolled") is not True:
+        return None
+    state.setdefault("authentication", {})["credential"] = credential
+    state.pop("credential", None)
+    state.pop("enrollment", None)
+    write_state(state)
+    return credential
+
+
 def start_enrollment(state):
     enrollment = state.get("enrollment") if isinstance(state.get("enrollment"), dict) else None
     if enrollment and enrollment.get("challengeId") and enrollment.get("challenge") and enrollment.get("credential"):
@@ -212,6 +224,7 @@ class Handler(BaseHTTPRequestHandler):
             self._send(400, {"error": "invalid_request"})
             return
         requested_boot = body.get("bootId") if isinstance(body, dict) else None
+        pairing_code = body.get("pairingCode") if isinstance(body, dict) else None
         current_boot = boot_id()
         if not requested_boot or requested_boot != current_boot:
             self._send(400, {"error": "boot_id_mismatch"})
@@ -222,6 +235,18 @@ class Handler(BaseHTTPRequestHandler):
             return
         credential = credential_value(state)
         if not credential:
+            if isinstance(pairing_code, str) and pairing_code:
+                credential = complete_initial_enrollment(state, pairing_code, current_boot)
+                if credential:
+                    status, response = post_json("/api/devices/handoff", {"bootId": current_boot, "deviceId": module_value(state, "deviceId"), "publicNumber": module_value(state, "publicNumber")}, credential)
+                    if status != 200:
+                        lifecycle = apply_handoff_failure(state, status, response)
+                        self._send(409 if lifecycle in ("needs_provisioning", "identity_recovery") else 503, {"state": lifecycle, "deviceId": module_value(state, "deviceId"), "publicNumber": module_value(state, "publicNumber"), **({"pairingRequired": True} if lifecycle == "needs_provisioning" else {})})
+                        return
+                    self._send(200, {"state": "ready", "deviceId": response.get("deviceId"), "handoffToken": response.get("handoffToken")})
+                    return
+                self._send(503, {"state": "reconnecting"})
+                return
             lifecycle = resolve_credentialless_state(state)
             if lifecycle == "needs_provisioning":
                 self._send(200, {"state": "needs_provisioning", "deviceId": module_value(state, "deviceId"), "publicNumber": module_value(state, "publicNumber"), "pairingRequired": True})

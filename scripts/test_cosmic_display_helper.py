@@ -60,6 +60,15 @@ class HelperLifecycleTests(unittest.TestCase):
         finally:
             HELPER.post_json = original_post_json
 
+    def test_credentialless_owned_device_requires_recovery(self):
+        self.state["authentication"].pop("credential")
+        original_post_json = HELPER.post_json
+        HELPER.post_json = lambda path, body, credential=None: (200, {"state": "recovery_required", "pairingRequired": False})
+        try:
+            self.assertEqual(HELPER.resolve_credentialless_state(self.state), "recovery_required")
+        finally:
+            HELPER.post_json = original_post_json
+
     def test_identity_recovery_does_not_clear_credential(self):
         result = HELPER.apply_handoff_failure(self.state, 409, {"state": "identity_recovery"})
         self.assertEqual(result, "identity_recovery")

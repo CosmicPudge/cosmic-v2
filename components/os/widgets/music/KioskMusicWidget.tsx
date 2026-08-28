@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useMemo, useState, type CSSProperties } from "react";
 
-import type { MusicArtist, MusicTrack } from "@/core/contracts/Music";
+import type { MusicArtist, MusicTrack, PlaybackMediaType } from "@/core/contracts/Music";
 import { useKioskSlideshowControl } from "@/components/os/kiosk/KioskSlideshowContext";
 import { useWidgetContext } from "@/components/os/ui/widget/WidgetContext";
 import Widget from "@/components/os/ui/widget/Widget";
@@ -11,8 +11,10 @@ import { useMusic } from "@/hooks/os/useMusic";
 type KioskMusicState = "track" | "playback-detected" | "error" | "idle" | "no-provider";
 
 function hasRenderableTrack(track: MusicTrack | undefined): track is MusicTrack {
-  return Boolean(track?.id && track.title.trim() && track.artists.some((artist) => artist.trim()));
+  return Boolean(track?.id && track.title.trim());
 }
+
+function mediaType(track: MusicTrack): PlaybackMediaType { return track.mediaType ?? "unknown"; }
 
 function classifyState(music: ReturnType<typeof useMusic>, track: MusicTrack | undefined): KioskMusicState {
   if (hasRenderableTrack(track)) return "track";
@@ -59,21 +61,30 @@ function PlayingState({ music, track, provider }: { music: ReturnType<typeof use
   const progress = useTrackProgress(music.playback?.positionMs ?? 0, music.playback?.durationMs ?? track.durationMs, music.playback?.playing ?? false, track.id);
   const artists = useMemo<MusicArtist[]>(() => (track.artistProfiles?.length ? track.artistProfiles : track.artists.map((name) => ({ name }))).slice(0, 3), [track.artistProfiles, track.artists]);
   const primaryArtist = artists[0];
+  const type = mediaType(track);
+  const spokenType = type === "podcast" || type === "audiobook";
+  const titleLabel = type === "podcast" ? "EPISODE" : type === "audiobook" ? "AUDIOBOOK" : "NOW PLAYING";
+  const subtitle = type === "podcast" ? track.subtitle : track.artists.join(", ");
+  const tertiary = type === "podcast" ? track.tertiaryText : type === "audiobook" ? track.subtitle : track.tertiaryText ?? track.album;
 
   return <div className="kiosk-music-playing">
     <div className="kiosk-music-artist-section">
-      {primaryArtist ? <ArtistPortrait artist={primaryArtist} /> : <div className="kiosk-music-artist-placeholder">♫</div>}
-      {artists.length > 1 ? <div className="kiosk-music-supporting-artists">{artists.slice(1).map((artist, index) => <ArtistPortrait key={`${artist.id ?? artist.name}-${index}`} artist={artist} small />)}</div> : null}
+      {!spokenType && primaryArtist ? <ArtistPortrait artist={primaryArtist} /> : track.artworkUrl ? <ArtworkPortrait artworkUrl={track.artworkUrl} label={type === "podcast" ? "Podcast artwork" : "Audiobook artwork"} /> : <div className="kiosk-music-artist-placeholder">♫</div>}
+      {!spokenType && artists.length > 1 ? <div className="kiosk-music-supporting-artists">{artists.slice(1).map((artist, index) => <ArtistPortrait key={`${artist.id ?? artist.name}-${index}`} artist={artist} small />)}</div> : null}
     </div>
     <div className="kiosk-music-details">
-      <p className="kiosk-music-status">{provider} <span aria-hidden="true">•</span> {music.playback?.playing ? "PLAYING" : "PAUSED"}</p>
+      <p className="kiosk-music-status">{provider} <span aria-hidden="true">•</span> {titleLabel} <span aria-hidden="true">•</span> {music.playback?.playing ? "PLAYING" : "PAUSED"}</p>
       <h1>{track.title}</h1>
-      <p className="kiosk-music-artists">{track.artists.join(", ")}</p>
-      {track.album ? <p className="kiosk-music-album">{track.album}</p> : null}
+      {subtitle ? <p className="kiosk-music-artists">{subtitle}</p> : null}
+      {tertiary ? <p className="kiosk-music-album">{tertiary}</p> : null}
       {music.playback?.durationMs || track.durationMs ? <ProgressBar progress={progress} duration={music.playback?.durationMs ?? track.durationMs ?? 0} /> : null}
       {music.playback?.deviceName ? <p className="kiosk-music-device">PLAYING ON {music.playback.deviceName}</p> : null}
     </div>
   </div>;
+}
+
+function ArtworkPortrait({ artworkUrl, label }: { artworkUrl: string; label: string }) {
+  return <div className="kiosk-music-artist-portrait"><img src={artworkUrl} alt={label} draggable={false} onError={(event) => { event.currentTarget.style.display = "none"; }} /></div>;
 }
 
 function StatusState({ state, provider }: { state: Exclude<KioskMusicState, "track">; provider: string }) {

@@ -2,7 +2,7 @@ import "server-only";
 
 import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from "fs";
 import { dirname, join } from "path";
-import type { MusicArtist, MusicCapabilities, MusicSnapshot } from "@/core/contracts/Music";
+import type { MusicArtist, MusicCapabilities, MusicSnapshot, PlaybackMediaType } from "@/core/contracts/Music";
 import { getProviderCredentials, listProviderConnections, markProviderReconnectRequired, setProviderCredentials, upsertProviderConnection } from "@/services/providers/store";
 import { normalizeProviderId } from "@/services/providers/normalize";
 
@@ -126,13 +126,35 @@ function getCachedArtistProfiles(ids: string[]) {
   return profiles;
 }
 
-async function normalizePlayback(data: { is_playing: boolean; progress_ms: number; item?: { id: string; name: string; duration_ms: number; artists: { id?: string; name: string }[]; album?: { name: string; images?: { url: string; width?: number; height?: number }[] } }; device?: { name: string; volume_percent?: number } }, accessToken: string, refreshAccessToken?: () => Promise<string>): Promise<MusicSnapshot> {
-  const artistIds = data.item?.artists.map((artist) => artist.id ?? "") ?? [];
+type SpotifyPlaybackItem = {
+  id: string;
+  name: string;
+  duration_ms: number;
+  artists?: { id?: string; name: string }[];
+  album?: { name: string; images?: { url: string; width?: number; height?: number }[] };
+  show?: { name?: string; images?: { url: string; width?: number; height?: number }[] };
+};
+
+type SpotifyPlaybackResponse = { is_playing: boolean; progress_ms: number; currently_playing_type?: string; item?: SpotifyPlaybackItem; device?: { name: string; volume_percent?: number } };
+
+function spotifyMediaType(itemType: string | undefined): PlaybackMediaType {
+  if (itemType === "episode") return "podcast";
+  if (itemType === "track") return "music";
+  return "unknown";
+}
+
+async function normalizePlayback(data: SpotifyPlaybackResponse, accessToken: string, refreshAccessToken?: () => Promise<string>): Promise<MusicSnapshot> {
+  const mediaType = spotifyMediaType(data.currently_playing_type);
+  const artists = data.item?.artists ?? [];
+  const artistIds = artists.map((artist) => artist.id ?? "");
   const profiles = getCachedArtistProfiles(artistIds);
-  if (data.item) void getArtistProfiles(artistIds, accessToken, refreshAccessToken);
-  const artistProfiles = data.item?.artists.map((artist) => artist.id ? profiles.get(artist.id) ?? { id: artist.id, name: artist.name, imageUrl: null } : { name: artist.name, imageUrl: null });
-  if (process.env.NODE_ENV !== "production") console.info(`[music-normalized] trackPresent=${Boolean(data.item)} trackIdSuffix=${trackSuffix(data.item?.id)} titlePresent=${Boolean(data.item?.name)} artistCount=${data.item?.artists.length ?? 0} artworkPresent=${Boolean(data.item?.album?.images?.length)}`);
-  return { provider: "spotify", connected: true, capabilities: caps, playback: { playing: data.is_playing, positionMs: data.progress_ms ?? 0, durationMs: data.item?.duration_ms, volume: data.device?.volume_percent, deviceName: data.device?.name, updatedAt: new Date().toISOString(), track: data.item ? { id: data.item.id, title: data.item.name, artists: data.item.artists.map((artist) => artist.name), ...(artistProfiles?.length ? { artistProfiles } : {}), album: data.item.album?.name, artworkUrl: selectSpotifyArtwork(data.item.album?.images), durationMs: data.item.duration_ms, provider: "spotify" } : undefined } };
+  if (data.item && mediaType === "music") void getArtistProfiles(artistIds, accessToken, refreshAccessToken);
+  const artistProfiles = mediaType === "music" ? data.item?.artists?.map((artist) => artist.id ? profiles.get(artist.id) ?? { id: artist.id, name: artist.name, imageUrl: null } : { name: artist.name, imageUrl: null }) : undefined;
+  const artwork = mediaType === "podcast" ? selectSpotifyArtwork(data.item?.show?.images) : selectSpotifyArtwork(data.item?.album?.images);
+  const subtitle = mediaType === "podcast" ? data.item?.show?.name : artists.map((artist) => artist.name).join(", ") || undefined;
+  const tertiaryText = mediaType === "music" ? data.item?.album?.name : undefined;
+  if (process.env.NODE_ENV !== "production") console.info(`[music-normalized] mediaType=${mediaType} itemPresent=${Boolean(data.item)} trackIdSuffix=${trackSuffix(data.item?.id)} titlePresent=${Boolean(data.item?.name)} artistCount=${artists.length} artworkPresent=${Boolean(artwork)}`);
+  return { provider: "spotify", connected: true, capabilities: caps, playback: { playing: data.is_playing, positionMs: data.progress_ms ?? 0, durationMs: data.item?.duration_ms, volume: data.device?.volume_percent, deviceName: data.device?.name, updatedAt: new Date().toISOString(), track: data.item ? { id: data.item.id, title: data.item.name, artists: artists.map((artist) => artist.name), ...(artistProfiles?.length ? { artistProfiles } : {}), ...(mediaType === "music" ? { album: data.item.album?.name } : {}), artworkUrl: artwork, durationMs: data.item.duration_ms, provider: "spotify", mediaType, ...(subtitle ? { subtitle } : {}), ...(tertiaryText ? { tertiaryText } : {}) } : undefined } };
 }
 
 async function snapshotWithToken(current: Token, refreshAccessToken?: () => Promise<string>): Promise<MusicSnapshot> {
@@ -145,7 +167,7 @@ async function snapshotWithToken(current: Token, refreshAccessToken?: () => Prom
     if (response.status === 429) return temporaryFailure("Spotify is rate limited. Retrying automatically.");
     if (response.status >= 500) return temporaryFailure("Spotify is temporarily unavailable. Retrying automatically.");
     if (!response.ok) return temporaryFailure("Spotify playback is temporarily unavailable.");
-    const payload = await response.json() as Parameters<typeof normalizePlayback>[0] & { currently_playing_type?: string };
+    const payload = await response.json() as SpotifyPlaybackResponse;
     if (process.env.NODE_ENV !== "production") console.info(`[spotify-playback] requestStartedAt=${requestStartedAt} durationMs=${Date.now() - requestStartedMs} status=${response.status} itemPresent=${Boolean(payload.item)} itemType=${payload.currently_playing_type ?? (payload.item ? "track" : "none")} trackIdSuffix=${trackSuffix(payload.item?.id)} progressMs=${payload.progress_ms ?? 0} isPlaying=${Boolean(payload.is_playing)}`);
     return await normalizePlayback(payload, current.access_token, refreshAccessToken);
   } catch { return temporaryFailure("Spotify playback is temporarily unavailable."); }
