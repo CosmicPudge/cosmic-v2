@@ -1,18 +1,21 @@
 "use client";
 
 import { useCallback, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { useCosmicAccount } from "@/components/account/AccountProvider";
 import { DashboardReadinessProvider } from "@/components/dashboard/readiness/DashboardReadiness";
 import DevicePairingScreen from "./DevicePairingScreen";
 import KioskSlideshow from "./KioskSlideshow";
 import KioskAmbientFrame from "./KioskAmbientFrame";
 import KioskDeviceSetupGate from "./KioskDeviceSetupGate";
+import KioskRenderTest, { parseKioskRenderTestMode } from "./KioskRenderTest";
 
 function authLog(message: string) {
   if (process.env.NODE_ENV !== "production") console.info(`[kiosk-auth] ${message}`);
 }
 
 export default function KioskAuthGate() {
+  const searchParams = useSearchParams();
   const { loading, account, sessionType, deviceId, refresh } = useCosmicAccount();
   const revalidateDeviceSession = useCallback(async () => {
     const bootId = new URLSearchParams(window.location.search).get("cosmic-boot") ?? "";
@@ -39,6 +42,8 @@ export default function KioskAuthGate() {
   }, [account, deviceId, loading, sessionType]);
   if (loading) return <div className="grid min-h-[100dvh] place-items-center text-sm text-white/50">Checking Cosmic device authorization…</div>;
   if (!account || sessionType !== "device") return <DevicePairingScreen onAuthenticated={revalidateDeviceSession} />;
+  const renderTestMode = parseKioskRenderTestMode(searchParams.get("cosmic-render-test"));
+  if (renderTestMode) return <KioskRenderTest mode={renderTestMode} />;
   return (
     // Kiosk widgets need the readiness context, but kiosk presentation does not
     // gate mounting on dashboard-critical readiness.
