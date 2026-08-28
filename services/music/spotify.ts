@@ -151,7 +151,7 @@ async function snapshotWithToken(current: Token, refreshAccessToken?: () => Prom
     if (response.status >= 500) return temporaryFailure("Spotify is temporarily unavailable. Retrying automatically.");
     if (!response.ok) return temporaryFailure("Spotify playback is temporarily unavailable.");
     const payload = await response.json() as SpotifyPlaybackResponse;
-    if (process.env.NODE_ENV !== "production") console.info(`[spotify-playback] requestStartedAt=${requestStartedAt} durationMs=${Date.now() - requestStartedMs} status=${response.status} itemPresent=${Boolean(payload.item)} itemType=${payload.currently_playing_type ?? (payload.item ? "track" : "none")} trackIdSuffix=${trackSuffix(payload.item?.id)} progressMs=${payload.progress_ms ?? 0} isPlaying=${Boolean(payload.is_playing)}`);
+    if (process.env.NODE_ENV !== "production") console.info(`[spotify-playback] requestStartedAt=${requestStartedAt} durationMs=${Date.now() - requestStartedMs} status=${response.status} itemPresent=${Boolean(payload.item)} itemType=${payload.currently_playing_type ?? payload.item?.type ?? (payload.item ? "track" : "none")} itemIdPresent=${Boolean(payload.item?.id)} itemNamePresent=${Boolean(payload.item?.name)} showPresent=${Boolean(payload.item?.show)} episodeImageCount=${payload.item?.images?.length ?? 0} showImageCount=${payload.item?.show?.images?.length ?? 0} durationPresent=${payload.item?.duration_ms !== undefined} progressMs=${payload.progress_ms ?? 0} isPlaying=${Boolean(payload.is_playing)}`);
     return await normalizePlayback(payload, current.access_token, refreshAccessToken);
   } catch { return temporaryFailure("Spotify playback is temporarily unavailable."); }
 }

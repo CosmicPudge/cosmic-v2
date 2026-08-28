@@ -25,6 +25,20 @@ test("normalizes a Spotify episode as a podcast", () => {
   assert.equal(result.playback.durationMs, 3_600_000);
 });
 
+test("prefers episode artwork and does not require music fields", () => {
+  const result = normalizeSpotifyPlayback({ ...base, currently_playing_type: "episode", item: { id: "episode-2", name: "A Chapter", duration_ms: 120_000, images: [{ url: "https://example.test/episode.jpg", width: 640 }], show: { name: "Cosmic Stories", images: [{ url: "https://example.test/show.jpg", width: 640 }] } } });
+  assert.equal(result.playback.track?.mediaType, "podcast");
+  assert.equal(result.playback.track?.title, "A Chapter");
+  assert.equal(result.playback.track?.subtitle, "Cosmic Stories");
+  assert.equal(result.playback.track?.artworkUrl, "https://example.test/episode.jpg");
+  assert.deepEqual(result.playback.track?.artists, []);
+});
+
+test("falls back to show artwork when an episode has no artwork", () => {
+  const result = normalizeSpotifyPlayback({ ...base, currently_playing_type: "episode", item: { id: "episode-3", name: "Another Chapter", duration_ms: 120_000, show: { name: "Cosmic Stories", images: [{ url: "https://example.test/show.jpg", width: 640 }] } } });
+  assert.equal(result.playback.track?.artworkUrl, "https://example.test/show.jpg");
+});
+
 test("unknown Spotify media remains safe and music-compatible in the kiosk", () => {
   const result = normalizeSpotifyPlayback({ ...base, item: { id: "unknown-1", name: "Unknown Item", duration_ms: 90_000 } });
   assert.equal(result.mediaType, "unknown");

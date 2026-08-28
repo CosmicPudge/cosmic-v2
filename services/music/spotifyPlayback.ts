@@ -6,6 +6,7 @@ export type SpotifyPlaybackItem = {
   type?: string;
   duration_ms?: number;
   artists?: { id?: string; name?: string }[];
+  images?: { url: string; width?: number; height?: number }[];
   album?: { name?: string; images?: { url: string; width?: number; height?: number }[] };
   show?: { name?: string; images?: { url: string; width?: number; height?: number }[] };
 };
@@ -35,7 +36,7 @@ export function normalizeSpotifyPlayback(data: SpotifyPlaybackResponse): Pick<Mu
     title: item.name,
     artists,
     ...(isPodcast ? {} : item.album?.name ? { album: item.album.name } : {}),
-    artworkUrl: isPodcast ? artwork(item.show?.images) : artwork(item.album?.images),
+    artworkUrl: isPodcast ? artwork(item.images) ?? artwork(item.show?.images) : artwork(item.album?.images),
     ...(item.duration_ms !== undefined ? { durationMs: item.duration_ms } : {}),
     provider: "spotify" as const,
     mediaType,
