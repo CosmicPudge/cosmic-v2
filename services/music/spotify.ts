@@ -2,7 +2,8 @@ import "server-only";
 
 import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from "fs";
 import { dirname, join } from "path";
-import type { MusicArtist, MusicCapabilities, MusicSnapshot, PlaybackMediaType } from "@/core/contracts/Music";
+import type { MusicArtist, MusicCapabilities, MusicSnapshot } from "@/core/contracts/Music";
+import { normalizeSpotifyPlayback, type SpotifyPlaybackResponse } from "@/services/music/spotifyPlayback";
 import { getProviderCredentials, listProviderConnections, markProviderReconnectRequired, setProviderCredentials, upsertProviderConnection } from "@/services/providers/store";
 import { normalizeProviderId } from "@/services/providers/normalize";
 
@@ -21,7 +22,6 @@ export const readToken = (): Token | undefined => { try { return JSON.parse(read
 export const storeToken = (token: Token) => { mkdirSync(dirname(path), { recursive: true }); writeFileSync(path, JSON.stringify({ ...readToken(), ...token, refresh_token: token.refresh_token ?? readToken()?.refresh_token }), { mode: 0o600 }); };
 export const disconnect = () => { if (existsSync(path)) unlinkSync(path); };
 
-function selectSpotifyArtwork(images?: Array<{ url: string; width?: number; height?: number }>) { return images?.slice().sort((a, b) => Math.abs((a.width ?? 640) - 640) - Math.abs((b.width ?? 640) - 640))[0]?.url; }
 function selectSpotifyArtistImage(images?: Array<{ url: string; width?: number; height?: number }>) {
   const usable = images?.filter((image) => image.url) ?? [];
   if (!usable.length) return null;
@@ -126,35 +126,18 @@ function getCachedArtistProfiles(ids: string[]) {
   return profiles;
 }
 
-type SpotifyPlaybackItem = {
-  id: string;
-  name: string;
-  duration_ms: number;
-  artists?: { id?: string; name: string }[];
-  album?: { name: string; images?: { url: string; width?: number; height?: number }[] };
-  show?: { name?: string; images?: { url: string; width?: number; height?: number }[] };
-};
-
-type SpotifyPlaybackResponse = { is_playing: boolean; progress_ms: number; currently_playing_type?: string; item?: SpotifyPlaybackItem; device?: { name: string; volume_percent?: number } };
-
-function spotifyMediaType(itemType: string | undefined): PlaybackMediaType {
-  if (itemType === "episode") return "podcast";
-  if (itemType === "track") return "music";
-  return "unknown";
-}
-
 async function normalizePlayback(data: SpotifyPlaybackResponse, accessToken: string, refreshAccessToken?: () => Promise<string>): Promise<MusicSnapshot> {
-  const mediaType = spotifyMediaType(data.currently_playing_type);
-  const artists = data.item?.artists ?? [];
+  const normalized = normalizeSpotifyPlayback(data);
+  const mediaType = normalized.mediaType;
+  const artists = data.item?.artists?.filter((artist): artist is { id?: string; name: string } => Boolean(artist.name)) ?? [];
   const artistIds = artists.map((artist) => artist.id ?? "");
   const profiles = getCachedArtistProfiles(artistIds);
   if (data.item && mediaType === "music") void getArtistProfiles(artistIds, accessToken, refreshAccessToken);
-  const artistProfiles = mediaType === "music" ? data.item?.artists?.map((artist) => artist.id ? profiles.get(artist.id) ?? { id: artist.id, name: artist.name, imageUrl: null } : { name: artist.name, imageUrl: null }) : undefined;
-  const artwork = mediaType === "podcast" ? selectSpotifyArtwork(data.item?.show?.images) : selectSpotifyArtwork(data.item?.album?.images);
-  const subtitle = mediaType === "podcast" ? data.item?.show?.name : artists.map((artist) => artist.name).join(", ") || undefined;
-  const tertiaryText = mediaType === "music" ? data.item?.album?.name : undefined;
-  if (process.env.NODE_ENV !== "production") console.info(`[music-normalized] mediaType=${mediaType} itemPresent=${Boolean(data.item)} trackIdSuffix=${trackSuffix(data.item?.id)} titlePresent=${Boolean(data.item?.name)} artistCount=${artists.length} artworkPresent=${Boolean(artwork)}`);
-  return { provider: "spotify", connected: true, capabilities: caps, playback: { playing: data.is_playing, positionMs: data.progress_ms ?? 0, durationMs: data.item?.duration_ms, volume: data.device?.volume_percent, deviceName: data.device?.name, updatedAt: new Date().toISOString(), track: data.item ? { id: data.item.id, title: data.item.name, artists: artists.map((artist) => artist.name), ...(artistProfiles?.length ? { artistProfiles } : {}), ...(mediaType === "music" ? { album: data.item.album?.name } : {}), artworkUrl: artwork, durationMs: data.item.duration_ms, provider: "spotify", mediaType, ...(subtitle ? { subtitle } : {}), ...(tertiaryText ? { tertiaryText } : {}) } : undefined } };
+  const artistProfiles = mediaType === "music" ? artists.map((artist) => artist.id ? profiles.get(artist.id) ?? { id: artist.id, name: artist.name, imageUrl: null } : { name: artist.name, imageUrl: null }) : undefined;
+  const track = normalized.playback.track;
+  if (track && artistProfiles?.length) track.artistProfiles = artistProfiles;
+  if (process.env.NODE_ENV !== "production") console.info(`[music-normalized] mediaType=${mediaType} itemPresent=${Boolean(data.item)} trackIdSuffix=${trackSuffix(data.item?.id)} titlePresent=${Boolean(data.item?.name)} artistCount=${artists.length} artworkPresent=${Boolean(track?.artworkUrl)}`);
+  return { provider: "spotify", connected: true, capabilities: caps, playback: normalized.playback };
 }
 
 async function snapshotWithToken(current: Token, refreshAccessToken?: () => Promise<string>): Promise<MusicSnapshot> {

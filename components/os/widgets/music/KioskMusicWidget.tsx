@@ -8,7 +8,7 @@ import { useWidgetContext } from "@/components/os/ui/widget/WidgetContext";
 import Widget from "@/components/os/ui/widget/Widget";
 import { useMusic } from "@/hooks/os/useMusic";
 
-type KioskMusicState = "track" | "playback-detected" | "error" | "idle" | "no-provider";
+type KioskMusicState = "track" | "podcast-detected" | "playback-detected" | "error" | "idle" | "no-provider";
 
 function hasRenderableTrack(track: MusicTrack | undefined): track is MusicTrack {
   return Boolean(track?.id && track.title.trim());
@@ -18,6 +18,7 @@ function mediaType(track: MusicTrack): PlaybackMediaType { return track.mediaTyp
 
 function classifyState(music: ReturnType<typeof useMusic>, track: MusicTrack | undefined): KioskMusicState {
   if (hasRenderableTrack(track)) return "track";
+  if (music.playback?.mediaType === "podcast" && music.connected) return "podcast-detected";
   if (music.connected && music.playback?.playing) return "playback-detected";
   if (music.error && music.connected) return "error";
   if (music.connected) return "idle";
@@ -88,8 +89,8 @@ function ArtworkPortrait({ artworkUrl, label }: { artworkUrl: string; label: str
 }
 
 function StatusState({ state, provider }: { state: Exclude<KioskMusicState, "track">; provider: string }) {
-  const title = state === "playback-detected" ? "Playback detected" : state === "error" ? "Music temporarily unavailable" : state === "idle" ? "Nothing is playing" : "No music service connected";
-  const detail = state === "playback-detected" ? `${provider} is active, but track details are not available yet.` : state === "error" ? "Cosmic will retry automatically." : state === "idle" ? "Start playing something on Spotify." : "Connect a music service from Cosmic Account Settings.";
+  const title = state === "podcast-detected" ? "Podcast playback detected" : state === "playback-detected" ? "Playback detected" : state === "error" ? "Music temporarily unavailable" : state === "idle" ? "Nothing is playing" : "No music service connected";
+  const detail = state === "podcast-detected" ? `${provider} is active; episode details are not available yet.` : state === "playback-detected" ? `${provider} is active, but track details are not available yet.` : state === "error" ? "Cosmic will retry automatically." : state === "idle" ? "Start playing something on Spotify." : "Connect a music service from Cosmic Account Settings.";
   return <div className="kiosk-music-status-state">{provider === "Spotify" ? <img className="kiosk-music-provider-logo" src="/kiosk/brands/spotify.svg" alt="Spotify" draggable={false} /> : <div className="kiosk-music-mark">♫</div>}<p className="kiosk-music-status">{provider}</p><h1>{title}</h1><p>{detail}</p></div>;
 }
 

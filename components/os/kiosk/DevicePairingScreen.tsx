@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import QRCode from "qrcode";
 import { useSearchParams } from "next/navigation";
+import { completeApprovedPairing } from "./kioskPairingFlow";
 
 type Pairing = { deviceCode: string; userCode: string; deviceNumber: string; verificationUrl: string; expiresAt: string; pollInterval: number };
 type PairingResponse = (Pairing & { status?: "created"; error?: string }) | { status?: "identity_missing"; reason?: string; error?: string };
@@ -15,6 +16,7 @@ export default function DevicePairingScreen({ onAuthenticated }: { onAuthenticat
   const [qr, setQr] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [connecting, setConnecting] = useState(false);
+  const [enrolling, setEnrolling] = useState(false);
   const [identityRecovery, setIdentityRecovery] = useState(false);
   const [reconnecting, setReconnecting] = useState(false);
   const [enrollment, setEnrollment] = useState<{ activationUrl: string; publicNumber?: string } | null>(null);
@@ -89,20 +91,29 @@ export default function DevicePairingScreen({ onAuthenticated }: { onAuthenticat
       pollInFlight.current = true;
       try {
         const response = await fetch("/api/devices/pair/status", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ deviceCode: pairing.deviceCode }), credentials: "include", cache: "no-store" });
-        const body = await response.json() as { status?: string };
+        const body = await response.json() as { status?: string; initialEnrollmentRequired?: boolean };
         if (body.status === "approved") {
           completed = true;
           sessionStorage.removeItem("cosmic:pairing-device-code");
           setConnecting(true);
           try {
-            const helper = await fetch("http://127.0.0.1:8765/v1/browser-handoff", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ bootId, pairingCode: pairing.deviceCode }), credentials: "omit", cache: "no-store" }).catch(() => null);
-            const helperBody = await helper?.json().catch(() => null) as HelperHandoff | null;
-            if (helper?.ok && helperBody?.handoffToken) {
-              const handoff = await fetch("/api/devices/handoff/consume", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ bootId, handoffToken: helperBody.handoffToken }), credentials: "include", cache: "no-store" });
-              if (!handoff.ok) throw new Error("Device session handoff failed.");
-            }
-            await onAuthenticated();
-          } catch { setConnecting(false); setError("Display connected, but session validation is still pending."); }
+            const state = await completeApprovedPairing({
+              bootId,
+              pairingCode: pairing.deviceCode,
+              requestHelper: async (requestBody) => {
+                const helper = await fetch("http://127.0.0.1:8765/v1/browser-handoff", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(requestBody), credentials: "omit", cache: "no-store" });
+                return { ok: helper.ok, body: await helper.json().catch(() => null) as HelperHandoff | null };
+              },
+              consumeHandoff: async (handoffToken) => (await fetch("/api/devices/handoff/consume", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ bootId, handoffToken }), credentials: "include", cache: "no-store" })).ok,
+              onAuthenticated,
+            });
+            if (state === "authenticated") return;
+            setConnecting(false);
+            setEnrolling(state === "enrolling");
+            setReconnecting(state === "reconnecting");
+            if (state === "recovery_required") { setIdentityRecovery(true); setError(null); }
+            else setError(state === "enrolling" ? null : "Display service is reconnecting.");
+          } catch { setConnecting(false); setReconnecting(true); setError("Display service is reconnecting."); }
           return;
         }
         if (body.status === "expired" || body.status === "denied") {
@@ -128,6 +139,8 @@ export default function DevicePairingScreen({ onAuthenticated }: { onAuthenticat
       <h1 className="mt-6 text-3xl font-black tracking-tight">CONNECTED</h1>
       <p className="mt-2 text-sm uppercase tracking-[.24em] text-cyan-100/60">Starting Cosmic</p>
     </div>
+  ) : enrolling ? (
+    <div className="grid min-h-[21rem] place-items-center py-8"><div className="grid size-20 place-items-center rounded-full border border-cyan-200/40 bg-cyan-200/10 text-3xl text-cyan-100">◇</div><h1 className="mt-6 text-3xl font-black tracking-tight">ENROLLING DISPLAY</h1><p className="mt-2 max-w-md text-sm leading-6 text-white/55">The trusted display service is finishing secure setup. This display will continue automatically when enrollment completes.</p></div>
   ) : reconnecting ? (
     <div className="grid min-h-[21rem] place-items-center py-8"><div className="grid size-20 place-items-center rounded-full border border-amber-200/40 bg-amber-200/10 text-3xl text-amber-100">↻</div><h1 className="mt-6 text-3xl font-black tracking-tight">RECONNECTING</h1><p className="mt-2 max-w-md text-sm leading-6 text-white/55">Cosmic is waiting for the display service to reconnect. Your permanent display identity remains stored locally.</p></div>
   ) : enrollment ? (

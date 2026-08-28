@@ -139,7 +139,8 @@ export async function consumeApprovedPairing(deviceCode: string) {
       if (!consumed) throw new Error("Pairing could not be marked consumed.");
       pairLog(`[pair-consume] pairingId=${consumed.id} pairingConsumed=${Boolean(consumed.consumedAt)}`);
       const [device] = await tx.select({ publicNumber: devices.publicNumber }).from(devices).where(eq(devices.id, deviceId)).limit(1);
-      return { token, expiresAt: expiresAt.toISOString(), deviceId, deviceNumber: device?.publicNumber ?? "" };
+      const [initialGrant] = await tx.select({ id: deviceEnrollmentGrants.id }).from(deviceEnrollmentGrants).where(and(eq(deviceEnrollmentGrants.deviceId, deviceId), eq(deviceEnrollmentGrants.challengeHash, hash(initialEnrollmentChallenge(pairing.id))), eq(deviceEnrollmentGrants.grantHash, hash(pairing.id)), eq(deviceEnrollmentGrants.userId, pairing.userId), isNotNull(deviceEnrollmentGrants.approvedAt), isNull(deviceEnrollmentGrants.consumedAt), gt(deviceEnrollmentGrants.expiresAt, new Date()))).limit(1);
+      return { token, expiresAt: expiresAt.toISOString(), deviceId, deviceNumber: device?.publicNumber ?? "", initialEnrollmentRequired: Boolean(initialGrant) };
     });
   } catch (error) {
     if (process.env.NODE_ENV !== "production") {
