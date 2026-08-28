@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 
 type Pairing = { deviceCode: string; userCode: string; deviceNumber: string; verificationUrl: string; expiresAt: string; pollInterval: number };
 type PairingResponse = (Pairing & { status?: "created"; error?: string }) | { status?: "identity_missing"; reason?: string; error?: string };
+type HelperHandoff = { state?: "ready" | "reconnecting" | "unauthorized" | "needs_provisioning" | "identity_recovery"; handoffToken?: string; activationUrl?: string; publicNumber?: string };
 
 export default function DevicePairingScreen({ onAuthenticated }: { onAuthenticated: () => Promise<void> }) {
   const searchParams = useSearchParams();
@@ -15,12 +16,23 @@ export default function DevicePairingScreen({ onAuthenticated }: { onAuthenticat
   const [error, setError] = useState<string | null>(null);
   const [connecting, setConnecting] = useState(false);
   const [identityRecovery, setIdentityRecovery] = useState(false);
+  const [reconnecting, setReconnecting] = useState(false);
+  const [enrollment, setEnrollment] = useState<{ activationUrl: string; publicNumber?: string } | null>(null);
   const pollInFlight = useRef(false);
 
   useEffect(() => {
     let active = true;
     async function start() {
       try {
+        const helper = await fetch("http://127.0.0.1:8765/v1/browser-handoff", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ bootId }), credentials: "omit", cache: "no-store" }).catch(() => null);
+        const helperBody = await helper?.json().catch(() => null) as HelperHandoff | null;
+        if (helper && !helper.ok && helperBody?.state === "reconnecting") { setReconnecting(true); return; }
+        if (helper && !helper.ok && helperBody?.state === "needs_provisioning") { setEnrollment({ activationUrl: helperBody.activationUrl ?? "", publicNumber: helperBody.publicNumber }); return; }
+        if (helper && !helper.ok && (helperBody?.state === "unauthorized" || helperBody?.state === "identity_recovery")) { setIdentityRecovery(true); return; }
+        if (helper?.ok && helperBody?.handoffToken) {
+          const handoff = await fetch("/api/devices/handoff/consume", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ bootId, handoffToken: helperBody.handoffToken }), credentials: "include", cache: "no-store" });
+          if (handoff.ok) { await onAuthenticated(); return; }
+        }
         const bootstrap = await fetch("/api/devices/bootstrap", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ bootId }), credentials: "include", cache: "no-store" });
         const bootstrapBody = await bootstrap.json().catch(() => null) as { state?: string } | null;
         if (bootstrap.ok && bootstrapBody?.state === "owned") {
@@ -44,6 +56,25 @@ export default function DevicePairingScreen({ onAuthenticated }: { onAuthenticat
     void start();
     return () => { active = false; };
   }, [bootId, onAuthenticated]);
+
+  useEffect(() => {
+    if (!enrollment) return;
+    let stopped = false;
+    let timer: number | undefined;
+    const poll = async () => {
+      try {
+        const helper = await fetch("http://127.0.0.1:8765/v1/browser-handoff", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ bootId }), credentials: "omit", cache: "no-store" });
+        const body = await helper.json().catch(() => null) as HelperHandoff | null;
+        if (helper.ok && body?.handoffToken) {
+          const handoff = await fetch("/api/devices/handoff/consume", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ bootId, handoffToken: body.handoffToken }), credentials: "include", cache: "no-store" });
+          if (handoff.ok) { await onAuthenticated(); return; }
+        }
+      } catch { /* Keep enrollment visible while the helper retries. */ }
+      if (!stopped) timer = window.setTimeout(() => void poll(), 4000);
+    };
+    void poll();
+    return () => { stopped = true; if (timer !== undefined) window.clearTimeout(timer); };
+  }, [bootId, enrollment, onAuthenticated]);
 
   useEffect(() => {
     if (!pairing) return;
@@ -87,6 +118,10 @@ export default function DevicePairingScreen({ onAuthenticated }: { onAuthenticat
       <h1 className="mt-6 text-3xl font-black tracking-tight">CONNECTED</h1>
       <p className="mt-2 text-sm uppercase tracking-[.24em] text-cyan-100/60">Starting Cosmic</p>
     </div>
+  ) : reconnecting ? (
+    <div className="grid min-h-[21rem] place-items-center py-8"><div className="grid size-20 place-items-center rounded-full border border-amber-200/40 bg-amber-200/10 text-3xl text-amber-100">↻</div><h1 className="mt-6 text-3xl font-black tracking-tight">RECONNECTING</h1><p className="mt-2 max-w-md text-sm leading-6 text-white/55">Cosmic is waiting for the display service to reconnect. Your permanent display identity remains stored locally.</p></div>
+  ) : enrollment ? (
+    <div className="grid min-h-[21rem] place-items-center py-8"><div className="grid size-20 place-items-center rounded-full border border-cyan-200/40 bg-cyan-200/10 text-3xl text-cyan-100">◇</div><h1 className="mt-6 text-3xl font-black tracking-tight">RECOVER {enrollment.publicNumber ?? "DISPLAY"}</h1><p className="mt-2 max-w-md text-sm leading-6 text-white/55">Open the secure recovery link on your phone and approve this exact display as its current account owner. The helper will finish automatically.</p>{enrollment.activationUrl ? <p className="mt-5 break-all text-xs text-cyan-100/70">{enrollment.activationUrl}</p> : null}</div>
   ) : (
     <>
       <h1 className="mt-3 text-2xl font-black sm:text-3xl">Let&apos;s get you connected</h1>

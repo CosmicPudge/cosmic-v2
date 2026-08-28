@@ -169,6 +169,13 @@
       "when": 1787866000000,
       "tag": "0024_device_identity",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1787867000000,
+      "tag": "0025_device_session_handoffs",
+      "breakpoints": true
     }
   ]
 }

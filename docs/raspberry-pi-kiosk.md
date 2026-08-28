@@ -180,6 +180,119 @@ equivalent: it revokes sessions, clears kiosk settings and credential material,
 removes ownership while retaining the public number, and makes the device
 claimable again. It does not implement a physical button or GPIO reset.
 
+## Trusted Cosmic Display helper
+
+Chromium is not the permanent identity store. The production helper is the
+loopback-only `scripts/cosmic_display_helper.py`. Its default state file is
+`/var/lib/cosmic-display/device.json` and contains only a schema version,
+public module number, internal device ID, and private credential. The
+directory must be mode `0700`; the file must be mode `0600`, owned by a
+dedicated helper service account that Chromium cannot read. The helper writes
+replacement state through a same-directory temporary file and atomic rename.
+It does not assume a TPM or secure enclave exists on the Pi.
+
+The helper listens only on `127.0.0.1:8765` and exposes one browser-facing
+operation:
+
+```text
+POST http://127.0.0.1:8765/v1/browser-handoff
+{"bootId":"<current Linux boot ID>"}
+```
+
+When a credential exists, the helper calls `POST /api/devices/handoff` over
+HTTPS with `Authorization: Bearer <credential>`. The server validates the
+credential, ownership, and exact boot ID, then returns a random one-time
+handoff token. The helper returns only that token and the device ID to
+Chromium. Chromium exchanges it at `POST /api/devices/handoff/consume`; the
+server consumes it once and sets only the temporary browser session cookie.
+The permanent credential never reaches browser JavaScript, a URL, a
+screenshot, or a log. Handoffs expire after 60 seconds and are boot-bound.
+
+Install the helper as a separate service, not as a browser child process. A
+future Pi deployment can use a dedicated `cosmic-display` service account and
+a unit similar to:
+
+```ini
+[Unit]
+Description=Cosmic Display trusted helper
+After=network-online.target
+
+[Service]
+Type=simple
+User=cosmic-display
+Group=cosmic-display
+ExecStart=/usr/bin/python3 /opt/cosmic-display/cosmic_display_helper.py
+Environment=COSMIC_SERVER_URL=https://cosmicpudge.shop
+Environment=COSMIC_DISPLAY_STATE_FILE=/var/lib/cosmic-display/device.json
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+```
+
+The kiosk unit should use `After=cosmic-display-helper.service` and
+`Requires=cosmic-display-helper.service`. This repository does not install or
+enable systemd units on the developer machine.
+
+The helper lifecycle is:
+
+```text
+identity + credential → AUTHENTICATING_DEVICE → RUNNING
+temporary network/server failure → RECONNECTING
+identity + no credential → NEEDS_PROVISIONING for the same module
+missing/corrupt identity → IDENTITY_RECOVERY
+authoritative revoked/unclaimed → clear owner credential, retain module ID
+```
+
+First credential provisioning uses the helper enrollment protocol. The helper
+creates a private high-entropy challenge and registers only its hash against
+the exact existing device. The current owner explicitly approves the
+challenge at `/activate/recover?challenge=<id>`. The helper generates and
+atomically stages the new credential locally, sends only its hash to the
+server, polls for an owner-authorized grant, and proves possession of the
+staged credential to finalize it server-to-server.
+The grant is derived from a server-only `COSMIC_ENROLLMENT_SECRET`, stored
+only as a hash, expires after ten minutes, and cannot be replayed after
+consumption. The browser sees the recovery link/status but never the
+credential. If the helper fails while persisting after server rotation, it
+does not occur in this staged protocol: the helper persists before server
+finalization. If finalization fails, it retries the same transaction. If the
+server finalizes and the helper crashes before clearing local enrollment, a
+retry with the same staged credential is idempotently recognized. Expired or
+invalid transactions are quarantined and require a new owner approval rather
+than guessing or restoring an old secret.
+
+Set `COSMIC_ENROLLMENT_SECRET` to a high-entropy server secret in every
+server environment before enabling enrollment. The existing browser
+credential cookie remains only a development/backward-compatibility fallback
+and is not authoritative hardware storage.
+
+Expired enrollment and handoff rows may be removed by a scheduled server-side
+cleanup using only their expiry/consumption state; cleanup never deletes a
+device or changes its public module number.
+
+The helper source and a hardened example unit are in
+`scripts/cosmic_display_helper.py` and
+`docs/systemd/cosmic-display-helper.service`. Install the unit only after
+creating the dedicated service account and state directory. The kiosk
+dependency drop-in is `docs/systemd/cosmic-kiosk-helper.conf`.
+
+For local testing without `/var` or systemd:
+
+```bash
+export COSMIC_DISPLAY_STATE_FILE="$PWD/.cosmic-display/device.json"
+export COSMIC_SERVER_URL="http://localhost:3000"
+python3 scripts/cosmic_display_helper.py
+```
+
+Never place a credential in shell history, URLs, browser storage, or
+diagnostics. A public module number, database ID, activation code, boot ID,
+or browser request cannot authorize physical reset. A future GPIO reset
+listener must be a separate privileged local process, preserve the permanent
+module identity, clear owner-specific state, and remain unreachable through
+this browser API.
+
 ## Development simulator
 
 The simulator is development-only and must not synthesize production data:

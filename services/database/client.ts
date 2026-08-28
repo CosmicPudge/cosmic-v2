@@ -1,7 +1,9 @@
 import "server-only";
 
-import { Pool } from "@neondatabase/serverless";
-import { drizzle } from "drizzle-orm/neon-serverless";
+import { Pool as NeonPool } from "@neondatabase/serverless";
+import { Pool as PostgresPool } from "pg";
+import { drizzle as drizzleNeon } from "drizzle-orm/neon-serverless";
+import { drizzle as drizzlePostgres } from "drizzle-orm/node-postgres";
 import * as schema from "./schema";
 
 export type CosmicDatabase = ReturnType<typeof createDatabase>;
@@ -9,7 +11,8 @@ export type CosmicDatabase = ReturnType<typeof createDatabase>;
 function createDatabase() {
   const url = process.env.DATABASE_URL;
   if (!url) throw new Error("DATABASE_URL is required for PostgreSQL mode.");
-  return drizzle(new Pool({ connectionString: url }), { schema });
+  if (process.env.NODE_ENV === "test" || process.env.COSMIC_TEST_MODE === "1") return drizzlePostgres(new PostgresPool({ connectionString: url }), { schema });
+  return drizzleNeon(new NeonPool({ connectionString: url }), { schema });
 }
 
 let database: CosmicDatabase | undefined;

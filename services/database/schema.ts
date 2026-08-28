@@ -124,6 +124,32 @@ export const devicePairings = pgTable("device_pairings", {
   consumedAt: timestamp("consumed_at", { withTimezone: true }),
 }, (table) => [uniqueIndex("device_pairings_device_hash_unique").on(table.deviceCodeHash), uniqueIndex("device_pairings_user_code_unique").on(table.userCode), index("device_pairings_status_expires_index").on(table.status, table.expiresAt), index("device_pairings_user_id_index").on(table.userId), check("device_pairings_status_check", sql`${table.status} in ('pending', 'approved', 'expired', 'denied', 'consumed')`)]);
 
+export const deviceSessionHandoffs = pgTable("device_session_handoffs", {
+  id: text("id").primaryKey(),
+  tokenHash: text("token_hash").notNull(),
+  deviceId: text("device_id").notNull().references(() => devices.id, { onDelete: "cascade" }),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  bootId: text("boot_id").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  consumedAt: timestamp("consumed_at", { withTimezone: true }),
+}, (table) => [uniqueIndex("device_session_handoffs_token_hash_unique").on(table.tokenHash), index("device_session_handoffs_expiry_index").on(table.expiresAt)]);
+
+export const deviceEnrollmentGrants = pgTable("device_enrollment_grants", {
+  id: text("id").primaryKey(),
+  deviceId: text("device_id").notNull().references(() => devices.id, { onDelete: "cascade" }),
+  challengeHash: text("challenge_hash").notNull(),
+  grantHash: text("grant_hash"),
+  stagedCredentialHash: text("staged_credential_hash"),
+  userId: text("user_id").references(() => users.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  approvedAt: timestamp("approved_at", { withTimezone: true }),
+  stagedAt: timestamp("staged_at", { withTimezone: true }),
+  finalizedAt: timestamp("finalized_at", { withTimezone: true }),
+  consumedAt: timestamp("consumed_at", { withTimezone: true }),
+}, (table) => [uniqueIndex("device_enrollment_grants_challenge_hash_unique").on(table.challengeHash), uniqueIndex("device_enrollment_grants_grant_hash_unique").on(table.grantHash), index("device_enrollment_grants_device_index").on(table.deviceId), index("device_enrollment_grants_expiry_index").on(table.expiresAt)]);
+
 export const userPreferences = pgTable("user_preferences", {
   userId: text("user_id").primaryKey().references(() => users.id, { onDelete: "cascade" }),
   version: integer("version").notNull().default(1),

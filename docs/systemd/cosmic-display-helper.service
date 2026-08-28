@@ -1,0 +1,23 @@
+[Unit]
+Description=Cosmic Display trusted helper
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=cosmic-display
+Group=cosmic-display
+ExecStart=/usr/bin/python3 /opt/cosmic-display/cosmic_display_helper.py
+Environment=COSMIC_SERVER_URL=https://cosmicpudge.shop
+Environment=COSMIC_HELPER_ORIGIN=https://cosmicpudge.shop
+Environment=COSMIC_DISPLAY_STATE_FILE=/var/lib/cosmic-display/device.json
+Restart=always
+RestartSec=5
+PrivateTmp=true
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/cosmic-display
+
+[Install]
+WantedBy=multi-user.target

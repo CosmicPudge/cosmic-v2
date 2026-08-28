@@ -1,14 +1,16 @@
 import "server-only";
 
-import { createHash, randomBytes, randomUUID } from "crypto";
-import { and, eq, gt, isNull } from "drizzle-orm";
-import { devices, devicePairings, kioskDeviceSettings, sessions } from "@/services/database/schema";
+import { createHash, createHmac, randomBytes, randomUUID } from "crypto";
+import { and, eq, gt, isNotNull, isNull } from "drizzle-orm";
+import { devices, deviceEnrollmentGrants, devicePairings, deviceSessionHandoffs, kioskDeviceSettings, sessions } from "@/services/database/schema";
 import { getDatabase, isDatabaseConfigured } from "@/services/database/client";
 import { hashSessionToken } from "@/services/auth/localStore";
 import { resolvePairingIdentity } from "./pairingPolicy";
 
 export const DEVICE_PAIRING_TTL_MS = 10 * 60 * 1000;
 export const DEVICE_POLL_INTERVAL_SECONDS = 4;
+export const DEVICE_HANDOFF_TTL_MS = 60 * 1000;
+export const DEVICE_ENROLLMENT_TTL_MS = 10 * 60 * 1000;
 const ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
 function pairLog(message: string) {
@@ -20,6 +22,11 @@ function normalizeUserCode(value: string) { return value.replace(/[^A-Z0-9]/gi, 
 function formatUserCode(value: string) { return `${value.slice(0, 4)}-${value.slice(4)}`; }
 function randomUserCode() { return Array.from({ length: 6 }, () => ALPHABET[randomBytes(1)[0] % ALPHABET.length]).join(""); }
 function newDeviceCredential() { return randomBytes(32).toString("base64url"); }
+function enrollmentGrant(challengeId: string, challengeHash: string) {
+  const secret = process.env.COSMIC_ENROLLMENT_SECRET;
+  if (!secret) throw new Error("COSMIC_ENROLLMENT_SECRET is required for device enrollment.");
+  return createHmac("sha256", secret).update(`${challengeId}:${challengeHash}`).digest("base64url");
+}
 function requireDatabase() { if (!isDatabaseConfigured()) throw new Error("Device pairing requires durable PostgreSQL storage."); return getDatabase(); }
 export function normalizeBootId(value: unknown) { return typeof value === "string" && /^[A-Za-z0-9_-]{1,128}$/.test(value) ? value : null; }
 
@@ -166,6 +173,78 @@ export async function authenticateDeviceCredential(credential: string, bootId: s
   const session = await createDeviceSession(device.userId, device.id, bootId, userAgent);
   await database.update(devices).set({ lastSeenAt: new Date() }).where(eq(devices.id, device.id));
   return { ...session, state: "owned" as const, deviceNumber: device.publicNumber };
+}
+
+export async function createDeviceSessionHandoff(credential: string, bootId: string) {
+  const database = requireDatabase();
+  const [device] = await database.select({ id: devices.id, userId: devices.userId }).from(devices).where(and(eq(devices.credentialHash, hash(credential)), isNull(devices.credentialRevokedAt), isNull(devices.revokedAt))).limit(1);
+  if (!device?.userId) return null;
+  const token = randomBytes(32).toString("base64url");
+  const expiresAt = new Date(Date.now() + DEVICE_HANDOFF_TTL_MS);
+  await database.insert(deviceSessionHandoffs).values({ id: `handoff_${randomUUID()}`, tokenHash: hash(token), deviceId: device.id, userId: device.userId, bootId, expiresAt });
+  return { token, deviceId: device.id, expiresAt: expiresAt.toISOString() };
+}
+
+export async function consumeDeviceSessionHandoff(token: string, bootId: string, userAgent?: string) {
+  const database = requireDatabase();
+  const now = new Date();
+  const [handoff] = await database.select({ id: deviceSessionHandoffs.id, deviceId: deviceSessionHandoffs.deviceId, userId: deviceSessionHandoffs.userId }).from(deviceSessionHandoffs).where(and(eq(deviceSessionHandoffs.tokenHash, hash(token)), eq(deviceSessionHandoffs.bootId, bootId), gt(deviceSessionHandoffs.expiresAt, now), isNull(deviceSessionHandoffs.consumedAt))).limit(1);
+  if (!handoff) return null;
+  const [claimed] = await database.update(deviceSessionHandoffs).set({ consumedAt: now }).where(and(eq(deviceSessionHandoffs.id, handoff.id), isNull(deviceSessionHandoffs.consumedAt), gt(deviceSessionHandoffs.expiresAt, now))).returning({ id: deviceSessionHandoffs.id });
+  if (!claimed) return null;
+  const session = await createDeviceSession(handoff.userId, handoff.deviceId, bootId, userAgent);
+  return { ...session, deviceId: handoff.deviceId };
+}
+
+export async function createDeviceEnrollmentChallenge(deviceId: string, publicNumber: string, challenge: string) {
+  const database = requireDatabase();
+  const [device] = await database.select({ id: devices.id, publicNumber: devices.publicNumber }).from(devices).where(and(eq(devices.id, deviceId), eq(devices.publicNumber, publicNumber), isNull(devices.revokedAt))).limit(1);
+  if (!device) return null;
+  const expiresAt = new Date(Date.now() + DEVICE_ENROLLMENT_TTL_MS);
+  const [row] = await database.insert(deviceEnrollmentGrants).values({ id: `enroll_${randomUUID()}`, deviceId, challengeHash: hash(challenge), expiresAt }).returning({ id: deviceEnrollmentGrants.id, expiresAt: deviceEnrollmentGrants.expiresAt });
+  return row ? { challengeId: row.id, expiresAt: row.expiresAt.toISOString(), deviceId, publicNumber } : null;
+}
+
+export async function authorizeDeviceEnrollment(challengeId: string, userId: string) {
+  const database = requireDatabase();
+  const [candidate] = await database.select({ id: deviceEnrollmentGrants.id, deviceId: deviceEnrollmentGrants.deviceId, challengeHash: deviceEnrollmentGrants.challengeHash }).from(deviceEnrollmentGrants).where(and(eq(deviceEnrollmentGrants.id, challengeId), isNull(deviceEnrollmentGrants.approvedAt), isNull(deviceEnrollmentGrants.consumedAt), gt(deviceEnrollmentGrants.expiresAt, new Date()))).limit(1);
+  if (!candidate) return null;
+  const [device] = await database.select({ id: devices.id }).from(devices).where(and(eq(devices.id, candidate.deviceId), eq(devices.userId, userId), eq(devices.ownershipStatus, "owned"), isNull(devices.revokedAt))).limit(1);
+  if (!device) return null;
+  const grant = enrollmentGrant(candidate.id, candidate.challengeHash);
+  const [updated] = await database.update(deviceEnrollmentGrants).set({ userId, grantHash: hash(grant), approvedAt: new Date() }).where(and(eq(deviceEnrollmentGrants.id, challengeId), isNull(deviceEnrollmentGrants.approvedAt), isNull(deviceEnrollmentGrants.consumedAt), gt(deviceEnrollmentGrants.expiresAt, new Date()))).returning({ id: deviceEnrollmentGrants.id });
+  return updated ? { approved: true } : null;
+}
+
+export async function getDeviceEnrollmentGrant(challengeId: string, challenge: string) {
+  const database = requireDatabase();
+  const [row] = await database.select({ id: deviceEnrollmentGrants.id, challengeHash: deviceEnrollmentGrants.challengeHash, userId: deviceEnrollmentGrants.userId }).from(deviceEnrollmentGrants).where(and(eq(deviceEnrollmentGrants.id, challengeId), eq(deviceEnrollmentGrants.challengeHash, hash(challenge)), gt(deviceEnrollmentGrants.expiresAt, new Date()), isNotNull(deviceEnrollmentGrants.approvedAt), isNull(deviceEnrollmentGrants.consumedAt))).limit(1);
+  return row?.challengeHash && row.userId ? { challengeId: row.id, grant: enrollmentGrant(row.id, row.challengeHash) } : null;
+}
+
+export async function stageDeviceEnrollment(challengeId: string, challenge: string, grant: string, credentialHash: string) {
+  const database = requireDatabase();
+  const [existing] = await database.select({ stagedCredentialHash: deviceEnrollmentGrants.stagedCredentialHash, consumedAt: deviceEnrollmentGrants.consumedAt, finalizedAt: deviceEnrollmentGrants.finalizedAt }).from(deviceEnrollmentGrants).where(and(eq(deviceEnrollmentGrants.id, challengeId), eq(deviceEnrollmentGrants.challengeHash, hash(challenge)), eq(deviceEnrollmentGrants.grantHash, hash(grant)))).limit(1);
+  if (existing?.consumedAt && existing.finalizedAt && existing.stagedCredentialHash === credentialHash) return { staged: true, alreadyFinalized: true };
+  const [row] = await database.update(deviceEnrollmentGrants).set({ stagedCredentialHash: credentialHash, stagedAt: new Date() }).where(and(eq(deviceEnrollmentGrants.id, challengeId), eq(deviceEnrollmentGrants.challengeHash, hash(challenge)), eq(deviceEnrollmentGrants.grantHash, hash(grant)), isNotNull(deviceEnrollmentGrants.approvedAt), isNull(deviceEnrollmentGrants.consumedAt), gt(deviceEnrollmentGrants.expiresAt, new Date()))).returning({ id: deviceEnrollmentGrants.id });
+  return row ? { staged: true, alreadyFinalized: false } : null;
+}
+
+export async function finalizeDeviceEnrollment(challengeId: string, challenge: string, grant: string, credential: string) {
+  const database = requireDatabase();
+  const now = new Date();
+  return database.transaction(async (tx) => {
+    const credentialHash = hash(credential);
+    const [row] = await tx.select({ id: deviceEnrollmentGrants.id, deviceId: deviceEnrollmentGrants.deviceId, userId: deviceEnrollmentGrants.userId, stagedCredentialHash: deviceEnrollmentGrants.stagedCredentialHash, consumedAt: deviceEnrollmentGrants.consumedAt, finalizedAt: deviceEnrollmentGrants.finalizedAt, expiresAt: deviceEnrollmentGrants.expiresAt }).from(deviceEnrollmentGrants).where(and(eq(deviceEnrollmentGrants.id, challengeId), eq(deviceEnrollmentGrants.challengeHash, hash(challenge)), eq(deviceEnrollmentGrants.grantHash, hash(grant)), isNotNull(deviceEnrollmentGrants.approvedAt))).for("update").limit(1);
+    if (row?.consumedAt && row.finalizedAt && row.stagedCredentialHash === credentialHash) return { finalized: true, alreadyFinalized: true, deviceId: row.deviceId };
+    if (!row?.userId || !row.stagedCredentialHash || row.stagedCredentialHash !== credentialHash || row.consumedAt || row.finalizedAt || !row.id || row.expiresAt <= now) return null;
+    const [device] = await tx.select({ id: devices.id, publicNumber: devices.publicNumber }).from(devices).where(and(eq(devices.id, row.deviceId), eq(devices.userId, row.userId), eq(devices.ownershipStatus, "owned"), isNull(devices.revokedAt))).limit(1);
+    if (!device) return null;
+    await tx.update(devices).set({ credentialHash, credentialRevokedAt: null, lastSeenAt: now }).where(eq(devices.id, device.id));
+    await tx.update(sessions).set({ revokedAt: now }).where(and(eq(sessions.deviceId, device.id), isNull(sessions.revokedAt)));
+    const [consumed] = await tx.update(deviceEnrollmentGrants).set({ consumedAt: now, finalizedAt: now }).where(and(eq(deviceEnrollmentGrants.id, row.id), isNull(deviceEnrollmentGrants.consumedAt))).returning({ id: deviceEnrollmentGrants.id });
+    return consumed ? { finalized: true, alreadyFinalized: false, deviceId: device.id, deviceNumber: device.publicNumber } : null;
+  });
 }
 
 export async function provisionDeviceCredential(userId: string, deviceId: string) {

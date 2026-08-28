@@ -12,6 +12,7 @@
     "db:migrate": "drizzle-kit migrate",
     "db:bootstrap-admin": "node scripts/bootstrap-admin.mjs",
     "test:device-pairing": "node --test --experimental-strip-types services/devices/pairingPolicy.test.ts",
+    "test:device-integration": "NODE_ENV=test node scripts/test-device-integration.mjs",
     "download:mlb": "node scripts/download-mlb-logos.mjs",
     "mlb:uniforms": "node scripts/mlb-uniforms.mjs"
   },
@@ -25,6 +26,7 @@
     "leaflet": "^1.9.4",
     "lucide-react": "^1.25.0",
     "next": "^16.3.2",
+    "pg": "^8.23.0",
     "qrcode": "^1.5.4",
     "react": "19.2.4",
     "react-dom": "19.2.4",
@@ -36,6 +38,7 @@
     "@tailwindcss/postcss": "^4.3.3",
     "@types/leaflet": "^1.9.21",
     "@types/node": "^20.19.43",
+    "@types/pg": "^8.23.1",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "dotenv": "^17.4.2",
