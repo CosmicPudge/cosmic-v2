@@ -6,8 +6,12 @@ import WidgetBody from "@/components/os/ui/widget/WidgetBody";
 import WidgetFooter from "@/components/os/ui/widget/WidgetFooter";
 import { WidgetEmpty } from "@/components/os/ui/widget";
 import Link from "next/link";
+import { useWidgetContext } from "@/components/os/ui/widget/WidgetContext";
+import KioskSceneFrame from "@/components/os/widgets/shared/KioskSceneFrame";
 
 export default function CosmicWidget() {
+  const { presentation } = useWidgetContext();
+  if (presentation === "kiosk") return <KioskSceneFrame scene="ai" eyebrow="COSMIC • AI" title="Ready when you are." subtitle="Cosmic intelligence core" />;
   return (
     <Widget
       accent="cosmic"

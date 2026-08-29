@@ -308,6 +308,27 @@ html, body { width: 100%; min-height: 100%; background: #030511; }
 .kiosk-notifications-description { max-width: 30rem; margin: .9rem 0 0; color: rgba(226,232,240,.65); font-size: clamp(.78rem, 1.45vw, 1.05rem); line-height: 1.5; }
 .kiosk-notifications-footer { align-self: center; color: rgba(165,180,252,.42); font-size: clamp(.52rem, .8vw, .66rem); letter-spacing: .2em; text-transform: uppercase; }
 
+/* Lightweight scene language for the remaining kiosk-only presentations. */
+.kiosk-native-scene { position: relative; display: flex; width: 100%; height: 100%; min-width: 0; min-height: 0; overflow: hidden; isolation: isolate; background: #070a18; }
+.kiosk-native-scene::before { position: absolute; inset: 0; z-index: -1; background: radial-gradient(circle at 78% 24%, rgba(139,92,246,.18), transparent 30%), linear-gradient(145deg, #0b1028, #030511 72%); content: ""; }
+.kiosk-native-scene-ai::before { background: radial-gradient(circle at 50% 38%, rgba(139,92,246,.3), transparent 22%), radial-gradient(circle at 72% 72%, rgba(34,211,238,.12), transparent 26%), #040511; }
+.kiosk-native-scene-briefing::before { background: radial-gradient(ellipse at 52% 18%, rgba(244,114,182,.2), transparent 34%), linear-gradient(160deg, #211334, #06101e 75%); }
+.kiosk-native-scene-search::before { background: radial-gradient(circle at 50% 46%, rgba(103,232,249,.13), transparent 25%), #030611; }
+.kiosk-native-scene-finance::before { background: repeating-linear-gradient(165deg, transparent 0 42px, rgba(34,211,238,.04) 43px 44px), linear-gradient(145deg, #10172b, #040711 72%); }
+.kiosk-native-scene-system::before { background-image: linear-gradient(rgba(96,165,250,.045) 1px, transparent 1px), linear-gradient(90deg, rgba(96,165,250,.045) 1px, transparent 1px), linear-gradient(145deg, #0b1c31, #030711 72%); background-size: 42px 42px, 42px 42px, auto; }
+.kiosk-native-scene-sports::before { background: radial-gradient(circle at 70% 34%, rgba(45,212,191,.18), transparent 27%), linear-gradient(145deg, #071d25, #050914 72%); }
+.kiosk-native-scene-garage::before { background-image: linear-gradient(rgba(148,163,184,.04) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,.04) 1px, transparent 1px), linear-gradient(145deg, #182130, #060910 72%); background-size: 34px 34px, 34px 34px, auto; }
+.kiosk-native-scene-school::before { background: linear-gradient(160deg, rgba(96,165,250,.18), transparent 38%), linear-gradient(145deg, #0c2440, #050914 72%); }
+.kiosk-native-scene-projects::before { background: radial-gradient(circle at 78% 24%, rgba(34,211,238,.16), transparent 22%), linear-gradient(145deg, #171233, #050713 72%); }
+.kiosk-native-scene-email::before { background: radial-gradient(ellipse at 30% 32%, rgba(56,189,248,.15), transparent 28%), linear-gradient(145deg, #0c1830, #080615 72%); }
+.kiosk-native-scene-header { position: absolute; top: clamp(1rem, 3vw, 3rem); left: clamp(1rem, 3vw, 3rem); display: flex; align-items: center; gap: .55rem; color: rgba(224,231,255,.7); font-size: clamp(.58rem, 1vw, .78rem); font-weight: 700; letter-spacing: .2em; text-transform: uppercase; }
+.kiosk-native-scene-dot { width: .5rem; height: .5rem; flex: 0 0 auto; border-radius: 50%; background: #a78bfa; box-shadow: 0 0 14px rgba(167,139,250,.7); }
+.kiosk-native-scene-main { display: flex; flex: 1; flex-direction: column; justify-content: center; min-width: 0; padding: clamp(4rem, 10vw, 8rem) clamp(1rem, 8vw, 8rem) clamp(3rem, 8vw, 6rem); }
+.kiosk-native-scene-title { max-width: 50rem; overflow: hidden; color: rgba(248,250,252,.97); font-size: clamp(2rem, 6vw, 5.8rem); font-weight: 650; letter-spacing: -.045em; line-height: .98; text-wrap: balance; }
+.kiosk-native-scene-subtitle { max-width: 38rem; margin-top: 1rem; overflow: hidden; color: rgba(226,232,240,.72); font-size: clamp(.8rem, 1.8vw, 1.35rem); line-height: 1.35; text-overflow: ellipsis; white-space: nowrap; }
+.kiosk-native-scene-details { display: flex; flex-wrap: wrap; gap: .6rem 1rem; margin-top: clamp(1.25rem, 3vw, 2.5rem); color: rgba(165,243,252,.78); font-size: clamp(.62rem, 1.1vw, .85rem); letter-spacing: .08em; text-transform: uppercase; }
+.kiosk-native-scene-details span { max-width: 24rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
 @media (orientation: landscape) and (max-height: 560px) {
   .kiosk-notifications-content { padding: .75rem 1rem; }
   .kiosk-notifications-orbit { width: min(58vw, 19rem); }
@@ -321,6 +342,11 @@ html, body { width: 100%; min-height: 100%; background: #030511; }
   .kiosk-notifications-secondary { gap: .5rem; }
   .kiosk-notifications-secondary h2 { font-size: .8rem; }
   .kiosk-notifications-primary p, .kiosk-notifications-secondary p { font-size: .62rem; }
+  .kiosk-native-scene-header { top: .75rem; left: 1rem; font-size: .55rem; }
+  .kiosk-native-scene-main { padding: 2.75rem 2rem 1.75rem; }
+  .kiosk-native-scene-title { font-size: clamp(1.55rem, 6vw, 3rem); }
+  .kiosk-native-scene-subtitle { margin-top: .55rem; font-size: .72rem; }
+  .kiosk-native-scene-details { margin-top: .85rem; font-size: .56rem; }
 }
 
 /* Calendar keeps modest structure for the timeline while leaving the workspace image visible. */

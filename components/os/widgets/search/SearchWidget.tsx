@@ -11,14 +11,17 @@ import Widget from "@/components/os/ui/widget/Widget";
 import WidgetHeader from "@/components/os/ui/widget/WidgetHeader";
 import WidgetBody from "@/components/os/ui/widget/WidgetBody";
 import { useWidgetContext } from "@/components/os/ui/widget/WidgetContext";
+import KioskSceneFrame from "@/components/os/widgets/shared/KioskSceneFrame";
 
 export default function SearchWidget() {
   const router = useRouter();
-  const { size } = useWidgetContext();
+  const { size, presentation } = useWidgetContext();
   const { openSearch, recentSearches, recordSearch } = useSearchRuntime();
   const [query, setQuery] = useState("");
   const snapshot = useSearchResults(size === "large" ? query : "");
   const destinations = apps.filter((app) => ["calendar", "garage", "projects", "notes"].includes(app.id));
+
+  if (presentation === "kiosk") return <KioskSceneFrame scene="search" eyebrow="COSMIC • SEARCH" title={query.trim() ? (snapshot.results[0]?.title ?? "No results yet.") : "Search across your universe."} subtitle={query.trim() ? (snapshot.results[0]?.subtitle ?? "") : "Open Search to explore Cosmic"} />;
 
   if (size === "small") {
     return (

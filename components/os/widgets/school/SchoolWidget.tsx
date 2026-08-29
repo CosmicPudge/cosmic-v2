@@ -8,6 +8,7 @@ import { useWidgetContext } from "@/components/os/ui/widget/WidgetContext";
 import { WidgetEmpty, WidgetError, WidgetLoading } from "@/components/os/ui/widget";
 import { useSchoolData } from "@/components/school/hooks/useSchoolData";
 import { getCurrentAndNextClass } from "@/components/school/data/weeklySchedule";
+import KioskSceneFrame from "@/components/os/widgets/shared/KioskSceneFrame";
 
 import SchoolCurrent from "./SchoolCurrent";
 import SchoolAssignments from "./SchoolAssignments";
@@ -35,6 +36,7 @@ export default function SchoolWidget() {
   const upcomingClasses = data?.classes
     .filter((schoolClass) => schoolClass.start > now)
     .sort((first, second) => first.start.getTime() - second.start.getTime()) ?? [];
+  if (presentation === "kiosk") return <KioskSceneFrame scene="school" eyebrow="COSMIC • SCHOOL" title={localSchedule.currentClass?.course.name ?? localSchedule.nextClass?.course.name ?? nextClass?.name ?? "No class scheduled."} subtitle={localSchedule.currentClass ? "In progress" : nextClass ? `Next class · ${nextClass.start.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}` : "Academic schedule"}><div className="kiosk-native-scene-details">{dueAssignments[0] && <span>Due · {dueAssignments[0].title}</span>}</div></KioskSceneFrame>;
   return (
     <Widget
       accent="school"
@@ -45,7 +47,7 @@ export default function SchoolWidget() {
       />
 
       <WidgetBody scrollable={size === "large"}>
-        {!local.ready || (loading && !hasLocalData) ? <WidgetLoading /> : error && !hasLocalData ? <WidgetError title={presentation === "kiosk" ? "School temporarily unavailable" : "School unavailable"} message={presentation === "kiosk" ? "Cosmic will retry automatically." : error} /> : !data && !hasLocalData ? <WidgetEmpty title="No school data yet" description="Add a School term or connect a school calendar to get started." /> : <>
+        {!local.ready || (loading && !hasLocalData) ? <WidgetLoading /> : error && !hasLocalData ? <WidgetError title="School unavailable" message={error} /> : !data && !hasLocalData ? <WidgetEmpty title="No school data yet" description="Add a School term or connect a school calendar to get started." /> : <>
           <SchoolCurrent term={activeTerm?.name ?? data?.semester.semester ?? "School"} nextClass={localSchedule.currentClass ? { id: localSchedule.currentClass.course.id, name: localSchedule.currentClass.course.name, start: localSchedule.currentClass.start, end: localSchedule.currentClass.end, location: localSchedule.currentClass.location } : localSchedule.nextClass ? { id: localSchedule.nextClass.course.id, name: localSchedule.nextClass.course.name, start: localSchedule.nextClass.start, end: localSchedule.nextClass.end, location: localSchedule.nextClass.location } : nextClass} isCurrentClass={Boolean(localSchedule.currentClass)} urgentAssignment={dueAssignments[0]} />
           {size !== "small" && <SchoolAssignments assignments={dueAssignments} />}
           {size === "large" && <SchoolSchedule classes={[...localSchedule.schedule.map((item) => ({ id: `${item.course.id}:${item.start.toISOString()}`, name: item.course.name, start: item.start, end: item.end, ...(item.location ? { location: item.location } : {}) })), ...upcomingClasses]} />}

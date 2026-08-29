@@ -10,6 +10,7 @@ import { useSports } from "@/hooks/os/useSports";
 import { prioritizeFollowedEvents } from "@/services/sports/preferences";
 import { useSettingsRepository } from "@/services/settings/localRepository";
 import { useDashboardWidgetReadiness } from "@/components/dashboard/readiness/DashboardReadiness";
+import KioskSceneFrame from "@/components/os/widgets/shared/KioskSceneFrame";
 
 import SportsCurrent from "./SportsCurrent";
 import SportsScores from "./SportsScores";
@@ -24,6 +25,7 @@ export default function SportsWidget() {
   const upcoming = data ? prioritizeFollowedEvents(data.upcoming, settings.preferences) : [];
   const standings = data ? Object.values(data.standings).flat() : [];
   useDashboardWidgetReadiness("sports", loading && !data ? "loading" : error && !data ? "degraded" : "ready");
+  if (presentation === "kiosk") return <KioskSceneFrame scene="sports" eyebrow="COSMIC • SPORTS" title={liveOrFeatured?.title ?? (loading ? "Scanning events." : "No live event.")} subtitle={liveOrFeatured ? `${liveOrFeatured.statusDetail ?? liveOrFeatured.status} · ${liveOrFeatured.sport.toUpperCase()}` : "Upcoming games will appear here."} />;
 
   return (
     <Widget
@@ -35,7 +37,7 @@ export default function SportsWidget() {
       />
 
       <WidgetBody scrollable={size === "large"}>
-        {loading && !data ? <WidgetLoading label="Loading sports" compact /> : error && !data ? <WidgetError title={presentation === "kiosk" ? "Sports temporarily unavailable" : "Sports unavailable"} message={presentation === "kiosk" ? "Cosmic will retry automatically." : error} compact /> : !data ? <WidgetEmpty title={presentation === "kiosk" ? "No live games" : "No sports data"} description="Scores and schedules will appear here." compact /> : <>
+        {loading && !data ? <WidgetLoading label="Loading sports" compact /> : error && !data ? <WidgetError title="Sports unavailable" message={error} compact /> : !data ? <WidgetEmpty title="No sports data" description="Scores and schedules will appear here." compact /> : <>
           <SportsCurrent event={liveOrFeatured} />
           {size !== "small" && <SportsScores events={upcoming.slice(0, size === "medium" ? 2 : 3)} />}
           {size === "large" && <SportsStandings standings={standings} />}
