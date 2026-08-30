@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import type { CalendarEvent } from "@/core/contracts";
 import CalendarCreateEventModal from "./CalendarCreateEventModal";
 import CalendarEditEventModal from "./CalendarEditEventModal";
+import { useVisiblePolling } from "@/hooks/useVisiblePolling";
 
 interface CalendarRangeResponse {
   events: Array<
@@ -163,6 +164,10 @@ function getEventCategory(
 function getSourceLabel(
   event: CalendarEvent
 ): string {
+  if (event.source === "sports") {
+    return "Cosmic Sports";
+  }
+
   if (event.source === "subscription") {
     return "Subscription";
   }
@@ -177,6 +182,10 @@ function getSourceLabel(
 function getSourceStyle(
   event: CalendarEvent
 ): string {
+  if (event.source === "sports") {
+    return "border-cyan-300/20 bg-cyan-300/6";
+  }
+
   if (event.source === "subscription") {
     return "border-violet-300/15 bg-violet-300/6";
   }
@@ -234,7 +243,7 @@ function EventCard({
             </h3>
 
             <span className="shrink-0 rounded-full border border-white/10 bg-white/5 px-2 py-1 text-[10px] uppercase tracking-wider text-white/40">
-              {event.source === "subscription"
+              {event.category === "sports" || event.source === "subscription"
                 ? "Sports"
                 : "Personal"}
             </span>
@@ -512,10 +521,7 @@ export default function CalendarView() {
 
   const [refreshKey, setRefreshKey] = useState(0);
 
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadDay() {
+  const loadDay = useCallback(async () => {
       try {
         setLoading(true);
         setError(null);
@@ -544,34 +550,17 @@ export default function CalendarView() {
         const data: CalendarRangeResponse =
           await response.json();
 
-        if (!cancelled) {
-          setEvents(
-            data.events.map(hydrateEvent)
-          );
-        }
+        setEvents(data.events.map(hydrateEvent));
       } catch (err) {
-        if (!cancelled) {
-          setEvents([]);
-
-          setError(
-            err instanceof Error
-              ? err.message
-              : "Unable to load calendar."
-          );
-        }
+        setEvents([]);
+        setError(err instanceof Error ? err.message : "Unable to load calendar.");
       } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
+        setLoading(false);
       }
-    }
+    }, [selectedDate]);
 
-    void loadDay();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [selectedDate, refreshKey]);
+  useEffect(() => { const timer = window.setTimeout(() => { void loadDay(); }, 0); return () => window.clearTimeout(timer); }, [loadDay, refreshKey]);
+  useVisiblePolling(loadDay, events.some((event) => event.sportsStatus === "live" || event.sportsStatus === "delayed") ? 15_000 : 5 * 60_000, { immediate: false });
 
   function goPrevious() {
     setSelectedDate((current) => {

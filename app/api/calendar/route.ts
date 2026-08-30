@@ -2,7 +2,7 @@ import type { CalendarDateRange } from "@/engines/calendar";
 import type { CalendarEvent } from "@/core/contracts";
 import { getCurrentCosmicSession, kioskBootId } from "@/services/auth/server";
 import { getCalendarEngineForRequest } from "@/services/calendar/accountProvider";
-import { buildKioskCalendarSnapshot } from "@/services/calendar/sportsCalendar";
+import { buildKioskCalendarSnapshot, mergeCalendarEvents, sportsEventsForRange } from "@/services/calendar/sportsCalendar";
 import { getSportsSnapshot } from "@/services/sports/snapshot";
 import { getAccountPreferences } from "@/services/settings/accountPreferences";
 import { referencePreferences } from "@/services/settings/preferences";
@@ -38,7 +38,6 @@ export async function GET(
      * Used by the full Calendar application.
      */
     if (startParam || endParam) {
-      if (!calendar) return Response.json({ error: "Calendar is not connected.", events: [] }, { status: 200 });
       if (!startParam || !endParam) {
         return Response.json(
           {
@@ -78,13 +77,24 @@ export async function GET(
         end,
       };
 
-      const events =
-        await calendar.engine.getEvents(
-          range
-        );
+      let privateEvents: CalendarEvent[] = [];
+      if (calendar) {
+        try { privateEvents = await calendar.engine.getEvents(range); }
+        catch { accountCalendarError = true; }
+      }
+      let sportsEvents: CalendarEvent[] = [];
+      let sportsCalendarError = false;
+      if (account) {
+        try {
+          const preferences = process.env.DATABASE_URL ? await getAccountPreferences(account.id) : referencePreferences;
+          sportsEvents = sportsEventsForRange(await getSportsSnapshot(new Date(), preferences), range);
+        } catch { sportsCalendarError = true; }
+      }
 
       return Response.json({
-        events,
+        events: mergeCalendarEvents([...privateEvents, ...sportsEvents]),
+        ...(sportsCalendarError ? { sportsCalendarError: true } : {}),
+        ...(accountCalendarError ? { accountCalendarError: true } : {}),
       });
     }
 

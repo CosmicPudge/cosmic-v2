@@ -43,10 +43,16 @@ function dateKey(value: Date, timeZone: string): string {
   }).format(value);
 }
 
-function mergeUnique(events: CalendarEvent[]): CalendarEvent[] {
+export function mergeCalendarEvents(events: CalendarEvent[]): CalendarEvent[] {
   const unique = new Map<string, CalendarEvent>();
   for (const event of events) unique.set(event.id, event);
   return [...unique.values()].sort((left, right) => left.start.getTime() - right.start.getTime());
+}
+
+export function sportsEventsForRange(sports: SportsSnapshot, range: { start: Date; end: Date }): CalendarEvent[] {
+  return [...sports.live, ...sports.upcoming, ...sports.recent]
+    .filter((event) => event.start < range.end && (event.end ?? new Date(event.start.getTime() + DEFAULT_EVENT_DURATION_MS)) > range.start)
+    .map(sportsEventToCalendarEvent);
 }
 
 export function buildKioskCalendarSnapshot(
@@ -58,10 +64,8 @@ export function buildKioskCalendarSnapshot(
   accountCalendarError = false,
   sportsCalendarError = false,
 ): CalendarSnapshot {
-  const sportsEvents = sports
-    ? [...sports.live, ...sports.upcoming].map(sportsEventToCalendarEvent)
-    : [];
-  const events = mergeUnique([...accountEvents, ...sportsEvents]);
+  const sportsEvents = sports ? [...sports.live, ...sports.upcoming].map(sportsEventToCalendarEvent) : [];
+  const events = mergeCalendarEvents([...accountEvents, ...sportsEvents]);
   const todayKey = dateKey(now, timeZone);
   const today = events.filter((event) => dateKey(event.start, timeZone) === todayKey);
   const upcoming = events.filter((event) => dateKey(event.start, timeZone) > todayKey);
