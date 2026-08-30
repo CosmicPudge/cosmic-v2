@@ -1,9 +1,17 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { createPortal } from "react-dom";
+import { useEffect, useSyncExternalStore, type ReactNode } from "react";
 
 export function SchoolModal({ title, children, onClose }: { title: string; children: ReactNode; onClose: () => void }) {
-  return <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm" onMouseDown={onClose}><div className="flex min-h-full items-start justify-center px-4 py-4 sm:px-6 sm:py-6"><section className="flex max-h-[calc(100dvh-2rem)] min-h-0 w-full max-w-2xl flex-col overflow-hidden rounded-3xl border border-white/15 bg-[#0d111d]/95 p-6 shadow-2xl" onMouseDown={(event) => event.stopPropagation()} role="dialog" aria-modal="true" aria-label={title}><header className="flex shrink-0 items-center justify-between gap-4"><h2 className="text-xl font-semibold text-white">{title}</h2><button type="button" onClick={onClose} className="rounded-xl border border-white/10 px-3 py-2 text-sm text-white/60 hover:bg-white/10">Close</button></header><div className="mt-5 min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1">{children}</div></section></div></div>;
+  const mounted = useSyncExternalStore(() => () => {}, () => true, () => false);
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = previousOverflow; };
+  }, []);
+  if (!mounted) return null;
+  return createPortal(<div className="fixed inset-0 z-[200] overflow-y-auto bg-black/60 backdrop-blur-sm" onMouseDown={onClose}><div className="flex min-h-full items-center justify-center p-4 sm:p-6"><section className="flex max-h-[calc(100dvh-2rem)] min-h-0 w-full max-w-3xl flex-col overflow-hidden rounded-3xl border border-white/15 bg-[#0d111d]/95 p-6 shadow-2xl" onMouseDown={(event) => event.stopPropagation()} role="dialog" aria-modal="true" aria-label={title}><header className="flex shrink-0 items-center justify-between gap-4"><h2 className="text-xl font-semibold text-white">{title}</h2><button type="button" onClick={onClose} className="rounded-xl border border-white/10 px-3 py-2 text-sm text-white/60 hover:bg-white/10">Close</button></header><div className="mt-5 min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1">{children}</div></section></div></div>, document.body);
 }
 
 export function SchoolConfirm({ title, message, onCancel, onConfirm }: { title: string; message: string; onCancel: () => void; onConfirm: () => void }) {
