@@ -310,6 +310,7 @@ html, body { width: 100%; min-height: 100%; background: #030511; }
 
 /* Lightweight scene language for the remaining kiosk-only presentations. */
 .kiosk-native-scene { position: relative; display: flex; width: 100%; height: 100%; min-width: 0; min-height: 0; overflow: hidden; isolation: isolate; background: #070a18; }
+.kiosk-native-scene-background { position: absolute; inset: 0; z-index: -2; width: 100%; height: 100%; object-fit: cover; }
 .kiosk-native-scene::before { position: absolute; inset: 0; z-index: -1; background: radial-gradient(circle at 78% 24%, rgba(139,92,246,.18), transparent 30%), linear-gradient(145deg, #0b1028, #030511 72%); content: ""; }
 .kiosk-native-scene-ai::before { background: radial-gradient(circle at 50% 38%, rgba(139,92,246,.3), transparent 22%), radial-gradient(circle at 72% 72%, rgba(34,211,238,.12), transparent 26%), #040511; }
 .kiosk-native-scene-briefing::before { background: radial-gradient(ellipse at 52% 18%, rgba(244,114,182,.2), transparent 34%), linear-gradient(160deg, #211334, #06101e 75%); }

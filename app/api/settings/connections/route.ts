@@ -36,13 +36,15 @@ function unavailableStatus(provider: string, detail: string, available = false) 
 
 function ownedConnectionStatus(connections: Array<{ provider: string; providerType: string | null; status: string; reconnectRequired: boolean; displayName: string | null }>) {
   const find = (provider: string) => connections.find((connection) => normalizeProviderId(connection.provider) === provider);
+  const findAll = (provider: string) => connections.filter((connection) => normalizeProviderId(connection.provider) === provider);
   const spotify = find("spotify");
   const gmail = find("gmail");
-  const calendar = find("calendar");
+  const calendars = findAll("calendar");
+  const calendarStatusFor = (calendar: typeof calendars[number]) => ({ configured: true, connected: calendar.status === "connected" && !calendar.reconnectRequired, status: calendar.reconnectRequired ? "reconnect-required" : calendar.status, provider: "Calendar", detail: calendar.displayName ?? "Account-owned Calendar connection" });
   return {
     spotify: spotify ? { configured: true, connected: spotify.status === "connected" && !spotify.reconnectRequired, status: spotify.reconnectRequired ? "reconnect-required" : spotify.status, provider: "Spotify", detail: spotify.displayName ?? "Account-owned Spotify connection" } : unavailableStatus("Spotify", "Not connected", true),
     gmail: gmail ? { configured: true, connected: gmail.status === "connected" && !gmail.reconnectRequired, status: gmail.reconnectRequired ? "reconnect-required" : gmail.status, provider: "Gmail", detail: gmail.displayName ?? "Account-owned Gmail connection" } : unavailableStatus("Gmail", "Not connected", true),
-    calendar: calendar ? { configured: true, connected: calendar.status === "connected" && !calendar.reconnectRequired, status: calendar.reconnectRequired ? "reconnect-required" : calendar.status, provider: calendar.providerType === "caldav" ? "Calendar" : "Calendar", detail: calendar.displayName ?? "Account-owned Calendar connection" } : unavailableStatus("Calendar", "Not connected", true),
+    calendar: calendars.length ? calendars.map(calendarStatusFor) : [unavailableStatus("Calendar", "Not connected", true)],
     outlook: unavailableStatus("Outlook", "Not connected · Coming soon", false),
   };
 }
@@ -53,7 +55,7 @@ export async function GET(request: Request) {
     const connections = await listProviderConnections(account.id);
     return Response.json(ownedConnectionStatus(connections));
   }
-  if (account) return Response.json({ spotify: unavailableStatus("Spotify", "Connection storage unavailable", false), gmail: unavailableStatus("Gmail", "Connection storage unavailable", false), calendar: unavailableStatus("Calendar", "Connection storage unavailable", false), outlook: unavailableStatus("Outlook", "Not connected · Coming soon", false) });
+  if (account) return Response.json({ spotify: unavailableStatus("Spotify", "Connection storage unavailable", false), gmail: unavailableStatus("Gmail", "Connection storage unavailable", false), calendar: [unavailableStatus("Calendar", "Connection storage unavailable", false)], outlook: unavailableStatus("Outlook", "Not connected · Coming soon", false) });
   const spotifyReady = spotifyConfigured();
   const spotifyToken = readSpotifyToken();
   const spotifyReconnectRequired = Boolean(spotifyToken?.expires_at && spotifyToken.expires_at <= Date.now() && !spotifyToken.refresh_token);
@@ -64,7 +66,7 @@ export async function GET(request: Request) {
   const gmailConnected = Boolean(gmailToken) && !gmailReconnectRequired;
 
   return Response.json({
-    calendar: calendarStatus(),
+    calendar: [calendarStatus()],
     spotify: {
       configured: spotifyReady,
       connected: spotifyConnected,

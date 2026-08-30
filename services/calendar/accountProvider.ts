@@ -31,12 +31,15 @@ async function withSubscriptions(privateProvider: CalendarProvider, userId: stri
 
 export async function getAccountCalendarContext(userId: string, connectionId?: string) {
   const connections = (await listProviderConnections(userId)).filter((item) => item.provider === "calendar" && item.providerType !== "subscription");
-  const connection = connectionId ? connections.find((item) => item.id === connectionId) : connections[0];
-  if (!connection) return null;
-  const credentials = await getProviderCredentials<CalendarCredentialPayload>(userId, connection.id);
-  if (!credentials) return null;
-  const provider = new AppleCalendarProvider({ ...credentials, ownerKey: `${userId}:${connection.id}` });
-  return { connection, provider: await withSubscriptions(provider, userId), writer: new AppleCalendarWriter({ ...credentials, ownerKey: `${userId}:${connection.id}` }) };
+  const selectedConnections = connectionId ? connections.filter((item) => item.id === connectionId) : connections;
+  const contexts = (await Promise.all(selectedConnections.map(async (connection) => {
+    const credentials = await getProviderCredentials<CalendarCredentialPayload>(userId, connection.id);
+    if (!credentials) return null;
+    return { connection, provider: new AppleCalendarProvider({ ...credentials, ownerKey: `${userId}:${connection.id}` }), writer: new AppleCalendarWriter({ ...credentials, ownerKey: `${userId}:${connection.id}` }) };
+  }))).flatMap((context) => context ? [context] : []);
+  if (!contexts.length) return null;
+  const privateProvider = contexts.length === 1 ? contexts[0].provider : new CombinedCalendarProvider(contexts.map((context) => context.provider));
+  return { connection: contexts[0].connection, provider: await withSubscriptions(privateProvider, userId), writer: contexts[0].writer };
 }
 
 export async function getCalendarEngineForRequest(userId?: string, connectionId?: string) {
