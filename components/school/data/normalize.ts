@@ -14,21 +14,45 @@ type SerializedSchoolDashboardData = Omit<
 export function hydrateSchoolDashboard(
   data: SerializedSchoolDashboardData
 ): SchoolDashboardData {
-  const timeline = data.timeline.map((item) => ({
-    id: item.id,
-    title: item.title,
-    ...(item.subtitle ? { subtitle: item.subtitle } : {}),
-    start: new Date(item.start),
-    ...(item.end ? { end: new Date(item.end) } : {}),
-    type: item.type,
-  }));
+  const parseDate = (value: string) => {
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? null : date;
+  };
+
+  const timeline = data.timeline.flatMap((item) => {
+    const start = parseDate(item.start);
+    const end = item.end ? parseDate(item.end) : null;
+    if (!start || (item.end && !end)) return [];
+    return [{
+      id: item.id,
+      title: item.title,
+      ...(item.subtitle ? { subtitle: item.subtitle } : {}),
+      start,
+      ...(end ? { end } : {}),
+      type: item.type,
+    }];
+  });
 
   return {
     ...data,
-    events: data.events.map((event) => ({ ...event, start: new Date(event.start), end: new Date(event.end) })),
-    classes: data.classes.map((schoolClass) => ({ ...schoolClass, start: new Date(schoolClass.start), end: new Date(schoolClass.end) })),
-    assignments: data.assignments.map((assignment) => ({ ...assignment, due: new Date(assignment.due) })),
-    announcements: data.announcements.map((announcement) => ({ ...announcement, date: new Date(announcement.date) })),
+    events: data.events.flatMap((event) => {
+      const start = parseDate(event.start);
+      const end = parseDate(event.end);
+      return start && end ? [{ ...event, start, end }] : [];
+    }),
+    classes: data.classes.flatMap((schoolClass) => {
+      const start = parseDate(schoolClass.start);
+      const end = parseDate(schoolClass.end);
+      return start && end ? [{ ...schoolClass, start, end }] : [];
+    }),
+    assignments: data.assignments.flatMap((assignment) => {
+      const due = parseDate(assignment.due);
+      return due ? [{ ...assignment, due }] : [];
+    }),
+    announcements: data.announcements.flatMap((announcement) => {
+      const date = parseDate(announcement.date);
+      return date ? [{ ...announcement, date }] : [];
+    }),
     timeline,
   };
 }

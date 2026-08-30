@@ -38,7 +38,15 @@ export function useSchoolData({ enabled = true }: UseSchoolDataOptions = {}) {
         const json = hydrateSchoolDashboard((body.data ?? body) as Parameters<typeof hydrateSchoolDashboard>[0]);
 
         setData(json);
-        setSnapshot(body.snapshot ?? buildSchoolSnapshot(json));
+        // JSON serialization turns the server snapshot's Date fields into
+        // strings. Rebuild it from the already-hydrated dashboard data so
+        // every client consumer receives the Date-based contract.
+        const normalizedSnapshot = buildSchoolSnapshot(json);
+        setSnapshot({
+          ...normalizedSnapshot,
+          ...(body.snapshot?.updatedAt ? { updatedAt: body.snapshot.updatedAt } : {}),
+          ...(body.snapshot?.sourceStatus ? { sourceStatus: body.snapshot.sourceStatus } : {}),
+        });
         setError(body.error);
       } catch (err) {
         setError(
