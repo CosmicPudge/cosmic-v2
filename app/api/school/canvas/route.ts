@@ -57,8 +57,8 @@ export async function POST(request: Request) {
     if (!connection) return NextResponse.json({ error: "Canvas is not connected." }, { status: 409 });
     const credentials = await getProviderCredentials<{ feedUrl?: unknown }>(account.id, connection.id);
     if (!validFeedUrl(credentials?.feedUrl)) return NextResponse.json({ error: "Canvas feed URL is missing or invalid." }, { status: 409 });
-    const data = await new CanvasCalendarProvider(credentials.feedUrl).getDashboardData();
+    const result = await new CanvasCalendarProvider(credentials.feedUrl).getDashboardDataWithDiagnostics();
     await markProviderRefresh(account.id, connection.id);
-    return NextResponse.json({ data, syncedAt: new Date().toISOString(), assignmentCount: data.assignments.length });
+    return NextResponse.json({ data: result.data, diagnostics: result.diagnostics, syncedAt: new Date().toISOString(), assignmentCount: result.data.assignments.length });
   } catch (error) { if (error instanceof Response) return error; return NextResponse.json({ error: "Canvas sync failed. Check the feed URL and try again." }, { status: 502 }); }
 }

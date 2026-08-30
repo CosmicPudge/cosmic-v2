@@ -2,6 +2,7 @@ export type CalendarEventSource =
   | "apple"
   | "subscription"
   | "test"
+  | "school"
   | "sports";
 
 export type CalendarEventPriority =

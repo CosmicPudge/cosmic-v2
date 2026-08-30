@@ -15,6 +15,7 @@ import { settingsSections } from "@/config/settings";
 import { systemDestinations } from "@/config/system";
 import { readFinanceSnapshot } from "@/services/finance/localRepository";
 import { allSportsDirectoryEntries } from "@/services/sports/directory";
+import { schoolSnapshotSearchRecords } from "@/services/search/schoolAdapter";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -136,8 +137,22 @@ export const systemSearchProvider: SearchProvider = {
 export const schoolSearchProvider: SearchProvider = {
   id: "school",
   categories: ["school"],
-  search(query, { limit }) {
+  async search(query, { limit }) {
     const data = readSchoolSnapshot();
+    let normalizedRecords: SearchProviderRecord[] = [];
+    let normalizedAssignmentIds = new Set<string>();
+    let normalizedCourseIds = new Set<string>();
+    try {
+      const response = await fetch("/api/school/calendar", { cache: "no-store" });
+      if (response.ok) {
+        const body = await response.json() as { snapshot?: import("@/services/school/domain").SchoolSnapshot };
+        if (body.snapshot) {
+          normalizedRecords = schoolSnapshotSearchRecords(body.snapshot, query);
+          normalizedAssignmentIds = new Set(body.snapshot.assignments.map((item) => item.id));
+          normalizedCourseIds = new Set(body.snapshot.courses.map((item) => item.id));
+        }
+      }
+    } catch { /* Local-only School search remains available. */ }
     const activeTerm = data.terms.find((term) => term.active);
     const activeCourseIds = new Set(data.courses
       .filter((course) => !activeTerm || course.termId === activeTerm.id)
@@ -147,12 +162,14 @@ export const schoolSearchProvider: SearchProvider = {
 
     for (const course of data.courses) {
       if (activeTerm && course.termId !== activeTerm.id) continue;
+      if (normalizedCourseIds.has(course.id)) continue;
       if (!matches(query, course.name, course.code, course.instructor, course.location)) continue;
       records.push({ id: `course:${course.id}`, category: "school", title: course.name, subtitle: compact([course.code, course.instructor]).join(" · ") || "Course", description: course.location, keywords: ["course", "class"], icon: "🎓", href: "/school/courses", source: "school", boost: 14 });
     }
 
     for (const assignment of data.assignments) {
       if (assignment.courseId && activeTerm && !activeCourseIds.has(assignment.courseId)) continue;
+      if (normalizedAssignmentIds.has(assignment.id)) continue;
       if (!matches(query, assignment.title, assignment.description, assignment.status, assignment.courseId ? courseName.get(assignment.courseId) : undefined)) continue;
       const dueAt = dateValue(assignment.dueAt);
       const overdue = dueAt !== undefined && dueAt < Date.now() && assignment.status !== "completed";
@@ -170,7 +187,7 @@ export const schoolSearchProvider: SearchProvider = {
       records.push({ id: `resource:${resource.id}`, category: "school", title: resource.title, subtitle: `${resource.category} resource`, description: truncate(resource.notes ?? "School resource"), keywords: ["resource", resource.category], icon: "↗", href: "/school/resources", source: "school" });
     }
 
-    return bounded(records, limit);
+    return bounded([...normalizedRecords, ...records].filter((record, index, list) => list.findIndex((candidate) => candidate.id === record.id) === index), limit);
   },
 };
 

@@ -1,7 +1,12 @@
 import { SchoolProvider } from "../provider";
 import { SchoolDashboardData } from "../types";
-import { parseCanvasCalendar } from "../parser";
+import { parseCanvasCalendarWithDiagnostics, type CanvasCalendarDiagnostics } from "../parser";
 import { buildDashboard } from "../engine/engine";
+
+export interface CanvasDashboardResult {
+  data: SchoolDashboardData;
+  diagnostics: CanvasCalendarDiagnostics;
+}
 
 export class CanvasCalendarProvider implements SchoolProvider {
   constructor(private readonly feedUrl?: string) {}
@@ -9,11 +14,18 @@ export class CanvasCalendarProvider implements SchoolProvider {
       return Promise.resolve();
   }
   async getDashboardData(): Promise<SchoolDashboardData> {
+    return (await this.getDashboardDataWithDiagnostics()).data;
+  }
+
+  async getDashboardDataWithDiagnostics(): Promise<CanvasDashboardResult> {
     const url = this.feedUrl ?? process.env.CANVAS_CALENDAR_URL;
 
     if (!url) {
-  return buildDashboard([]);
-}
+      return {
+        data: buildDashboard([]),
+        diagnostics: { totalIcsEvents: 0, parsedEvents: 0, assignments: 0, classes: 0, otherEvents: 0 },
+      };
+    }
 
     const response = await fetch(url, {
       cache: "no-store",
@@ -25,8 +37,8 @@ export class CanvasCalendarProvider implements SchoolProvider {
 
     const text = await response.text();
 
-    const events = parseCanvasCalendar(text);
+    const parsed = parseCanvasCalendarWithDiagnostics(text);
 
-return buildDashboard(events);
+    return { data: buildDashboard(parsed.events), diagnostics: parsed.diagnostics };
   }
 }

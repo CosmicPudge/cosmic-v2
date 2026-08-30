@@ -8,6 +8,9 @@ import type {
 } from "@/core/contracts";
 import { useVisiblePolling } from "@/hooks/useVisiblePolling";
 import { kioskApiUrl } from "@/services/kioskRequest";
+import { useEntitlements } from "@/hooks/os/useEntitlements";
+import { useSchoolData } from "@/components/school/hooks/useSchoolData";
+import { mergeSchoolCalendarSnapshot } from "@/services/calendar/schoolAdapter";
 
 interface CalendarResponse {
   today: Array<Omit<CalendarEvent, "start" | "end"> & {
@@ -81,6 +84,8 @@ interface UseCalendarOptions {
 }
 
 export default function useCalendar({ refreshMs = DEFAULT_REFRESH_INTERVAL_MS }: UseCalendarOptions = {}) {
+  const { data: entitlements } = useEntitlements();
+  const school = useSchoolData({ enabled: entitlements.features["school.basic"] });
   const [calendar, setCalendar] =
     useState<CalendarSnapshot | null>(null);
 
@@ -116,10 +121,11 @@ export default function useCalendar({ refreshMs = DEFAULT_REFRESH_INTERVAL_MS }:
           );
         }
 
-        const snapshot =
+        let snapshot =
           hydrateSnapshot(
             await response.json()
           );
+        if (school.snapshot) snapshot = mergeSchoolCalendarSnapshot(snapshot, school.snapshot);
 
         if (!cancelled) {
           setCalendar(snapshot);
@@ -147,24 +153,26 @@ export default function useCalendar({ refreshMs = DEFAULT_REFRESH_INTERVAL_MS }:
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [school.snapshot]);
 
   const refresh = useCallback(async () => {
     try {
       const response = await fetch(kioskApiUrl("/api/calendar"), { credentials: "include", cache: "no-store" });
       if (!response.ok) throw new Error("Calendar is temporarily unavailable.");
-      setCalendar(hydrateSnapshot(await response.json()));
+      let snapshot = hydrateSnapshot(await response.json());
+      if (school.snapshot) snapshot = mergeSchoolCalendarSnapshot(snapshot, school.snapshot);
+      setCalendar(snapshot);
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unknown calendar error");
     }
-  }, []);
+  }, [school.snapshot]);
 
   useVisiblePolling(refresh, refreshMs, { immediate: false });
 
   return {
     calendar,
-    loading,
+    loading: loading || school.loading,
     error,
   };
 }

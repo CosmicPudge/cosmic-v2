@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   Bell,
   BookOpen,
+  ArrowLeft,
   CalendarDays,
   Flag,
   FolderOpen,
@@ -41,9 +42,15 @@ export function SchoolSidebar() {
             </span>
             <span className="text-sm font-semibold tracking-tight text-white">Cosmic School</span>
           </Link>
-          <Link href="/school/settings" aria-label="School Settings" className="rounded-xl border border-white/10 p-2.5 text-white/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-200/80">
-            <Settings className="size-4" aria-hidden="true" />
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link href="/os" className="inline-flex items-center gap-1.5 rounded-xl border border-sky-100/15 bg-sky-200/10 px-3 py-2 text-xs font-medium text-sky-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-200/80">
+              <ArrowLeft className="size-3.5" aria-hidden="true" />
+              Cosmic OS
+            </Link>
+            <Link href="/school/settings" aria-label="School Settings" className="rounded-xl border border-white/10 p-2.5 text-white/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-200/80">
+              <Settings className="size-4" aria-hidden="true" />
+            </Link>
+          </div>
         </div>
         <nav aria-label="School mobile navigation" className="mt-4 flex gap-2 overflow-x-auto pb-1">
           {navigation.map(({ href, label }) => {
@@ -86,6 +93,10 @@ export function SchoolSidebar() {
 
       <div className="mt-auto border-t border-white/10 pt-5">
         <SyncStatus />
+        <Link href="/os" className="mt-3 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-sky-100/75 transition hover:bg-sky-200/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-200/80">
+          <ArrowLeft className="size-4" aria-hidden="true" />
+          Back to Cosmic OS
+        </Link>
         <Link href="/school/settings" className="mt-2 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-white/55 transition hover:bg-white/[0.06] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-200/80">
           <Settings className="size-4" aria-hidden="true" />
           Settings
