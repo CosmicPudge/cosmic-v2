@@ -21,7 +21,7 @@ export function useSchoolData() {
   useEffect(() => {
     async function load() {
       try {
-        const res = await fetch("/api/school/calendar");
+        const res = await fetch("/api/school/calendar", { cache: "no-store" });
 
         if (!res.ok) {
           throw new Error("Unable to load school data.");
@@ -44,6 +44,9 @@ export function useSchoolData() {
     }
 
     load();
+    const refresh = () => void load();
+    window.addEventListener("cosmic:school-refresh", refresh);
+    return () => window.removeEventListener("cosmic:school-refresh", refresh);
   }, []);
 
   const intelligence: SchoolIntelligence | null =

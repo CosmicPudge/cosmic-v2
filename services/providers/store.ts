@@ -6,7 +6,7 @@ import { getDatabase } from "@/services/database/client";
 import { providerConnections, providerCredentials } from "@/services/database/schema";
 import { decryptCredentialPayload, encryptCredentialPayload } from "./credentialCrypto";
 
-export type ProviderName = "gmail" | "spotify" | "calendar" | "plaid";
+export type ProviderName = "gmail" | "spotify" | "calendar" | "canvas" | "plaid";
 export type ProviderConnection = typeof providerConnections.$inferSelect;
 export type ProviderCredential = Record<string, unknown>;
 

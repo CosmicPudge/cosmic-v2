@@ -4,11 +4,12 @@ import { parseCanvasCalendar } from "../parser";
 import { buildDashboard } from "../engine/engine";
 
 export class CanvasCalendarProvider implements SchoolProvider {
+  constructor(private readonly feedUrl?: string) {}
   refresh(): Promise<void> {
       return Promise.resolve();
   }
   async getDashboardData(): Promise<SchoolDashboardData> {
-    const url = process.env.CANVAS_CALENDAR_URL;
+    const url = this.feedUrl ?? process.env.CANVAS_CALENDAR_URL;
 
     if (!url) {
   return buildDashboard([]);
