@@ -31,6 +31,7 @@ import {
 } from "./kioskConfig";
 import { KioskSlideshowProvider } from "./KioskSlideshowContext";
 import type { KioskSlideshowPauseReason } from "@/core/contracts/Kiosk";
+import { useEntitlements } from "@/hooks/os/useEntitlements";
 
 const TEST_SPORTS: SportKind[] = [
   "nfl",
@@ -145,6 +146,7 @@ function createTestEvent(
 export default function KioskSlideshow() {
   const searchParams = useSearchParams();
   const { setPersistentClockHidden } = useKioskAmbientFrame();
+  const { data: entitlements } = useEntitlements();
 
   const { data: sportsData } = useSports({
     refreshMs: (snapshot) => snapshot?.live.length ? 10_000 : 60_000,
@@ -152,7 +154,7 @@ export default function KioskSlideshow() {
 
   const widgets = useMemo(() => {
     return dashboardWidgets
-      .filter((widget) =>
+      .filter((widget) => (widget.id !== "school" || entitlements.features["school.basic"]) &&
         WIDGET_REGISTRY.some(
           (entry) =>
             entry.id === widget.id &&
@@ -163,7 +165,7 @@ export default function KioskSlideshow() {
         (a, b) =>
           a.priority - b.priority,
       );
-  }, []);
+  }, [entitlements.features]);
 
   const testSportParam = searchParams.get("simulate-sport") ?? searchParams.get("kiosk-sport-test");
 

@@ -37,7 +37,7 @@ function featuresForPlan(plan: CosmicPlan): CosmicFeatureEntitlements {
   // Finance's local-first ledger, expected items, and basic category budgets are
   // core recordkeeping. Paid access is reserved for future forecasting/analytics
   // surfaces rather than blocking the user's own records.
-  return Object.fromEntries(featureNames.map((feature) => [feature, plan === "cosmic_plus" || !feature.includes("advanced") && !["finance.forecasting", "finance.analytics", "calendar.multi_connection", "mail.advanced"].includes(feature)])) as CosmicFeatureEntitlements;
+  return Object.fromEntries(featureNames.map((feature) => [feature, !feature.startsWith("school.") && (plan === "cosmic_plus" || !feature.includes("advanced") && !["finance.forecasting", "finance.analytics", "calendar.multi_connection", "mail.advanced"].includes(feature))])) as CosmicFeatureEntitlements;
 }
 
 function limitsForPlan(plan: CosmicPlan): CosmicLimitEntitlements {

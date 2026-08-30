@@ -61,7 +61,8 @@ export function replaceSchoolSnapshot(data: LocalSchoolData, scopeId?: string) {
   window.dispatchEvent(new CustomEvent(SCHOOL_UPDATE_EVENT, { detail: { scopeId, data } }));
 }
 
-export function useLocalSchoolRepository() {
+export function useLocalSchoolRepository(options: { enabled?: boolean } = {}) {
+  const enabled = options.enabled ?? true;
   const scope = useCosmicScope();
   const [data, setData] = useState<LocalSchoolData>(emptySchoolData);
   const [ready, setReady] = useState(false);
@@ -69,27 +70,28 @@ export function useLocalSchoolRepository() {
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
-      setData(readSchoolSnapshot(scope.id));
+      setData(enabled ? readSchoolSnapshot(scope.id) : emptySchoolData);
       setLoadedScope(scope.id);
       setReady(true);
     }, 0);
     return () => window.clearTimeout(timeout);
-  }, [scope.id]);
-  const sync = useCloudSnapshotSync({ domain: "school", scope, ready: ready && loadedScope === scope.id, data, setData, equals: (left, right) => JSON.stringify(left) === JSON.stringify(right) });
+  }, [enabled, scope.id]);
+  const sync = useCloudSnapshotSync({ domain: "school", scope, ready: enabled && ready && loadedScope === scope.id, data, setData, equals: (left, right) => JSON.stringify(left) === JSON.stringify(right) });
   useEffect(() => {
-    if (!ready) return;
+    if (!enabled || !ready) return;
     if (loadedScope !== scope.id) return;
     replaceSchoolSnapshot(data, scope.id);
-  }, [data, ready, loadedScope, scope.id]);
+  }, [data, enabled, ready, loadedScope, scope.id]);
   useEffect(() => {
     function sync(event: StorageEvent) {
-      if (event.key === createScopedStorageKey("school", scope.id) || event.key === SCHOOL_STORAGE_KEY) setData(readSchoolSnapshot(scope.id));
+      if (enabled && (event.key === createScopedStorageKey("school", scope.id) || event.key === SCHOOL_STORAGE_KEY)) setData(readSchoolSnapshot(scope.id));
     }
     window.addEventListener("storage", sync);
     return () => window.removeEventListener("storage", sync);
-  }, [scope.id]);
+  }, [enabled, scope.id]);
   useEffect(() => {
     function syncLocal(event: Event) {
+      if (!enabled) return;
       if (!(event instanceof CustomEvent)) return;
       const detail = event.detail as { scopeId?: string; data?: unknown };
       if (detail.scopeId && detail.scopeId !== scope.id) return;
@@ -98,7 +100,7 @@ export function useLocalSchoolRepository() {
     }
     window.addEventListener(SCHOOL_UPDATE_EVENT, syncLocal);
     return () => window.removeEventListener(SCHOOL_UPDATE_EVENT, syncLocal);
-  }, [scope.id]);
+  }, [enabled, scope.id]);
 
   const update = useCallback((recipe: (current: LocalSchoolData) => LocalSchoolData) => setData((current) => recipe(current)), []);
   const removeCourse = useCallback((id: string) => update((current) => ({ ...current, courses: current.courses.filter((course) => course.id !== id), assignments: current.assignments.filter((assignment) => assignment.courseId !== id), grades: current.grades.filter((grade) => grade.courseId !== id), resources: current.resources.filter((resource) => resource.courseId !== id) })), [update]);

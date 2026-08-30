@@ -32,9 +32,9 @@ export function useCosmicContext() {
   const clock = useClockRepository();
   const finance = useFinanceRepository();
   const connectedFinance = useConnectedFinanceData(25);
-  const school = useLocalSchoolRepository();
-  const settings = useSettingsRepository();
   const entitlements = useEntitlements();
+  const school = useLocalSchoolRepository({ enabled: entitlements.data.features["school.basic"] });
+  const settings = useSettingsRepository();
   const scope = useCosmicScope();
   const [dismissed, setDismissed] = useState<Record<string, number>>({});
   useEffect(() => { const timer = window.setTimeout(() => setDismissed({}), 0); return () => window.clearTimeout(timer); }, [scope.id]);
@@ -53,7 +53,7 @@ export function useCosmicContext() {
 
   const moduleForSource: Record<string, keyof typeof settings.data.preferences.modules> = { sports: "sports", finance: "finance", school: "school", garage: "garage", mail: "mail", calendar: "calendar" };
   const basicContextKinds = new Set(["current-event", "next-event", "current-class", "next-class", "assignment", "live-event", "upcoming-event", "maintenance", "timer", "unread"]);
-  const entitledCandidates = entitlements.data.features["context.full"] ? candidates : candidates.filter((item) => basicContextKinds.has(item.kind));
+  const entitledCandidates = (entitlements.data.features["context.full"] ? candidates : candidates.filter((item) => basicContextKinds.has(item.kind))).filter((item) => item.source !== "school" || entitlements.data.features["school.basic"]);
   const visible = entitledCandidates.filter((item) => settings.data.preferences.context.enabledSources.length === 0 || settings.data.preferences.context.enabledSources.includes(item.source)).filter((item) => !settings.data.preferences.context.suppressedKinds.includes(item.kind)).filter((item) => moduleForSource[item.source] ? settings.data.preferences.modules[moduleForSource[item.source]] : true).filter((item) => !dismissed[item.id]);
   const snapshot = useMemo(() => buildContextSnapshot(visible, now), [visible, now]);
   const dismiss = (item: CosmicContextItem) => setDismissed((current) => ({ ...current, [item.id]: nowValue ?? 0 }));

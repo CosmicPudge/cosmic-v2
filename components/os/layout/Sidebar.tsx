@@ -9,6 +9,7 @@ import { useOptionalBoot } from "@/components/os/boot/BootManager";
 import { useCosmicTransition } from "@/components/os/transition";
 import { CosmicIcon } from "@/components/cosmic-icons";
 import type { CosmicIconName } from "@/components/cosmic-icons";
+import { useEntitlements } from "@/hooks/os/useEntitlements";
 
 const sidebarIcons: Record<string, CosmicIconName> = {
   dashboard: "dashboard", search: "search", system: "system", calendar: "calendar", gmail: "gmail",
@@ -21,6 +22,7 @@ export default function Sidebar() {
   const boot = useOptionalBoot();
   const { prefetch } = useCosmicTransition();
   const pathname = usePathname() ?? "/";
+  const { data: entitlements } = useEntitlements();
 
   useEffect(() => {
     boot?.complete("sidebar");
@@ -31,7 +33,7 @@ export default function Sidebar() {
       <div className="flex h-full min-w-0 flex-col gap-3">
         <Link href="/os" className="flex items-center gap-3 rounded-xl px-3 py-3" onMouseEnter={() => prefetch("/os")} onFocus={() => prefetch("/os")}><span className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-violet-300/60 text-xl text-violet-200 shadow-[0_0_18px_rgba(168,85,247,.28)]">◎</span><span className="hidden min-w-0 lg:block"><span className="block text-sm font-medium tracking-[0.08em] text-white">COSMIC OS</span><span className="block text-[10px] uppercase tracking-[0.16em] text-violet-200/70">Everything in orbit.</span></span></Link>
         <nav className="flex min-w-0 gap-1 overflow-x-auto pb-1 lg:block lg:space-y-1 lg:overflow-visible" aria-label="Cosmic applications">
-        {apps.map((app) => (
+        {apps.filter((app) => app.id !== "school" || entitlements.features["school.basic"]).map((app) => (
           (() => {
             const active = pathname === app.route || (app.route !== "/os" && pathname.startsWith(`${app.route}/`));
             return (

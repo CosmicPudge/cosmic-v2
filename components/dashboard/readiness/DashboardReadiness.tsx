@@ -33,14 +33,14 @@ function activeWidgets(settings: CosmicSettingsLocalData) {
   });
 }
 
-export function getCriticalDashboardWidgetIds(settings: CosmicSettingsLocalData, profile: DisplayProfile, height: number) {
+export function getCriticalDashboardWidgetIds(settings: CosmicSettingsLocalData, profile: DisplayProfile, height: number, schoolEnabled = true) {
   const grid = GRID_PROFILES[profile];
   const reservedViewport = profile === "pocket" ? 500 : profile === "compact" ? 540 : profile === "comfortable" ? 600 : 660;
   const visibleRows = Math.max(1, Math.floor((height - reservedViewport) / grid.rowHeight));
   const ids: string[] = ["hero-weather", "context"];
   let row = 0;
   let column = 0;
-  for (const widget of activeWidgets(settings)) {
+  for (const widget of activeWidgets(settings).filter((item) => item.id !== "school" || schoolEnabled)) {
     const cols = profile === "pocket" ? 1 : Math.min(widget.cols, profile === "compact" ? 3 : 4);
     if (column + cols > grid.columns) { row += 1; column = 0; }
     if (row >= visibleRows) break;

@@ -81,8 +81,9 @@ function DashboardReady() {
 export default function Dashboard() {
   const { profile, height } = useDisplay();
   const { data: settings } = useSettingsRepository();
+  const { data: entitlements } = useEntitlements();
   const scope = useCosmicScope();
-  const criticalWidgetIds = useMemo(() => getCriticalDashboardWidgetIds(settings, profile, height), [height, profile, settings]);
+  const criticalWidgetIds = useMemo(() => getCriticalDashboardWidgetIds(settings, profile, height, entitlements.features["school.basic"]), [entitlements.features, height, profile, settings]);
   return (
     <DashboardProvider>
   <DashboardReadinessProvider key={scope.id} criticalWidgetIds={criticalWidgetIds}>

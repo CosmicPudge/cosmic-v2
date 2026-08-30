@@ -1,0 +1,78 @@
+export type SchoolSourceType = "upload-pdf" | "upload-text" | "email" | "calendar" | "manual";
+export type SchoolSourceStatus = "pending" | "processing" | "ready" | "needs_review" | "failed" | "unsupported";
+export type SchoolFactKind = "course" | "assignment" | "grade" | "schedule" | "event-type" | "deadline" | "location" | "time" | "timezone" | "attire" | "required-item" | "audience" | "contact" | "other";
+export type SchoolFactCertainty = "explicit" | "inferred" | "unknown" | "conflicting";
+
+export interface SchoolSource {
+  id: string;
+  accountId: string;
+  type: SchoolSourceType;
+  title: string;
+  originalName?: string;
+  provider?: string;
+  importedAt: string;
+  sourceDate?: string;
+  status: SchoolSourceStatus;
+  version: number;
+  contentHash?: string;
+  lastProcessedAt?: string;
+}
+
+export interface SchoolProvenance {
+  sourceId: string;
+  sourceVersion: number;
+  locator?: { pageNumber?: number; section?: string; startOffset?: number; endOffset?: number };
+  excerpt?: string;
+}
+
+export interface SchoolFact {
+  id: string;
+  accountId: string;
+  kind: SchoolFactKind;
+  subject: string;
+  value: string;
+  certainty: SchoolFactCertainty;
+  provenance: SchoolProvenance[];
+  extractedAt: string;
+  requiresValidation?: boolean;
+}
+
+export interface SchoolEvent {
+  id: string;
+  accountId: string;
+  title: string;
+  category?: "academic" | "afrotc" | "other";
+  eventType?: "class" | "pt" | "llab" | "meeting" | "briefing" | "training" | "appointment" | "exam" | "assignment" | "deadline" | "orientation" | "other";
+  startsAt?: string;
+  endsAt?: string;
+  timezone?: string;
+  recurrence?: string;
+  location?: { name: string; building?: string; room?: string; address?: string; onlineUrl?: string };
+  attire?: { value: string; certainty: SchoolFactCertainty };
+  requiredItems?: string[];
+  audience?: string;
+  action?: string;
+  factIds: string[];
+  provenance: SchoolProvenance[];
+  certainty: SchoolFactCertainty;
+}
+
+export interface SchoolActionItem {
+  id: string;
+  accountId: string;
+  title: string;
+  dueAt?: string;
+  status: "open" | "completed" | "needs_review";
+  factIds: string[];
+  provenance: SchoolProvenance[];
+}
+
+export interface SchoolConflict {
+  id: string;
+  accountId: string;
+  factIds: string[];
+  description: string;
+  status: "open" | "resolved";
+  createdAt: string;
+  resolvedAt?: string;
+}

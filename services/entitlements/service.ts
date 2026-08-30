@@ -9,8 +9,14 @@ import { accountEntitlements, adminEntitlementOverrides } from "@/services/datab
 import { getBillingSubscription } from "@/services/billing/repository";
 import { isSubscriptionEntitled } from "@/services/billing/contracts";
 import { isCheckoutConfigured } from "@/services/billing/stripe";
+import { getSchoolAccess } from "@/services/school/access";
 
 const developmentOverrides = new Map<string, CosmicPlan>();
+
+function applySchoolAccess(entitlements: CosmicEntitlements, accountId: string): CosmicEntitlements {
+  const schoolEnabled = getSchoolAccess({ id: accountId }).enabled;
+  return { ...entitlements, features: { ...entitlements.features, "school.basic": schoolEnabled, "school.advanced": schoolEnabled } };
+}
 
 function validPlan(value: unknown): value is CosmicPlan {
   return value === "free" || value === "cosmic_plus";
@@ -18,15 +24,15 @@ function validPlan(value: unknown): value is CosmicPlan {
 
 export async function getAccountEntitlements(accountId: string): Promise<CosmicEntitlements> {
   const override = getDevelopmentEntitlement(accountId);
-  if (override && process.env.NODE_ENV !== "production") return entitlementsForPlan(override, "development-override");
+  if (override && process.env.NODE_ENV !== "production") return applySchoolAccess(entitlementsForPlan(override, "development-override"), accountId);
   if (isDatabaseConfigured()) {
     try {
       const rows = await getDatabase().select({ plan: adminEntitlementOverrides.plan, expiresAt: adminEntitlementOverrides.expiresAt }).from(adminEntitlementOverrides).where(eq(adminEntitlementOverrides.accountId, accountId)).limit(1);
       const record = rows[0];
-      if (record && (!record.expiresAt || record.expiresAt > new Date()) && validPlan(record.plan)) return entitlementsForPlan(record.plan, "admin-override");
+      if (record && (!record.expiresAt || record.expiresAt > new Date()) && validPlan(record.plan)) return applySchoolAccess(entitlementsForPlan(record.plan, "admin-override"), accountId);
     } catch { /* Migrations may not be applied yet; billing remains the safe fallback. */ }
   }
-  return entitlementsForPlan(await getAccountBillingPlan(accountId), "account");
+  return applySchoolAccess(entitlementsForPlan(await getAccountBillingPlan(accountId), "account"), accountId);
 }
 
 export function getDevelopmentEntitlement(accountId: string): CosmicPlan | undefined {

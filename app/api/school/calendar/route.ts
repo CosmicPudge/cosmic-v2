@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { CanvasCalendarProvider } from "@/components/school/data/providers/CanvasCalendarProvider";
+import { requireSchoolAccess } from "@/services/school/access";
 
-export async function GET() {
+export async function GET(request: Request) {
+  await requireSchoolAccess(request);
   try {
     const provider = new CanvasCalendarProvider();
 

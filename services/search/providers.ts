@@ -66,12 +66,13 @@ function bounded(records: SearchProviderRecord[], limit: number) {
   return records.slice(0, Math.max(limit * 5, 40));
 }
 
-export const appsSearchProvider: SearchProvider = {
+export function createAppsSearchProvider(schoolEnabled: boolean): SearchProvider {
+  return {
   id: "apps",
   categories: ["apps"],
   search(query) {
     return apps
-      .filter((app) => app.enabled !== false)
+      .filter((app) => app.enabled !== false && (app.id !== "school" || schoolEnabled))
       .filter((app) => matches(query, app.name, app.description, app.route, ...app.keywords))
       .map((app) => ({
         id: app.id,
@@ -85,7 +86,10 @@ export const appsSearchProvider: SearchProvider = {
         source: "apps",
       }));
   },
-};
+  };
+}
+
+export const appsSearchProvider = createAppsSearchProvider(false);
 
 export const settingsSearchProvider: SearchProvider = {
   id: "settings",
@@ -430,12 +434,13 @@ export const financeSearchProvider: SearchProvider = {
   },
 };
 
-export function createSearchProviders(): SearchProvider[] {
+export function createSearchProviders(options: { schoolEnabled?: boolean } = {}): SearchProvider[] {
+  const schoolEnabled = options.schoolEnabled ?? false;
   return [
-    appsSearchProvider,
+    createAppsSearchProvider(schoolEnabled),
     settingsSearchProvider,
     systemSearchProvider,
-    schoolSearchProvider,
+    ...(schoolEnabled ? [schoolSearchProvider] : []),
     garageSearchProvider,
     projectsSearchProvider,
     notesSearchProvider,

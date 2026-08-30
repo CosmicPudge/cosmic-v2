@@ -17,6 +17,7 @@ import { useSettingsData } from "./SettingsProvider";
 import SportsPreferencesPanel from "./SportsPreferencesPanel";
 import GarageNotificationPreferencesPanel from "./GarageNotificationPreferences";
 import CosmicAIPreferencesPanel from "./CosmicAIPreferencesPanel";
+import { useEntitlements } from "@/hooks/os/useEntitlements";
 
 interface ConnectionStatus { configured: boolean; connected: boolean; provider: string; detail: string; status: "connected" | "disconnected" | "reconnect-required" | "configured" | "unavailable" }
 interface ConnectionPayload { calendar: ConnectionStatus[] & ConnectionStatus; spotify: ConnectionStatus; gmail: ConnectionStatus; outlook?: ConnectionStatus }
@@ -92,6 +93,7 @@ function useLocalInventory() {
 }
 
 export default function SettingsView({ compact = false }: { compact?: boolean }) {
+  const { data: entitlements } = useEntitlements();
   const settings = useSettingsData(); const clock = useClockData(); const search = useSearchRuntime();
   const system = useSystem(); const reducedMotion = system.snapshot.power.reducedMotion; const inventory = useLocalInventory();
   const weatherStatus = system.snapshot.permissions.geolocation === "granted" ? "Browser location allowed" : system.snapshot.permissions.geolocation === "denied" ? "Permission denied; fallback location is used" : system.snapshot.permissions.geolocation === "prompt" ? "Browser will ask when Weather needs location" : system.snapshot.capabilities.geolocation ? "Browser location available; permission unknown" : "Unavailable in this browser";
@@ -132,6 +134,9 @@ export default function SettingsView({ compact = false }: { compact?: boolean })
   };
 
   const sectionContent = (() => {
+    if (activeSection === "apps" && !entitlements.features["school.basic"]) {
+      return <><SectionIntro title="Apps" description="App availability is managed by your Cosmic account." /><p className="mt-6 rounded-2xl border border-white/9 bg-white/[0.03] p-5 text-sm text-white/45">No private app modules are available for this account.</p></>;
+    }
     switch (activeSection) {
       case "general": return <><SectionIntro title="General" description="A concise overview of Cosmic’s canonical settings and local user preferences. Changes save immediately." /><SettingsRow title="Local profile" description="A development-friendly preference preset. This is local-only and does not represent authentication or an account identity."><select aria-label="Local profile" value={settings.data.profileId} onChange={(event) => settings.setProfile(event.target.value as typeof settings.data.profileId)} className={controlClass}><option value="neutral">Neutral</option><option value="reference">Reference user</option><option value="sports-heavy">Sports-heavy</option><option value="student">Student</option><option value="minimal">Minimal</option></select></SettingsRow><SettingsRow title="Time format" description="This shortcut edits the canonical Clock preference used across Cosmic."><select aria-label="Time format" value={clock.data.preferences.hourFormat} onChange={(event) => clock.setHourFormat(event.target.value as "system" | "12" | "24")} className={controlClass}><option value="system">System</option><option value="12">12-hour</option><option value="24">24-hour</option></select></SettingsRow><SettingsRow title="Automatic Ambient" description={`Currently ${settings.data.ambient.enabled && settings.data.ambient.idleMinutes ? `after ${settings.data.ambient.idleMinutes} minutes` : "disabled"}. Manual Ambient always remains available.`}><Link href="/os/ambient" className={buttonClass()}>Open Ambient <ArrowUpRight className="h-4 w-4" /></Link></SettingsRow></>;
       case "appearance": return <><SectionIntro title="Appearance" description="Cosmic stays intentionally dark and celestial. This preference reduces decorative interface effects without inventing a second theme." /><SettingsRow title="Reduce interface effects" description="Shortens transitions and disables decorative animation. The celestial canvas also uses effective motion Off."><Switch checked={settings.data.appearance.reducedEffects} onChange={settings.setReducedEffects} label="Reduce interface effects" /></SettingsRow><SettingsRow title="System reduced motion" description="The browser preference always wins inside the renderer, even if Cosmic motion is set to Normal."><StatusPill status={reducedMotion ? "Enabled" : "Not requested"} /></SettingsRow></>;

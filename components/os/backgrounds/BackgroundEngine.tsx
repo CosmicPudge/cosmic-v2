@@ -10,6 +10,7 @@ import CalendarScene from "./scenes/CalendarScene";
 import AssistantScene from "./scenes/AssistantScene";
 import SchoolScene from "./scenes/SchoolScene";
 import DefaultScene from "./scenes/DefaultScene";
+import { useEntitlements } from "@/hooks/os/useEntitlements";
 
 const sceneMap = {
   dashboard: DashboardScene,
@@ -31,7 +32,8 @@ export default function BackgroundEngine({
   app,
   context,
 }: BackgroundEngineProps) {
-  const Scene = sceneMap[app] ?? DefaultScene;
+  const { data: entitlements } = useEntitlements();
+  const Scene = app === "school" && !entitlements.features["school.basic"] ? DefaultScene : sceneMap[app] ?? DefaultScene;
 
   return <Scene context={context as never} />;
 }
