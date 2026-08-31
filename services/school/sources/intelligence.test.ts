@@ -31,6 +31,17 @@ test("resolves only an explicitly supplied calendar date", () => {
   assert.equal(result.events[0]?.startsAt, "2026-09-03T06:30:00.000Z");
 });
 
+test("extracts a full-year assignment deadline without guessing the year", () => {
+  const result = extractDocumentIntelligence(source, "Reading Response 8 is due 2026-09-10 at 11:59 PM.");
+  assert.equal(result.actionItems[0]?.title, "Reading Response 8");
+  assert.equal(result.actionItems[0]?.dueAt, "2026-09-10T23:59:00.000Z");
+});
+
+test("does not invent a deadline from an ambiguous month/day", () => {
+  const result = extractDocumentIntelligence(source, "Several reading responses are due September 10.");
+  assert.equal(result.actionItems.some((item) => item.dueAt), false);
+});
+
 test("detects conservative cross-source event conflicts", () => {
   const first = extractDocumentIntelligence(source, "LLAB 2026-09-03 at 0600 in HPER.").events[0]!;
   const second = extractDocumentIntelligence({ ...source, id: "source-2", title: "Updated guide" }, "LLAB 2026-09-03 at 0630 in Fieldhouse.").events[0]!;

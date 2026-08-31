@@ -18,6 +18,9 @@ export function schoolSnapshotSearchRecords(snapshot: SchoolSnapshot, query: Sea
   for (const assignment of snapshot.assignments) {
     if (matches(query, assignment.title, "school assignment")) records.push({ id: `school:assignment:${assignment.id}`, category: "school", title: assignment.title, subtitle: `School Assignment${date(assignment.due) ? ` · Due ${date(assignment.due)}` : ""}`, description: "School assignment", keywords: ["school", "assignment"], icon: "✓", href: "/school/assignments", source: "school", boost: 18, updatedAt: assignment.due.toISOString() });
   }
+  for (const assignment of snapshot.planningAssignments ?? []) {
+    if (matches(query, assignment.title, assignment.courseName, "school assignment")) records.push({ id: `school:planning-assignment:${assignment.id}`, category: "school", title: assignment.title, subtitle: `School Planning${date(assignment.dueAt) ? ` · Due ${date(assignment.dueAt)}` : ""}`, description: assignment.description, keywords: ["school", "assignment", "planning", assignment.sourceType], icon: "✓", href: "/school/assignments", source: "school", boost: 19, updatedAt: assignment.updatedAt.toISOString() });
+  }
   for (const event of snapshot.events) {
     if (matches(query, event.title, event.location, event.course)) records.push({ id: `school:event:${event.source}:${event.id}`, category: "school", title: event.title, subtitle: `School Event${date(event.start) ? ` · ${date(event.start)}` : ""}`, description: event.location, keywords: ["school", "event", event.type], icon: "◷", href: "/school", source: "school", boost: 12, updatedAt: event.start.toISOString() });
   }

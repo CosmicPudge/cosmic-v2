@@ -205,6 +205,7 @@ export const providerConnections = pgTable("provider_connections", {
   providerAccountId: text("provider_account_id"),
   displayName: text("display_name"),
   email: text("email"),
+  metadata: jsonb("metadata"),
   status: text("status").notNull().default("connected"),
   reconnectRequired: boolean("reconnect_required").notNull().default(false),
   lastSuccessfulRefreshAt: timestamp("last_successful_refresh_at", { withTimezone: true }),
@@ -240,6 +241,34 @@ export const schoolSources = pgTable("school_sources", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [index("school_sources_user_id_index").on(table.userId), index("school_sources_status_index").on(table.processingStatus), check("school_sources_type_check", sql`${table.sourceType} in ('upload-pdf', 'upload-text', 'manual')`), check("school_sources_status_check", sql`${table.processingStatus} in ('uploaded', 'processing', 'ready', 'ready_degraded', 'needs_review', 'failed', 'unsupported')`)]);
+
+export const schoolAssignments = pgTable("school_assignments", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  description: text("description"),
+  courseId: text("course_id"),
+  courseName: text("course_name"),
+  sourceType: text("source_type").notNull(),
+  sourceId: text("source_id"),
+  externalId: text("external_id"),
+  dueAt: timestamp("due_at", { withTimezone: true }),
+  availableAt: timestamp("available_at", { withTimezone: true }),
+  lockAt: timestamp("lock_at", { withTimezone: true }),
+  completionStatus: text("completion_status").notNull().default("unknown"),
+  planningStatus: text("planning_status").notNull().default("not_started"),
+  priority: text("priority").notNull().default("normal"),
+  estimatedMinutes: integer("estimated_minutes"),
+  pointsPossible: doublePrecision("points_possible"),
+  published: boolean("published"),
+  canvasUrl: text("canvas_url"),
+  personalNotes: text("personal_notes"),
+  provenance: jsonb("provenance"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  lastSyncedAt: timestamp("last_synced_at", { withTimezone: true }),
+  sourceUpdatedAt: timestamp("source_updated_at", { withTimezone: true }),
+}, (table) => [index("school_assignments_user_id_index").on(table.userId), index("school_assignments_due_at_index").on(table.userId, table.dueAt), uniqueIndex("school_assignments_source_identity_unique").on(table.userId, table.sourceType, table.sourceId, table.externalId), check("school_assignments_source_type_check", sql`${table.sourceType} in ('canvas-api', 'canvas-calendar', 'school-source', 'manual')`), check("school_assignments_completion_status_check", sql`${table.completionStatus} in ('upcoming', 'due_soon', 'overdue', 'completed', 'submitted', 'graded', 'missing', 'unknown')`), check("school_assignments_planning_status_check", sql`${table.planningStatus} in ('not_started', 'planned', 'in_progress', 'done')`), check("school_assignments_priority_check", sql`${table.priority} in ('low', 'normal', 'high', 'critical')`)]);
 
 export const clockAlarms = pgTable("clock_alarms", {
   id: text("id").primaryKey(),

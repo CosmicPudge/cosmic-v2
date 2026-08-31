@@ -64,6 +64,7 @@ export interface SchoolActionItem {
   accountId: string;
   title: string;
   dueAt?: string;
+  dueText?: string;
   status: "open" | "completed" | "needs_review";
   factIds: string[];
   provenance: SchoolProvenance[];

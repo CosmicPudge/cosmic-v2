@@ -1,5 +1,8 @@
 import type { SchoolDashboardData, SchoolEvent, SchoolAssignment } from "@/components/school/data/types";
 import type { SchoolSourceIntelligence } from "@/core/contracts/SchoolIntelligence";
+import type { SchoolPlanRecommendation, SchoolPlanningAssignment, SchoolTimelineEntry } from "@/core/contracts/SchoolPlanning";
+
+export interface SchoolCanvasCourse { id: string; name: string; courseCode?: string; startAt?: string; endAt?: string; workflowState?: string; url?: string; }
 
 export interface SchoolSnapshot {
   courses: SchoolDashboardData["classes"];
@@ -11,6 +14,11 @@ export interface SchoolSnapshot {
   updatedAt: string;
   sourceStatus?: { canvas: "healthy" | "error" | "not_connected"; lastSyncedAt?: string | null };
   sourceIntelligence?: SchoolSourceIntelligence;
+  planningAssignments?: SchoolPlanningAssignment[];
+  timelineEntries?: SchoolTimelineEntry[];
+  planningRecommendations?: SchoolPlanRecommendation[];
+  conflicts?: Array<{ id: string; firstId: string; secondId: string; description: string }>;
+  canvasCourses?: SchoolCanvasCourse[];
 }
 
 function stableEventKey(event: SchoolEvent): string {

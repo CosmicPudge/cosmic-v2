@@ -59,7 +59,7 @@ export async function markProviderReconnectRequired(userId: string, connectionId
   await getDatabase().update(providerConnections).set({ reconnectRequired: true, status: "reconnect-required", updatedAt: new Date() }).where(and(eq(providerConnections.userId, userId), eq(providerConnections.id, connectionId)));
 }
 
-export async function updateProviderConnection(userId: string, connectionId: string, input: { displayName?: string; status?: string; reconnectRequired?: boolean }) {
+export async function updateProviderConnection(userId: string, connectionId: string, input: { displayName?: string; status?: string; reconnectRequired?: boolean; metadata?: Record<string, unknown> }) {
   const rows = await getDatabase().update(providerConnections).set({ ...input, updatedAt: new Date() }).where(and(eq(providerConnections.userId, userId), eq(providerConnections.id, connectionId))).returning();
   return rows[0] ?? null;
 }

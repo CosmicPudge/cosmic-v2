@@ -8,3 +8,21 @@ The central decision is `getSchoolAccess` in
 `services/school/access.ts`. When the capability is opened to more accounts,
 change that decision there and update the entitlement policy; do not add
 identity checks to individual components.
+
+## Canvas Academic API availability
+
+Canvas Calendar/iCal is the currently usable Canvas integration. The optional
+Canvas Academic API provider remains available for institution-approved access
+and future OAuth/LTI integration. It never requests a USU username, password,
+A-number, or SSO credential.
+
+USU Canvas has been manually verified to restrict self-service token creation:
+
+> Your Canvas administrators have chosen to limit your ability to generate
+> your own access token. Please reach out to your Canvas administrators to have
+> them generate an access token on your behalf.
+
+When no academic token is configured, School remains healthy and the UI labels
+the optional connection **Institution access required**. Migrations `0029` and
+`0030` remain useful for the provider's normalized Canvas fields and safe course
+metadata when institution-approved access becomes available.

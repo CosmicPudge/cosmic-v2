@@ -46,6 +46,12 @@ export function extractDocumentIntelligence(source: SchoolSource, text: string):
     if (event) events.push(event);
     const action = /^(?:action|to do|todo|required)\s*:\s*(.+)$/i.exec(line);
     if (action) actionItems.push({ id: `${source.id}:action:${actionItems.length + 1}`, accountId: source.accountId, title: action[1].trim(), status: "needs_review", factIds: [], provenance: [provenance(source, text, line)] });
+    const deadline = /^(.+?)\s+is\s+due\s+(20\d{2}-\d{2}-\d{2})(?:\s+at\s+(\d{1,2}:\d{2}\s*(?:AM|PM)?))?\.?$/i.exec(line);
+    if (deadline) {
+      const time = deadline[3] ? parseTime(deadline[3]) ?? "23:59" : "23:59";
+      const dueAt = new Date(`${deadline[2]}T${time}:00Z`);
+      actionItems.push({ id: `${source.id}:assignment:${actionItems.length + 1}`, accountId: source.accountId, title: deadline[1].trim(), dueAt: dueAt.toISOString(), status: "needs_review", factIds: [], provenance: [provenance(source, text, line)] });
+    }
   }
   if (/\b(?:TBD|TBA|not specified)\b/i.test(text)) warnings.push("Source contains an unspecified value; no value was inferred.");
   return { facts, events, actionItems, conflicts: [], warnings };

@@ -38,6 +38,23 @@ export function schoolSnapshotToCalendarEvents(snapshot: SchoolSnapshot): Calend
       travelRequired: false,
       completed: assignment.completed,
     }));
+  const planningAssignments = (snapshot.planningAssignments ?? []).map((assignment) => ({
+    id: `school:planning-assignment:${assignment.id}`,
+    uid: assignment.id,
+    title: assignment.title,
+    ...(assignment.description ? { description: assignment.description } : {}),
+    start: assignment.dueAt ?? assignment.createdAt,
+    end: assignment.dueAt ?? assignment.createdAt,
+    allDay: !assignment.dueAt,
+    calendarName: "School",
+    category: "school" as const,
+    source: "school" as const,
+    sourceId: `planning-assignment:${assignment.id}`,
+    sourceProvider: assignment.sourceType,
+    priority: assignment.priority === "critical" || assignment.priority === "high" ? "high" as const : "normal" as const,
+    travelRequired: false,
+    completed: assignment.completionStatus === "completed" || assignment.planningStatus === "done",
+  }));
   const documentEvents = (snapshot.sourceIntelligence?.events ?? []).flatMap((event) => {
     if (!event.startsAt) return [];
     const start = new Date(event.startsAt);
@@ -61,7 +78,8 @@ export function schoolSnapshotToCalendarEvents(snapshot: SchoolSnapshot): Calend
       completed: false,
     }];
   });
-  return [...events, ...assignments, ...documentEvents];
+  const legacyIds = new Set(assignments.map((item) => item.uid));
+  return [...events, ...assignments, ...planningAssignments.filter((item) => !legacyIds.has(item.uid)), ...documentEvents];
 }
 
 export function mergeSchoolCalendarSnapshot(calendar: CalendarSnapshot, school: SchoolSnapshot): CalendarSnapshot {

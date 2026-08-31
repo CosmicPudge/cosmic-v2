@@ -190,6 +190,27 @@
       "when": 1787869000000,
       "tag": "0027_school_source_ai_status",
       "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1787869500000,
+      "tag": "0028_school_assignments",
+      "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1787870000000,
+      "tag": "0029_canvas_academic_fields",
+      "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1787870500000,
+      "tag": "0030_canvas_connection_metadata",
+      "breakpoints": true
     }
   ]
 }
