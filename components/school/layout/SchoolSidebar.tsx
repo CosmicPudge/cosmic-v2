@@ -23,6 +23,7 @@ const navigation = [
   { href: "/school/courses", label: "Courses", icon: BookOpen },
   { href: "/school/assignments", label: "Assignments", icon: ListChecks },
   { href: "/school/schedule", label: "Schedule", icon: CalendarDays },
+  { href: "/school/sources", label: "Sources", icon: FolderOpen },
   { href: "/school/grades", label: "Grades", icon: GraduationCap },
   { href: "/school/resources", label: "Resources", icon: FolderOpen },
   { href: "/school/goals", label: "Goals", icon: Target },

@@ -18,7 +18,7 @@ export function extractExplicitSchoolFacts(source: SchoolSource, text: string, n
     if (!match) return;
     const kind = match[1].toLowerCase().replace(/\s+/g, "-") as SchoolFactKind;
     const value = match[2].trim();
-    const provenance: SchoolProvenance = { sourceId: source.id, sourceVersion: source.version, locator: { startOffset: text.indexOf(line) }, excerpt: line };
+    const provenance: SchoolProvenance = { sourceId: source.id, sourceVersion: source.version, locator: { startOffset: text.indexOf(line) }, excerpt: line, extractor: "deterministic", extractorVersion: 1 };
     facts.push({ id: factId(source.id, facts.length), accountId: source.accountId, kind, subject: kind, value, certainty: "explicit", provenance: [provenance], extractedAt: now.toISOString() });
   });
   if (/\bTBD\b|\bTBA\b|not specified/i.test(text)) {

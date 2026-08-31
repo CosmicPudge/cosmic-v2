@@ -1,6 +1,6 @@
 export type SchoolSourceType = "upload-pdf" | "upload-text" | "email" | "calendar" | "manual";
-export type SchoolSourceStatus = "pending" | "processing" | "ready" | "needs_review" | "failed" | "unsupported";
-export type SchoolFactKind = "course" | "assignment" | "grade" | "schedule" | "event-type" | "deadline" | "location" | "time" | "timezone" | "attire" | "required-item" | "audience" | "contact" | "other";
+export type SchoolSourceStatus = "pending" | "processing" | "ready" | "ready_degraded" | "needs_review" | "failed" | "unsupported";
+export type SchoolFactKind = "course" | "assignment" | "grade" | "schedule" | "event-type" | "deadline" | "location" | "time" | "timezone" | "attire" | "uniform" | "required-item" | "audience" | "contact" | "other";
 export type SchoolFactCertainty = "explicit" | "inferred" | "unknown" | "conflicting";
 
 export interface SchoolSource {
@@ -23,6 +23,8 @@ export interface SchoolProvenance {
   sourceVersion: number;
   locator?: { pageNumber?: number; section?: string; startOffset?: number; endOffset?: number };
   excerpt?: string;
+  extractor?: "deterministic" | "ai";
+  extractorVersion?: number;
 }
 
 export interface SchoolFact {
@@ -75,4 +77,12 @@ export interface SchoolConflict {
   status: "open" | "resolved";
   createdAt: string;
   resolvedAt?: string;
+}
+
+export interface SchoolSourceIntelligence {
+  facts: SchoolFact[];
+  events: SchoolEvent[];
+  actionItems: SchoolActionItem[];
+  conflicts: SchoolConflict[];
+  warnings: string[];
 }

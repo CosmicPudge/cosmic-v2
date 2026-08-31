@@ -38,7 +38,30 @@ export function schoolSnapshotToCalendarEvents(snapshot: SchoolSnapshot): Calend
       travelRequired: false,
       completed: assignment.completed,
     }));
-  return [...events, ...assignments];
+  const documentEvents = (snapshot.sourceIntelligence?.events ?? []).flatMap((event) => {
+    if (!event.startsAt) return [];
+    const start = new Date(event.startsAt);
+    if (Number.isNaN(start.getTime())) return [];
+    const end = event.endsAt ? new Date(event.endsAt) : new Date(start.getTime() + 60 * 60 * 1000);
+    if (Number.isNaN(end.getTime())) return [];
+    return [{
+      id: `school:source:${event.id}`,
+      uid: event.id,
+      title: event.title,
+      start,
+      end,
+      ...(event.location?.name ? { location: event.location.name } : {}),
+      calendarName: "School",
+      category: "school" as const,
+      source: "school" as const,
+      sourceId: event.provenance[0]?.sourceId ?? event.id,
+      sourceProvider: "school-source",
+      priority: "normal" as const,
+      travelRequired: false,
+      completed: false,
+    }];
+  });
+  return [...events, ...assignments, ...documentEvents];
 }
 
 export function mergeSchoolCalendarSnapshot(calendar: CalendarSnapshot, school: SchoolSnapshot): CalendarSnapshot {

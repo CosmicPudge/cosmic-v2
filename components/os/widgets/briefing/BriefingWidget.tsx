@@ -15,8 +15,9 @@ export default function BriefingWidget() {
   const { data: entitlements } = useEntitlements();
   const school = useSchoolData({ enabled: entitlements.features["school.basic"] });
   const nextAssignment = school.snapshot?.actionItems.find((item) => item.due >= new Date());
-  const briefingTitle = school.loading ? "Preparing your day." : nextAssignment ? `Next assignment · ${nextAssignment.title}` : "Your day, at a glance.";
-  const briefingSubtitle = nextAssignment ? `Due ${nextAssignment.due.toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}` : school.snapshot?.sourceStatus?.canvas === "error" ? "School data is temporarily unavailable." : "No upcoming School deadlines.";
+  const sourceAction = school.snapshot?.sourceIntelligence?.actionItems.find((item) => item.status !== "completed");
+  const briefingTitle = school.loading ? "Preparing your day." : nextAssignment ? `Next assignment · ${nextAssignment.title}` : sourceAction ? sourceAction.title : "Your day, at a glance.";
+  const briefingSubtitle = nextAssignment ? `Due ${nextAssignment.due.toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}` : sourceAction ? "From a School source · review recommended" : school.snapshot?.sourceStatus?.canvas === "error" ? "School data is temporarily unavailable." : "No upcoming School deadlines.";
   if (presentation === "kiosk") return <KioskSceneFrame scene="briefing" eyebrow="COSMIC • DAILY BRIEFING" title={briefingTitle} subtitle={briefingSubtitle} />;
   return (
     <Widget

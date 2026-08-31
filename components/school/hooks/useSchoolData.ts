@@ -46,6 +46,7 @@ export function useSchoolData({ enabled = true }: UseSchoolDataOptions = {}) {
           ...normalizedSnapshot,
           ...(body.snapshot?.updatedAt ? { updatedAt: body.snapshot.updatedAt } : {}),
           ...(body.snapshot?.sourceStatus ? { sourceStatus: body.snapshot.sourceStatus } : {}),
+          ...(body.snapshot?.sourceIntelligence ? { sourceIntelligence: body.snapshot.sourceIntelligence } : {}),
         });
         setError(body.error);
       } catch (err) {

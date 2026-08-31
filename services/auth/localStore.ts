@@ -4,6 +4,7 @@ import { createHash, randomUUID } from "crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { dirname, join } from "path";
 import type { AuthRepository, AuthSessionRecord, AuthUserRecord } from "./contracts";
+import { toPublicCosmicAccount } from "./serialization";
 
 type StoredAccount = AuthUserRecord;
 interface StoredSession { id: string; accountId: string; tokenHash: string; createdAt: string; expiresAt: string; lastUsedAt: string; revokedAt?: string; userAgent?: string }
@@ -13,8 +14,7 @@ const AUTH_FILE = process.env.COSMIC_AUTH_FILE ?? join(process.cwd(), ".cosmic",
 const emptyStore: AuthStoreData = { version: 1, accounts: [], sessions: {} };
 function readStore(): AuthStoreData { try { if (!existsSync(AUTH_FILE)) return emptyStore; const parsed = JSON.parse(readFileSync(AUTH_FILE, "utf8")) as Partial<AuthStoreData>; return parsed.version === 1 && Array.isArray(parsed.accounts) && parsed.sessions && typeof parsed.sessions === "object" ? parsed as AuthStoreData : emptyStore; } catch { return emptyStore; } }
 function writeStore(store: AuthStoreData) { mkdirSync(dirname(AUTH_FILE), { recursive: true }); writeFileSync(AUTH_FILE, JSON.stringify(store, null, 2), { mode: 0o600 }); }
-function publicAccount(account: AuthUserRecord) { return { id: account.id, email: account.email, ...(account.displayName ? { displayName: account.displayName } : {}), createdAt: account.createdAt, updatedAt: account.updatedAt }; }
-function toSession(stored: StoredSession, account: AuthUserRecord): AuthSessionRecord { return { account: publicAccount(account), sessionId: stored.id, expiresAt: stored.expiresAt, createdAt: stored.createdAt, lastUsedAt: stored.lastUsedAt, ...(stored.userAgent ? { userAgent: stored.userAgent } : {}) }; }
+function toSession(stored: StoredSession, account: AuthUserRecord): AuthSessionRecord { return { account: toPublicCosmicAccount(account), sessionId: stored.id, expiresAt: stored.expiresAt, createdAt: stored.createdAt, lastUsedAt: stored.lastUsedAt, ...(stored.userAgent ? { userAgent: stored.userAgent } : {}) }; }
 
 export const fileAuthRepository: AuthRepository = {
   async findUserByEmail(email) { const account = readStore().accounts.find((item) => item.email === email); return account ? { ...account, status: account.status === "disabled" ? "disabled" : "active" } : null; },

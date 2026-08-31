@@ -1,4 +1,5 @@
 import type { SchoolDashboardData, SchoolEvent, SchoolAssignment } from "@/components/school/data/types";
+import type { SchoolSourceIntelligence } from "@/core/contracts/SchoolIntelligence";
 
 export interface SchoolSnapshot {
   courses: SchoolDashboardData["classes"];
@@ -9,6 +10,7 @@ export interface SchoolSnapshot {
   sources: Array<{ source: SchoolEvent["source"]; eventCount: number; assignmentCount: number }>;
   updatedAt: string;
   sourceStatus?: { canvas: "healthy" | "error" | "not_connected"; lastSyncedAt?: string | null };
+  sourceIntelligence?: SchoolSourceIntelligence;
 }
 
 function stableEventKey(event: SchoolEvent): string {
@@ -41,6 +43,10 @@ export function buildSchoolSnapshot(data: SchoolDashboardData, updatedAt = new D
     })),
     updatedAt: updatedAt.toISOString(),
   };
+}
+
+export function emptySchoolSourceIntelligence(): SchoolSourceIntelligence {
+  return { facts: [], events: [], actionItems: [], conflicts: [], warnings: [] };
 }
 
 export function schoolEventCalendarKey(event: Pick<SchoolEvent, "source" | "id">): string {

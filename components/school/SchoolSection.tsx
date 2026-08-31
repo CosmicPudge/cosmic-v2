@@ -6,13 +6,14 @@ import { useSchool } from "./context/SchoolDataContext";
 import SchoolBreadcrumbs from "./layout/SchoolBreadcrumbs";
 import { AssignmentsView, CoursesView, GoalsView, GradesView, ResourcesView, ScheduleView } from "./SchoolCrudViews";
 import { fieldClass, primaryClass, SchoolConfirm } from "./SchoolModal";
+import SourcesView from "./SourcesView";
 
-type Section = "Courses" | "Assignments" | "Grades" | "Schedule" | "Goals" | "Resources" | "AFROTC" | "Settings";
+type Section = "Courses" | "Assignments" | "Grades" | "Schedule" | "Goals" | "Resources" | "Sources" | "AFROTC" | "Settings";
 
 export default function SchoolSection({ section }: { section: Section }) {
   const { error, local } = useSchool();
   if (!local.ready) return <p className="py-16 text-white/60">Loading School…</p>;
-  return <section className="space-y-6"><SchoolBreadcrumbs currentPage={section} /><header><h1 className="text-3xl font-bold tracking-tight text-white">{section}</h1><p className="mt-2 text-sm text-white/55">{section === "Assignments" ? "Manage local work alongside read-only Canvas assignments." : section === "Schedule" ? "Your configured weekly class schedule." : `${section} for your local School workspace.`}</p>{error && <p className="mt-2 text-xs text-amber-100/70">Canvas data is temporarily unavailable. Local School tools remain available.</p>}</header>{section === "Courses" ? <CoursesView /> : section === "Assignments" ? <AssignmentsView /> : section === "Grades" ? <GradesView /> : section === "Schedule" ? <ScheduleView /> : section === "Goals" ? <GoalsView /> : section === "Resources" ? <ResourcesView /> : section === "Settings" ? <SettingsView /> : <div className="rounded-2xl border border-white/10 bg-white/5 p-6 text-sm text-white/55">No AFROTC information is configured. AFROTC resources can be stored from the Resources page.</div>}</section>;
+  return <section className="space-y-6"><SchoolBreadcrumbs currentPage={section} /><header><h1 className="text-3xl font-bold tracking-tight text-white">{section}</h1><p className="mt-2 text-sm text-white/55">{section === "Assignments" ? "Manage local work alongside read-only Canvas assignments." : section === "Schedule" ? "Your configured weekly class schedule." : section === "Sources" ? "Private school documents and extracted intelligence." : `${section} for your local School workspace.`}</p>{error && <p className="mt-2 text-xs text-amber-100/70">Canvas data is temporarily unavailable. Local School tools remain available.</p>}</header>{section === "Courses" ? <CoursesView /> : section === "Assignments" ? <AssignmentsView /> : section === "Grades" ? <GradesView /> : section === "Schedule" ? <ScheduleView /> : section === "Goals" ? <GoalsView /> : section === "Resources" ? <ResourcesView /> : section === "Sources" ? <SourcesView /> : section === "Settings" ? <SettingsView /> : <div className="rounded-2xl border border-white/10 bg-white/5 p-6 text-sm text-white/55">No AFROTC information is configured. AFROTC resources can be stored from the Resources page.</div>}</section>;
 }
 
 function parseLocalDate(value: string) { const [year, month, day] = value.split("-").map(Number); return [year, month, day].every(Number.isInteger) ? new Date(year, month - 1, day) : null; }

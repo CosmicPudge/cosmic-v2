@@ -24,5 +24,11 @@ export function schoolSnapshotSearchRecords(snapshot: SchoolSnapshot, query: Sea
   for (const item of snapshot.actionItems) {
     if (matches(query, item.title, "school action item")) records.push({ id: `school:action:${item.id}`, category: "school", title: item.title, subtitle: "School Action Item", description: date(item.due) ? `Due ${date(item.due)}` : undefined, keywords: ["school", "action", "assignment"], icon: "!", href: "/school/assignments", source: "school", boost: 14 });
   }
+  for (const event of snapshot.sourceIntelligence?.events ?? []) {
+    if (matches(query, event.title, event.location?.name, event.attire?.value, ...(event.requiredItems ?? []))) records.push({ id: `school:source-event:${event.id}`, category: "school", title: event.title, subtitle: "School source event", description: [event.location?.name, event.attire?.value].filter(Boolean).join(" · ") || undefined, keywords: ["school", "source", "event", event.eventType ?? ""], icon: "◈", href: "/school/sources", source: "school", boost: 15 });
+  }
+  for (const fact of snapshot.sourceIntelligence?.facts ?? []) {
+    if (matches(query, fact.subject, fact.value, "school source")) records.push({ id: `school:source-fact:${fact.id}`, category: "school", title: fact.value, subtitle: `School source · ${fact.subject}`, description: `Certainty: ${fact.certainty}`, keywords: ["school", "source", fact.kind], icon: "◇", href: "/school/sources", source: "school", boost: 10 });
+  }
   return records;
 }

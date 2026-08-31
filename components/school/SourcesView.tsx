@@ -1,0 +1,64 @@
+"use client";
+
+import { useCallback, useEffect, useState } from "react";
+
+interface SourceSummary { id: string; title: string; sourceType: string; category: string | null; processingStatus: string; processingError: string | null; processedAt: string | null; createdAt: string; extractedFactsCount: number; eventsCount: number; actionItemsCount: number; conflictsCount: number; }
+interface SourceDetail extends SourceSummary { extractedText: string | null; intelligence?: { facts?: Array<{ kind: string; value: string; certainty: string; provenance?: Array<{ excerpt?: string; extractor?: string }> }>; events?: Array<{ title: string; startsAt?: string; location?: { name: string }; attire?: { value: string }; requiredItems?: string[]; provenance?: Array<{ excerpt?: string; extractor?: string }> }>; actionItems?: Array<{ title: string; status: string; provenance?: Array<{ excerpt?: string; extractor?: string }> }>; conflicts?: Array<{ description: string }> } | null; }
+
+const sample = "LLAB is Thursday at 0630 in the HPER Fieldhouse. Wear PTGs and bring a water bottle.";
+
+export default function SourcesView() {
+  const [sources, setSources] = useState<SourceSummary[]>([]);
+  const [title, setTitle] = useState("");
+  const [text, setText] = useState("");
+  const [category, setCategory] = useState("AFROTC");
+  const [message, setMessage] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [selected, setSelected] = useState<SourceDetail | null>(null);
+
+  const load = useCallback(async () => {
+    const response = await fetch("/api/school/sources", { cache: "no-store" });
+    if (!response.ok) { setMessage("Source library is unavailable."); return; }
+    setSources((await response.json() as { sources?: SourceSummary[] }).sources ?? []);
+  }, []);
+  useEffect(() => { const timer = window.setTimeout(() => { void load(); }, 0); return () => window.clearTimeout(timer); }, [load]);
+
+  async function addText() {
+    setBusy(true); setMessage("");
+    try {
+      const response = await fetch("/api/school/sources", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title, text, category }) });
+      const body = await response.json() as { error?: string };
+      if (!response.ok) throw new Error(body.error ?? "Source could not be processed.");
+      setTitle(""); setText(""); setMessage("Source processed."); await load();
+    } catch (error) { setMessage(error instanceof Error ? error.message : "Source could not be processed."); }
+    finally { setBusy(false); }
+  }
+
+  async function upload(file: File) {
+    setBusy(true); setMessage("");
+    try {
+      const form = new FormData(); form.set("file", file); form.set("category", category);
+      const response = await fetch("/api/school/sources/upload", { method: "POST", body: form });
+      const body = await response.json() as { error?: string };
+      if (!response.ok) throw new Error(body.error ?? "Source could not be processed.");
+      setMessage("Source processed."); await load();
+    } catch (error) { setMessage(error instanceof Error ? error.message : "Source could not be processed."); }
+    finally { setBusy(false); }
+  }
+
+  async function remove(id: string) {
+    if (!window.confirm("Delete this source and its derived intelligence?")) return;
+    await fetch(`/api/school/sources/${encodeURIComponent(id)}`, { method: "DELETE" }); await load();
+  }
+
+  async function reprocess(id: string) {
+    setBusy(true); const response = await fetch(`/api/school/sources/${encodeURIComponent(id)}/reprocess`, { method: "POST" }); setMessage(response.ok ? "Source reprocessed." : "Source could not be reprocessed."); await load(); setBusy(false);
+  }
+
+  async function view(id: string) {
+    const response = await fetch(`/api/school/sources/${encodeURIComponent(id)}`, { cache: "no-store" });
+    if (response.ok) setSelected((await response.json() as { source: SourceDetail }).source);
+  }
+
+  return <div className="space-y-5"><section className="rounded-2xl border border-sky-200/10 bg-sky-200/[0.04] p-5"><div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="font-semibold text-white">Add Source</h2><p className="mt-1 text-sm text-white/50">Paste explicit school or AFROTC instructions, or upload a readable PDF/TXT/Markdown file.</p></div><label className="rounded-xl border border-white/10 px-3 py-2 text-sm text-white/70 hover:bg-white/10">Upload file<input className="sr-only" type="file" accept="application/pdf,text/plain,text/markdown,.pdf,.txt,.md" disabled={busy} onChange={(event) => { const file = event.target.files?.[0]; if (file) void upload(file); event.currentTarget.value = ""; }} /></label></div><div className="mt-4 grid gap-3"><input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Source title" aria-label="Source title" className="rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-white outline-none" /><select value={category} onChange={(event) => setCategory(event.target.value)} aria-label="Source category" className="rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-white outline-none"><option>AFROTC</option><option>Course</option><option>University</option><option>General School</option></select><textarea value={text} onChange={(event) => setText(event.target.value)} placeholder={sample} aria-label="Paste source text" rows={5} className="rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm text-white outline-none" /><button type="button" disabled={busy || !title.trim() || !text.trim()} onClick={() => void addText()} className="w-fit rounded-xl border border-sky-200/20 bg-sky-200/10 px-4 py-2 text-sm text-sky-50 disabled:opacity-40">{busy ? "Processing…" : "Add pasted source"}</button></div>{message && <p className="mt-3 text-sm text-amber-100/75" role="status">{message}</p>}</section><section className="space-y-3"><h2 className="text-xs uppercase tracking-[0.22em] text-white/45">Source Library</h2>{sources.length === 0 ? <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 text-sm text-white/50">No School sources yet.</div> : sources.map((source) => <article key={source.id} className="rounded-2xl border border-white/10 bg-white/[0.03] p-4"><div className="flex flex-wrap items-start justify-between gap-3"><div><h3 className="font-medium text-white">{source.title}</h3><p className="mt-1 text-xs text-white/45">{source.sourceType} · {source.category ?? "General School"} · added {new Date(source.createdAt).toLocaleDateString()}</p></div><span className="rounded-full border border-white/10 px-2 py-1 text-xs text-white/60">{source.processingStatus === "ready_degraded" ? "Ready · AI unavailable" : source.processingStatus === "ready" ? "Ready · AI analyzed" : source.processingStatus}</span></div><p className="mt-3 text-sm text-white/55">{source.extractedFactsCount} facts · {source.eventsCount} events · {source.actionItemsCount} action items · {source.conflictsCount} conflicts</p>{source.processingError && <p className="mt-2 text-sm text-amber-100/70">{source.processingError}</p>}<div className="mt-3 flex gap-2"><button type="button" onClick={() => void view(source.id)} className="rounded-xl border border-white/10 px-3 py-2 text-xs text-white/65">View</button><button type="button" disabled={busy} onClick={() => void reprocess(source.id)} className="rounded-xl border border-white/10 px-3 py-2 text-xs text-white/65">Reprocess</button><button type="button" onClick={() => void remove(source.id)} className="rounded-xl border border-red-200/15 px-3 py-2 text-xs text-red-100/75">Delete</button></div></article>)}</section>{selected && <section className="rounded-2xl border border-sky-200/15 bg-slate-950/80 p-5"><div className="flex items-start justify-between gap-3"><div><h2 className="font-semibold text-white">{selected.title}</h2><p className="mt-1 text-xs text-white/45">Owner-only evidence view · {selected.processingStatus}</p></div><button type="button" onClick={() => setSelected(null)} className="text-sm text-white/50">Close</button></div><pre className="mt-4 max-h-48 overflow-auto whitespace-pre-wrap rounded-xl bg-black/20 p-3 text-xs leading-5 text-white/60">{selected.extractedText ?? "No extracted text retained."}</pre><div className="mt-4 space-y-2 text-sm text-white/65">{selected.intelligence?.events?.map((event, index) => <div key={`${event.title}-${index}`}><p>Event: {event.title}{event.location?.name ? ` · ${event.location.name}` : ""}{event.attire?.value ? ` · ${event.attire.value}` : ""}</p><p className="text-xs text-white/45">{event.provenance?.[0]?.extractor ?? "deterministic"} · {event.provenance?.[0]?.excerpt ?? "No evidence excerpt"}</p></div>)}{selected.intelligence?.facts?.map((fact, index) => <div key={`${fact.kind}-${index}`}><p>Fact: {fact.kind} = {fact.value} · {fact.certainty}</p><p className="text-xs text-white/45">{fact.provenance?.[0]?.extractor ?? "deterministic"} · {fact.provenance?.[0]?.excerpt ?? "No evidence excerpt"}</p></div>)}{selected.intelligence?.actionItems?.map((item, index) => <div key={`${item.title}-${index}`}><p>Action: {item.title} · {item.status}</p><p className="text-xs text-white/45">{item.provenance?.[0]?.extractor ?? "deterministic"} · {item.provenance?.[0]?.excerpt ?? "No evidence excerpt"}</p></div>)}{selected.intelligence?.conflicts?.map((conflict) => <p key={conflict.description} className="text-amber-100/75">Conflict: {conflict.description}</p>)}</div></section>}</div>;
+}

@@ -34,6 +34,9 @@ export async function executeAITool(name: string, args: { module?: string; query
       courses: snapshot.courses.slice(0, 20).map((course) => ({ id: course.id, name: course.name, start: course.start.toISOString(), end: course.end.toISOString(), location: course.location })),
       assignments: snapshot.assignments.slice(0, 50).map((assignment) => ({ id: assignment.id, title: assignment.title, due: assignment.due.toISOString(), status: assignment.completed ? "completed" : "upcoming", priority: assignment.priority })),
       events: snapshot.events.slice(0, 50).map((event) => ({ id: event.id, title: event.title, type: event.type, start: event.start.toISOString(), end: event.end.toISOString(), location: event.location })),
+      sourceFacts: (snapshot.sourceIntelligence?.facts ?? []).slice(0, 50).map((fact) => ({ kind: fact.kind, subject: fact.subject, value: fact.value, certainty: fact.certainty, sourceId: fact.provenance[0]?.sourceId, evidence: fact.provenance[0]?.excerpt })),
+      sourceEvents: (snapshot.sourceIntelligence?.events ?? []).slice(0, 50).map((event) => ({ id: event.id, title: event.title, startsAt: event.startsAt, location: event.location?.name, attire: event.attire, requiredItems: event.requiredItems, certainty: event.certainty, sourceId: event.provenance[0]?.sourceId, evidence: event.provenance[0]?.excerpt })),
+      sourceActionItems: (snapshot.sourceIntelligence?.actionItems ?? []).slice(0, 50).map((item) => ({ id: item.id, title: item.title, dueAt: item.dueAt, status: item.status, sourceId: item.provenance[0]?.sourceId, evidence: item.provenance[0]?.excerpt })),
     };
   }
   const row = await readCloudSnapshot(accountId, selectedModule); if (!row) return { available: false, module: selectedModule, reason: "No cloud snapshot is available." };

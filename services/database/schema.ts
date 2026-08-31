@@ -220,6 +220,27 @@ export const providerCredentials = pgTable("provider_credentials", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+export const schoolSources = pgTable("school_sources", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  sourceType: text("source_type").notNull(),
+  category: text("category"),
+  originalFileName: text("original_file_name"),
+  mimeType: text("mime_type"),
+  fileSize: integer("file_size"),
+  sourceDate: timestamp("source_date", { withTimezone: true }),
+  notes: text("notes"),
+  extractedText: text("extracted_text"),
+  intelligence: jsonb("intelligence"),
+  processingStatus: text("processing_status").notNull().default("uploaded"),
+  processingVersion: integer("processing_version").notNull().default(1),
+  processingError: text("processing_error"),
+  processedAt: timestamp("processed_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [index("school_sources_user_id_index").on(table.userId), index("school_sources_status_index").on(table.processingStatus), check("school_sources_type_check", sql`${table.sourceType} in ('upload-pdf', 'upload-text', 'manual')`), check("school_sources_status_check", sql`${table.processingStatus} in ('uploaded', 'processing', 'ready', 'ready_degraded', 'needs_review', 'failed', 'unsupported')`)]);
+
 export const clockAlarms = pgTable("clock_alarms", {
   id: text("id").primaryKey(),
   userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),

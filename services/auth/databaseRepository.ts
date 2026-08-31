@@ -6,13 +6,14 @@ import { getDatabase } from "@/services/database/client";
 import type { AuthRepository, AuthSessionRecord, AuthUserRecord } from "./contracts";
 import { devices, sessions, users } from "@/services/database/schema";
 import { getAccountAccessState } from "./access";
+import { toPublicCosmicAccount } from "./serialization";
 
 function account(row: typeof users.$inferSelect): AuthUserRecord {
   return { id: row.id, email: row.email, ...(row.displayName ? { displayName: row.displayName } : {}), createdAt: row.createdAt.toISOString(), updatedAt: row.updatedAt.toISOString(), passwordHash: row.passwordHash, passwordSalt: row.passwordSalt, status: row.status === "disabled" ? "disabled" : "active" };
 }
 
 function session(row: typeof sessions.$inferSelect, user: typeof users.$inferSelect): AuthSessionRecord {
-  return { account: account(user), sessionId: row.id, expiresAt: row.expiresAt.toISOString(), createdAt: row.createdAt.toISOString(), lastUsedAt: row.lastUsedAt.toISOString(), sessionType: row.sessionType === "device" ? "device" : "user", ...(row.deviceId ? { deviceId: row.deviceId } : {}), ...(row.authenticatedBootId ? { authenticatedBootId: row.authenticatedBootId } : {}), ...(row.userAgent ? { userAgent: row.userAgent } : {}) };
+  return { account: toPublicCosmicAccount(user), sessionId: row.id, expiresAt: row.expiresAt.toISOString(), createdAt: row.createdAt.toISOString(), lastUsedAt: row.lastUsedAt.toISOString(), sessionType: row.sessionType === "device" ? "device" : "user", ...(row.deviceId ? { deviceId: row.deviceId } : {}), ...(row.authenticatedBootId ? { authenticatedBootId: row.authenticatedBootId } : {}), ...(row.userAgent ? { userAgent: row.userAgent } : {}) };
 }
 
 async function findUser(idOrEmail: { id: string } | { normalizedEmail: string }) {
