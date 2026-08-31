@@ -1,0 +1,11 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+// @ts-expect-error Node's strip-types runner resolves the source extension directly.
+import { classifySchoolEmail, extractSchoolEmailProposals, normalizeSchoolEmail, schoolEmailSourceId } from "./email.ts";
+
+const message = { id: "message-1", provider: "gmail" as const, subject: "LLAB Update", bodyText: "LLAB has moved to 0700 in the HPER Fieldhouse. Wear OCPs and bring a water bottle.", from: { email: "instructor@usu.edu", name: "Instructor" }, to: [], receivedAt: new Date("2026-08-30T12:00:00Z"), unread: false, hasAttachments: true };
+
+test("normalizes a bounded provider message and stable source identity", () => { const result = normalizeSchoolEmail(message, "connection-1", "account-1"); assert.equal(result.accountId, "account-1"); assert.equal(schoolEmailSourceId(result), "email:gmail:connection-1:message-1"); assert.equal(result.hasAttachments, true); });
+test("classifies explicit school mail but rejects marketing", () => { assert.equal(classifySchoolEmail(normalizeSchoolEmail(message, "c", "a")).relevance, "relevant"); assert.equal(classifySchoolEmail({ subject: "Aggie Store Sale", plainTextBody: "20% off this weekend", senderAddress: "store@example.com" }).relevance, "not_relevant"); });
+test("extracts review-first AFROTC updates without mutating School", () => { const normalized = normalizeSchoolEmail(message, "connection-1", "account-1"); const proposals = extractSchoolEmailProposals(normalized, "relevant", new Date("2026-08-30T12:00:00Z")); assert.equal(proposals.some((item) => item.type === "event_time_changed"), true); assert.equal(proposals.some((item) => item.type === "uniform_changed"), true); assert.equal(proposals.some((item) => item.type === "required_items_changed"), true); assert.equal(proposals.every((item) => item.status === "pending" && item.accountId === "account-1"), true); });
+test("does not create proposals for uncertain mail", () => { const normalized = normalizeSchoolEmail({ ...message, subject: "Campus news", bodyText: "A campus newsletter is available", from: { email: "news@usu.edu" } }, "connection-1", "account-1"); assert.equal(extractSchoolEmailProposals(normalized, "uncertain").length, 0); });

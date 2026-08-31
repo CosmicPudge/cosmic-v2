@@ -1,0 +1,6 @@
+import { requireCosmicAccount } from "@/services/auth/server";
+import { consumeOAuthState, expiredOAuthStateCookie, getOAuthReturnTo } from "@/services/auth/oauthState";
+import { exchangeMicrosoftCode, storeAccountOutlookToken } from "@/services/mail/outlook";
+
+export const dynamic = "force-dynamic";
+export async function GET(request: Request) { const url = new URL(request.url); let account; try { account = await requireCosmicAccount(request); } catch { return Response.json({ error: "Sign in before connecting Outlook." }, { status: 401 }); } if (!consumeOAuthState(request, url.searchParams.get("state"), account.id) || !url.searchParams.get("code")) return Response.json({ error: "Invalid or expired OAuth state." }, { status: 400 }); try { await storeAccountOutlookToken(account.id, await exchangeMicrosoftCode(url.searchParams.get("code")!)); const returnTo = getOAuthReturnTo(request, url.searchParams.get("state"), account.id) ?? "/account?connected=outlook"; return new Response(null, { status: 302, headers: { Location: new URL(returnTo, request.url).toString(), "Set-Cookie": expiredOAuthStateCookie() } }); } catch { return Response.json({ error: "Outlook connection failed." }, { status: 502 }); } }

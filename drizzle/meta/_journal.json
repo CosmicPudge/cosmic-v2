@@ -211,6 +211,27 @@
       "when": 1787870500000,
       "tag": "0030_canvas_connection_metadata",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1787871000000,
+      "tag": "0031_school_email_proposals",
+      "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1787872000000,
+      "tag": "0032_school_email_proposal_application",
+      "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1787873000000,
+      "tag": "0033_account_identities",
+      "breakpoints": true
     }
   ]
 }

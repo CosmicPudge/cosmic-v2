@@ -26,3 +26,19 @@ When no academic token is configured, School remains healthy and the UI labels
 the optional connection **Institution access required**. Migrations `0029` and
 `0030` remain useful for the provider's normalized Canvas fields and safe course
 metadata when institution-approved access becomes available.
+
+## Outlook and manual School Email Import
+
+Direct Outlook/Microsoft 365 mail access uses the server-side Microsoft Graph
+adapter and read-only `Mail.Read` permission. Institution-managed accounts may
+require an approved Microsoft application, so an unconfigured Outlook OAuth
+flow is shown as **Institution authorization required**, not as a provider
+failure. Cosmic never requests Microsoft passwords, automates SSO, or imports
+Outlook cookies.
+
+The current fallback is **Manual Email Import** under School Updates. Pasted
+mail is bounded, normalized into the same `SchoolEmailMessage` pipeline, and
+classified before any proposal is created. Relevant proposals remain pending
+until approval; irrelevant mail is discarded. Future approved OAuth or inbound
+forwarding can use the same normalized adapter boundary without creating a
+second School intelligence pipeline.

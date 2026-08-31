@@ -34,6 +34,16 @@ body {
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
+.cosmic-auth-shell { position: relative; isolation: isolate; overflow: hidden; background: radial-gradient(circle at 50% 18%, rgba(50, 86, 190, .18), transparent 30%), radial-gradient(circle at 18% 78%, rgba(126, 67, 204, .12), transparent 28%), #030511; }
+.cosmic-auth-shell::before { content: ""; position: absolute; inset: 0; z-index: -1; opacity: .32; background-image: radial-gradient(rgba(190, 220, 255, .55) .55px, transparent .7px), radial-gradient(rgba(176, 130, 255, .4) .55px, transparent .7px); background-position: 0 0, 31px 19px; background-size: 67px 67px, 91px 91px; mask-image: linear-gradient(to bottom, black, transparent 88%); pointer-events: none; }
+.cosmic-auth-card { border: 1px solid rgba(160, 190, 255, .14); border-radius: 1.5rem; background: linear-gradient(145deg, rgba(10, 18, 43, .84), rgba(4, 8, 24, .78)); box-shadow: 0 24px 80px rgba(0, 0, 0, .32), 0 0 42px rgba(58, 73, 180, .12); backdrop-filter: blur(14px); }
+.cosmic-auth-card::before { content: ""; display: block; height: 1px; margin: -1.75rem -1.75rem 1.5rem; background: linear-gradient(90deg, transparent, rgba(103, 232, 249, .36), transparent); }
+.cosmic-auth-mark { display: inline-flex; align-items: center; gap: .65rem; font-size: .78rem; font-weight: 700; letter-spacing: .3em; color: rgba(241, 245, 249, .9); }
+.cosmic-auth-orbit { width: 1.15rem; height: 1.15rem; border: 1px solid rgba(216, 180, 254, .9); border-radius: 999px; position: relative; transform: rotate(-22deg); }
+.cosmic-auth-orbit::after { content: ""; position: absolute; width: .25rem; height: .25rem; right: -.18rem; top: -.06rem; border-radius: 999px; background: #67e8f9; box-shadow: 0 0 8px #67e8f9; }
+.cosmic-auth-eyebrow { font-size: 10px; font-weight: 600; letter-spacing: .24em; text-transform: uppercase; color: rgba(186, 230, 253, .55); }
+@media (max-width: 639px) { .cosmic-auth-card::before { margin-inline: -1.25rem; margin-top: -1.25rem; } }
+
 html, body { width: 100%; min-height: 100%; background: #030511; }
 
 .kiosk-pairing-screen { height: 100dvh; min-height: 0; }

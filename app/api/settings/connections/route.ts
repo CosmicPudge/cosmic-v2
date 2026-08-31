@@ -1,5 +1,6 @@
 import { getCalendarSubscriptions } from "@/services/calendar/subscriptionConfig";
 import { getGmailToken, isGmailConfigured } from "@/services/mail/gmail";
+import { isOutlookConfigured } from "@/services/mail/outlook";
 import { configured as spotifyConfigured, disconnect as disconnectSpotify, readToken as readSpotifyToken } from "@/services/music/spotify";
 import { getCurrentCosmicAccount } from "@/services/auth/server";
 import { deleteProviderConnection, listProviderConnections } from "@/services/providers/store";
@@ -40,12 +41,13 @@ function ownedConnectionStatus(connections: Array<{ provider: string; providerTy
   const spotify = find("spotify");
   const gmail = find("gmail");
   const calendars = findAll("calendar");
+  const outlook = find("outlook");
   const calendarStatusFor = (calendar: typeof calendars[number]) => ({ configured: true, connected: calendar.status === "connected" && !calendar.reconnectRequired, status: calendar.reconnectRequired ? "reconnect-required" : calendar.status, provider: "Calendar", detail: calendar.displayName ?? "Account-owned Calendar connection" });
   return {
     spotify: spotify ? { configured: true, connected: spotify.status === "connected" && !spotify.reconnectRequired, status: spotify.reconnectRequired ? "reconnect-required" : spotify.status, provider: "Spotify", detail: spotify.displayName ?? "Account-owned Spotify connection" } : unavailableStatus("Spotify", "Not connected", true),
     gmail: gmail ? { configured: true, connected: gmail.status === "connected" && !gmail.reconnectRequired, status: gmail.reconnectRequired ? "reconnect-required" : gmail.status, provider: "Gmail", detail: gmail.displayName ?? "Account-owned Gmail connection" } : unavailableStatus("Gmail", "Not connected", true),
     calendar: calendars.length ? calendars.map(calendarStatusFor) : [unavailableStatus("Calendar", "Not connected", true)],
-    outlook: unavailableStatus("Outlook", "Not connected · Coming soon", false),
+    outlook: outlook ? { configured: true, connected: outlook.status === "connected" && !outlook.reconnectRequired, status: outlook.reconnectRequired ? "reconnect-required" : outlook.status, provider: "Outlook", detail: outlook.displayName ?? "Account-owned Outlook connection" } : unavailableStatus("Outlook", "Not connected", true),
   };
 }
 
@@ -55,7 +57,7 @@ export async function GET(request: Request) {
     const connections = await listProviderConnections(account.id);
     return Response.json(ownedConnectionStatus(connections));
   }
-  if (account) return Response.json({ spotify: unavailableStatus("Spotify", "Connection storage unavailable", false), gmail: unavailableStatus("Gmail", "Connection storage unavailable", false), calendar: [unavailableStatus("Calendar", "Connection storage unavailable", false)], outlook: unavailableStatus("Outlook", "Not connected · Coming soon", false) });
+  if (account) return Response.json({ spotify: unavailableStatus("Spotify", "Connection storage unavailable", false), gmail: unavailableStatus("Gmail", "Connection storage unavailable", false), calendar: [unavailableStatus("Calendar", "Connection storage unavailable", false)], outlook: unavailableStatus("Outlook", "Connection storage unavailable", false) });
   const spotifyReady = spotifyConfigured();
   const spotifyToken = readSpotifyToken();
   const spotifyReconnectRequired = Boolean(spotifyToken?.expires_at && spotifyToken.expires_at <= Date.now() && !spotifyToken.refresh_token);
@@ -64,6 +66,7 @@ export async function GET(request: Request) {
   const gmailToken = getGmailToken();
   const gmailReconnectRequired = Boolean(gmailToken?.expires_at && gmailToken.expires_at <= Date.now() && !gmailToken.refresh_token);
   const gmailConnected = Boolean(gmailToken) && !gmailReconnectRequired;
+  const outlookReady = isOutlookConfigured();
 
   return Response.json({
     calendar: [calendarStatus()],
@@ -81,6 +84,7 @@ export async function GET(request: Request) {
       provider: "Gmail",
       detail: !gmailReady ? "OAuth is not configured" : gmailConnected ? "Authorization is stored on this server" : "Ready to connect",
     },
+    outlook: { configured: outlookReady, connected: false, status: outlookReady ? "disconnected" : "unavailable", provider: "Outlook", detail: outlookReady ? "Ready to connect" : "OAuth is not configured" },
   });
 }
 

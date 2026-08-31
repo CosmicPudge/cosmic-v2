@@ -1,4 +1,4 @@
-export type MailProvider = "gmail" | "outlook";
+export type MailProvider = "gmail" | "outlook" | "manual";
 
 export interface MailAddress {
   name?: string;
@@ -20,6 +20,8 @@ export interface MailMessage {
   subject: string;
   bodyText: string;
   bodyHtml?: string;
+  webUrl?: string;
+  attachments?: Array<{ name: string; contentType?: string; size?: number; providerId?: string }>;
   receivedAt: Date;
   unread: boolean;
   hasAttachments?: boolean;

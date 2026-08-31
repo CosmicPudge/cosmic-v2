@@ -6,7 +6,8 @@ import { getDatabase } from "@/services/database/client";
 import { providerConnections, providerCredentials } from "@/services/database/schema";
 import { decryptCredentialPayload, encryptCredentialPayload } from "./credentialCrypto";
 
-export type ProviderName = "gmail" | "spotify" | "calendar" | "canvas" | "plaid";
+export type ProviderName = "gmail" | "outlook" | "spotify" | "calendar" | "canvas" | "plaid";
+export type ProviderCapability = "mail.read" | "mail.send" | "calendar.read" | "calendar.write" | "music.read" | "music.playback";
 export type ProviderConnection = typeof providerConnections.$inferSelect;
 export type ProviderCredential = Record<string, unknown>;
 
@@ -24,7 +25,7 @@ export async function findProviderConnection(userId: string, provider: ProviderN
   return rows[0] ?? null;
 }
 
-export async function upsertProviderConnection(userId: string, input: { provider: ProviderName; providerType?: string; providerAccountId?: string; displayName?: string; email?: string }) {
+export async function upsertProviderConnection(userId: string, input: { provider: ProviderName; providerType?: string; providerAccountId?: string; displayName?: string; email?: string; metadata?: Record<string, unknown> }) {
   const existing = input.providerAccountId ? await findProviderConnection(userId, input.provider, input.providerAccountId) : null;
   const id = existing?.id ?? randomUUID();
   const rows = await getDatabase().insert(providerConnections).values({ id, userId, ...input }).onConflictDoUpdate({ target: providerConnections.id, set: { ...input, updatedAt: new Date(), status: "connected", reconnectRequired: false } }).returning();

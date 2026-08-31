@@ -39,7 +39,7 @@ export async function POST(request: Request) {
     const discovery = await discoverCalDav({ serverUrl, username, password });
     const calendars = await discoverCalendars({ serverUrl, username, password }, discovery.calendarHomeUrl);
     if (!calendars.length) return Response.json({ error: "No readable calendars were found for this account." }, { status: 422 });
-    const connection = await upsertProviderConnection(account.id, { provider: "calendar", providerType: "caldav", providerAccountId, displayName });
+    const connection = await upsertProviderConnection(account.id, { provider: "calendar", providerType: "caldav", providerAccountId, displayName, metadata: { capabilities: ["calendar.read", "calendar.write"] } });
     await setProviderCredentials(account.id, connection.id, { username, password, serverUrl, ...(typeof body.defaultCalendarName === "string" && body.defaultCalendarName.trim() ? { defaultCalendarName: body.defaultCalendarName.trim() } : {}) });
     return Response.json({ connection: { id: connection.id, provider: connection.provider, providerType: connection.providerType, displayName: connection.displayName, status: connection.status } }, { status: 201 });
   } catch (error) {

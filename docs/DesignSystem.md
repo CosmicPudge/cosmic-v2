@@ -1,5 +1,9 @@
 # Cosmic V2 Design System
 
+## Real brand identities
+
+Real brand identities use official brand assets. Cosmic styling is applied to the surrounding interface, not by recreating third-party logos. Provider marks must come from the provider’s official brand/developer resources, retain their approved geometry and colors, and remain inside a Cosmic button or connection surface without implying endorsement.
+
 Version 1.0
 Last Updated: June 30, 2026
 

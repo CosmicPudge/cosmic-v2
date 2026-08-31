@@ -10,6 +10,8 @@ import { CombinedCalendarProvider } from "@/services/calendar/combinedCalendarPr
 import { getCalendarSubscriptions } from "@/services/calendar/subscriptionConfig";
 import { MailEngine } from "@/engines/mail";
 import { getGmailToken, GmailProvider, type GmailToken } from "@/services/mail/gmail";
+import { OutlookProvider, type OutlookToken } from "@/services/mail/outlook";
+import { getConnectionsForCapability } from "@/services/providers/capabilities";
 import { getProviderCredentials, listProviderConnections, setProviderCredentials } from "@/services/providers/store";
 import { getCurrentCosmicAccount } from "@/services/auth/server";
 import { getAccountCalendarContext } from "@/services/calendar/accountProvider";
@@ -103,4 +105,18 @@ export async function getServerGmailToken(request: Request): Promise<GmailToken 
   if (!account) return process.env.NODE_ENV === "production" ? null : getGmailToken();
   const connection = (await listProviderConnections(account.id)).find((item) => item.provider === "gmail");
   return connection ? await getProviderCredentials<GmailToken>(account.id, connection.id) : null;
+}
+
+export async function getServerSchoolMailProviders(request: Request) {
+  const account = await getCurrentCosmicAccount(request);
+  if (!account || !process.env.DATABASE_URL) return [];
+  const providers: Array<{ provider: "gmail" | "outlook"; connectionId: string; engine: MailEngine }> = [];
+  const connections = await getConnectionsForCapability(account.id, "mail.read");
+  for (const connection of connections.filter((item) => item.provider === "gmail" || item.provider === "outlook")) {
+    const token = await getProviderCredentials(account.id, connection.id);
+    if (!token) continue;
+    if (connection.provider === "gmail") providers.push({ provider: "gmail", connectionId: connection.id, engine: new MailEngine(new GmailProvider(token as unknown as GmailToken, connection.email ?? undefined, async (next) => { await setProviderCredentials(account.id, connection.id, next as unknown as Record<string, unknown>); })) });
+    else providers.push({ provider: "outlook", connectionId: connection.id, engine: new MailEngine(new OutlookProvider(token as unknown as OutlookToken, connection.id, account.id)) });
+  }
+  return providers;
 }

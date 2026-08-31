@@ -1,0 +1,8 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+// @ts-expect-error Node's strip-types runner resolves the source extension directly.
+import { normalizeManualEmail } from "./manualEmail.ts";
+
+test("normalizes manual email with form metadata taking precedence", () => { const message = normalizeManualEmail({ importId: "import-1234", sender: "student@usu.edu", subject: "LLAB Update", receivedAt: "2026-08-30T12:00:00Z", body: "From: wrong@example.com\nSubject: Wrong\nLLAB moved to 0700." }, "account-1"); assert.equal(message.provider, "manual"); assert.equal(message.id, "manual:account-1:import-1234"); assert.equal(message.from.email, "student@usu.edu"); assert.equal(message.subject, "LLAB Update"); assert.equal(message.bodyText.includes("wrong@example.com"), true); });
+test("parses explicit forwarded headers and strips unsafe markup", () => { const message = normalizeManualEmail({ importId: "import-5678", sender: "", subject: "", receivedAt: "", body: "From: instructor@usu.edu\nSent: August 30, 2026 8:00 AM\nSubject: LLAB Update\n<div>Wear OCPs.</div><script>secret()</script>" }, "account-1"); assert.equal(message.from.email, "instructor@usu.edu"); assert.equal(message.subject, "LLAB Update"); assert.equal(message.bodyText.includes("secret"), false); });
+test("rejects oversized imports and unstable identities", () => { assert.throws(() => normalizeManualEmail({ importId: "short", sender: "a@b.com", subject: "x", receivedAt: "2026-08-30", body: "x" }, "account-1")); assert.throws(() => normalizeManualEmail({ importId: "import-1234", sender: "a@b.com", subject: "x", receivedAt: "2026-08-30", body: "x".repeat(50_001) }, "account-1")); });

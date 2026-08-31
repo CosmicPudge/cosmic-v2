@@ -5,8 +5,8 @@ export const users = pgTable("users", {
   id: text("id").primaryKey(),
   email: text("email").notNull(),
   normalizedEmail: text("normalized_email").notNull(),
-  passwordHash: text("password_hash").notNull(),
-  passwordSalt: text("password_salt").notNull(),
+  passwordHash: text("password_hash"),
+  passwordSalt: text("password_salt"),
   displayName: text("display_name"),
   status: text("status").notNull().default("active"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -158,6 +158,16 @@ export const userPreferences = pgTable("user_preferences", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+export const accountIdentities = pgTable("account_identities", {
+  id: text("id").primaryKey(),
+  accountId: text("account_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  provider: text("provider").notNull(),
+  providerSubject: text("provider_subject").notNull(),
+  email: text("email"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  lastUsedAt: timestamp("last_used_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [uniqueIndex("account_identities_provider_subject_unique").on(table.provider, table.providerSubject), index("account_identities_account_id_index").on(table.accountId), check("account_identities_provider_check", sql`${table.provider} in ('password', 'google', 'microsoft', 'apple')`)]);
+
 export const accountEntitlements = pgTable("account_entitlements", {
   userId: text("user_id").primaryKey().references(() => users.id, { onDelete: "cascade" }),
   plan: text("plan").notNull().default("free"),
@@ -240,7 +250,7 @@ export const schoolSources = pgTable("school_sources", {
   processedAt: timestamp("processed_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-}, (table) => [index("school_sources_user_id_index").on(table.userId), index("school_sources_status_index").on(table.processingStatus), check("school_sources_type_check", sql`${table.sourceType} in ('upload-pdf', 'upload-text', 'manual')`), check("school_sources_status_check", sql`${table.processingStatus} in ('uploaded', 'processing', 'ready', 'ready_degraded', 'needs_review', 'failed', 'unsupported')`)]);
+}, (table) => [index("school_sources_user_id_index").on(table.userId), index("school_sources_status_index").on(table.processingStatus), check("school_sources_type_check", sql`${table.sourceType} in ('upload-pdf', 'upload-text', 'email', 'calendar', 'manual')`), check("school_sources_status_check", sql`${table.processingStatus} in ('uploaded', 'processing', 'ready', 'ready_degraded', 'needs_review', 'failed', 'unsupported')`)]);
 
 export const schoolAssignments = pgTable("school_assignments", {
   id: text("id").primaryKey(),
@@ -269,6 +279,25 @@ export const schoolAssignments = pgTable("school_assignments", {
   lastSyncedAt: timestamp("last_synced_at", { withTimezone: true }),
   sourceUpdatedAt: timestamp("source_updated_at", { withTimezone: true }),
 }, (table) => [index("school_assignments_user_id_index").on(table.userId), index("school_assignments_due_at_index").on(table.userId, table.dueAt), uniqueIndex("school_assignments_source_identity_unique").on(table.userId, table.sourceType, table.sourceId, table.externalId), check("school_assignments_source_type_check", sql`${table.sourceType} in ('canvas-api', 'canvas-calendar', 'school-source', 'manual')`), check("school_assignments_completion_status_check", sql`${table.completionStatus} in ('upcoming', 'due_soon', 'overdue', 'completed', 'submitted', 'graded', 'missing', 'unknown')`), check("school_assignments_planning_status_check", sql`${table.planningStatus} in ('not_started', 'planned', 'in_progress', 'done')`), check("school_assignments_priority_check", sql`${table.priority} in ('low', 'normal', 'high', 'critical')`)]);
+
+export const schoolEmailProposals = pgTable("school_email_proposals", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  sourceId: text("source_id").notNull().references(() => schoolSources.id, { onDelete: "cascade" }),
+  provider: text("provider").notNull(),
+  connectionId: text("connection_id").notNull(),
+  messageId: text("message_id").notNull(),
+  type: text("type").notNull(),
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  evidence: text("evidence").notNull(),
+  confidence: doublePrecision("confidence").notNull(),
+  status: text("status").notNull().default("pending"),
+  appliedAt: timestamp("applied_at", { withTimezone: true }),
+  error: text("error"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [index("school_email_proposals_user_id_index").on(table.userId), index("school_email_proposals_source_id_index").on(table.sourceId), check("school_email_proposals_status_check", sql`${table.status} in ('pending', 'approved', 'applied', 'dismissed', 'failed', 'needs_target')`)]);
 
 export const clockAlarms = pgTable("clock_alarms", {
   id: text("id").primaryKey(),

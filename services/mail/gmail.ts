@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { dirname, join } from "path";
 import type { MailAddress, MailMessage } from "@/core/contracts";
 import type { MailProviderAdapter } from "@/engines/mail";
-import { getProviderCredentials, listProviderConnections, setProviderCredentials, upsertProviderConnection } from "@/services/providers/store";
+import { setProviderCredentials, upsertProviderConnection } from "@/services/providers/store";
 
 export interface GmailToken { access_token: string; refresh_token?: string; expires_at?: number; token_type?: string; scope?: string; }
 interface GmailPart { mimeType?: string; body?: { data?: string; attachmentId?: string }; parts?: GmailPart[]; filename?: string; headers?: Array<{ name: string; value: string }>; }
@@ -31,7 +31,7 @@ export async function storeAccountGmailToken(userId: string, token: GmailToken) 
   if (!profileResponse.ok) throw new Error("Gmail account identity could not be verified.");
   const profile = await profileResponse.json() as { emailAddress?: string };
   if (!profile.emailAddress) throw new Error("Gmail account identity is missing.");
-  const connection = await upsertProviderConnection(userId, { provider: "gmail", providerAccountId: profile.emailAddress, email: profile.emailAddress, displayName: profile.emailAddress });
+  const connection = await upsertProviderConnection(userId, { provider: "gmail", providerAccountId: profile.emailAddress, email: profile.emailAddress, displayName: profile.emailAddress, metadata: { capabilities: ["mail.read", "mail.send"] } });
   await setProviderCredentials(userId, connection.id, token as unknown as Record<string, unknown>);
   return connection;
 }

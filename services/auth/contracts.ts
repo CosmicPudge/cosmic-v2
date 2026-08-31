@@ -1,8 +1,8 @@
 import type { CosmicAccount, CosmicSession } from "@/core/contracts/Account";
 
 export interface AuthUserRecord extends CosmicAccount {
-  passwordHash: string;
-  passwordSalt: string;
+  passwordHash: string | null;
+  passwordSalt: string | null;
   status: "active" | "disabled";
 }
 
@@ -23,13 +23,28 @@ export interface CreateSessionInput {
   authenticatedBootId?: string;
 }
 
+export interface AccountIdentityRecord {
+  id: string;
+  accountId: string;
+  provider: "password" | "google" | "microsoft" | "apple";
+  providerSubject: string;
+  email?: string | null;
+  createdAt: string;
+  lastUsedAt: string;
+}
+
 export interface AuthRepository {
   findUserByEmail(email: string): Promise<AuthUserRecord | null>;
   findUserById(id: string): Promise<AuthUserRecord | null>;
-  createUser(input: { id: string; email: string; displayName?: string; passwordHash: string; passwordSalt: string }): Promise<AuthUserRecord>;
+  createUser(input: { id: string; email: string; displayName?: string; passwordHash?: string | null; passwordSalt?: string | null }): Promise<AuthUserRecord>;
   createSession(input: CreateSessionInput): Promise<AuthSessionRecord>;
   findSession(tokenHash: string): Promise<AuthSessionRecord | null>;
   revokeSession(tokenHash: string): Promise<void>;
   revokeAllSessions(userId: string): Promise<void>;
   deleteUser(userId: string): Promise<void>;
+  listAccountIdentities(accountId: string): Promise<AccountIdentityRecord[]>;
+  findAccountIdentity(provider: AccountIdentityRecord["provider"], providerSubject: string): Promise<AccountIdentityRecord | null>;
+  createAccountIdentity(input: { accountId: string; provider: Exclude<AccountIdentityRecord["provider"], "password">; providerSubject: string; email?: string }): Promise<AccountIdentityRecord>;
+  touchAccountIdentity(id: string): Promise<AccountIdentityRecord | null>;
+  deleteAccountIdentity(accountId: string, id: string): Promise<boolean>;
 }

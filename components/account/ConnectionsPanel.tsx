@@ -4,10 +4,11 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useBillingStatus } from "@/hooks/os/useBillingStatus";
 import { useCosmicAccount } from "./AccountProvider";
+import IdentityMethodsPanel from "./IdentityMethodsPanel";
 
 type Connection = { id: string; provider: string; providerType?: string | null; status: string; reconnectRequired: boolean; displayName?: string | null; email?: string | null };
 
-export default function ConnectionsPanel({ returnTo }: { returnTo?: string } = {}) { return <><BillingSummary /><ConnectionsPanelContent returnTo={returnTo} /><AccountDeletionPanel /></>; }
+export default function ConnectionsPanel({ returnTo }: { returnTo?: string } = {}) { return <><IdentityMethodsPanel returnTo={returnTo} /><BillingSummary /><ConnectionsPanelContent returnTo={returnTo} /><AccountDeletionPanel /></>; }
 
 function BillingSummary() {
   const { data, loading } = useBillingStatus();

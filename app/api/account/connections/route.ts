@@ -3,6 +3,7 @@ import { deleteProviderConnection, listProviderConnections } from "@/services/pr
 import { isCredentialEncryptionConfigured } from "@/services/providers/credentialCrypto";
 import { clearWritableEventTargets } from "@/services/calendar/writableEventRegistry";
 import { assertSameOrigin } from "@/services/security/origin";
+import { declaredProviderCapabilities } from "@/services/providers/capabilities";
 
 export const dynamic = "force-dynamic";
 
@@ -11,7 +12,7 @@ export async function GET(request: Request) {
     const account = await requireCosmicAccount(request);
     if (!isCredentialEncryptionConfigured()) return Response.json({ error: "Provider connections are not configured." }, { status: 503 });
     const connections = await listProviderConnections(account.id);
-    return Response.json({ connections: connections.map(({ id, provider, providerType, displayName, email, status, reconnectRequired, lastSuccessfulRefreshAt, createdAt, updatedAt }) => ({ id, provider, providerType, displayName, email, status, reconnectRequired, lastSuccessfulRefreshAt, createdAt, updatedAt })) });
+    return Response.json({ connections: connections.map(({ id, provider, providerType, displayName, email, metadata, status, reconnectRequired, lastSuccessfulRefreshAt, createdAt, updatedAt }) => ({ id, provider, providerType, displayName, email, capabilities: declaredProviderCapabilities(metadata), status, reconnectRequired, lastSuccessfulRefreshAt, createdAt, updatedAt })) });
   } catch (error) {
     if (error instanceof Response) return error;
     return Response.json({ error: "Provider connections are temporarily unavailable." }, { status: 503 });

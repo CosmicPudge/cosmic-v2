@@ -20,6 +20,7 @@ export interface SchoolSource {
 
 export interface SchoolProvenance {
   sourceId: string;
+  proposalId?: string;
   sourceVersion: number;
   locator?: { pageNumber?: number; section?: string; startOffset?: number; endOffset?: number };
   excerpt?: string;
@@ -54,6 +55,7 @@ export interface SchoolEvent {
   requiredItems?: string[];
   audience?: string;
   action?: string;
+  status?: "canceled";
   factIds: string[];
   provenance: SchoolProvenance[];
   certainty: SchoolFactCertainty;

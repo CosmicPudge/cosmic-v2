@@ -56,6 +56,7 @@ export function schoolSnapshotToCalendarEvents(snapshot: SchoolSnapshot): Calend
     completed: assignment.completionStatus === "completed" || assignment.planningStatus === "done",
   }));
   const documentEvents = (snapshot.sourceIntelligence?.events ?? []).flatMap((event) => {
+    if (event.status === "canceled") return [];
     if (!event.startsAt) return [];
     const start = new Date(event.startsAt);
     if (Number.isNaN(start.getTime())) return [];
