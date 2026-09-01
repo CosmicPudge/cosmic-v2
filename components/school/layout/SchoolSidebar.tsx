@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   Bell,
   BookOpen,
+  Inbox,
   ArrowLeft,
   CalendarDays,
   Flag,
@@ -20,7 +21,10 @@ import { SyncStatus } from "./SyncStatus";
 
 const navigation = [
   { href: "/school", label: "Overview", icon: LayoutGrid },
+  { href: "/school/inbox", label: "Inbox", icon: Inbox },
+  { href: "/school/week", label: "This Week", icon: CalendarDays },
   { href: "/school/courses", label: "Courses", icon: BookOpen },
+  { href: "/school/notes", label: "Notes", icon: BookOpen },
   { href: "/school/assignments", label: "Assignments", icon: ListChecks },
   { href: "/school/schedule", label: "Schedule", icon: CalendarDays },
   { href: "/school/sources", label: "Sources", icon: FolderOpen },
@@ -65,7 +69,7 @@ export function SchoolSidebar() {
         <span className="grid size-9 place-items-center rounded-2xl border border-sky-100/15 bg-sky-200/10 text-sky-100">
           <GraduationCap className="size-5" aria-hidden="true" />
         </span>
-        <span className="text-sm font-semibold tracking-tight text-white">Cosmic School</span>
+        <span><span className="block text-[10px] font-semibold uppercase tracking-[0.22em] text-sky-100/55">Utah State</span><span className="block text-sm font-semibold tracking-tight text-white">Cosmic School</span></span>
       </Link>
 
       <SemesterSwitcher />

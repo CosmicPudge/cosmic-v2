@@ -12,8 +12,14 @@ import { buildDashboard } from "@/components/school/data/engine/engine";
 import type { SchoolDashboardData } from "@/components/school/data/types";
 import type { SchoolSourceIntelligence } from "@/core/contracts/SchoolIntelligence";
 import { detectSourceConflicts } from "./sources/conflicts";
+import { listSchoolNotes } from "./noteRepository";
+import { listSchoolFindingsForAccount } from "./findingRepository";
+import { requirementCategory, resolveRequirementDate } from "./requirements";
+import { applyCoursePlanOverrides, buildCoursePlans } from "./coursePlan";
+import { listCoursePlanOverrides } from "./coursePlanOverrideRepository";
 
 const providerAccountId = "canvas-personal-calendar";
+async function safeCoursePlanOverrides(accountId: string) { try { return await listCoursePlanOverrides(accountId); } catch { return []; } }
 
 function sourceIntelligence(rows: SchoolSourceRow[]): SchoolSourceIntelligence {
   const combined = emptySchoolSourceIntelligence();
@@ -32,6 +38,17 @@ function sourceIntelligence(rows: SchoolSourceRow[]): SchoolSourceIntelligence {
 
 function withSourceIntelligence(snapshot: SchoolSnapshot, rows: SchoolSourceRow[]): SchoolSnapshot {
   return { ...snapshot, sourceIntelligence: sourceIntelligence(rows) };
+}
+
+function withKnowledge(snapshot: SchoolSnapshot, notes: Awaited<ReturnType<typeof listSchoolNotes>>, findings: Awaited<ReturnType<typeof listSchoolFindingsForAccount>>, sources: SchoolSourceRow[], overrides: Awaited<ReturnType<typeof listCoursePlanOverrides>> = []): SchoolSnapshot {
+  const normalizedNotes = notes.slice(0, 25).map((note) => ({ id: note.id, ...(note.courseId ? { courseId: note.courseId } : {}), ...(note.sourceId ? { sourceId: note.sourceId } : {}), title: note.title, content: note.content.slice(0, 2_000), topics: Array.isArray(note.topics) ? note.topics.filter((item): item is string => typeof item === "string").slice(0, 20) : [], ...(note.classDate ? { classDate: note.classDate } : {}), createdAt: note.createdAt, updatedAt: note.updatedAt, provenance: note.provenance }));
+  const approved = findings.filter((finding) => finding.reviewState === "approved" || finding.reviewState === "edited_then_approved");
+  const requirements = approved.filter((finding) => finding.type === "requirement").flatMap((finding) => { const payload = finding.payload as Record<string, unknown>; const value = typeof payload.content === "string" ? payload.content : typeof payload.value === "string" ? payload.value : finding.evidence; const source = sources.find((item) => item.id === finding.sourceId); const relevantDate = source ? resolveRequirementDate(payload, source.createdAt) : undefined; const categoryValue = typeof payload.requirementCategory === "string" ? payload.requirementCategory : payload.kind === "required-item" ? "bring" : payload.kind; return value ? [{ id: finding.id, ...(typeof payload.courseId === "string" ? { courseId: payload.courseId } : {}), category: requirementCategory(categoryValue), value: value.slice(0, 300), sourceId: finding.sourceId, evidence: finding.evidence.slice(0, 500), ...(relevantDate ? { relevantDate } : {}), ...(typeof payload.eventContext === "string" ? { eventContext: payload.eventContext } : {}), recurrence: payload.recurrence === "recurring" ? "recurring" as const : "once" as const }] : []; }).slice(0, 50);
+  const importantFacts = approved.filter((finding) => finding.type === "fact" || finding.type === "policy" || finding.type === "important_fact").flatMap((finding) => { const payload = finding.payload as Record<string, unknown>; const subject = typeof payload.subject === "string" ? payload.subject : finding.type; const value = typeof payload.value === "string" ? payload.value : finding.evidence; return [{ id: finding.id, subject, value: value.slice(0, 300), sourceId: finding.sourceId, evidence: finding.evidence.slice(0, 500) }]; }).slice(0, 50);
+  const topics = normalizedNotes.flatMap((note) => note.topics.map((value) => ({ value, noteId: note.id, ...(note.courseId ? { courseId: note.courseId } : {}), ...(note.sourceId ? { sourceId: note.sourceId } : {}), createdAt: note.updatedAt }))).slice(0, 50);
+  const knowledgeConflicts = findings.filter((finding) => finding.type === "conflict" && finding.reviewState === "pending").flatMap((finding) => { const payload = finding.payload as Record<string, unknown>; return typeof payload.existingFindingId === "string" && typeof payload.incomingFindingId === "string" ? [{ id: finding.id, firstId: payload.existingFindingId, secondId: payload.incomingFindingId, description: finding.evidence }] : []; });
+  const plans = buildCoursePlans(findings.map((row) => ({ sourceId: row.sourceId, type: row.type, payload: row.payload, reviewState: row.reviewState })), new Map(sources.map((source) => [source.id, source.courseId])));
+  return { ...snapshot, notes: normalizedNotes, topics, requirements, importantFacts, coursePlans: applyCoursePlanOverrides(plans, overrides.map((item) => ({ semanticField: item.semanticField, targetId: item.targetId, value: item.value }))), conflicts: [...(snapshot.conflicts ?? []), ...knowledgeConflicts] };
 }
 
 function canvasCourses(connection: Awaited<ReturnType<typeof listProviderConnections>>[number] | null): SchoolCanvasCourse[] {
@@ -76,10 +93,11 @@ export interface SchoolServerData {
 /** Server-side School boundary. Consumers receive normalized data only. */
 export async function getSchoolDataForAccount(accountId: string): Promise<SchoolServerData> {
   if (!getSchoolAccess({ id: accountId }).enabled) {
-    return { data: buildDashboard([]), snapshot: { courses: [], assignments: [], events: [], actionItems: [], facts: [], sources: [], updatedAt: new Date().toISOString(), sourceStatus: { canvas: "not_connected" }, sourceIntelligence: emptySchoolSourceIntelligence() } };
+    return { data: buildDashboard([]), snapshot: { courses: [], assignments: [], events: [], actionItems: [], facts: [], notes: [], topics: [], requirements: [], importantFacts: [], sources: [], updatedAt: new Date().toISOString(), sourceStatus: { canvas: "not_connected" }, sourceIntelligence: emptySchoolSourceIntelligence() } };
   }
 
   const sources = await listSchoolSources(accountId);
+  const [notes, findings, overrides] = await Promise.all([listSchoolNotes(accountId), listSchoolFindingsForAccount(accountId), safeCoursePlanOverrides(accountId)]);
   let storedAssignments: SchoolPlanningAssignment[] = [];
   try { storedAssignments = await listSchoolAssignments(accountId); } catch { /* The planning table may not exist until migration 0028 is applied. */ }
 
@@ -87,7 +105,7 @@ export async function getSchoolDataForAccount(accountId: string): Promise<School
   const connection = providerConnections.find((item) => item.provider === "canvas" && item.providerAccountId === providerAccountId);
   const academicConnection = providerConnections.find((item) => item.provider === "canvas" && item.providerType === "rest");
   if (!connection) {
-    const empty = buildDashboard([]); const snapshot = withSourceIntelligence({ courses: [], assignments: [], events: [], actionItems: [], facts: [], sources: [], updatedAt: new Date().toISOString(), sourceStatus: { canvas: "not_connected" } }, sources);
+    const empty = buildDashboard([]); const snapshot = withKnowledge(withSourceIntelligence({ courses: [], assignments: [], events: [], actionItems: [], facts: [], notes: [], topics: [], requirements: [], importantFacts: [], sources: [], updatedAt: new Date().toISOString(), sourceStatus: { canvas: "not_connected" } }, sources), notes, findings, sources, overrides);
     return { data: empty, snapshot: { ...withPlanning(accountId, snapshot, empty, sources, storedAssignments), ...(academicConnection ? { canvasCourses: canvasCourses(academicConnection) } : {}) } };
   }
 
@@ -96,10 +114,10 @@ export async function getSchoolDataForAccount(accountId: string): Promise<School
     const feedUrl = typeof credentials?.feedUrl === "string" ? credentials.feedUrl : undefined;
     const result = await new CanvasCalendarProvider(feedUrl).getDashboardDataWithDiagnostics();
     const snapshot = buildSchoolSnapshot(result.data);
-    const enriched = withSourceIntelligence({ ...snapshot, sourceStatus: { canvas: "healthy", lastSyncedAt: connection.lastSuccessfulRefreshAt?.toISOString() ?? null } }, sources);
+    const enriched = withKnowledge(withSourceIntelligence({ ...snapshot, sourceStatus: { canvas: "healthy", lastSyncedAt: connection.lastSuccessfulRefreshAt?.toISOString() ?? null } }, sources), notes, findings, sources, overrides);
     return { data: result.data, snapshot: { ...withPlanning(accountId, enriched, result.data, sources, storedAssignments), ...(academicConnection ? { canvasCourses: canvasCourses(academicConnection) } : {}) } };
   } catch {
-    const empty = buildDashboard([]); const snapshot = withSourceIntelligence({ courses: [], assignments: [], events: [], actionItems: [], facts: [], sources: [], updatedAt: new Date().toISOString(), sourceStatus: { canvas: "error", lastSyncedAt: connection.lastSuccessfulRefreshAt?.toISOString() ?? null } }, sources);
+    const empty = buildDashboard([]); const snapshot = withKnowledge(withSourceIntelligence({ courses: [], assignments: [], events: [], actionItems: [], facts: [], notes: [], topics: [], requirements: [], importantFacts: [], sources: [], updatedAt: new Date().toISOString(), sourceStatus: { canvas: "error", lastSyncedAt: connection.lastSuccessfulRefreshAt?.toISOString() ?? null } }, sources), notes, findings, sources, overrides);
     return { data: empty, snapshot: { ...withPlanning(accountId, snapshot, empty, sources, storedAssignments), ...(academicConnection ? { canvasCourses: canvasCourses(academicConnection) } : {}) }, error: "Canvas data is temporarily unavailable." };
   }
 }

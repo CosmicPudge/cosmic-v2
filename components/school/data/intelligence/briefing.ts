@@ -1,5 +1,6 @@
 import { IntelligenceContext } from "./context";
 import { DailyBriefing } from "./types";
+import { sameLocalDay } from "@/services/school/temporal";
 
 export function generateDailyBriefing(
   context: IntelligenceContext
@@ -10,6 +11,15 @@ export function generateDailyBriefing(
     risks,
     recommendations,
   } = context;
+  const snapshot = context.snapshot;
+  const today = new Date(); const tomorrow = new Date(today); tomorrow.setDate(today.getDate() + 1);
+  const dayRequirements = (date: Date, category?: string) => (snapshot?.requirements ?? []).filter((item) => item.relevantDate && sameLocalDay(item.relevantDate, date) && (!category || item.category === category)).map((item) => item.value).slice(0, 5);
+  const planItems = (date: Date) => (snapshot?.coursePlans ?? []).flatMap((plan) => [
+    ...plan.exams.filter((item) => item.date && new Date(item.date).toDateString() === date.toDateString()).map((item) => `Exam: ${item.title}`),
+    ...plan.majorAssignments.filter((item) => item.dueAt && new Date(item.dueAt).toDateString() === date.toDateString()).map((item) => `Due: ${item.title}`),
+  ]);
+  const weekday = ["SU", "MO", "TU", "WE", "TH", "FR", "SA"][today.getDay()];
+  const officeHours = (snapshot?.coursePlans ?? []).flatMap((plan) => plan.officeHours.filter((item) => Array.isArray(item.daysOfWeek) && item.daysOfWeek.includes(weekday)).map((item) => String(item.value ?? `Office hours ${item.startTime ?? ""}-${item.endTime ?? ""}`))).slice(0, 5);
 
   const hour = new Date().getHours();
 
@@ -98,5 +108,14 @@ export function generateDailyBriefing(
   notificationCount:
   Math.min(2, risks.length) +
   (context.metrics.overdueAssignments > 0 ? 1 : 0),
+  school: {
+    today: [...data.assignments.filter((item) => item.due.toDateString() === today.toDateString()).map((item) => item.title), ...data.events.filter((item) => item.start.toDateString() === today.toDateString()).map((item) => item.title), ...planItems(today)].slice(0, 8),
+    tomorrow: [...data.events.filter((item) => item.start.toDateString() === tomorrow.toDateString()).map((item) => item.title), ...planItems(tomorrow)].slice(0, 5),
+    bring: dayRequirements(today, "bring"),
+    wear: dayRequirements(today, "wear"),
+    prepare: dayRequirements(tomorrow, "prepare"),
+    officeHours,
+    suggestedReview: (snapshot?.topics ?? []).slice(0, 3).map((item) => ({ value: item.value, source: "Study notes" })),
+  },
 };
 }

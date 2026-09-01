@@ -1,4 +1,5 @@
 import type { SchoolAssignmentCompletion, SchoolPlanRecommendation, SchoolPlanningAssignment, SchoolPlanningPriority, SchoolTimelineEntry } from "@/core/contracts/SchoolPlanning";
+export { hydrateSchoolPlanningAssignments, safeSchoolDate } from "./hydration";
 
 const priorityWeight: Record<SchoolPlanningPriority, number> = { low: 0, normal: 10, high: 25, critical: 45 };
 
@@ -50,21 +51,6 @@ export function rankSchoolAssignments(assignments: SchoolPlanningAssignment[], n
 
 export function buildSchoolTimeline(entries: SchoolTimelineEntry[]) {
   return [...entries].sort((a, b) => a.start.getTime() - b.start.getTime() || a.title.localeCompare(b.title) || a.id.localeCompare(b.id));
-}
-
-export function hydrateSchoolPlanningAssignments(value: unknown): SchoolPlanningAssignment[] {
-  if (!Array.isArray(value)) return [];
-  const parsed: SchoolPlanningAssignment[] = [];
-  for (const item of value) {
-    if (!item || typeof item !== "object") continue;
-    const raw = item as Record<string, unknown>;
-    if (typeof raw.id !== "string" || typeof raw.accountId !== "string" || typeof raw.title !== "string" || typeof raw.sourceType !== "string") continue;
-    const parse = (candidate: unknown) => typeof candidate === "string" ? new Date(candidate) : undefined;
-    const createdAt = parse(raw.createdAt); const updatedAt = parse(raw.updatedAt); if (!createdAt || !updatedAt || Number.isNaN(createdAt.getTime()) || Number.isNaN(updatedAt.getTime())) continue;
-    const dueAt = parse(raw.dueAt); const availableAt = parse(raw.availableAt); const lockAt = parse(raw.lockAt); const lastSyncedAt = parse(raw.lastSyncedAt); const sourceUpdatedAt = parse(raw.sourceUpdatedAt);
-    parsed.push({ ...(raw as unknown as SchoolPlanningAssignment), createdAt, updatedAt, ...(dueAt && !Number.isNaN(dueAt.getTime()) ? { dueAt } : {}), ...(availableAt && !Number.isNaN(availableAt.getTime()) ? { availableAt } : {}), ...(lockAt && !Number.isNaN(lockAt.getTime()) ? { lockAt } : {}), ...(lastSyncedAt && !Number.isNaN(lastSyncedAt.getTime()) ? { lastSyncedAt } : {}), ...(sourceUpdatedAt && !Number.isNaN(sourceUpdatedAt.getTime()) ? { sourceUpdatedAt } : {}) });
-  }
-  return parsed;
 }
 
 export function detectSchoolTimelineConflicts(entries: SchoolTimelineEntry[]) {

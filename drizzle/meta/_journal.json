@@ -232,6 +232,41 @@
       "when": 1787873000000,
       "tag": "0033_account_identities",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1787874000000,
+      "tag": "0034_school_multimodal",
+      "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1787875000000,
+      "tag": "0035_school_source_multimodal_types",
+      "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1787876000000,
+      "tag": "0036_school_source_course",
+      "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1787877000000,
+      "tag": "0037_school_source_purpose",
+      "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1787878000000,
+      "tag": "0038_school_course_plan_overrides",
+      "breakpoints": true
     }
   ]
 }

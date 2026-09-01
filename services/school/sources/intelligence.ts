@@ -1,4 +1,5 @@
 import type { SchoolActionItem, SchoolEvent as DocumentEvent, SchoolFact, SchoolProvenance, SchoolSource, SchoolSourceIntelligence } from "@/core/contracts/SchoolIntelligence";
+import { extractStructuredSyllabus } from "../syllabus";
 
 function provenance(source: SchoolSource, text: string, line: string): SchoolProvenance {
   return { sourceId: source.id, sourceVersion: source.version, locator: { startOffset: text.indexOf(line) }, excerpt: line, extractor: "deterministic", extractorVersion: 1 };
@@ -39,7 +40,20 @@ export function extractDocumentIntelligence(source: SchoolSource, text: string):
   const actionItems: SchoolActionItem[] = [];
   const warnings: string[] = [];
   const lines = text.split("\n").map((line) => line.trim()).filter(Boolean);
+  for (const item of extractStructuredSyllabus(text)) { const fact = makeFact(source, text, "other", item.value, item.evidence, facts.length) as SchoolFact & Record<string, unknown>; fact.subject = item.subject; Object.assign(fact, item.data); fact.structuredKind = item.kind; facts.push(fact); }
   for (const [index, line] of lines.entries()) {
+    const syllabus = /^(instructor|professor|email|office hours?|textbook|required textbook|materials?|attendance|late work|calculator|technology|academic integrity|grading|grade scale|meeting|class time|office)\s*:\s*(.+)$/i.exec(line);
+    if (syllabus) { const fact = makeFact(source, text, "other", syllabus[2].trim(), line, facts.length) as SchoolFact & Record<string, unknown>; fact.subject = syllabus[1].toLowerCase().replace(/\s+/g, "_"); facts.push(fact); continue; }
+    const grading = /^(.+?)\s+(\d+(?:\.\d+)?)%\s*$/.exec(line);
+    if (grading) { const fact = makeFact(source, text, "other", line, line, facts.length) as SchoolFact & Record<string, unknown>; fact.subject = "grading"; fact.label = grading[1].trim(); fact.weight = Number(grading[2]); facts.push(fact); continue; }
+    const requirement = /^(bring|wear|prepare|read|equipment|material|required item)\s+(.+?)(?:\s+(sunday|monday|tuesday|wednesday|thursday|friday|saturday))?\.?$/i.exec(line);
+    if (requirement) {
+      const category = requirement[1].toLowerCase().replace(" ", "-") as SchoolFact["kind"];
+      const fact = makeFact(source, text, category === "required-item" ? "required-item" : category as SchoolFact["kind"], requirement[2].trim(), line, facts.length) as SchoolFact & Record<string, unknown>;
+      if (requirement[3]) fact.relevantWeekday = requirement[3];
+      const context = /\b(LLAB|lab|class|meeting)\b/i.exec(line); if (context) fact.eventContext = context[1];
+      facts.push(fact); continue;
+    }
     const labeled = /^(uniform|attire|required item|location|time|audience|requirement|deadline)\s*:\s*(.+)$/i.exec(line);
     if (labeled) facts.push(makeFact(source, text, labeled[1].toLowerCase().replace(" ", "-") as SchoolFact["kind"], labeled[2].trim(), line, facts.length));
     const event = parseDocumentEvent(source, text, line, index);

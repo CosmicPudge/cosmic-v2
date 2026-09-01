@@ -36,4 +36,5 @@ export interface DailyBriefing {
   currentWeek: number;
 
   notificationCount: number;
+  school: { today: string[]; tomorrow: string[]; bring: string[]; wear: string[]; prepare: string[]; officeHours: string[]; suggestedReview: Array<{ value: string; source: string }> };
 }

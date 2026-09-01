@@ -11,6 +11,7 @@ import { getUpcomingRecurringItems } from "@/services/finance/domain";
 import type { UnifiedFinanceAccount } from "@/services/finance/merged";
 import { getUnifiedAccountTotals } from "@/services/finance/merged";
 import { getRelevantTimedEvent } from "@/services/calendar/relevance";
+import { safeSchoolDate } from "@/services/school/planning";
 
 const iso = (value: Date | number) => new Date(value).toISOString();
 const minutesFromNow = (value: Date, now: Date) => Math.round((value.getTime() - now.getTime()) / 60_000);
@@ -44,8 +45,11 @@ export function schoolContext(data: LocalSchoolData, now: Date): CosmicContextIt
   if (classItem) {
     result.push({ id: `school:class:${classItem.course.id}:${classItem.start.toISOString()}`, priority: schedule.currentClass ? "attention" : minutesFromNow(classItem.start, now) <= 30 ? "attention" : "glance", source: "school", kind: schedule.currentClass ? "current-class" : "next-class", title: classItem.course.code ?? classItem.course.name, subtitle: schedule.currentClass ? "Class in progress" : `${classItem.start.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}${classItem.location ? ` · ${classItem.location}` : ""}`, timestamp: iso(now), startsAt: iso(classItem.start), expiresAt: iso(classItem.end), destination: "/school" });
   }
-  const assignment = data.assignments.filter((item) => item.status !== "completed" && item.dueAt).sort((a, b) => (a.dueAt?.getTime() ?? Infinity) - (b.dueAt?.getTime() ?? Infinity))[0];
-  if (assignment?.dueAt) result.push({ id: `school:assignment:${assignment.id}`, priority: assignment.priority === "high" || assignment.dueAt.getTime() - now.getTime() < 24 * 60 * 60_000 ? "attention" : "glance", source: "school", kind: "assignment", title: assignment.title, subtitle: `Due ${assignment.dueAt.toLocaleDateString([], { month: "short", day: "numeric" })}`, timestamp: iso(now), startsAt: iso(assignment.dueAt), destination: "/school" });
+  const assignment = data.assignments.flatMap((item) => {
+    const dueAt = safeSchoolDate(item.dueAt);
+    return item.status !== "completed" && dueAt ? [{ item, dueAt }] : [];
+  }).sort((a, b) => a.dueAt.getTime() - b.dueAt.getTime())[0];
+  if (assignment) result.push({ id: `school:assignment:${assignment.item.id}`, priority: assignment.item.priority === "high" || assignment.dueAt.getTime() - now.getTime() < 24 * 60 * 60_000 ? "attention" : "glance", source: "school", kind: "assignment", title: assignment.item.title, subtitle: `Due ${assignment.dueAt.toLocaleDateString([], { month: "short", day: "numeric" })}`, timestamp: iso(now), startsAt: iso(assignment.dueAt), destination: "/school" });
   return result;
 }
 

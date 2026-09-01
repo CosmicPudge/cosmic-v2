@@ -1,4 +1,5 @@
-export type SchoolSourceType = "upload-pdf" | "upload-text" | "email" | "calendar" | "manual";
+export type SchoolSourceType = "upload-pdf" | "upload-text" | "upload-image" | "upload-docx" | "email" | "calendar" | "manual";
+export const SCHOOL_SOURCE_TYPES: readonly SchoolSourceType[] = ["upload-pdf", "upload-text", "upload-image", "upload-docx", "email", "calendar", "manual"];
 export type SchoolSourceStatus = "pending" | "processing" | "ready" | "ready_degraded" | "needs_review" | "failed" | "unsupported";
 export type SchoolFactKind = "course" | "assignment" | "grade" | "schedule" | "event-type" | "deadline" | "location" | "time" | "timezone" | "attire" | "uniform" | "required-item" | "audience" | "contact" | "other";
 export type SchoolFactCertainty = "explicit" | "inferred" | "unknown" | "conflicting";

@@ -3,7 +3,7 @@ import test from "node:test";
 // @ts-expect-error Node's strip-types runner resolves the source extension directly.
 import { hydrateSchoolDashboard } from "./normalize.ts";
 // @ts-expect-error Node's strip-types runner resolves the source extension directly.
-import { buildSchoolSnapshot } from "../../../services/school/domain.ts";
+import { buildSchoolSnapshot, hydrateSchoolSnapshot } from "../../../services/school/domain.ts";
 
 const data = {
   mission: { title: "Study", subtitle: "", priority: "medium" as const },
@@ -42,4 +42,19 @@ test("skips malformed external School dates without throwing", () => {
   const hydrated = hydrateSchoolDashboard(serialized);
   assert.equal(hydrated.events.some((event) => event.id === "bad-event"), false);
   assert.equal(hydrated.assignments.some((assignment) => assignment.id === "bad-assignment"), false);
+});
+
+test("hydrates planning assignment dates and drops malformed planning records", () => {
+  const raw = {
+    ...buildSchoolSnapshot(data),
+    planningAssignments: [
+      { id: "planning-1", accountId: "account-1", title: "Valid", sourceType: "manual", dueAt: "2026-09-04T18:00:00.000Z", createdAt: "2026-08-01T00:00:00.000Z", updatedAt: "2026-08-01T00:00:00.000Z", completionStatus: "upcoming", planningStatus: "not_started", priority: "normal" },
+      { id: "planning-2", accountId: "account-1", title: "Malformed", sourceType: "manual", dueAt: "not-a-date", createdAt: "2026-08-01T00:00:00.000Z", updatedAt: "2026-08-01T00:00:00.000Z", completionStatus: "upcoming", planningStatus: "not_started", priority: "normal" },
+    ],
+  };
+  const hydrated = hydrateSchoolSnapshot(JSON.parse(JSON.stringify(raw)));
+  assert.equal(hydrated?.planningAssignments?.length, 2);
+  assert.equal(hydrated?.planningAssignments?.[0]?.dueAt instanceof Date, true);
+  assert.equal(hydrated?.planningAssignments?.[0]?.dueAt?.toISOString(), "2026-09-04T18:00:00.000Z");
+  assert.equal(hydrated?.planningAssignments?.[1]?.dueAt, undefined);
 });

@@ -9,9 +9,8 @@ import {
 } from "../data/intelligence";
 import { hydrateSchoolDashboard } from "../data/normalize";
 import { useLocalSchoolRepository } from "../data/localRepository";
-import { buildSchoolSnapshot } from "@/services/school/domain";
+import { buildSchoolSnapshot, hydrateSchoolSnapshot } from "@/services/school/domain";
 import type { SchoolSnapshot } from "@/services/school/domain";
-import { hydrateSchoolPlanningAssignments } from "@/services/school/planning";
 
 interface UseSchoolDataOptions { enabled?: boolean }
 
@@ -43,17 +42,8 @@ export function useSchoolData({ enabled = true }: UseSchoolDataOptions = {}) {
         // strings. Rebuild it from the already-hydrated dashboard data so
         // every client consumer receives the Date-based contract.
         const normalizedSnapshot = buildSchoolSnapshot(json);
-        setSnapshot({
-          ...normalizedSnapshot,
-          ...(body.snapshot?.updatedAt ? { updatedAt: body.snapshot.updatedAt } : {}),
-          ...(body.snapshot?.sourceStatus ? { sourceStatus: body.snapshot.sourceStatus } : {}),
-          ...(body.snapshot?.sourceIntelligence ? { sourceIntelligence: body.snapshot.sourceIntelligence } : {}),
-          ...(body.snapshot?.planningAssignments ? { planningAssignments: hydrateSchoolPlanningAssignments(body.snapshot.planningAssignments) } : {}),
-          ...(body.snapshot?.timelineEntries ? { timelineEntries: body.snapshot.timelineEntries.map((entry) => ({ ...entry, start: new Date(String(entry.start)), ...(entry.end ? { end: new Date(String(entry.end)) } : {}) })) } : {}),
-          ...(body.snapshot?.planningRecommendations ? { planningRecommendations: body.snapshot.planningRecommendations } : {}),
-          ...(body.snapshot?.conflicts ? { conflicts: body.snapshot.conflicts } : {}),
-          ...(body.snapshot?.canvasCourses ? { canvasCourses: body.snapshot.canvasCourses } : {}),
-        });
+        const hydratedServerSnapshot = hydrateSchoolSnapshot(body.snapshot);
+        setSnapshot(hydratedServerSnapshot ? { ...normalizedSnapshot, ...hydratedServerSnapshot } : normalizedSnapshot);
         setError(body.error);
       } catch (err) {
         setError(
@@ -76,7 +66,7 @@ export function useSchoolData({ enabled = true }: UseSchoolDataOptions = {}) {
     useMemo(() => {
       if (!enabled || !data) return null;
 
-      return buildSchoolIntelligence(data);
+      return buildSchoolIntelligence(data, snapshot ?? undefined);
     }, [data, enabled]);
 
   const normalizedSnapshot = useMemo(() => !enabled ? null : snapshot ?? (data ? buildSchoolSnapshot(data) : null), [data, enabled, snapshot]);

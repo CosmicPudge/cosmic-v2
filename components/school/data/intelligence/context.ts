@@ -4,6 +4,7 @@ import { calculateMetrics } from "./metrics";
 import { calculateWorkload } from "./workload";
 import { calculateAssignmentRisk } from "./risk";
 import { generateRecommendations } from "./recommendations";
+import type { SchoolSnapshot } from "@/services/school/domain";
 
 export interface IntelligenceContext {
   data: SchoolDashboardData;
@@ -15,10 +16,11 @@ export interface IntelligenceContext {
   risks: ReturnType<typeof calculateAssignmentRisk>;
 
   recommendations: ReturnType<typeof generateRecommendations>;
+  snapshot?: SchoolSnapshot;
 }
 
 export function buildIntelligenceContext(
-  data: SchoolDashboardData
+  data: SchoolDashboardData, snapshot?: SchoolSnapshot
 ): IntelligenceContext {
   const metrics = calculateMetrics(data);
 
@@ -41,5 +43,6 @@ export function buildIntelligenceContext(
     risks,
 
     recommendations,
+    snapshot,
   };
 }

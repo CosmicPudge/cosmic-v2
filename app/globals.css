@@ -46,6 +46,20 @@ body {
 
 html, body { width: 100%; min-height: 100%; background: #030511; }
 
+.school-environment { position: relative; isolation: isolate; min-height: 100vh; overflow: hidden; background: #061127; }
+.school-environment-media, .school-environment-overlay, .school-environment-atmosphere { position: fixed; inset: 0; pointer-events: none; }
+.school-environment-media { z-index: -3; background: radial-gradient(ellipse at 76% 4%, rgba(27, 105, 175, .3), transparent 34%), linear-gradient(135deg, rgba(14, 56, 103, .72), transparent 38%), linear-gradient(160deg, #0a2342 0%, #07152e 45%, #030816 100%); }
+.school-environment-media::after { content: ""; position: absolute; inset: 0; opacity: .18; background-image: linear-gradient(115deg, transparent 0 38%, rgba(255,255,255,.08) 38.2% 38.35%, transparent 38.5%), linear-gradient(160deg, transparent 0 56%, rgba(124, 190, 231, .1) 56.2% 56.35%, transparent 56.5%); }
+.school-environment-overlay { z-index: -2; background: linear-gradient(180deg, rgba(2, 9, 24, .52), rgba(2, 7, 19, .84) 68%, #030611 100%); }
+.school-environment-atmosphere { z-index: -1; opacity: .33; background-image: radial-gradient(rgba(212, 235, 255, .45) .55px, transparent .7px), radial-gradient(rgba(151, 195, 255, .28) .6px, transparent .8px); background-position: 0 0, 29px 17px; background-size: 71px 71px, 113px 113px; mask-image: linear-gradient(to bottom, black, transparent 82%); }
+.school-environment-content { position: relative; z-index: 0; min-height: 100vh; }
+.school-environment-minimal .school-environment-media { background: #071126; }
+.school-glass-panel { position: relative; overflow: hidden; border: 1px solid rgba(172, 211, 255, .16); border-radius: 1.35rem; background: rgba(9, 23, 50, .68); box-shadow: 0 18px 60px rgba(0, 0, 0, .2), inset 0 1px 0 rgba(255,255,255,.06); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); }
+.school-glass-panel::before { content: ""; position: absolute; inset: 0 0 auto; height: 1px; background: linear-gradient(90deg, transparent, rgba(198, 226, 255, .28), transparent); pointer-events: none; }
+.school-glass-panel-glow { box-shadow: 0 18px 60px rgba(0, 0, 0, .2), 0 0 34px rgba(54, 137, 214, .12), inset 0 1px 0 rgba(255,255,255,.07); }
+.school-command-panel { border: 1px solid rgba(172, 211, 255, .13); border-radius: 1.35rem; background: rgba(10, 27, 57, .72); box-shadow: 0 18px 60px rgba(0,0,0,.2), inset 0 1px 0 rgba(255,255,255,.05); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
+@media (prefers-reduced-transparency: reduce) { .school-glass-panel, .school-command-panel { background: #0b1b38; backdrop-filter: none; -webkit-backdrop-filter: none; } }
+
 .kiosk-pairing-screen { height: 100dvh; min-height: 0; }
 .kiosk-pairing-card { max-height: calc(100dvh - 2rem); }
 .kiosk-pairing-grid { display: grid; grid-template-columns: minmax(0, 190px) minmax(0, 1fr); gap: clamp(1rem, 4vw, 3rem); text-align: left; }

@@ -102,9 +102,14 @@ export default function DailyBriefingCard({
         </div>
 
         {/* Mission */}
+        <div className="grid gap-3 md:grid-cols-2">
+          {([["TODAY", briefing.school.today], ["TOMORROW", briefing.school.tomorrow], ["BRING", briefing.school.bring], ["WEAR", briefing.school.wear], ["PREPARE", briefing.school.prepare], ["OFFICE HOURS", briefing.school.officeHours], ["SUGGESTED REVIEW", briefing.school.suggestedReview.map((item) => `${item.value} · ${item.source}`)] ] as const).filter(([, items]) => items.length > 0).map(([label, items]) => <div key={label} className="rounded-2xl border border-white/10 bg-white/5 p-4"><p className="text-xs uppercase tracking-wider text-white/50">{label}</p><ul className="mt-2 space-y-1 text-sm text-white/70">{items.slice(0, 5).map((item) => <li key={item}>• {item}</li>)}</ul></div>)}
+        </div>
+
+        {/* Mission */}
         <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
           <p className="text-xs uppercase tracking-wider text-white/50">
-            Today's Mission
+            Today&apos;s Mission
           </p>
 
           {plan.nextTask ? (
@@ -137,7 +142,7 @@ export default function DailyBriefingCard({
           ) : (
             <>
               <h2 className="mt-2 text-xl font-semibold text-white">
-                You're all caught up 🎉
+                You&apos;re all caught up 🎉
               </h2>
 
               <p className="mt-2 text-white/70">

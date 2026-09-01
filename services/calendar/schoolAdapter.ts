@@ -79,8 +79,19 @@ export function schoolSnapshotToCalendarEvents(snapshot: SchoolSnapshot): Calend
       completed: false,
     }];
   });
+  const coursePlanEvents = (snapshot.coursePlans ?? []).flatMap((plan) => [
+    ...plan.exams.map((exam) => ({ title: exam.title, date: exam.date, kind: "exam" as const, sourceId: exam.sourceId })),
+    ...plan.majorAssignments.map((assignment) => ({ title: assignment.title, date: assignment.dueAt, kind: "assignment" as const, sourceId: assignment.sourceId })),
+  ]).flatMap((item) => {
+    if (!item.date) return [];
+    const start = new Date(item.date);
+    if (Number.isNaN(start.getTime())) return [];
+    const id = `school:course-plan:${item.kind}:${item.sourceId}:${item.title}`;
+    return [{ id, uid: id, title: item.title, start, end: start, allDay: true, calendarName: "School", category: "school" as const, source: "school" as const, sourceId: item.sourceId, sourceProvider: "approved-course-plan", priority: "high" as const, travelRequired: false, completed: false }];
+  });
   const legacyIds = new Set(assignments.map((item) => item.uid));
-  return [...events, ...assignments, ...planningAssignments.filter((item) => !legacyIds.has(item.uid)), ...documentEvents];
+  const existingKeys = new Set([...events, ...assignments, ...planningAssignments, ...documentEvents].map((item) => `${item.title}|${item.start.toISOString().slice(0, 10)}`));
+  return [...events, ...assignments, ...planningAssignments.filter((item) => !legacyIds.has(item.uid)), ...documentEvents, ...coursePlanEvents.filter((item) => !existingKeys.has(`${item.title}|${item.start.toISOString().slice(0, 10)}`))];
 }
 
 export function mergeSchoolCalendarSnapshot(calendar: CalendarSnapshot, school: SchoolSnapshot): CalendarSnapshot {

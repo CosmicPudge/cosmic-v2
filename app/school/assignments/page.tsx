@@ -1,5 +1,5 @@
-import SchoolSection from "@/components/school/SchoolSection";
+import { SchoolAssignmentsCommand } from "@/components/school/AcademicCommandCenter";
 
 export default function SchoolAssignmentsPage() {
-  return <SchoolSection section="Assignments" />;
+  return <SchoolAssignmentsCommand />;
 }

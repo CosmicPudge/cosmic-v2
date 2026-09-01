@@ -1,0 +1,6 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+// @ts-expect-error Node's strip-types runner resolves the source extension directly.
+import { extractStructuredSyllabus } from "./syllabus.ts";
+test("extracts structured syllabus records without converting topics into assignments", () => { const result = extractStructuredSyllabus("MWF 10:30–11:20 AM, ENGR 101\nOffice Hours: MW 2–4 PM, ENGR 214\nA: 93–100\nRequired Text: Precalculus, 7th Edition\nWeek 1:\nTopics: Unit Circle\nRead: Chapter 1\nWeekly quizzes are due every Friday."); assert.equal(result.some((item) => item.kind === "meeting_schedule" && item.data.location === "ENGR 101"), true); assert.equal(result.some((item) => item.kind === "office_hours"), true); assert.equal(result.some((item) => item.kind === "grade_scale"), true); assert.equal(result.some((item) => item.kind === "textbook"), true); assert.equal(result.filter((item) => item.kind === "weekly_schedule").length, 2); assert.equal(result.some((item) => item.kind === "recurring_expectation"), true); });
+test("preserves by-appointment office hours without inventing times", () => { const result = extractStructuredSyllabus("Office Hours: by appointment"); assert.equal(result[0]?.kind, "office_hours"); assert.equal(result[0]?.data.notes, "By appointment"); assert.equal(result[0]?.data.startTime, undefined); });

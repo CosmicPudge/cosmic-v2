@@ -34,12 +34,15 @@ export async function executeAITool(name: string, args: { module?: string; query
       courses: snapshot.courses.slice(0, 20).map((course) => ({ id: course.id, name: course.name, start: course.start.toISOString(), end: course.end.toISOString(), location: course.location })),
       assignments: snapshot.assignments.slice(0, 50).map((assignment) => ({ id: assignment.id, title: assignment.title, due: assignment.due.toISOString(), status: assignment.completed ? "completed" : "upcoming", priority: assignment.priority })),
       events: snapshot.events.slice(0, 50).map((event) => ({ id: event.id, title: event.title, type: event.type, start: event.start.toISOString(), end: event.end.toISOString(), location: event.location })),
-      sourceFacts: (snapshot.sourceIntelligence?.facts ?? []).slice(0, 50).map((fact) => ({ kind: fact.kind, subject: fact.subject, value: fact.value, certainty: fact.certainty, sourceId: fact.provenance[0]?.sourceId, evidence: fact.provenance[0]?.excerpt })),
-      sourceEvents: (snapshot.sourceIntelligence?.events ?? []).slice(0, 50).map((event) => ({ id: event.id, title: event.title, startsAt: event.startsAt, location: event.location?.name, attire: event.attire, requiredItems: event.requiredItems, certainty: event.certainty, sourceId: event.provenance[0]?.sourceId, evidence: event.provenance[0]?.excerpt })),
-      sourceActionItems: (snapshot.sourceIntelligence?.actionItems ?? []).slice(0, 50).map((item) => ({ id: item.id, title: item.title, dueAt: item.dueAt, status: item.status, sourceId: item.provenance[0]?.sourceId, evidence: item.provenance[0]?.excerpt })),
       planningAssignments: (snapshot.planningAssignments ?? []).slice(0, 50).map((item) => ({ id: item.id, title: item.title, courseName: item.courseName, dueAt: item.dueAt?.toISOString(), status: item.completionStatus, planningStatus: item.planningStatus, priority: item.priority, estimatedMinutes: item.estimatedMinutes, sourceType: item.sourceType })),
       planningRecommendations: (snapshot.planningRecommendations ?? []).slice(0, 10),
       conflicts: (snapshot.conflicts ?? []).slice(0, 20),
+      contextPolicy: "Use approved normalized School data. Unresolved conflicts are advisory only; do not choose between conflicting values without user confirmation.",
+      notes: (snapshot.notes ?? []).slice(0, 15).map((note) => ({ id: note.id, title: note.title, courseId: note.courseId, content: note.content, topics: note.topics, sourceId: note.sourceId, provenance: note.provenance })),
+      topics: (snapshot.topics ?? []).slice(0, 30),
+      requirements: (snapshot.requirements ?? []).slice(0, 30),
+      importantFacts: (snapshot.importantFacts ?? []).slice(0, 30),
+      coursePlans: (snapshot.coursePlans ?? []).slice(0, 10),
     };
   }
   const row = await readCloudSnapshot(accountId, selectedModule); if (!row) return { available: false, module: selectedModule, reason: "No cloud snapshot is available." };

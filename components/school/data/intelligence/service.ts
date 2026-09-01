@@ -6,6 +6,7 @@ import { buildDailyPlan } from "./planner";
 import { buildTimeline } from "./timeline";
 import { buildPerformance } from "./performance";
 import { buildNotifications } from "./notifications";
+import type { SchoolSnapshot } from "@/services/school/domain";
 
 
 export interface SchoolIntelligence {
@@ -42,10 +43,10 @@ notifications: ReturnType<
 }
 
 export function buildSchoolIntelligence(
-    data: SchoolDashboardData
+    data: SchoolDashboardData, snapshot?: SchoolSnapshot
 ): SchoolIntelligence {
     const context =
-        buildIntelligenceContext(data);
+        buildIntelligenceContext(data, snapshot);
 
     return {
         metrics: context.metrics,

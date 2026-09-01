@@ -237,6 +237,8 @@ export const schoolSources = pgTable("school_sources", {
   title: text("title").notNull(),
   sourceType: text("source_type").notNull(),
   category: text("category"),
+  sourcePurpose: text("source_purpose").notNull().default("unknown"),
+  courseId: text("course_id"),
   originalFileName: text("original_file_name"),
   mimeType: text("mime_type"),
   fileSize: integer("file_size"),
@@ -250,7 +252,19 @@ export const schoolSources = pgTable("school_sources", {
   processedAt: timestamp("processed_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-}, (table) => [index("school_sources_user_id_index").on(table.userId), index("school_sources_status_index").on(table.processingStatus), check("school_sources_type_check", sql`${table.sourceType} in ('upload-pdf', 'upload-text', 'email', 'calendar', 'manual')`), check("school_sources_status_check", sql`${table.processingStatus} in ('uploaded', 'processing', 'ready', 'ready_degraded', 'needs_review', 'failed', 'unsupported')`)]);
+}, (table) => [index("school_sources_user_id_index").on(table.userId), index("school_sources_status_index").on(table.processingStatus), check("school_sources_type_check", sql`${table.sourceType} in ('upload-pdf', 'upload-text', 'upload-image', 'upload-docx', 'email', 'calendar', 'manual')`), check("school_sources_status_check", sql`${table.processingStatus} in ('uploaded', 'processing', 'ready', 'ready_degraded', 'needs_review', 'failed', 'unsupported')`)]);
+
+export const schoolNotes = pgTable("school_notes", {
+  id: text("id").primaryKey(), userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }), courseId: text("course_id"), sourceId: text("source_id").references(() => schoolSources.id, { onDelete: "set null" }), title: text("title").notNull(), content: text("content").notNull(), topics: jsonb("topics").notNull().default(sql`'[]'::jsonb`), classDate: timestamp("class_date", { withTimezone: true }), extractionMethod: text("extraction_method").notNull().default("manual"), provenance: jsonb("provenance"), createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(), updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [index("school_notes_user_id_index").on(table.userId), index("school_notes_source_id_index").on(table.sourceId)]);
+
+export const schoolFindings = pgTable("school_findings", {
+  id: text("id").primaryKey(), userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }), sourceId: text("source_id").notNull().references(() => schoolSources.id, { onDelete: "cascade" }), type: text("type").notNull(), payload: jsonb("payload").notNull(), evidence: text("evidence").notNull(), confidence: doublePrecision("confidence").notNull().default(1), certainty: text("certainty").notNull().default("explicit"), reviewState: text("review_state").notNull().default("pending"), appliedAt: timestamp("applied_at", { withTimezone: true }), createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(), updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [index("school_findings_user_id_index").on(table.userId), index("school_findings_source_id_index").on(table.sourceId)]);
+
+export const schoolAssets = pgTable("school_assets", {
+  id: text("id").primaryKey(), userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }), sourceId: text("source_id").notNull().references(() => schoolSources.id, { onDelete: "cascade" }), originalFileName: text("original_file_name").notNull(), safeFileName: text("safe_file_name").notNull(), mimeType: text("mime_type").notNull(), size: integer("size").notNull(), storageProvider: text("storage_provider").notNull(), storageKey: text("storage_key").notNull(), createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [index("school_assets_user_id_index").on(table.userId), uniqueIndex("school_assets_storage_key_unique").on(table.storageProvider, table.storageKey)]);
 
 export const schoolAssignments = pgTable("school_assignments", {
   id: text("id").primaryKey(),
@@ -381,6 +395,19 @@ export const financeSyncState = pgTable("finance_sync_state", {
   errorCategory: text("error_category"),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+export const schoolCoursePlanOverrides = pgTable("school_course_plan_overrides", {
+  id: text("id").primaryKey(),
+  accountId: text("account_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  courseId: text("course_id").notNull(),
+  semanticField: text("semantic_field").notNull(),
+  targetId: text("target_id").notNull().default("primary"),
+  value: jsonb("value").notNull(),
+  note: text("note"),
+  provenance: text("provenance").notNull().default("manual"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [index("school_course_plan_overrides_account_course_index").on(table.accountId, table.courseId), uniqueIndex("school_course_plan_overrides_identity_unique").on(table.accountId, table.courseId, table.semanticField, table.targetId), check("school_course_plan_overrides_provenance_check", sql`${table.provenance} = 'manual'`)]);
 
 export const financeTransactionOverrides = pgTable("finance_transaction_overrides", {
   id: text("id").primaryKey(),
