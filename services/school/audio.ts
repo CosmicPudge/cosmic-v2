@@ -22,20 +22,7 @@ function looksLikeAudio(bytes: Uint8Array, mime: string) {
 }
 
 export type TranscriptSegment = { start: number; end: number; text: string };
-export type TranscriptionResult = { transcript: string; segments?: TranscriptSegment[]; provider: string; model: string };
-export class SchoolTranscriptionError extends Error { readonly reason: string; constructor(reason: string) { super(reason); this.reason = reason; } }
-
-export async function transcribeSchoolAudio(input: { bytes: Uint8Array; mimeType: SchoolAudioMimeType; fileName: string }): Promise<TranscriptionResult> {
-  const key = process.env.OPENAI_API_KEY?.trim();
-  if (!key) throw new SchoolTranscriptionError("transcription_provider_not_configured");
-  const form = new FormData();
-  form.append("file", new Blob([new Uint8Array(input.bytes).buffer as ArrayBuffer], { type: input.mimeType }), input.fileName);
-  form.append("model", process.env.OPENAI_TRANSCRIPTION_MODEL?.trim() || "gpt-4o-mini-transcribe");
-  form.append("response_format", "verbose_json");
-  let response: Response;
-  try { response = await fetch("https://api.openai.com/v1/audio/transcriptions", { method: "POST", headers: { Authorization: `Bearer ${key}` }, body: form, signal: AbortSignal.timeout(60_000) }); } catch { throw new SchoolTranscriptionError("transcription_timeout"); }
-  if (!response.ok) { const status = response.status; throw new SchoolTranscriptionError(status === 401 ? "transcription_unauthorized" : status === 403 ? "transcription_forbidden" : status === 429 ? "transcription_quota_or_rate_limit" : status >= 500 ? "transcription_provider_error" : "transcription_failed"); }
-  const data = await response.json() as { text?: unknown; segments?: Array<{ start?: unknown; end?: unknown; text?: unknown }> };
-  if (typeof data.text !== "string" || !data.text.trim()) throw new SchoolTranscriptionError("transcription_malformed_response");
-  return { transcript: data.text.trim(), segments: Array.isArray(data.segments) ? data.segments.flatMap((s) => typeof s.start === "number" && typeof s.end === "number" && typeof s.text === "string" ? [{ start: s.start, end: s.end, text: s.text }] : []) : undefined, provider: "openai", model: process.env.OPENAI_TRANSCRIPTION_MODEL?.trim() || "gpt-4o-mini-transcribe" };
-}
+export type SchoolTranscriptResult = { text: string; segments?: TranscriptSegment[]; language?: string; durationSeconds?: number; provider: string; model: string };
+export type TranscriptionResult = SchoolTranscriptResult;
+export type SchoolTranscriptionFailureCode = "transcription_quota" | "transcription_rate_limit" | "transcription_timeout" | "transcription_provider_unavailable" | "transcription_invalid_audio" | "transcription_unsupported_audio" | "transcription_too_large" | "transcription_auth_configuration" | "transcription_unknown";
+export class SchoolTranscriptionError extends Error { readonly code: SchoolTranscriptionFailureCode; readonly retryable: boolean; readonly status?: number; constructor(code: SchoolTranscriptionFailureCode, options?: { retryable?: boolean; status?: number }) { super(code); this.name = "SchoolTranscriptionError"; this.code = code; this.retryable = options?.retryable ?? ["transcription_quota", "transcription_rate_limit", "transcription_timeout", "transcription_provider_unavailable"].includes(code); this.status = options?.status; } }
