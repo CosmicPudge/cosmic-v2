@@ -3,22 +3,27 @@ export const SCHOOL_AUDIO_TYPES = ["audio/mpeg", "audio/mp4", "audio/wav", "audi
 export type SchoolAudioMimeType = typeof SCHOOL_AUDIO_TYPES[number];
 
 const extensions = new Map([[".mp3", "audio/mpeg"], [".m4a", "audio/mp4"], [".wav", "audio/wav"], [".webm", "audio/webm"], [".aac", "audio/aac"], [".ogg", "audio/ogg"]]);
+const mimeAliases = new Map([["audio/mp3", "audio/mpeg"], ["audio/m4a", "audio/mp4"], ["audio/x-m4a", "audio/mp4"], ["audio/x-wav", "audio/wav"]]);
+export type SchoolAudioValidationCode = "audio_empty" | "audio_too_large" | "audio_signature_unrecognized" | "audio_mime_unsupported";
+export class SchoolAudioValidationError extends Error { readonly code: SchoolAudioValidationCode; constructor(code: SchoolAudioValidationCode, message: string) { super(message); this.name = "SchoolAudioValidationError"; this.code = code; } }
 export function validateSchoolAudio(file: { type: string; name: string; size: number }, bytes?: Uint8Array): SchoolAudioMimeType {
-  if (file.size > MAX_SCHOOL_AUDIO_BYTES) throw new Error("Recording exceeds the 50 MB size limit.");
-  const extensionType = extensions.get(file.name.toLowerCase().slice(file.name.lastIndexOf(".")));
-  const mime = (SCHOOL_AUDIO_TYPES as readonly string[]).includes(file.type) ? file.type : extensionType;
-  if (!mime) throw new Error("Unsupported recording. Use MP3, M4A, WAV, WEBM, AAC, or OGG.");
-  if (bytes && !looksLikeAudio(bytes, mime)) throw new Error("The recording could not be validated as an audio file.");
-  return mime as SchoolAudioMimeType;
+  if (file.size <= 0 || (bytes && bytes.byteLength === 0)) throw new SchoolAudioValidationError("audio_empty", "The recording is empty.");
+  if (file.size > MAX_SCHOOL_AUDIO_BYTES || (bytes && bytes.byteLength > MAX_SCHOOL_AUDIO_BYTES)) throw new SchoolAudioValidationError("audio_too_large", "Recording exceeds the 50 MB size limit.");
+  const rawMime = file.type.toLowerCase().split(";", 1)[0]?.trim() ?? "";
+  const claimedMime = mimeAliases.get(rawMime) ?? ((SCHOOL_AUDIO_TYPES as readonly string[]).includes(rawMime) ? rawMime : extensions.get(file.name.toLowerCase().slice(file.name.lastIndexOf("."))));
+  if (bytes) { const detected = detectAudioMime(bytes); if (!detected) throw new SchoolAudioValidationError("audio_signature_unrecognized", "The recording could not be validated as an audio file."); return detected; }
+  if (!claimedMime) throw new SchoolAudioValidationError("audio_mime_unsupported", "Unsupported recording. Use MP3, M4A, WAV, WEBM, AAC, or OGG.");
+  return claimedMime as SchoolAudioMimeType;
 }
-function looksLikeAudio(bytes: Uint8Array, mime: string) {
+function detectAudioMime(bytes: Uint8Array): SchoolAudioMimeType | null {
   const text = (start: number, length: number) => new TextDecoder().decode(bytes.slice(start, start + length));
-  if (mime === "audio/wav" || mime === "audio/x-wav") return text(0, 4) === "RIFF" && text(8, 4) === "WAVE";
-  if (mime === "audio/ogg") return text(0, 4) === "OggS";
-  if (mime === "audio/webm") return bytes[0] === 0x1a && bytes[1] === 0x45 && bytes[2] === 0xdf && bytes[3] === 0xa3;
-  if (mime === "audio/mp4") return text(4, 4) === "ftyp";
-  if (mime === "audio/aac") return bytes[0] === 0xff && (bytes[1] & 0xf6) === 0xf0;
-  return text(0, 3) === "ID3" || (bytes[0] === 0xff && (bytes[1] & 0xe0) === 0xe0);
+  if (bytes.length >= 12 && text(0, 4) === "RIFF" && text(8, 4) === "WAVE") return "audio/wav";
+  if (bytes.length >= 4 && text(0, 4) === "OggS") return "audio/ogg";
+  if (bytes.length >= 4 && bytes[0] === 0x1a && bytes[1] === 0x45 && bytes[2] === 0xdf && bytes[3] === 0xa3) return "audio/webm";
+  if (bytes.length >= 8 && text(4, 4) === "ftyp") return "audio/mp4";
+  if (bytes.length >= 2 && bytes[0] === 0xff && (bytes[1] & 0xf6) === 0xf0) return "audio/aac";
+  if (bytes.length >= 3 && (text(0, 3) === "ID3" || (bytes[0] === 0xff && (bytes[1] & 0xe0) === 0xe0))) return "audio/mpeg";
+  return null;
 }
 
 export type TranscriptSegment = { start: number; end: number; text: string };
