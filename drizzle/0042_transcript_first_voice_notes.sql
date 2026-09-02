@@ -1,0 +1,12 @@
+ALTER TABLE "school_sources" DROP CONSTRAINT IF EXISTS "school_sources_type_check";
+ALTER TABLE "school_sources" ADD CONSTRAINT "school_sources_type_check" CHECK ("source_type" in ('upload-pdf', 'upload-text', 'upload-image', 'upload-docx', 'voice-recording', 'apple_voice_memos_transcript', 'manual_transcript', 'email', 'calendar', 'manual'));
+ALTER TABLE "school_audio_transcripts" ALTER COLUMN "asset_id" DROP NOT NULL;
+ALTER TABLE "school_audio_transcripts" DROP CONSTRAINT IF EXISTS "school_audio_transcripts_asset_id_fkey";
+ALTER TABLE "school_audio_transcripts" DROP CONSTRAINT IF EXISTS "school_audio_transcripts_asset_id_school_assets_id_fk";
+ALTER TABLE "school_audio_transcripts" ADD CONSTRAINT "school_audio_transcripts_asset_id_fkey" FOREIGN KEY ("asset_id") REFERENCES "school_assets"("id") ON DELETE SET NULL;
+ALTER TABLE "school_audio_transcripts" ADD COLUMN IF NOT EXISTS "source_type" text NOT NULL DEFAULT 'cosmic_transcription';
+ALTER TABLE "school_audio_transcripts" ADD COLUMN IF NOT EXISTS "source_label" text;
+ALTER TABLE "school_audio_transcripts" ADD COLUMN IF NOT EXISTS "audio_cleanup_status" text NOT NULL DEFAULT 'not_applicable';
+ALTER TABLE "school_audio_transcripts" ADD COLUMN IF NOT EXISTS "audio_deleted_at" timestamptz;
+UPDATE "school_audio_transcripts" SET "audio_cleanup_status" = 'uploaded' WHERE "asset_id" IS NOT NULL AND "audio_cleanup_status" = 'not_applicable';
+ALTER TABLE "school_audio_transcripts" ADD CONSTRAINT "school_audio_cleanup_status_check" CHECK ("audio_cleanup_status" in ('not_applicable', 'uploaded', 'processing', 'transcribed', 'deletion_pending', 'deleted'));
