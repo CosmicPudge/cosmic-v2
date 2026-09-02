@@ -281,6 +281,13 @@
       "when": 1787879500000,
       "tag": "0040_school_voice_notes",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1788350000000,
+      "tag": "0041_school_voice_transcription_attempts",
+      "breakpoints": true
     }
   ]
 }
