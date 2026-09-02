@@ -6,6 +6,12 @@ export type SchoolEventType =
   | "afrotc"
   | "meeting"
   | "announcement"
+  | "discussion"
+  | "reading"
+  | "module"
+  | "office-hours"
+  | "course-event"
+  | "other-academic"
   | "other";
 
 export type {
@@ -34,6 +40,18 @@ export interface SchoolEvent {
   type: SchoolEventType;
 
   source: "mock" | "canvas-calendar";
+  allDay?: boolean;
+  courseId?: string;
+  sourceMetadata?: {
+    uid?: string;
+    recurrenceId?: string;
+    rrule?: string;
+    status?: string;
+    sequence?: number;
+    lastModified?: string;
+    dtstamp?: string;
+    url?: string;
+  };
 }
 
 export interface Mission {

@@ -16,7 +16,8 @@ export function getSchoolAccess(account: Pick<CosmicAccount, "id"> | null): Scho
   const ownerId = process.env.COSMIC_OWNER_USER_ID?.trim();
   if (!ownerId) return { enabled: false, audience: "disabled", reason: "owner_not_configured" };
   if (!account) return { enabled: false, audience: "disabled", reason: "authentication_required" };
-  return account.id === ownerId
+  const testIds = (process.env.COSMIC_SCHOOL_TEST_USER_IDS ?? "").split(",").map((id) => id.trim()).filter(Boolean);
+  return account.id === ownerId || testIds.includes(account.id)
     ? { enabled: true, audience: "owner-only" }
     : { enabled: false, audience: "owner-only", reason: "owner_only" };
 }

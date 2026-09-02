@@ -26,7 +26,7 @@ export function extractAssignments(
     .map((event) => ({
       id: event.id,
       title: event.title,
-      due: event.end,
+      due: event.allDay ? event.start : event.end,
       completed: false,
       priority: "medium",
     }));

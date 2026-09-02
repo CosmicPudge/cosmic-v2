@@ -7,6 +7,13 @@ export interface CanvasDashboardResult {
   data: SchoolDashboardData;
   diagnostics: CanvasCalendarDiagnostics;
 }
+const refreshCache = new Map<string, { expiresAt: number; result: CanvasDashboardResult }>();
+
+export async function fetchCanvasCalendarEvents(feedUrl: string, fetchImpl: typeof fetch = fetch) {
+  const response = await fetchImpl(feedUrl, { cache: "no-store", headers: { Accept: "text/calendar" } });
+  if (!response.ok) throw new Error("Unable to download Canvas calendar.");
+  return parseCanvasCalendarWithDiagnostics(await response.text());
+}
 
 export class CanvasCalendarProvider implements SchoolProvider {
   constructor(private readonly feedUrl?: string) {}
@@ -27,18 +34,9 @@ export class CanvasCalendarProvider implements SchoolProvider {
       };
     }
 
-    const response = await fetch(url, {
-      cache: "no-store",
-    });
+    const cached = refreshCache.get(url); if (cached && cached.expiresAt > Date.now()) return cached.result;
 
-    if (!response.ok) {
-      throw new Error("Unable to download Canvas calendar.");
-    }
-
-    const text = await response.text();
-
-    const parsed = parseCanvasCalendarWithDiagnostics(text);
-
-    return { data: buildDashboard(parsed.events), diagnostics: parsed.diagnostics };
+    const parsed = await fetchCanvasCalendarEvents(url);
+    const result = { data: buildDashboard(parsed.events), diagnostics: parsed.diagnostics }; refreshCache.set(url, { expiresAt: Date.now() + 30 * 60 * 1000, result }); return result;
   }
 }

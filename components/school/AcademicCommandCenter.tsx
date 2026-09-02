@@ -5,6 +5,7 @@ import { BookOpen, CalendarDays, CheckCircle2, ChevronRight, Clock3, Filter, Lis
 import { useMemo, useState } from "react";
 import type { Course } from "@/core/contracts/School";
 import type { SchoolPlanningAssignment } from "@/core/contracts/SchoolPlanning";
+import { planAcademicState } from "@/services/school/planning/academicPlanner";
 import { useSchool } from "./context/SchoolDataContext";
 
 const panel = "school-command-panel";
@@ -12,6 +13,7 @@ const muted = "text-white/45";
 const fmtDate = (date?: Date) => date ? date.toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "No due date";
 const dayKey = (date?: Date) => date ? `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}` : "none";
 const sourceLabel = (source: SchoolPlanningAssignment["sourceType"]) => ({ "canvas-api": "Canvas", "canvas-calendar": "Canvas Calendar", "school-source": "School Source", manual: "Manual" }[source]);
+const reasonLabel: Record<string, string> = { DUE_TODAY: "This is due today.", DUE_TOMORROW: "This is due tomorrow.", OVERDUE: "This assignment is already overdue.", HIGH_PRIORITY: "You marked this as high priority.", SHORT_TASK: "This is a known short task.", FITS_AVAILABLE_BLOCK: "This task fits a known available block.", CLASS_SOON: "Your next class starts soon." };
 
 function activeAssignments(items: SchoolPlanningAssignment[]) {
   return items.filter((item) => item.completionStatus !== "completed" && item.completionStatus !== "graded" && item.planningStatus !== "done");
@@ -42,10 +44,11 @@ function AssignmentRow({ item }: { item: SchoolPlanningAssignment }) {
 function courseName(course: Course) { return course.code ? `${course.code} · ${course.name}` : course.name; }
 
 export function AcademicCommandCenter() {
-  const { snapshot, local, loading } = useSchool();
+  const { snapshot, local, loading, recommendationNarration } = useSchool();
   const term = local.data.terms.find((item) => item.active) ?? local.data.terms[0];
   const courses = local.data.courses.filter((course) => !term || course.termId === term.id);
   const assignments = useMemo(() => [...(snapshot?.planningAssignments ?? [])].sort(sortAssignments), [snapshot?.planningAssignments]);
+  const recommendations = useMemo(() => snapshot ? planAcademicState(snapshot).recommendations : [], [snapshot]);
   const active = activeAssignments(assignments);
   const today = new Date();
   const dueToday = active.filter((item) => dayKey(item.dueAt) === dayKey(today));
@@ -58,6 +61,7 @@ export function AcademicCommandCenter() {
   if (loading) return <div className="py-16 text-sm text-white/50">Loading your academic command center…</div>;
   return <div className="space-y-6">
     <header className="flex flex-col justify-between gap-4 md:flex-row md:items-end"><div><p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-sky-200/55">Academic command center</p><h1 className="mt-2 text-4xl font-black tracking-[-0.045em] text-white">{term?.name ?? "School"}</h1><p className="mt-2 text-sm text-white/45">{today.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })} · {active.length} active assignments</p></div><div className="flex gap-2"><Link href="/school/assignments" className="inline-flex items-center gap-2 rounded-xl bg-sky-200/15 px-3.5 py-2.5 text-sm font-semibold text-sky-50 hover:bg-sky-200/25"><ListChecks className="size-4" /> View all assignments</Link></div></header>
+    <section className={`${panel} border-sky-200/15 bg-sky-200/[0.06] p-5`}><div className="flex flex-wrap items-start justify-between gap-3"><div><p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-sky-200/65">What should I do now?</p><h2 className="mt-2 text-xl font-semibold text-white">{recommendations[0]?.title ?? "You have no urgent academic work."}</h2>{recommendations[0]?.courseId && <p className="mt-1 text-xs text-sky-100/55">{local.data.courses.find((course) => course.id === recommendations[0].courseId)?.name ?? recommendations[0].courseId}</p>}<p className="mt-2 text-sm text-white/55">{recommendations[0]?.explanation ?? "Your School plan is clear for the moment."}</p></div>{recommendations[0]?.assignmentId && <Link href={`/school/assignments/${encodeURIComponent(recommendations[0].assignmentId)}`} className="rounded-xl bg-sky-100 px-3.5 py-2.5 text-sm font-semibold text-slate-950">Open task</Link>}</div><p className="mt-4 border-t border-white/[0.08] pt-3 text-sm leading-6 text-white/65"><span className="mr-2 text-xs uppercase tracking-wider text-sky-100/45">Cosmic&apos;s take</span>{recommendationNarration?.text ?? recommendations[0]?.explanation ?? "Your School plan is clear for the moment."}</p>{recommendations[0] && <details className="mt-3"><summary className="cursor-pointer text-sm text-sky-100/75">Why this?</summary><ul className="mt-2 space-y-1 text-xs text-white/55">{recommendations[0].reasonCodes.map((code) => <li key={code}>{reasonLabel[code] ?? code}</li>)}</ul></details>}{recommendations.length > 1 && <div className="mt-5 border-t border-white/[0.08] pt-4"><p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/40">Next up</p><div className="mt-2 grid gap-2 sm:grid-cols-2">{recommendations.slice(1, 4).map((item) => <p key={item.id} className="text-sm text-white/70">{item.title}<span className="ml-2 text-xs text-white/35">{item.explanation}</span></p>)}</div></div>}</section>
     <section className="grid gap-3 sm:grid-cols-3"><Metric label="Due today" value={dueToday.length} tone="text-amber-100" /><Metric label="Overdue" value={overdue.length} tone="text-rose-200" /><Metric label="This week" value={upcoming.filter((item) => item.dueAt!.getTime() < today.getTime() + 7 * 86_400_000).length} tone="text-sky-100" /></section>
     <section className="grid gap-4 xl:grid-cols-[1.35fr_.85fr]">
       <div className={`${panel} overflow-hidden`}><div className="flex items-center justify-between border-b border-white/[0.08] px-4 py-4"><div><p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-sky-200/55">Today</p><h2 className="mt-1 text-xl font-semibold text-white">What needs your attention</h2></div><Sparkles className="size-5 text-sky-200/55" /></div><div className="divide-y divide-white/[0.06] px-4 py-3">{dueToday.slice(0, 4).map((item) => <div key={item.id} className="flex items-center gap-3 py-2"><span className="size-2 rounded-full bg-amber-200" /><span className="min-w-0 flex-1 truncate text-sm text-white/80">{item.title}</span><span className="text-xs text-white/40">{item.courseName ?? "Unknown course"}</span></div>)}{overdue.slice(0, 3).map((item) => <div key={`overdue-${item.id}`} className="flex items-center gap-3 py-2"><span className="size-2 rounded-full bg-rose-300" /><span className="min-w-0 flex-1 truncate text-sm text-white/80">{item.title}</span><span className="text-xs text-rose-200/75">Overdue</span></div>)}{!dueToday.length && !overdue.length && <p className="py-4 text-sm text-white/45">You have no urgent assignments. Nice margin.</p>}</div></div>

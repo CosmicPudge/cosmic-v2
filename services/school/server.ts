@@ -17,6 +17,7 @@ import { listSchoolFindingsForAccount } from "./findingRepository";
 import { requirementCategory, resolveRequirementDate } from "./requirements";
 import { applyCoursePlanOverrides, buildCoursePlans } from "./coursePlan";
 import { listCoursePlanOverrides } from "./coursePlanOverrideRepository";
+import { canonicalCanvasCalendarId, dedupeSchoolAssignments } from "./assignmentIdentity";
 
 const providerAccountId = "canvas-personal-calendar";
 async function safeCoursePlanOverrides(accountId: string) { try { return await listCoursePlanOverrides(accountId); } catch { return []; } }
@@ -74,7 +75,7 @@ function withPlanning(accountId: string, snapshot: SchoolSnapshot, data: SchoolD
     });
   });
   const canvasAssignments: SchoolPlanningAssignment[] = data.assignments.map((item) => ({ id: `canvas-calendar:${item.id}`, accountId, title: item.title, ...(item.course ? { courseName: item.course } : {}), sourceType: "canvas-calendar" as const, externalId: item.id, dueAt: item.due, completionStatus: "unknown" as const, planningStatus: "not_started" as const, priority: item.priority === "high" ? "high" as const : "normal" as const, createdAt: snapshot.updatedAt ? new Date(snapshot.updatedAt) : new Date(), updatedAt: new Date(), lastSyncedAt: new Date() }));
-  const assignments = [...stored, ...canvasAssignments, ...sourceAssignments];
+  const assignments = dedupeSchoolAssignments([...stored, ...canvasAssignments, ...sourceAssignments].map((item) => item.sourceType === "canvas-calendar" ? { ...item, id: canonicalCanvasCalendarId(item.id) } : item));
   const entries: SchoolTimelineEntry[] = [
     ...data.classes.map((item) => ({ id: `class:${item.id}`, title: item.name, start: item.start, end: item.end, kind: "class" as const, location: item.location, sourceType: "school" })),
     ...data.events.map((item) => ({ id: `${item.source}:${item.id}`, title: item.title, start: item.start, end: item.end, kind: item.type === "afrotc" ? "afrotc" as const : "event" as const, location: item.location, courseName: item.course, sourceType: item.source })),

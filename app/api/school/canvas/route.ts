@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
-import { CanvasCalendarProvider } from "@/components/school/data/providers/CanvasCalendarProvider";
+import { fetchCanvasCalendarEvents } from "@/components/school/data/providers/CanvasCalendarProvider";
+import { buildDashboard } from "@/components/school/data/engine/engine";
 import { requireSchoolAccess } from "@/services/school/access";
-import { deleteProviderConnection, getProviderCredentials, listProviderConnections, markProviderRefresh, setProviderCredentials, upsertProviderConnection } from "@/services/providers/store";
+import { deleteProviderConnection, getProviderCredentials, listProviderConnections, markProviderRefresh, setProviderCredentials, updateProviderConnection, upsertProviderConnection } from "@/services/providers/store";
 import { isCredentialEncryptionConfigured } from "@/services/providers/credentialCrypto";
 import { assertSameOrigin } from "@/services/security/origin";
+import { persistCanvasCalendarEvents } from "@/services/school/providers/canvas/calendarSync";
 
 export const dynamic = "force-dynamic";
 const providerAccountId = "canvas-personal-calendar";
@@ -22,7 +24,8 @@ export async function GET(request: Request) {
     const account = await requireSchoolAccess(request);
     if (!isCredentialEncryptionConfigured()) return NextResponse.json({ error: "Canvas connection storage is unavailable." }, { status: 503 });
     const connection = await canvasConnection(account.id);
-    return NextResponse.json({ connected: Boolean(connection), status: connection?.status ?? "not_connected", lastSyncedAt: connection?.lastSuccessfulRefreshAt?.toISOString() ?? null });
+    const metadata = connection?.metadata && typeof connection.metadata === "object" ? connection.metadata as { lastCalendarSync?: unknown } : {};
+    return NextResponse.json({ connected: Boolean(connection), status: connection?.status ?? "not_connected", lastSyncedAt: connection?.lastSuccessfulRefreshAt?.toISOString() ?? null, lastCalendarSync: metadata.lastCalendarSync ?? null });
   } catch (error) { if (error instanceof Response) return error; return NextResponse.json({ error: "Canvas connection status is unavailable." }, { status: 503 }); }
 }
 
@@ -57,8 +60,10 @@ export async function POST(request: Request) {
     if (!connection) return NextResponse.json({ error: "Canvas is not connected." }, { status: 409 });
     const credentials = await getProviderCredentials<{ feedUrl?: unknown }>(account.id, connection.id);
     if (!validFeedUrl(credentials?.feedUrl)) return NextResponse.json({ error: "Canvas feed URL is missing or invalid." }, { status: 409 });
-    const result = await new CanvasCalendarProvider(credentials.feedUrl).getDashboardDataWithDiagnostics();
+    const parsed = await fetchCanvasCalendarEvents(credentials.feedUrl);
+    const sync = await persistCanvasCalendarEvents(account.id, connection.id, parsed);
     await markProviderRefresh(account.id, connection.id);
-    return NextResponse.json({ data: result.data, diagnostics: result.diagnostics, syncedAt: new Date().toISOString(), assignmentCount: result.data.assignments.length });
+    await updateProviderConnection(account.id, connection.id, { metadata: { lastCalendarSync: { eventsSeen: sync.eventsSeen, created: sync.created, updated: sync.updated, unchanged: sync.unchanged, unmatched: sync.unmatched, missing: sync.missing } } });
+    return NextResponse.json({ data: buildDashboard(parsed.events), diagnostics: { ...parsed.diagnostics, ...sync }, syncedAt: new Date().toISOString(), assignmentCount: sync.created + sync.updated });
   } catch (error) { if (error instanceof Response) return error; return NextResponse.json({ error: "Canvas sync failed. Check the feed URL and try again." }, { status: 502 }); }
 }

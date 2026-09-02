@@ -1,6 +1,7 @@
 import "server-only";
 import type { CosmicAIMessage } from "@/core/contracts/AI";
 import { AIProviderError, createAIProviderError } from "./providerErrors";
+import { getConfiguredAIProvider, registerOpenAIProvider } from "./providers/providerRouter";
 export { AIProviderError } from "./providerErrors";
 
 export interface AIProviderInput { messages: CosmicAIMessage[]; context: string; }
@@ -15,7 +16,7 @@ function configured() {
 
 function payload(input: AIProviderInput) { return { model: process.env.COSMIC_AI_MODEL || "gpt-5.4-mini", instructions: input.context, input: input.messages.map((message) => ({ role: message.role, content: [{ type: "input_text", text: message.content }] })), max_output_tokens: 1200, store: false }; }
 
-export function getAIProvider(): AIProvider {
+function getOpenAIProvider(): AIProvider {
   return {
     id: "openai", model: process.env.COSMIC_AI_MODEL || "gpt-5.4-mini",
     async generate(input) {
@@ -39,3 +40,6 @@ export function getAIProvider(): AIProvider {
     },
   };
 }
+
+registerOpenAIProvider(getOpenAIProvider);
+export function getAIProvider(): AIProvider { return getConfiguredAIProvider(); }

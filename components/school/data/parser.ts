@@ -1,6 +1,7 @@
 import ICAL from "ical.js";
 import type { SchoolEvent } from "./types";
-import { classifyEvent, type CanvasEventMetadata } from "./classifier";
+// @ts-expect-error Node's strip-types runner resolves the source extension directly.
+import { classifyEvent, type CanvasEventMetadata } from "./classifier.ts";
 
 export interface CanvasCalendarDiagnostics {
   totalIcsEvents: number;
@@ -25,6 +26,13 @@ function propertyValues(component: ICAL.Component, name: string): string[] {
     .filter((value): value is string => typeof value === "string");
 }
 
+function stringValue(value: unknown) { return typeof value === "string" ? value : value && typeof value.toString === "function" ? value.toString() : undefined; }
+
+function property(component: ICAL.Component, name: string) {
+  const item = component.getFirstProperty(name);
+  return item ? { value: item.jCal?.[3] ?? item.getFirstValue(), params: item.jCal?.[1] as Record<string, unknown> | undefined } : undefined;
+}
+
 function parseEvent(component: ICAL.Component): SchoolEvent {
   const event = new ICAL.Event(component);
   const metadata: CanvasEventMetadata = {
@@ -32,6 +40,13 @@ function parseEvent(component: ICAL.Component): SchoolEvent {
     url: propertyValue(component, "url"),
     categories: propertyValues(component, "categories"),
   };
+  const courseId = (metadata.url ?? "").match(/\/courses\/(\d+)(?:\/|$)/i)?.[1];
+
+  const recurrenceId = stringValue(property(component, "recurrence-id")?.value);
+  const sequence = property(component, "sequence")?.value;
+  const lastModified = stringValue(property(component, "last-modified")?.value);
+  const dtstamp = stringValue(property(component, "dtstamp")?.value);
+  const rrule = stringValue(property(component, "rrule")?.value);
 
   return {
     id: event.uid,
@@ -42,6 +57,18 @@ function parseEvent(component: ICAL.Component): SchoolEvent {
     location: event.location ?? undefined,
     type: classifyEvent(event.summary ?? "", event.description ?? "", metadata),
     source: "canvas-calendar",
+    ...(courseId ? { courseId } : {}),
+    ...(event.startDate.isDate ? { allDay: true } : {}),
+    sourceMetadata: {
+      ...(metadata.uid ? { uid: metadata.uid } : {}),
+      ...(recurrenceId ? { recurrenceId } : {}),
+      ...(rrule ? { rrule } : {}),
+      ...(typeof propertyValue(component, "status") === "string" ? { status: propertyValue(component, "status") } : {}),
+      ...(typeof sequence === "number" ? { sequence } : {}),
+      ...(lastModified ? { lastModified } : {}),
+      ...(dtstamp ? { dtstamp } : {}),
+      ...(metadata.url ? { url: metadata.url } : {}),
+    },
   };
 }
 

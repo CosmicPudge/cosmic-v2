@@ -34,6 +34,14 @@ test("Canvas calendar event URL identifies a class without labeling every event 
   assert.equal(classifyEvent("Campus event", "Office hours"), "other");
 });
 
+test("classifies academic calendar categories without dropping uncertain events", () => {
+  assert.equal(classifyEvent("Midterm Exam"), "exam");
+  assert.equal(classifyEvent("Quiz 2"), "quiz");
+  assert.equal(classifyEvent("Discussion: Week 3"), "discussion");
+  assert.equal(classifyEvent("Module 2 Due"), "module");
+  assert.equal(classifyEvent("Academic reminder"), "other");
+});
+
 test("assignment fallback still recognizes explicit assignment language", () => {
   assert.equal(classifyEvent("Revision Portfolio"), "other");
   assert.equal(classifyEvent("Quiz 4"), "quiz");

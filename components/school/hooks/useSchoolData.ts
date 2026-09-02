@@ -11,6 +11,7 @@ import { hydrateSchoolDashboard } from "../data/normalize";
 import { useLocalSchoolRepository } from "../data/localRepository";
 import { buildSchoolSnapshot, hydrateSchoolSnapshot } from "@/services/school/domain";
 import type { SchoolSnapshot } from "@/services/school/domain";
+import type { RecommendationNarration } from "@/services/school/planning/recommendationNarrator";
 
 interface UseSchoolDataOptions { enabled?: boolean }
 
@@ -18,6 +19,7 @@ export function useSchoolData({ enabled = true }: UseSchoolDataOptions = {}) {
   const local = useLocalSchoolRepository({ enabled });
   const [data, setData] = useState<SchoolDashboardData | null>(null);
   const [snapshot, setSnapshot] = useState<SchoolSnapshot | null>(null);
+  const [recommendationNarration, setRecommendationNarration] = useState<RecommendationNarration | null>(null);
 
   const [loading, setLoading] = useState(true);
 
@@ -34,7 +36,7 @@ export function useSchoolData({ enabled = true }: UseSchoolDataOptions = {}) {
           throw new Error("Unable to load school data.");
         }
 
-        const body = await res.json() as { data?: unknown; snapshot?: SchoolSnapshot; error?: string };
+        const body = await res.json() as { data?: unknown; snapshot?: SchoolSnapshot; recommendationNarration?: RecommendationNarration; error?: string };
         const json = hydrateSchoolDashboard((body.data ?? body) as Parameters<typeof hydrateSchoolDashboard>[0]);
 
         setData(json);
@@ -44,6 +46,7 @@ export function useSchoolData({ enabled = true }: UseSchoolDataOptions = {}) {
         const normalizedSnapshot = buildSchoolSnapshot(json);
         const hydratedServerSnapshot = hydrateSchoolSnapshot(body.snapshot);
         setSnapshot(hydratedServerSnapshot ? { ...normalizedSnapshot, ...hydratedServerSnapshot } : normalizedSnapshot);
+        setRecommendationNarration(body.recommendationNarration ?? null);
         setError(body.error);
       } catch (err) {
         setError(
@@ -67,7 +70,7 @@ export function useSchoolData({ enabled = true }: UseSchoolDataOptions = {}) {
       if (!enabled || !data) return null;
 
       return buildSchoolIntelligence(data, snapshot ?? undefined);
-    }, [data, enabled]);
+    }, [data, enabled, snapshot]);
 
   const normalizedSnapshot = useMemo(() => !enabled ? null : snapshot ?? (data ? buildSchoolSnapshot(data) : null), [data, enabled, snapshot]);
 
@@ -81,6 +84,8 @@ export function useSchoolData({ enabled = true }: UseSchoolDataOptions = {}) {
     loading: enabled ? loading : false,
 
     error: enabled ? error : undefined,
+
+    recommendationNarration: enabled ? recommendationNarration : null,
 
     local,
   };
