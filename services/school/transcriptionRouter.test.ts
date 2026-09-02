@@ -15,8 +15,8 @@ test("OpenAI transcription success is normalized", async () => {
 });
 
 test("Cloudflare transcription success uses Whisper and normalizes the result", async () => {
-  configure(); env.SCHOOL_TRANSCRIPTION_PROVIDER = "cloudflare"; const previous = globalThis.fetch; let request: RequestInit | undefined; globalThis.fetch = async (_url, init) => { request = init; return response({ result: { text: "from cloudflare", segments: [{ start: 0, end: 2, text: "from cloudflare" }] } }); };
-  try { const routed = await transcribeWithSchoolRouter(input); assert.equal(routed.result.text, "from cloudflare"); assert.equal(routed.result.provider, "cloudflare"); assert.equal(JSON.parse(String(request?.body)).task, "transcribe"); } finally { globalThis.fetch = previous; }
+  configure(); env.SCHOOL_TRANSCRIPTION_PROVIDER = "cloudflare"; const previous = globalThis.fetch; let request: RequestInit | undefined; const mp4 = new Uint8Array(49_384); mp4.set([0, 0, 0, 0, 0x66, 0x74, 0x79, 0x70, 0x4d, 0x34, 0x41, 0x20]); globalThis.fetch = async (_url, init) => { request = init; return response({ result: { text: "from cloudflare", segments: [{ start: 0, end: 2, text: "from cloudflare" }] } }); };
+  try { const routed = await transcribeWithSchoolRouter({ ...input, bytes: mp4, mimeType: "audio/mp4", voiceNoteId: "test-voice-note" }); const body = JSON.parse(String(request?.body)) as { audio: string; task: string }; assert.equal(routed.result.text, "from cloudflare"); assert.equal(routed.result.provider, "cloudflare"); assert.equal(body.task, "transcribe"); assert.equal(typeof body.audio, "string"); assert.equal(body.audio.startsWith("data:audio/"), false); assert.equal(Buffer.from(body.audio, "base64").byteLength, mp4.byteLength); assert.deepEqual([...Buffer.from(body.audio, "base64").subarray(0, 12)], [...mp4.subarray(0, 12)]); } finally { globalThis.fetch = previous; }
 });
 
 test("OpenAI quota falls back to Cloudflare once", async () => {
@@ -42,6 +42,11 @@ test("a provider that cannot accept the recording is skipped", async () => {
 test("provider format failure does not masquerade as generic validation", async () => {
   configure(); env.SCHOOL_TRANSCRIPTION_PROVIDER = "openai"; const previous = globalThis.fetch; let calls = 0; globalThis.fetch = async () => { calls += 1; return response({ error: "invalid" }, 400); };
   try { await assert.rejects(() => transcribeWithSchoolRouter(input), (error: unknown) => (error as { code?: string }).code === "transcription_provider_format"); assert.equal(calls, 1); } finally { globalThis.fetch = previous; }
+});
+
+test("Cloudflare HTTP failures use provider-specific safe codes", async () => {
+  configure(); env.SCHOOL_TRANSCRIPTION_PROVIDER = "cloudflare"; const previous = globalThis.fetch;
+  try { for (const [status, code] of [[401, "transcription_provider_auth"], [403, "transcription_provider_auth"], [429, "transcription_provider_rate_limit"], [500, "transcription_provider_unavailable"]] as const) { globalThis.fetch = async () => response({ error: "provider failure" }, status); await assert.rejects(() => transcribeWithSchoolRouter(input), (error: unknown) => (error as { code?: string }).code === code); } } finally { globalThis.fetch = previous; }
 });
 
 test("unconfigured preferred provider is skipped", async () => {
