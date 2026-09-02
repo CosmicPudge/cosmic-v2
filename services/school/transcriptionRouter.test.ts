@@ -39,9 +39,9 @@ test("a provider that cannot accept the recording is skipped", async () => {
   try { const routed = await transcribeWithSchoolRouter(largeInput); assert.equal(routed.result.provider, "cloudflare"); assert.equal(routed.attempts[0]?.outcome, "skipped"); assert.equal(routed.attempts[0]?.code, "transcription_too_large"); } finally { globalThis.fetch = previous; }
 });
 
-test("non-retryable invalid audio does not fall back", async () => {
+test("provider format failure does not masquerade as generic validation", async () => {
   configure(); env.SCHOOL_TRANSCRIPTION_PROVIDER = "openai"; const previous = globalThis.fetch; let calls = 0; globalThis.fetch = async () => { calls += 1; return response({ error: "invalid" }, 400); };
-  try { await assert.rejects(() => transcribeWithSchoolRouter(input), (error: unknown) => (error as { code?: string }).code === "transcription_invalid_audio"); assert.equal(calls, 1); } finally { globalThis.fetch = previous; }
+  try { await assert.rejects(() => transcribeWithSchoolRouter(input), (error: unknown) => (error as { code?: string }).code === "transcription_provider_format"); assert.equal(calls, 1); } finally { globalThis.fetch = previous; }
 });
 
 test("unconfigured preferred provider is skipped", async () => {

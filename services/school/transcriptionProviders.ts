@@ -11,7 +11,7 @@ function parseSegments(value: unknown): TranscriptSegment[] | undefined {
 }
 
 function errorForResponse(status: number, provider: string): SchoolTranscriptionError {
-  if (status === 400 || status === 415) return new SchoolTranscriptionError(status === 415 ? "transcription_unsupported_audio" : "transcription_invalid_audio", { status });
+  if (status === 400 || status === 415) return new SchoolTranscriptionError("transcription_provider_format", { status });
   if (status === 401 || status === 403) return new SchoolTranscriptionError("transcription_auth_configuration", { retryable: false, status });
   if (status === 413) return new SchoolTranscriptionError("transcription_too_large", { retryable: false, status });
   if (status === 429) return new SchoolTranscriptionError(status === 429 && provider === "openai" ? "transcription_quota" : "transcription_rate_limit", { status });

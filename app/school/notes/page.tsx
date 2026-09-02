@@ -7,7 +7,7 @@ import { useSchool } from "@/components/school/context/SchoolDataContext";
 type Note = { id: string; title: string; content: string; courseId?: string | null; topics?: unknown; classDate?: string | null; updatedAt: string };
 type VoiceNote = { id: string; title: string | null; organizedContent: string | null; status: string; processingError: string | null; courseId: string | null; sourceId: string };
 const panel = "rounded-[1.35rem] border border-white/[0.09] bg-[#101c35]/75 p-5";
-function voiceError(value: string | null) { if (!value) return null; if (value === "transcription_quota_or_rate_limit" || value === "transcription_quota") return "OpenAI transcription limit reached."; if (value.includes("transcription_") || value.includes("provider")) return "Transcription temporarily unavailable."; return value; }
+function voiceError(value: string | null) { if (!value) return null; if (value === "transcription_quota_or_rate_limit" || value === "transcription_quota") return "OpenAI transcription limit reached."; if (value === "transcription_invalid_audio") return "The transcription provider rejected this audio."; if (value.includes("transcription_") || value.includes("provider")) return "Transcription temporarily unavailable."; return value; }
 
 export default function NotesPage() {
   const { local } = useSchool(); const [notes, setNotes] = useState<Note[]>([]); const [voice, setVoice] = useState<VoiceNote | null>(null); const [error, setError] = useState(""); const [uploading, setUploading] = useState(false); const [recordingTitle, setRecordingTitle] = useState(""); const [recordingCourse, setRecordingCourse] = useState("");
