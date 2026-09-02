@@ -27,7 +27,7 @@ export function validateSourceType(mimeType: string, fileName = ""): Extract<Sch
   if (["text/plain", "text/markdown", "text/x-markdown"].includes(mimeType) || /\.(txt|md)$/i.test(fileName)) return "upload-text";
   if (["image/png", "image/jpeg", "image/webp"].includes(mimeType) || /\.(png|jpe?g|webp)$/i.test(fileName)) return "upload-image";
   if (mimeType === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" || fileName.toLowerCase().endsWith(".docx")) return "upload-docx";
-  throw new Error("Unsupported source type. Upload a PDF, DOCX, image, TXT, or Markdown file.");
+  throw new Error("Unsupported source type. Upload a PDF, DOCX, image, TXT, Markdown, or audio recording.");
 }
 
 export function isSupportedSchoolSourceType(value: string): value is SchoolSourceType { return SCHOOL_SOURCE_TYPES.includes(value as SchoolSourceType); }

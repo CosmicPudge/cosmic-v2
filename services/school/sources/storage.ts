@@ -16,7 +16,7 @@ import { del, get, put } from "@vercel/blob";
 /** Local development store only. Never claim this is durable production storage. */
 export class LocalSchoolAssetStore implements SchoolAssetStore {
   private root = path.join(process.cwd(), ".school-assets");
-  async put(input: { accountId: string; sourceId: string; bytes: Uint8Array; mimeType: string; safeFileName: string }) { const key = `${input.accountId}/${input.sourceId}/${crypto.randomUUID()}-${input.safeFileName}`; const target = path.join(this.root, key); await mkdir(path.dirname(target), { recursive: true }); await writeFile(target, input.bytes); return { provider: "local-development", key }; }
+  async put(input: { accountId: string; sourceId: string; bytes: Uint8Array; mimeType: string; safeFileName: string }) { const extension = path.extname(input.safeFileName).toLowerCase().replace(/[^a-z0-9.]/g, ""); const key = `${input.accountId}/${input.sourceId}/${crypto.randomUUID()}${extension}`; const target = path.join(this.root, key); await mkdir(path.dirname(target), { recursive: true }); await writeFile(target, input.bytes); return { provider: "local-development", key }; }
   async get(input: { accountId: string; key: string }) { if (!input.key.startsWith(`${input.accountId}/`) || input.key.includes("..")) return null; try { return new Uint8Array(await readFile(path.join(this.root, input.key))); } catch { return null; } }
   async delete(input: { accountId: string; key: string }) { if (!input.key.startsWith(`${input.accountId}/`) || input.key.includes("..")) return; try { await unlink(path.join(this.root, input.key)); } catch { /* already absent */ } }
 }
@@ -29,7 +29,7 @@ export class UnconfiguredSchoolAssetStore implements SchoolAssetStore {
 
 export class VercelBlobSchoolAssetStore implements SchoolAssetStore {
   async put(input: { accountId: string; sourceId: string; bytes: Uint8Array; mimeType: string; safeFileName: string }) {
-    const extension = input.safeFileName.toLowerCase().match(/\.(png|jpe?g|webp)$/)?.[1] ?? "bin";
+    const extension = input.safeFileName.toLowerCase().match(/\.(png|jpe?g|webp|mp3|m4a|wav|webm|aac|ogg)$/)?.[1] ?? "bin";
     const pathname = `school/${input.accountId}/${input.sourceId}/${crypto.randomUUID()}.${extension}`;
     const blob = await put(pathname, Buffer.from(input.bytes), { access: "private", contentType: input.mimeType, addRandomSuffix: false });
     return { provider: "vercel-blob", key: blob.pathname };
