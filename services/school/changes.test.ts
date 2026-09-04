@@ -9,11 +9,12 @@ const base = { mission: { title: "", subtitle: "", priority: "low" as const }, f
 const assignment = (due: string) => ({ id: "a1", title: "Reading Response 8", due: new Date(due), completed: false, priority: "medium" as const });
 
 test("initial School import is a baseline and due-date changes produce one candidate", () => {
+  const now = new Date("2026-09-04T12:00:00.000Z");
   const first = buildSchoolSnapshot({ ...base, assignments: [assignment("2026-09-30T18:00:00Z")] });
   const second = buildSchoolSnapshot({ ...base, assignments: [assignment("2026-10-02T18:00:00Z")] });
-  assert.deepEqual(detectSchoolChanges(null, first), []);
-  assert.equal(detectSchoolChanges(first, second).map((item) => item.type).join(), "assignment_due_date_changed");
-  assert.deepEqual(detectSchoolChanges(first, second), detectSchoolChanges(first, second));
+  assert.deepEqual(detectSchoolChanges(null, first, now), []);
+  assert.equal(detectSchoolChanges(first, second, now).map((item) => item.type).join(), "assignment_due_date_changed");
+  assert.deepEqual(detectSchoolChanges(first, second, now), detectSchoolChanges(first, second, now));
 });
 
 test("provider failure is not interpreted as mass deletion", () => {

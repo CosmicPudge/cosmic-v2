@@ -6,7 +6,7 @@ export type AcademicWorkClassification = { type: AcademicWorkType; confidence: "
 
 export const academicWorkConfig = {
   normalHorizonDays: 7,
-  majorWorkHorizonDays: 30,
+  majorWorkHorizonDays: 42,
   defaultMinutes: { assignment: 45, quiz: 60, exam: 180, project: 300, presentation: 180, paper: 240, lab: 120, reading: 30, study: 45, other: 45 } satisfies Record<AcademicWorkType, number>,
   preparationBlocks: { quiz: { count: 2, minutes: 30 }, exam: { count: 4, minutes: 45 } },
 } as const;
