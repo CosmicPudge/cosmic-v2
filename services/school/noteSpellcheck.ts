@@ -1,3 +1,5 @@
+import nspell from "nspell";
+
 export interface NoteWordToken { word: string; start: number; end: number; }
 export interface SpellIssue extends NoteWordToken { suggestions: string[]; }
 
@@ -33,4 +35,25 @@ export function preserveCase(replacement: string, original: string): string {
 
 export function scanNoteText(text: string, correct: (word: string) => boolean, suggest: (word: string) => string[], ignored = new Set<string>()): SpellIssue[] {
   return tokenizeNoteWords(text).filter((token) => !ignored.has(token.word.toLocaleLowerCase()) && !correct(token.word)).map((token) => ({ ...token, suggestions: suggest(token.word).slice(0, 3) }));
+}
+export type LocalSpellChecker = ReturnType<typeof nspell>;
+
+let spellCheckerPromise: Promise<LocalSpellChecker> | undefined;
+
+export function createLocalSpellChecker(): Promise<LocalSpellChecker> {
+  spellCheckerPromise ??= Promise.all([
+    fetch("/dictionaries/en/index.aff").then((response) => {
+      if (!response.ok) throw new Error("Could not load dictionary affix data.");
+      return response.arrayBuffer().then((data) => new Uint8Array(data));
+    }),
+    fetch("/dictionaries/en/index.dic").then((response) => {
+      if (!response.ok) throw new Error("Could not load dictionary word data.");
+      return response.arrayBuffer().then((data) => new Uint8Array(data));
+    }),
+  ]).then(([aff, dic]) => nspell({aff, dic})).catch((error: unknown) => {
+    spellCheckerPromise = undefined;
+    throw error;
+  });
+
+  return spellCheckerPromise;
 }
