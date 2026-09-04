@@ -23,10 +23,12 @@ export async function extractSourceText(input: { buffer: Buffer; mimeType: strin
 }
 
 export function validateSourceType(mimeType: string, fileName = ""): Extract<SchoolSourceType, "upload-pdf" | "upload-text" | "upload-image" | "upload-docx"> {
-  if (mimeType === "application/pdf" || fileName.toLowerCase().endsWith(".pdf")) return "upload-pdf";
-  if (["text/plain", "text/markdown", "text/x-markdown"].includes(mimeType) || /\.(txt|md)$/i.test(fileName)) return "upload-text";
-  if (["image/png", "image/jpeg", "image/webp"].includes(mimeType) || /\.(png|jpe?g|webp)$/i.test(fileName)) return "upload-image";
-  if (mimeType === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" || fileName.toLowerCase().endsWith(".docx")) return "upload-docx";
+  const declaredMime = mimeType.trim().toLowerCase();
+  const hasDeclaredMime = declaredMime.length > 0;
+  if (declaredMime === "application/pdf" || (!hasDeclaredMime && fileName.toLowerCase().endsWith(".pdf"))) return "upload-pdf";
+  if (["text/plain", "text/markdown", "text/x-markdown"].includes(declaredMime) || (!hasDeclaredMime && /\.(txt|md)$/i.test(fileName))) return "upload-text";
+  if (["image/png", "image/jpeg", "image/webp"].includes(declaredMime) || (!hasDeclaredMime && /\.(png|jpe?g|webp)$/i.test(fileName))) return "upload-image";
+  if (declaredMime === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" || (!hasDeclaredMime && fileName.toLowerCase().endsWith(".docx"))) return "upload-docx";
   throw new Error("Unsupported source type. Upload a PDF, DOCX, image, TXT, Markdown, or audio recording.");
 }
 

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 // @ts-expect-error Node's strip-types runner resolves the source extension directly.
 import { buildAcademicRecommendations, buildAcademicState, buildProactivePlan } from "./academicPlanner.ts";
+import { hydrateSchoolPlanningAssignments } from "../hydration";
 import type { SchoolSnapshot } from "@/services/school/domain";
 import type { SchoolPlanningAssignment } from "@/core/contracts/SchoolPlanning";
 
@@ -21,6 +22,33 @@ test("proactive plan starts substantial work before its due date and preserves d
   assert.ok(result.recommendedWorkDate < dueAt);
   assert.ok(result.workBlocks.length >= 3);
   assert.equal(item.dueAt?.getTime(), dueAt.getTime());
+});
+test("plans meaningful work before the September 8 deadline", () => {
+  const today = new Date("2026-09-06T12:00:00.000Z");
+  const dueAt = new Date("2026-09-08T23:59:00.000Z");
+  const item = assignment("Engineering Reflection", dueAt.toISOString(), { estimatedMinutes: 90 });
+  const result = buildProactivePlan(snapshot([item]), today).assignments.find((entry) => entry.assignmentId === item.id);
+
+  assert.ok(result);
+  assert.ok(result.workBlocks.some((block) => block.date < dueAt));
+  assert.ok(result.workBlocks.every((block) => block.date < dueAt));
+});
+test("does not force a distant trivial assignment onto today", () => {
+  const today = new Date("2026-09-10T12:00:00.000Z");
+  const dueAt = new Date("2026-09-16T23:59:00.000Z");
+  const item = assignment("15-minute reading", dueAt.toISOString(), { estimatedMinutes: 15 });
+  const result = buildProactivePlan(snapshot([item]), today).assignments.find((entry) => entry.assignmentId === item.id);
+
+  assert.ok(result);
+  assert.ok(result.workBlocks.every((block) => block.date > today));
+});
+test("invalid due dates do not create deadline urgency", () => {
+  const [item] = hydrateSchoolPlanningAssignments([{ ...assignment("Malformed deadline", undefined), dueAt: "not-a-date" }]);
+  assert.ok(item);
+  assert.equal(item.dueAt, undefined);
+  const recommendations = buildAcademicRecommendations(buildAcademicState(snapshot([item]), now));
+  assert.equal(recommendations[0]?.reasonCodes.includes("OVERDUE"), false);
+  assert.equal(recommendations[0]?.reasonCodes.includes("DUE_TODAY"), false);
 });
 test("proactive plan uses a centralized unknown estimate and excludes completed work", () => {
   const plan = buildProactivePlan(snapshot([

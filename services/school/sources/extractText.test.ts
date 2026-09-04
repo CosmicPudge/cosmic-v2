@@ -18,6 +18,12 @@ test("accepts canonical multimodal and legacy School source types", () => {
 test("rejects spoofed or unsupported source types", () => {
   assert.throws(() => validateSourceType("image/svg+xml", "notes.svg"), /Unsupported source type/);
   assert.throws(() => validateSourceType("application/octet-stream", "notes.png"), /Unsupported source type/);
+  assert.throws(() => validateSourceType("application/x-unknown", "notes.txt"), /Unsupported source type/);
+});
+
+test("uses an extension only when the declared MIME type is absent", () => {
+  assert.equal(validateSourceType("", "notes.png"), "upload-image");
+  assert.equal(validateSourceType("text/plain", "notes.png"), "upload-text");
 });
 
 test("classifies database failures without exposing SQL or params", () => {

@@ -50,11 +50,24 @@ test("hydrates planning assignment dates and drops malformed planning records", 
     planningAssignments: [
       { id: "planning-1", accountId: "account-1", title: "Valid", sourceType: "manual", dueAt: "2026-09-04T18:00:00.000Z", createdAt: "2026-08-01T00:00:00.000Z", updatedAt: "2026-08-01T00:00:00.000Z", completionStatus: "upcoming", planningStatus: "not_started", priority: "normal" },
       { id: "planning-2", accountId: "account-1", title: "Malformed", sourceType: "manual", dueAt: "not-a-date", createdAt: "2026-08-01T00:00:00.000Z", updatedAt: "2026-08-01T00:00:00.000Z", completionStatus: "upcoming", planningStatus: "not_started", priority: "normal" },
+      { id: "planning-3", accountId: "account-1", title: "Impossible", sourceType: "manual", dueAt: "2026-99-99", createdAt: "2026-08-01T00:00:00.000Z", updatedAt: "2026-08-01T00:00:00.000Z", completionStatus: "upcoming", planningStatus: "not_started", priority: "normal" },
+      { id: "planning-4", accountId: "account-1", title: "Date only", sourceType: "manual", dueAt: "2026-09-08", createdAt: "2026-08-01T00:00:00.000Z", updatedAt: "2026-08-01T00:00:00.000Z", completionStatus: "upcoming", planningStatus: "not_started", priority: "normal" },
+      { id: "planning-5", accountId: "account-1", title: "Timed", sourceType: "manual", dueAt: "2026-09-08T23:59:00", createdAt: "2026-08-01T00:00:00.000Z", updatedAt: "2026-08-01T00:00:00.000Z", completionStatus: "upcoming", planningStatus: "not_started", priority: "normal" },
     ],
   };
   const hydrated = hydrateSchoolSnapshot(JSON.parse(JSON.stringify(raw)));
-  assert.equal(hydrated?.planningAssignments?.length, 2);
+  assert.equal(hydrated?.planningAssignments?.length, 5);
   assert.equal(hydrated?.planningAssignments?.[0]?.dueAt instanceof Date, true);
   assert.equal(hydrated?.planningAssignments?.[0]?.dueAt?.toISOString(), "2026-09-04T18:00:00.000Z");
   assert.equal(hydrated?.planningAssignments?.[1]?.dueAt, undefined);
+  assert.equal(hydrated?.planningAssignments?.[2]?.dueAt, undefined);
+  assert.equal(hydrated?.planningAssignments?.[3]?.dueAt instanceof Date, true);
+  assert.equal(hydrated?.planningAssignments?.[3]?.dueAt?.getFullYear(), 2026);
+  assert.equal(hydrated?.planningAssignments?.[3]?.dueAt?.getMonth(), 8);
+  assert.equal(hydrated?.planningAssignments?.[3]?.dueAt?.getDate(), 8);
+  assert.equal(hydrated?.planningAssignments?.[4]?.dueAt?.getFullYear(), 2026);
+  assert.equal(hydrated?.planningAssignments?.[4]?.dueAt?.getMonth(), 8);
+  assert.equal(hydrated?.planningAssignments?.[4]?.dueAt?.getDate(), 8);
+  assert.equal(hydrated?.planningAssignments?.[4]?.dueAt?.getHours(), 23);
+  assert.equal(hydrated?.planningAssignments?.[4]?.dueAt?.getMinutes(), 59);
 });

@@ -11,6 +11,7 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:bootstrap-admin": "node scripts/bootstrap-admin.mjs",
+    "test:school": "node scripts/test-school.mjs",
     "test:device-pairing": "node --test --experimental-strip-types services/devices/pairingPolicy.test.ts",
     "test:device-integration": "NODE_ENV=test node scripts/test-device-integration.mjs",
     "download:mlb": "node scripts/download-mlb-logos.mjs",
