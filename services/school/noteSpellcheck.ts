@@ -37,21 +37,76 @@ export function scanNoteText(text: string, correct: (word: string) => boolean, s
   return tokenizeNoteWords(text).filter((token) => !ignored.has(token.word.toLocaleLowerCase()) && !correct(token.word)).map((token) => ({ ...token, suggestions: suggest(token.word).slice(0, 3) }));
 }
 export type LocalSpellChecker = ReturnType<typeof nspell>;
+const browserNspell = nspell as unknown as (dictionary: { aff: string; dic: string }) => LocalSpellChecker;
 
 let spellCheckerPromise: Promise<LocalSpellChecker> | undefined;
 
+const commonEnglishWords = ["the", "and", "student", "class", "assignment"];
+
+type SpellcheckFailureCode = "FETCH_FAILED" | "INVALID_AFF" | "INVALID_DIC" | "NSPELL_INIT_FAILED" | "SANITY_CHECK_FAILED";
+
+class SpellcheckInitializationError extends Error {
+  code: SpellcheckFailureCode;
+
+  constructor(code: SpellcheckFailureCode, message: string) {
+    super(message);
+    this.name = "SpellcheckInitializationError";
+    this.code = code;
+  }
+}
+
+function diagnostic(message: string): void {
+  if (process.env.NODE_ENV !== "production") console.debug(`[spellcheck] ${message}`);
+}
+
+async function loadDictionaryAsset(path: string, kind: "AFF" | "DIC"): Promise<string> {
+  let response: Response;
+  try {
+    response = await fetch(path);
+  } catch {
+    diagnostic(`${kind} fetch failed`);
+    throw new SpellcheckInitializationError("FETCH_FAILED", "Dictionary asset request failed.");
+  }
+  const contentType = response.headers.get("content-type") ?? "unknown";
+  if (!response.ok) {
+    diagnostic(`${kind} fetch status=${response.status} contentType=${contentType}`);
+    throw new SpellcheckInitializationError("FETCH_FAILED", "Dictionary asset request failed.");
+  }
+  const text = await response.text();
+  diagnostic(`${kind} fetch status=${response.status} contentType=${contentType} bytes=${new TextEncoder().encode(text).byteLength}`);
+  if (!text.trim()) throw new SpellcheckInitializationError(kind === "AFF" ? "INVALID_AFF" : "INVALID_DIC", "Dictionary asset is empty.");
+
+  const normalizedText = text.replace(/^\uFEFF/, "").trimStart();
+  if (/^<(?:!doctype|html|head|body)\b/i.test(normalizedText)) throw new SpellcheckInitializationError(kind === "AFF" ? "INVALID_AFF" : "INVALID_DIC", "Dictionary asset is not valid text data.");
+  if (kind === "AFF" && !/^SET\s+UTF-8\b/im.test(normalizedText)) throw new SpellcheckInitializationError("INVALID_AFF", "Dictionary affix data is invalid.");
+  if (kind === "DIC" && !/^\s*\d+\s*(?:\r?\n|$)/.test(normalizedText)) throw new SpellcheckInitializationError("INVALID_DIC", "Dictionary word data is invalid.");
+  return text;
+}
+
 export function createLocalSpellChecker(): Promise<LocalSpellChecker> {
   spellCheckerPromise ??= Promise.all([
-    fetch("/dictionaries/en/index.aff").then((response) => {
-      if (!response.ok) throw new Error("Could not load dictionary affix data.");
-      return response.arrayBuffer().then((data) => new Uint8Array(data));
-    }),
-    fetch("/dictionaries/en/index.dic").then((response) => {
-      if (!response.ok) throw new Error("Could not load dictionary word data.");
-      return response.arrayBuffer().then((data) => new Uint8Array(data));
-    }),
-  ]).then(([aff, dic]) => nspell({aff, dic})).catch((error: unknown) => {
+    loadDictionaryAsset("/dictionaries/en/index.aff", "AFF"),
+    loadDictionaryAsset("/dictionaries/en/index.dic", "DIC"),
+  ]).then(([aff, dic]) => {
+    let checker: LocalSpellChecker;
+    try {
+      checker = browserNspell({aff, dic});
+      diagnostic("nspell initialized");
+    } catch {
+      diagnostic("initialization stage=nspell_initialization");
+      throw new SpellcheckInitializationError("NSPELL_INIT_FAILED", "English dictionary initialization failed.");
+    }
+    const recognized = commonEnglishWords.filter((word) => checker.correct(word)).length;
+    const sanity = Object.fromEntries(commonEnglishWords.map((word) => [word, checker.correct(word)]));
+    if (recognized < 4 || checker.correct("studnet")) {
+      diagnostic(`initialization stage=sanity_check passed=false results=${JSON.stringify(sanity)}`);
+      throw new SpellcheckInitializationError("SANITY_CHECK_FAILED", "English dictionary sanity check failed.");
+    }
+    diagnostic(`initialization stage=sanity_check passed=true results=${JSON.stringify(sanity)}`);
+    return checker;
+  }).catch((error: unknown) => {
     spellCheckerPromise = undefined;
+    diagnostic(`failure code=${error instanceof SpellcheckInitializationError ? error.code : "UNKNOWN"}`);
     throw error;
   });
 
