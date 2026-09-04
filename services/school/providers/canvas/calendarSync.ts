@@ -8,6 +8,7 @@ import { getSchoolAssignment, updateSchoolAssignment, upsertCanvasAssignments } 
 import { canonicalCanvasCalendarId } from "@/services/school/assignmentIdentity";
 
 export interface CanvasCalendarSyncResult { eventsSeen: number; created: number; updated: number; unchanged: number; reconciled: number; unmatched: number; missing: number; errors: number; }
+const inFlightSyncs = new Map<string, Promise<CanvasCalendarSyncResult>>();
 export function canvasCalendarIdentity(sourceId: string, event: ParsedCanvasCalendar["events"][number]) { const uid = event.sourceMetadata?.uid ?? event.id; return `canvas-calendar:${sourceId}:${uid}${event.sourceMetadata?.recurrenceId ? `:${event.sourceMetadata.recurrenceId}` : ""}`; }
 
 export async function persistCanvasCalendarEvents(accountId: string, sourceId: string, parsed: ParsedCanvasCalendar): Promise<CanvasCalendarSyncResult> {
@@ -34,5 +35,13 @@ export async function persistCanvasCalendarEvents(accountId: string, sourceId: s
 }
 
 export async function syncCanvasCalendarForAccount(accountId: string, sourceId: string, feedUrl: string): Promise<CanvasCalendarSyncResult> {
-  const parsed = await fetchCanvasCalendarEvents(feedUrl); return persistCanvasCalendarEvents(accountId, sourceId, parsed);
+  const key = `${accountId}:${sourceId}`;
+  const existing = inFlightSyncs.get(key);
+  if (existing) return existing;
+  const sync = (async () => {
+    const parsed = await fetchCanvasCalendarEvents(feedUrl);
+    return persistCanvasCalendarEvents(accountId, sourceId, parsed);
+  })();
+  inFlightSyncs.set(key, sync);
+  try { return await sync; } finally { if (inFlightSyncs.get(key) === sync) inFlightSyncs.delete(key); }
 }

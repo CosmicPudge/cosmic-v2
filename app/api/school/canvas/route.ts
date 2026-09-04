@@ -54,6 +54,7 @@ export async function DELETE(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    assertSameOrigin(request);
     const account = await requireSchoolAccess(request);
     if (!isCredentialEncryptionConfigured()) return NextResponse.json({ error: "Canvas connection storage is unavailable." }, { status: 503 });
     const connection = await canvasConnection(account.id);

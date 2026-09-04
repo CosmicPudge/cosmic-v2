@@ -28,3 +28,16 @@ test("handles common real-word and ordinary spelling mistakes", async () => {
   assert.equal(findContextSuggestions("I went too class.", spell)[0]?.suggested, "I went to class.");
   assert.equal(findContextSuggestions("The studnet completed the assingment.", spell)[0]?.suggested, "The student completed the assignment.");
 });
+
+test("protects ambiguity cases and informal school notes", async () => {
+  const spell = await getSpell();
+  const unchanged = [
+    "Put it over there.", "Is that your notebook?", "I ate too much.", "I have two assignments.",
+    "The project has its own folder.", "Then we went home.", "The weather looks bad.", "I'm gonna finish it tonight.",
+    "Exam Friday", "Need calculator", "Project due soon", "CHEM 1210 exam Friday.",
+  ];
+  unchanged.forEach((text) => assert.equal(findContextSuggestions(text, spell).length, 0, text));
+  assert.equal(findContextSuggestions("Their goign too clas.", spell)[0]?.suggested, "They're going to class.");
+  assert.equal(findContextSuggestions("I don't no weather class is canceled.", spell)[0]?.suggested, "I don't know whether class is canceled.");
+  assert.equal(findContextSuggestions("This class is better then that one.", spell)[0]?.suggested, "This class is better than that one.");
+});

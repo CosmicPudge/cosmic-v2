@@ -7,6 +7,7 @@ import { buildTimeline } from "./timeline";
 import { buildPerformance } from "./performance";
 import { buildNotifications } from "./notifications";
 import type { SchoolSnapshot } from "@/services/school/domain";
+import { buildAcademicBriefing, buildAcademicNotifications } from "@/services/school/planning/academicNotifications";
 
 
 export interface SchoolIntelligence {
@@ -40,6 +41,8 @@ export interface SchoolIntelligence {
 notifications: ReturnType<
   typeof buildNotifications
 >;
+proactiveNotifications: ReturnType<typeof buildAcademicNotifications>;
+academicBriefing?: ReturnType<typeof buildAcademicBriefing>;
 }
 
 export function buildSchoolIntelligence(
@@ -66,5 +69,7 @@ export function buildSchoolIntelligence(
         timeline: buildTimeline(context),
         performance: buildPerformance(context),
         notifications: buildNotifications(context),
+        proactiveNotifications: snapshot ? buildAcademicNotifications(snapshot) : [],
+        academicBriefing: snapshot ? buildAcademicBriefing(snapshot) : undefined,
     };
 }

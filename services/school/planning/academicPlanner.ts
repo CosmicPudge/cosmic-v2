@@ -1,6 +1,7 @@
 import type { SchoolSnapshot } from "@/services/school/domain";
 import type { SchoolPlanningAssignment } from "@/core/contracts/SchoolPlanning";
 import { isAssignmentActiveForPlanning, isAssignmentOverdue } from "../planning";
+import { academicWorkConfig, classifyAcademicWork, isMajorAcademicWork, type AcademicWorkType } from "./academicWork";
 
 export type AcademicRecommendationKind = "do-now" | "do-next" | "prepare" | "warning" | "quick-win" | "upcoming";
 export type CourseRisk = "LOW" | "NORMAL" | "ELEVATED" | "HIGH";
@@ -47,9 +48,132 @@ export interface AcademicState {
   tomorrowMorningDeadlines: SchoolPlanningAssignment[];
 }
 
+/** Configuration for the derived planner. Keep these values in one place so a
+ * future settings surface can replace them without changing planner logic. */
+export const proactivePlanningConfig = {
+  horizonDays: 7,
+  weekdayCapacityMinutes: 150,
+  weekendCapacityMinutes: 180,
+  unknownEstimateMinutes: 45,
+  maxBlockMinutes: 90,
+  safetyBufferMinutes: 30,
+  heavyClassCount: 3,
+  heavyClassReductionMinutes: 45,
+  moderateClassCount: 2,
+  moderateClassReductionMinutes: 25,
+  lightClassReductionMinutes: 10,
+} as const;
+
+export type ProactiveUrgency = "OVERDUE" | "DUE TODAY" | "URGENT" | "START SOON" | "PLANNED" | "LATER";
+export interface RecommendedWorkBlock {
+  assignmentId: string;
+  date: Date;
+  minutes: number;
+  reason: string;
+  title?: string;
+  workType?: AcademicWorkType;
+}
+export interface ProactiveAssignmentPlan {
+  assignmentId: string;
+  recommendedWorkDate: Date;
+  workBlocks: RecommendedWorkBlock[];
+  estimatedMinutes: number;
+  usedDefaultEstimate: boolean;
+  urgency: ProactiveUrgency;
+  reason: string;
+  workType?: AcademicWorkType;
+}
+export interface ProactivePlan {
+  generatedAt: Date;
+  horizonStart: Date;
+  horizonEnd: Date;
+  dailyCapacity: Array<{ date: Date; capacityMinutes: number; scheduledMinutes: number; classCount: number }>;
+  assignments: ProactiveAssignmentPlan[];
+  workBlocks: RecommendedWorkBlock[];
+  shouldNotifyToday: boolean;
+}
+
 function sameDay(left: Date, right: Date) { return left.toLocaleDateString() === right.toLocaleDateString(); }
 const active = isAssignmentActiveForPlanning;
 function dueIn(item: SchoolPlanningAssignment, now: Date, days: number) { return !!item.dueAt && item.dueAt >= now && item.dueAt.getTime() <= now.getTime() + days * 86_400_000; }
+
+function dayStart(date: Date) { return new Date(date.getFullYear(), date.getMonth(), date.getDate()); }
+function addDays(date: Date, amount: number) { const result = new Date(date); result.setDate(result.getDate() + amount); return result; }
+function dayKey(date: Date) { return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`; }
+function urgencyFor(item: SchoolPlanningAssignment, now: Date, firstDate: Date): ProactiveUrgency {
+  if (isAssignmentOverdue(item, now)) return "OVERDUE";
+  if (item.dueAt && sameDay(item.dueAt, now)) return "DUE TODAY";
+  const days = item.dueAt ? (dayStart(item.dueAt).getTime() - dayStart(now).getTime()) / 86_400_000 : Infinity;
+  if (days <= 2) return "URGENT";
+  if (firstDate.getTime() <= addDays(dayStart(now), 1).getTime()) return "START SOON";
+  if (item.planningStatus === "planned" || item.planningStatus === "in_progress") return "PLANNED";
+  return "LATER";
+}
+
+/**
+ * Build a rolling plan without persisting or mutating assignment deadlines.
+ * The same function is used by server consumers and the command-center UI.
+ */
+export function buildProactivePlan(snapshot: SchoolSnapshot, now = new Date()): ProactivePlan {
+  const start = dayStart(now);
+  const days = Array.from({ length: academicWorkConfig.majorWorkHorizonDays + 1 }, (_, index) => addDays(start, index));
+  const classesByDay = new Map(days.map((date) => [dayKey(date), snapshot.events.filter((event) => event.type === "class" && sameDay(event.start, date)).length]));
+  const dailyCapacity = days.map((date) => {
+    const classCount = classesByDay.get(dayKey(date)) ?? 0;
+    const base = date.getDay() === 0 || date.getDay() === 6 ? proactivePlanningConfig.weekendCapacityMinutes : proactivePlanningConfig.weekdayCapacityMinutes;
+    const reduction = classCount >= proactivePlanningConfig.heavyClassCount ? proactivePlanningConfig.heavyClassReductionMinutes : classCount >= proactivePlanningConfig.moderateClassCount ? proactivePlanningConfig.moderateClassReductionMinutes : classCount ? proactivePlanningConfig.lightClassReductionMinutes : 0;
+    return { date, capacityMinutes: Math.max(30, base - reduction), scheduledMinutes: 0, classCount };
+  });
+  const activeAssignments = (snapshot.planningAssignments ?? []).filter((item) => isAssignmentActiveForPlanning(item) && (!item.dueAt || item.dueAt >= start || isAssignmentOverdue(item, now)));
+  const ranked = [...activeAssignments].sort((left, right) => {
+    const leftDue = left.dueAt?.getTime() ?? Infinity; const rightDue = right.dueAt?.getTime() ?? Infinity;
+    return leftDue - rightDue || (right.priority === "critical" ? 4 : right.priority === "high" ? 3 : right.priority === "normal" ? 2 : 1) - (left.priority === "critical" ? 4 : left.priority === "high" ? 3 : left.priority === "normal" ? 2 : 1) || left.title.localeCompare(right.title) || left.id.localeCompare(right.id);
+  });
+  const plans: ProactiveAssignmentPlan[] = [];
+  for (const item of ranked) {
+    const classification = classifyAcademicWork(item); const workType = classification.type;
+    const total = Math.max(1, item.estimatedMinutes ?? academicWorkConfig.defaultMinutes[workType]);
+    const dueDay = item.dueAt ? dayStart(item.dueAt) : addDays(start, proactivePlanningConfig.horizonDays);
+    const dueOffset = Math.floor((dueDay.getTime() - start.getTime()) / 86_400_000);
+    // Reserve the deadline day as a safety buffer; only work due today may
+    // legitimately be scheduled today.
+    const horizon = isMajorAcademicWork(workType) ? academicWorkConfig.majorWorkHorizonDays : academicWorkConfig.normalHorizonDays;
+    const lastIndex = Math.min(horizon, Math.max(0, dueOffset > 0 ? dueOffset - 1 : 0));
+    const dates = days.slice(0, lastIndex + 1);
+    const futureDates = dates.filter((date) => date.getTime() >= start.getTime());
+    const eligible = futureDates.length ? futureDates : [start];
+    const blocks: RecommendedWorkBlock[] = [];
+    let remaining = total;
+    // Prefer the lightest eligible days, but keep chronological tie-breaking so
+    // substantial work starts early and does not pile up on the deadline.
+    while (remaining > 0) {
+      const candidates = eligible.filter((date) => {
+        const bucket = dailyCapacity.find((entry) => dayKey(entry.date) === dayKey(date))!;
+        return bucket.capacityMinutes - bucket.scheduledMinutes > 0;
+      }).sort((left, right) => {
+        const leftBucket = dailyCapacity.find((entry) => dayKey(entry.date) === dayKey(left))!; const rightBucket = dailyCapacity.find((entry) => dayKey(entry.date) === dayKey(right))!;
+        return rightBucket.capacityMinutes - rightBucket.scheduledMinutes - (leftBucket.capacityMinutes - leftBucket.scheduledMinutes) || left.getTime() - right.getTime();
+      });
+      if (!candidates.length) break;
+      const date = candidates[0]; const bucket = dailyCapacity.find((entry) => dayKey(entry.date) === dayKey(date))!;
+      const minutes = Math.min(remaining, proactivePlanningConfig.maxBlockMinutes, bucket.capacityMinutes - bucket.scheduledMinutes);
+      bucket.scheduledMinutes += minutes; remaining -= minutes;
+      blocks.push({ assignmentId: item.id, date, minutes, title: item.title, workType, reason: isAssignmentOverdue(item, now) ? "Recover overdue work" : item.estimatedMinutes === undefined ? `Use the ${workType} planning default` : total > proactivePlanningConfig.maxBlockMinutes ? "Split a large assignment across lighter days" : date.getTime() < dueDay.getTime() ? "Create lead time before the deadline" : "Protect the deadline" });
+    }
+    if (!blocks.length) continue;
+    const firstDate = blocks.reduce((earliest, block) => block.date < earliest ? block.date : earliest, blocks[0].date);
+    const urgency = urgencyFor(item, now, firstDate);
+    plans.push({ assignmentId: item.id, recommendedWorkDate: firstDate, workBlocks: blocks, estimatedMinutes: total, usedDefaultEstimate: item.estimatedMinutes === undefined, urgency, reason: blocks[0].reason, workType });
+  }
+  for (const event of snapshot.events.filter((item) => item.type === "exam" || item.type === "quiz")) {
+    if (event.start <= now) continue;
+    const workType: "exam" | "quiz" = event.type === "exam" ? "exam" : "quiz"; const prep = academicWorkConfig.preparationBlocks[workType]; const dueDay = dayStart(event.start); const dueOffset = Math.floor((dueDay.getTime() - start.getTime()) / 86_400_000); const lastIndex = Math.min(academicWorkConfig.majorWorkHorizonDays, Math.max(0, dueOffset > 0 ? dueOffset - 1 : 0)); const eligible = days.slice(0, lastIndex + 1); let remaining = prep.count; const blocks: RecommendedWorkBlock[] = [];
+    while (remaining > 0) { const candidates = eligible.filter((date) => { const bucket = dailyCapacity.find((entry) => dayKey(entry.date) === dayKey(date))!; return bucket.capacityMinutes - bucket.scheduledMinutes >= Math.min(prep.minutes, proactivePlanningConfig.maxBlockMinutes); }).sort((left, right) => left.getTime() - right.getTime()); if (!candidates.length) break; const date = candidates[0]; const bucket = dailyCapacity.find((entry) => dayKey(entry.date) === dayKey(date))!; const minutes = Math.min(prep.minutes, bucket.capacityMinutes - bucket.scheduledMinutes); bucket.scheduledMinutes += minutes; remaining -= 1; blocks.push({ assignmentId: `academic-event:${event.id}`, date, minutes, title: event.title, workType, reason: remaining === 0 ? "Reserve a final review before the assessment" : "Space preparation before the assessment" }); }
+    if (blocks.length) { const firstDate = blocks[0].date; plans.push({ assignmentId: `academic-event:${event.id}`, recommendedWorkDate: firstDate, workBlocks: blocks, estimatedMinutes: blocks.reduce((sum, block) => sum + block.minutes, 0), usedDefaultEstimate: true, urgency: dueOffset <= 2 ? "URGENT" : "START SOON", reason: blocks[0].reason, workType }); }
+  }
+  const workBlocks = plans.flatMap((plan) => plan.workBlocks);
+  return { generatedAt: now, horizonStart: start, horizonEnd: addDays(start, academicWorkConfig.majorWorkHorizonDays), dailyCapacity, assignments: plans, workBlocks, shouldNotifyToday: plans.some((plan) => plan.workBlocks.some((block) => sameDay(block.date, now)) && plan.urgency !== "LATER") };
+}
 
 export function buildAcademicState(snapshot: SchoolSnapshot, now = new Date()): AcademicState {
   const assignments = (snapshot.planningAssignments ?? []).filter(active);
