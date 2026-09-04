@@ -8,6 +8,8 @@ Cosmic AI is a provider-neutral, read-only conversational layer. P1 keeps conver
 
 The first adapter is native `fetch` against OpenAI Responses API (`COSMIC_AI_PROVIDER=openai`, default model `gpt-5.4-mini`). The adapter is behind `services/ai/provider.ts`, so Anthropic or Gemini can be added without coupling the UI or planner to a vendor SDK. Provider credentials are server-only.
 
+School transcript intelligence prefers OpenAI when the server-only `OPENAI_API_KEY` is configured and uses Cloudflare Workers AI as a fallback. Cloudflare-only deployments remain supported. `COSMIC_AI_MODEL` controls the existing centralized OpenAI model selection; do not expose either credential to the client.
+
 Optional public search uses Tavily with a short query, basic depth, five-result maximum, a ten-second timeout, and source links returned to the UI. Search results are context, not instructions. Private retrieval is summary-only and permission-gated; Finance, Mail, and Notes default off. P1 has no write/action tools, no arbitrary URL fetcher, no autonomous loop, and no chain-of-thought output.
 
 ## Safety and privacy

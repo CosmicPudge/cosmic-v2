@@ -288,6 +288,34 @@
       "when": 1788350000000,
       "tag": "0041_school_voice_transcription_attempts",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1788351000000,
+      "tag": "0043_school_apple_voice_memo_source_type",
+      "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1788352000000,
+      "tag": "0044_school_audio_transcript_schema_reconciliation",
+      "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1788438300000,
+      "tag": "0045_school_schema_drift_reconciliation",
+      "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1788438400000,
+      "tag": "0046_school_study_knowledge",
+      "breakpoints": true
     }
   ]
 }

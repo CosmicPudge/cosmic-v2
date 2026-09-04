@@ -12,3 +12,9 @@ test("keeps valid events when one VEVENT is malformed", () => {
   const result = parseCanvasCalendarWithDiagnostics("BEGIN:VCALENDAR\nBEGIN:VEVENT\nUID:valid\nDTSTART:20260912T230000Z\nDTEND:20260912T233000Z\nSUMMARY:Quiz 2\nEND:VEVENT\nBEGIN:VEVENT\nUID:bad\nDTSTART:not-a-date\nSUMMARY:Broken\nEND:VEVENT\nEND:VCALENDAR");
   assert.equal(result.diagnostics.totalIcsEvents, 2); assert.equal(result.events.length, 1); assert.equal(result.events[0].id, "valid");
 });
+
+test("normalizes explicit Canvas completion signals without using due dates or titles", () => {
+  const result = parseCanvasCalendarWithDiagnostics(`BEGIN:VCALENDAR\nVERSION:2.0\nBEGIN:VEVENT\nUID:submitted\nDTSTART;VALUE=DATE:20260901\nDTEND;VALUE=DATE:20260902\nSUMMARY:Normal title\nURL:https://canvas.example.test/courses/12/assignments/1\nX-CANVAS-SUBMISSION-STATE:submitted\nEND:VEVENT\nBEGIN:VEVENT\nUID:graded\nDTSTART;VALUE=DATE:20260901\nDTEND;VALUE=DATE:20260902\nSUMMARY:Another title\nURL:https://canvas.example.test/courses/12/assignments/2\nX-CANVAS-WORKFLOW-STATE:graded\nEND:VEVENT\nBEGIN:VEVENT\nUID:complete\nDTSTART;VALUE=DATE:20260901\nDTEND;VALUE=DATE:20260902\nSUMMARY:Third title\nURL:https://canvas.example.test/courses/12/assignments/3\nX-CANVAS-COMPLETED:TRUE\nEND:VEVENT\nBEGIN:VEVENT\nUID:late\nDTSTART;VALUE=DATE:20260901\nDTEND;VALUE=DATE:20260902\nSUMMARY:Late assignment\nURL:https://canvas.example.test/courses/12/assignments/4\nX-CANVAS-SUBMISSION-STATE:unsubmitted\nEND:VEVENT\nBEGIN:VEVENT\nUID:unknown\nDTSTART;VALUE=DATE:20260901\nDTEND;VALUE=DATE:20260902\nSUMMARY:Unknown assignment\nURL:https://canvas.example.test/courses/12/assignments/5\nSTATUS:CONFIRMED\nEND:VEVENT\nEND:VCALENDAR`);
+  assert.deepEqual(result.events.map((event) => event.sourceMetadata?.completionStatus), ["completed", "completed", "completed", "incomplete", undefined]);
+  assert.equal(result.events[0]?.sourceMetadata?.providerCompletionState, "submitted");
+});

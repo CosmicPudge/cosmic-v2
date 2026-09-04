@@ -46,9 +46,11 @@ export default function Button({
         "font-medium",
         "transition-all",
         "duration-200",
+        "cursor-pointer",
         "active:scale-95",
         "disabled:opacity-50",
-        "disabled:pointer-events-none",
+        "disabled:cursor-not-allowed",
+        "disabled:hover:brightness-100",
 
         sizeClasses[size],
         variantClasses[variant],

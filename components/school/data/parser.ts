@@ -1,7 +1,7 @@
 import ICAL from "ical.js";
 import type { SchoolEvent } from "./types";
 // @ts-expect-error Node's strip-types runner resolves the source extension directly.
-import { classifyEvent, type CanvasEventMetadata } from "./classifier.ts";
+import { classifyEvent, normalizeCanvasCalendarCompletion, type CanvasEventMetadata } from "./classifier.ts";
 
 export interface CanvasCalendarDiagnostics {
   totalIcsEvents: number;
@@ -33,12 +33,29 @@ function property(component: ICAL.Component, name: string) {
   return item ? { value: item.jCal?.[3] ?? item.getFirstValue(), params: item.jCal?.[1] as Record<string, unknown> | undefined } : undefined;
 }
 
+function completionMetadata(component: ICAL.Component): Pick<CanvasEventMetadata, "completionState" | "completionFlag"> {
+  const candidates = component.getAllProperties().flatMap((item) => {
+    const name = item.name?.toLowerCase().replace(/^x-canvas-/, "") ?? "";
+    if (!/(complete|workflow.?state|submission|grade|excused|status)/.test(name)) return [];
+    const value = stringValue(item.getFirstValue());
+    return value ? [{ name, value }] : [];
+  });
+  const explicit = candidates.find(({ name, value }) => name !== "status" && /^(true|false|yes|no|1|0)$/i.test(value));
+  const state = candidates.find(({ name }) => name !== "status" && /(workflow.?state|submission|complete|grade|excused)/.test(name));
+  const completedStatus = candidates.find(({ name, value }) => name === "status" && /^(completed|complete)$/i.test(value));
+  return {
+    ...((state?.value ?? completedStatus?.value) ? { completionState: state?.value ?? completedStatus?.value } : {}),
+    ...(explicit ? { completionFlag: /^(true|yes|1)$/i.test(explicit.value) } : {}),
+  };
+}
+
 function parseEvent(component: ICAL.Component): SchoolEvent {
   const event = new ICAL.Event(component);
   const metadata: CanvasEventMetadata = {
     uid: event.uid ?? undefined,
     url: propertyValue(component, "url"),
     categories: propertyValues(component, "categories"),
+    ...completionMetadata(component),
   };
   const courseId = (metadata.url ?? "").match(/\/courses\/(\d+)(?:\/|$)/i)?.[1];
 
@@ -68,6 +85,8 @@ function parseEvent(component: ICAL.Component): SchoolEvent {
       ...(lastModified ? { lastModified } : {}),
       ...(dtstamp ? { dtstamp } : {}),
       ...(metadata.url ? { url: metadata.url } : {}),
+      ...(normalizeCanvasCalendarCompletion(metadata) !== "unknown" ? { completionStatus: normalizeCanvasCalendarCompletion(metadata) } : {}),
+      ...(metadata.completionState ? { providerCompletionState: metadata.completionState } : {}),
     },
   };
 }

@@ -51,6 +51,8 @@ export interface SchoolEvent {
     lastModified?: string;
     dtstamp?: string;
     url?: string;
+    completionStatus?: "completed" | "incomplete" | "unknown";
+    providerCompletionState?: string;
   };
 }
 
@@ -105,8 +107,10 @@ export interface SchoolAssignment {
   course?: string;
 
   completed: boolean;
+  completionStatus?: "completed" | "incomplete" | "unknown";
 
   priority: "low" | "medium" | "high";
+  sourceUrl?: string;
 }
 
 export interface SchoolAnnouncement {

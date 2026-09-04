@@ -15,6 +15,7 @@ export interface SchoolPlanningAssignment {
   id: string;
   accountId: string;
   title: string;
+  rawTitle?: string;
   description?: string;
   courseId?: string;
   courseName?: string;

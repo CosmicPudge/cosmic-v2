@@ -1,0 +1,7 @@
+import { NextResponse } from "next/server";
+import { requireSchoolAccess } from "@/services/school/access";
+import { createStudySet, listStudySets } from "@/services/school/studyRepository";
+import { assertSameOrigin } from "@/services/security/origin";
+
+export async function GET(request: Request) { const account = await requireSchoolAccess(request); const courseId = new URL(request.url).searchParams.get("courseId") ?? undefined; return NextResponse.json({ sets: await listStudySets(account.id, courseId) }, { headers: { "Cache-Control": "no-store" } }); }
+export async function POST(request: Request) { try { assertSameOrigin(request); const account = await requireSchoolAccess(request); const body = await request.json() as Record<string, unknown>; if (typeof body.title !== "string" || !body.title.trim()) return NextResponse.json({ error: "Title is required." }, { status: 400 }); const row = await createStudySet({ id: crypto.randomUUID(), accountId: account.id, title: body.title.trim().slice(0, 300), ...(typeof body.courseId === "string" && body.courseId ? { courseId: body.courseId } : {}), ...(typeof body.description === "string" && body.description.trim() ? { description: body.description.trim().slice(0, 2_000) } : {}), provenance: { type: "manual" } }); return NextResponse.json({ set: row }, { status: 201 }); } catch (error) { if (error instanceof Response) return error; return NextResponse.json({ error: "Study set could not be created." }, { status: 503 }); } }

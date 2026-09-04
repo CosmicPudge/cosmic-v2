@@ -7,9 +7,11 @@ import { getSchoolAsset } from "@/services/school/assetRepository";
 import { getSchoolAssetStore } from "@/services/school/sources/storage";
 import { OpenAISchoolMultimodalExtractor } from "@/services/school/sources/multimodal";
 import { upsertRawSchoolFindings } from "@/services/school/findingRepository";
+import { SCHOOL_AI_ENABLED } from "@/services/school/capabilities";
 
 export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
   const account = await requireSchoolAccess(request);
+  if (!SCHOOL_AI_ENABLED) return NextResponse.json({ error: "school_ai_unavailable" }, { status: 503 });
   const id = (await context.params).id;
   const row = await getSchoolSource(account.id, id);
   if (!row) return NextResponse.json({ error: "Source not found." }, { status: 404 });

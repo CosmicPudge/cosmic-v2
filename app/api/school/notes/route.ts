@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
 import { requireSchoolAccess } from "@/services/school/access";
 import { createSchoolNote, listSchoolNotes } from "@/services/school/noteRepository";
+import { listSchoolTranscriptReviews } from "@/services/school/audioRepository";
 import { assertSameOrigin } from "@/services/security/origin";
 
 export const dynamic = "force-dynamic";
 
 function topics(value: unknown) { return Array.isArray(value) ? [...new Set(value.filter((item): item is string => typeof item === "string" && item.trim().length > 0).map((item) => item.trim().slice(0, 120)))].slice(0, 30) : []; }
-export async function GET(request: Request) { const account = await requireSchoolAccess(request); return NextResponse.json({ notes: await listSchoolNotes(account.id) }, { headers: { "Cache-Control": "no-store" } }); }
+export async function GET(request: Request) { const account = await requireSchoolAccess(request); const [notes, transcriptReviews] = await Promise.all([listSchoolNotes(account.id), listSchoolTranscriptReviews(account.id)]); return NextResponse.json({ notes, transcriptReviews: transcriptReviews.map(({ transcript, sourceTitle, sourceCourseId }) => ({ id: transcript.id, sourceId: transcript.sourceId, sourceType: transcript.sourceType, sourceLabel: transcript.sourceLabel, title: transcript.title ?? sourceTitle ?? "Transcript study note", courseId: transcript.courseId ?? sourceCourseId, organizedContent: transcript.organizedContent, organizedTopics: transcript.organizedTopics, status: transcript.status, processingError: transcript.processingError, transcriptPresent: Boolean(transcript.transcript?.trim()), createdAt: transcript.createdAt, updatedAt: transcript.updatedAt })) }, { headers: { "Cache-Control": "no-store" } }); }
 export async function POST(request: Request) {
   try {
     assertSameOrigin(request); const account = await requireSchoolAccess(request); const body = await request.json() as Record<string, unknown>;

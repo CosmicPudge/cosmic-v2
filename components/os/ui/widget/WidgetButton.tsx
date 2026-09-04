@@ -20,11 +20,12 @@ export default function WidgetButton({
         "text-sm font-medium text-white/80",
         "backdrop-blur-xl",
         "transition-all duration-200",
+        "cursor-pointer",
         "hover:border-white/20",
         "hover:bg-white/10",
         "hover:text-white",
         "active:scale-[0.98]",
-        "disabled:pointer-events-none",
+        "disabled:cursor-not-allowed",
         "disabled:opacity-50",
         className
       )}

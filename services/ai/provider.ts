@@ -1,10 +1,10 @@
 import "server-only";
 import type { CosmicAIMessage } from "@/core/contracts/AI";
 import { AIProviderError, createAIProviderError } from "./providerErrors";
-import { getConfiguredAIProvider, registerOpenAIProvider } from "./providers/providerRouter";
+import { getConfiguredAIProvider, getConfiguredAIProviders, registerOpenAIProvider, type AIProviderId } from "./providers/providerRouter";
 export { AIProviderError } from "./providerErrors";
 
-export interface AIProviderInput { messages: CosmicAIMessage[]; context: string; }
+export interface AIProviderInput { messages: CosmicAIMessage[]; context: string; responseFormat?: { name: string; schema: Record<string, unknown> }; maxOutputTokens?: number; }
 export interface AIProviderImageInput { bytes: Uint8Array; mimeType: "image/png" | "image/jpeg" | "image/webp"; context: string; prompt: string; }
 export interface AIProvider { id: string; model: string; generate(input: AIProviderInput): Promise<string>; generateImage?(input: AIProviderImageInput): Promise<string>; stream(input: AIProviderInput): Promise<Response>; }
 
@@ -14,7 +14,7 @@ function configured() {
   return key;
 }
 
-function payload(input: AIProviderInput) { return { model: process.env.COSMIC_AI_MODEL || "gpt-5.4-mini", instructions: input.context, input: input.messages.map((message) => ({ role: message.role, content: [{ type: "input_text", text: message.content }] })), max_output_tokens: 1200, store: false }; }
+function payload(input: AIProviderInput) { return { model: process.env.COSMIC_AI_MODEL || "gpt-5.4-mini", instructions: input.context, input: input.messages.map((message) => ({ role: message.role, content: [{ type: "input_text", text: message.content }] })), ...(input.responseFormat ? { text: { format: { type: "json_schema", name: input.responseFormat.name, strict: true, schema: input.responseFormat.schema } } } : {}), max_output_tokens: input.maxOutputTokens ?? 1200, store: false }; }
 
 function getOpenAIProvider(): AIProvider {
   return {
@@ -43,3 +43,4 @@ function getOpenAIProvider(): AIProvider {
 
 registerOpenAIProvider(getOpenAIProvider);
 export function getAIProvider(): AIProvider { return getConfiguredAIProvider(); }
+export function getAIProviderCandidates(preference?: AIProviderId[]): AIProvider[] { return getConfiguredAIProviders(preference); }

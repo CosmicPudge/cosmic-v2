@@ -4,6 +4,21 @@ export interface CanvasEventMetadata {
   uid?: string;
   url?: string;
   categories?: string[];
+  /** Provider-owned completion signal; never derived from dates or titles. */
+  completionState?: string;
+  completionFlag?: boolean;
+}
+
+export type CanvasCalendarCompletion = "completed" | "incomplete" | "unknown";
+
+function normalized(value: string | undefined) { return value?.trim().toLowerCase(); }
+
+/** Maps only explicit Canvas/provider completion signals. */
+export function normalizeCanvasCalendarCompletion(metadata: CanvasEventMetadata): CanvasCalendarCompletion {
+  const state = normalized(metadata.completionState);
+  if (metadata.completionFlag === true || ["completed", "complete", "submitted", "graded", "excused"].includes(state ?? "")) return "completed";
+  if (metadata.completionFlag === false || ["incomplete", "unsubmitted", "not_submitted", "pending"].includes(state ?? "")) return "incomplete";
+  return "unknown";
 }
 
 export function classifyEvent(

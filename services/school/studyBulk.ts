@@ -1,0 +1,4 @@
+export interface ParsedStudyCard { front: string; back: string; }
+export interface BulkParseResult { cards: ParsedStudyCard[]; invalidRows: Array<{ line: number; value: string }>; }
+/** Parses one Question<TAB>Answer or unambiguous Question | Answer per line. */
+export function parseBulkCards(input: string): BulkParseResult { const cards: ParsedStudyCard[] = []; const invalidRows: Array<{ line: number; value: string }> = []; input.split(/\r?\n/).forEach((raw, index) => { const value = raw.trim(); if (!value) return; const separator = value.includes("\t") ? "\t" : value.split("|").length === 2 ? "|" : null; if (!separator) { invalidRows.push({ line: index + 1, value }); return; } const [front, ...rest] = value.split(separator); const back = rest.join(separator).trim(); if (!front.trim() || !back) invalidRows.push({ line: index + 1, value }); else cards.push({ front: front.trim(), back }); }); return { cards, invalidRows }; }

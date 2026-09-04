@@ -27,9 +27,11 @@ export default function WidgetToolbar({
         bg-white/5
         text-white/70
         transition-all
+        cursor-pointer
         hover:border-white/20
         hover:bg-white/10
         hover:text-white
+        active:scale-[0.98]
       "
       aria-label="Expand widget"
       title="Expand"

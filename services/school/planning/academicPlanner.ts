@@ -1,5 +1,6 @@
 import type { SchoolSnapshot } from "@/services/school/domain";
 import type { SchoolPlanningAssignment } from "@/core/contracts/SchoolPlanning";
+import { isAssignmentActiveForPlanning, isAssignmentOverdue } from "../planning";
 
 export type AcademicRecommendationKind = "do-now" | "do-next" | "prepare" | "warning" | "quick-win" | "upcoming";
 export type CourseRisk = "LOW" | "NORMAL" | "ELEVATED" | "HIGH";
@@ -47,7 +48,7 @@ export interface AcademicState {
 }
 
 function sameDay(left: Date, right: Date) { return left.toLocaleDateString() === right.toLocaleDateString(); }
-function active(item: SchoolPlanningAssignment) { return !["completed", "graded"].includes(item.completionStatus) && item.planningStatus !== "done"; }
+const active = isAssignmentActiveForPlanning;
 function dueIn(item: SchoolPlanningAssignment, now: Date, days: number) { return !!item.dueAt && item.dueAt >= now && item.dueAt.getTime() <= now.getTime() + days * 86_400_000; }
 
 export function buildAcademicState(snapshot: SchoolSnapshot, now = new Date()): AcademicState {
@@ -57,14 +58,14 @@ export function buildAcademicState(snapshot: SchoolSnapshot, now = new Date()): 
   const nextClass = classes.find((event) => event.start > now);
   const todayClasses = classes.filter((event) => sameDay(event.start, now) && event.end >= now);
   const tomorrow = new Date(now.getTime() + 86_400_000);
-  const overdue = assignments.filter((item) => item.dueAt && item.dueAt < now);
+  const overdue = assignments.filter((item) => isAssignmentOverdue(item, now));
   const dueToday = assignments.filter((item) => item.dueAt && sameDay(item.dueAt, now));
   const dueTomorrow = assignments.filter((item) => item.dueAt && sameDay(item.dueAt, tomorrow));
   const workload: AcademicState["courseWorkload"] = {};
   for (const item of assignments) {
     const key = item.courseId ?? "unassigned";
     const current = workload[key] ?? { active: 0, overdue: 0, estimatedMinutes: 0 };
-    workload[key] = { active: current.active + 1, overdue: current.overdue + (item.dueAt && item.dueAt < now ? 1 : 0), estimatedMinutes: current.estimatedMinutes === null || item.estimatedMinutes === undefined ? null : current.estimatedMinutes + item.estimatedMinutes };
+    workload[key] = { active: current.active + 1, overdue: current.overdue + (isAssignmentOverdue(item, now) ? 1 : 0), estimatedMinutes: current.estimatedMinutes === null || item.estimatedMinutes === undefined ? null : current.estimatedMinutes + item.estimatedMinutes };
   }
   const minutesUntilNextClass = nextClass ? Math.max(0, Math.round((nextClass.start.getTime() - now.getTime()) / 60_000)) : null;
   return {
@@ -93,7 +94,7 @@ function availableBlocks(events: SchoolSnapshot["events"], now: Date): Available
 }
 
 export function courseAcademicState(snapshot: SchoolSnapshot, courseId: string, now = new Date()): CourseAcademicState {
-  const state = buildAcademicState(snapshot, now); const items = state.assignments.filter((item) => item.courseId === courseId); const overdueCount = items.filter((item) => item.dueAt && item.dueAt < now).length; const dueTodayCount = items.filter((item) => item.dueAt && sameDay(item.dueAt, now)).length; const dueThisWeekCount = items.filter((item) => dueIn(item, now, 7)).length; const assessment = snapshot.events.filter((event) => (event.type === "exam" || event.type === "quiz") && event.start >= now).sort((a, b) => a.start.getTime() - b.start.getTime())[0]; const known = items.filter((item) => item.estimatedMinutes !== undefined).reduce((total, item) => total + (item.estimatedMinutes ?? 0), 0); const unknownDurationCount = items.filter((item) => item.estimatedMinutes === undefined).length; const requirements = snapshot.requirements.filter((item) => item.courseId === courseId || !item.courseId); const unresolvedConflictCount = state.conflicts.filter((conflict) => conflict.description.toLocaleLowerCase().includes(courseId.toLocaleLowerCase())).length; const notes = snapshot.notes.filter((item) => item.courseId === courseId).slice(0, 5); const riskReasons = []; if (overdueCount) riskReasons.push(`${overdueCount} overdue assignment${overdueCount === 1 ? "" : "s"}`); if (dueThisWeekCount >= 2) riskReasons.push(`${dueThisWeekCount} assignments due this week`); if (assessment && assessment.start.getTime() - now.getTime() <= 3 * 86_400_000) riskReasons.push("assessment within 3 days"); if (unresolvedConflictCount) riskReasons.push("unresolved planning conflict"); const risk: CourseRisk = overdueCount >= 2 || (overdueCount > 0 && !!assessment) ? "HIGH" : riskReasons.length >= 2 ? "ELEVATED" : riskReasons.length ? "NORMAL" : "LOW"; return { courseId, nextAssignment: items.filter((item) => active(item)).sort((a, b) => (a.dueAt?.getTime() ?? Infinity) - (b.dueAt?.getTime() ?? Infinity))[0], overdueCount, dueTodayCount, dueThisWeekCount, nextAssessment: assessment, knownWorkloadMinutes: unknownDurationCount ? (known || null) : known, unknownDurationCount, importantRequirements: requirements, unresolvedConflictCount, recentNotes: notes, risk, riskReasons };
+  const state = buildAcademicState(snapshot, now); const items = state.assignments.filter((item) => item.courseId === courseId); const overdueCount = items.filter((item) => isAssignmentOverdue(item, now)).length; const dueTodayCount = items.filter((item) => item.dueAt && sameDay(item.dueAt, now)).length; const dueThisWeekCount = items.filter((item) => dueIn(item, now, 7)).length; const assessment = snapshot.events.filter((event) => (event.type === "exam" || event.type === "quiz") && event.start >= now).sort((a, b) => a.start.getTime() - b.start.getTime())[0]; const known = items.filter((item) => item.estimatedMinutes !== undefined).reduce((total, item) => total + (item.estimatedMinutes ?? 0), 0); const unknownDurationCount = items.filter((item) => item.estimatedMinutes === undefined).length; const requirements = snapshot.requirements.filter((item) => item.courseId === courseId || !item.courseId); const unresolvedConflictCount = state.conflicts.filter((conflict) => conflict.description.toLocaleLowerCase().includes(courseId.toLocaleLowerCase())).length; const notes = snapshot.notes.filter((item) => item.courseId === courseId).slice(0, 5); const riskReasons = []; if (overdueCount) riskReasons.push(`${overdueCount} overdue assignment${overdueCount === 1 ? "" : "s"}`); if (dueThisWeekCount >= 2) riskReasons.push(`${dueThisWeekCount} assignments due this week`); if (assessment && assessment.start.getTime() - now.getTime() <= 3 * 86_400_000) riskReasons.push("assessment within 3 days"); if (unresolvedConflictCount) riskReasons.push("unresolved planning conflict"); const risk: CourseRisk = overdueCount >= 2 || (overdueCount > 0 && !!assessment) ? "HIGH" : riskReasons.length >= 2 ? "ELEVATED" : riskReasons.length ? "NORMAL" : "LOW"; return { courseId, nextAssignment: items.filter((item) => active(item)).sort((a, b) => (a.dueAt?.getTime() ?? Infinity) - (b.dueAt?.getTime() ?? Infinity))[0], overdueCount, dueTodayCount, dueThisWeekCount, nextAssessment: assessment, knownWorkloadMinutes: unknownDurationCount ? (known || null) : known, unknownDurationCount, importantRequirements: requirements, unresolvedConflictCount, recentNotes: notes, risk, riskReasons };
 }
 
 function recommendationFor(item: SchoolPlanningAssignment, state: AcademicState): AcademicRecommendation {

@@ -1,0 +1,45 @@
+"use client";
+
+import Link from "next/link";
+import { CheckCircle2, ChevronRight } from "lucide-react";
+import { useState } from "react";
+import type { Assignment, Course } from "@/core/contracts/School";
+import type { SchoolPlanningAssignment } from "@/core/contracts/SchoolPlanning";
+import { groupSchoolAssignments, isAssignmentActiveForPlanning, safeSchoolDate } from "@/services/school/planning";
+import { useSchool } from "./context/SchoolDataContext";
+import { AssignmentForm } from "./SchoolCrudViews";
+import { SchoolConfirm } from "./SchoolModal";
+
+const panel = "rounded-[1.35rem] border border-white/[0.09] bg-[#101c35]/75";
+type Group = "overdue" | "today" | "tomorrow" | "thisWeek" | "later" | "completed" | "undated";
+const groupLabels: Record<Group, string> = { overdue: "Overdue", today: "Due Today", tomorrow: "Due Tomorrow", thisWeek: "This Week", later: "Later", completed: "Completed", undated: "No Due Date" };
+const groupOrder: Group[] = ["overdue", "today", "tomorrow", "thisWeek", "later", "completed", "undated"];
+const done = (item: SchoolPlanningAssignment) => !isAssignmentActiveForPlanning(item);
+const dueText = (value: Date | string | undefined, now: Date) => { const date = safeSchoolDate(value); if (!date) return "No due date"; const timed = date.getHours() !== 0 || date.getMinutes() !== 0; const base = date.toLocaleDateString("en-US", { month: "short", day: "numeric" }); return `Due ${base}${timed ? ` · ${date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}` : ""}${date.toDateString() === now.toDateString() ? " · today" : ""}`; };
+
+function toPlanning(item: Assignment, course?: Course): SchoolPlanningAssignment { const stamp = new Date(0); const dueAt = safeSchoolDate(item.dueAt); return { id: `manual:${item.id}`, accountId: "local", title: item.title, ...(item.description ? { description: item.description } : {}), ...(item.courseId ? { courseId: item.courseId, courseName: course?.name } : {}), sourceType: "manual", ...(dueAt ? { dueAt } : {}), completionStatus: item.status === "completed" ? "completed" : "upcoming", planningStatus: item.status === "completed" ? "done" : "not_started", priority: item.priority === "high" ? "high" : item.priority === "low" ? "low" : "normal", createdAt: stamp, updatedAt: stamp };
+}
+function sourceName(item: SchoolPlanningAssignment) { return item.sourceType === "school-source" ? "School Source" : item.sourceType === "canvas-api" ? "Canvas" : item.sourceType === "canvas-calendar" ? "Canvas Calendar" : "Manual"; }
+
+export function AssignmentsWorkloadManager() {
+  const { snapshot, local } = useSchool();
+  const [courseFilter, setCourseFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("active");
+  const [editing, setEditing] = useState<Assignment | null | undefined>();
+  const [deleting, setDeleting] = useState<Assignment | null>(null);
+  const now = new Date();
+  const term = local.data.terms.find((item) => item.active) ?? local.data.terms[0];
+  const courses = local.data.courses.filter((course) => !term || course.termId === term.id);
+  const courseMap = new Map(courses.map((course) => [course.id, course]));
+  const localItems = local.data.assignments.filter((item) => !item.courseId || courseMap.has(item.courseId)).map((item) => toPlanning(item, item.courseId ? courseMap.get(item.courseId) : undefined));
+  const importedItems = snapshot?.planningAssignments ?? [];
+  const all = [...new Map([...localItems, ...importedItems].map((item) => [item.id, item])).values()];
+  const shown = all.filter((item) => (courseFilter === "all" || item.courseId === courseFilter) && (statusFilter === "all" || statusFilter === "completed" && done(item) || statusFilter === "active" && !done(item)));
+  const groups = groupSchoolAssignments(shown, now);
+  const active = all.filter((item) => !done(item));
+  const week = groupSchoolAssignments(active, now);
+  const weekCount = week.today.length + week.tomorrow.length + week.thisWeek.length;
+  const localById = new Map(local.data.assignments.map((item) => [`manual:${item.id}`, item]));
+  return <div className="space-y-5"><header className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end"><div><p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-sky-200/55">School / Assignments</p><h1 className="mt-2 text-4xl font-black tracking-[-0.045em] text-white">Workload</h1><p className="mt-2 text-sm text-white/45">{active.length} active assignments across {courses.length} courses</p></div><button type="button" onClick={() => setEditing(null)} className="rounded-xl bg-sky-200/15 px-3.5 py-2.5 text-sm font-semibold text-sky-50 transition hover:bg-sky-200/25">+ Add Assignment</button></header><section className="grid gap-3 sm:grid-cols-3"><Summary label="Overdue" value={week.overdue.length} tone="text-rose-200" /><Summary label="Due this week" value={weekCount} tone="text-amber-100" /><Summary label="Upcoming" value={active.filter((item) => item.dueAt && item.dueAt >= now).length} tone="text-sky-100" /></section><section className={`${panel} p-4`}><div className="flex flex-col gap-3 sm:flex-row"><label className="flex-1 text-xs uppercase tracking-wider text-white/40">Course<select value={courseFilter} onChange={(event) => setCourseFilter(event.target.value)} className="mt-1 block w-full rounded-xl border border-white/10 bg-[#101c35] px-3 py-2 text-sm normal-case tracking-normal text-white/75"><option value="all">All courses</option>{courses.map((course) => <option key={course.id} value={course.id}>{course.code ? `${course.code} · ` : ""}{course.name}</option>)}</select></label><label className="flex-1 text-xs uppercase tracking-wider text-white/40">Status<select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} className="mt-1 block w-full rounded-xl border border-white/10 bg-[#101c35] px-3 py-2 text-sm normal-case tracking-normal text-white/75"><option value="active">Active</option><option value="completed">Completed</option><option value="all">All</option></select></label></div></section><div className="space-y-5">{groupOrder.map((group) => { const items = groups[group]; if (!items.length) return null; return <section key={group}><h2 className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-white/45">{groupLabels[group]} <span className="text-white/25">{items.length}</span></h2><div className={`${panel} overflow-hidden`}>{items.map((item) => { const localItem = localById.get(item.id); return <div key={item.id} className="flex items-center gap-3 border-b border-white/[0.07] px-4 py-3 last:border-0"><button type="button" disabled={!localItem} aria-label={done(item) ? `Reopen ${item.title}` : `Mark ${item.title} complete`} title={localItem ? undefined : "Imported assignments are read-only"} onClick={() => localItem && local.saveAssignment({ ...localItem, status: done(item) ? "upcoming" : "completed" })} className={`grid size-8 shrink-0 place-items-center rounded-xl ${done(item) ? "bg-emerald-300/10 text-emerald-200" : "bg-white/[0.04] text-white/35"}`}><CheckCircle2 className="size-4" /></button><Link href={`/school/assignments/${encodeURIComponent(item.id.replace(/^manual:/, ""))}`} className="min-w-0 flex-1"><span className={`block truncate text-sm ${done(item) ? "text-white/45 line-through" : "text-white/85"}`}>{item.title}</span><span className="mt-1 block truncate text-xs text-white/40">{item.courseName ?? "No course"} · {sourceName(item)}</span></Link><span className="hidden text-right text-xs text-white/50 sm:block">{dueText(item.dueAt, now)}{item.priority !== "normal" && <span className="mt-1 block capitalize text-white/30">{item.priority} priority</span>}</span>{localItem && <div className="flex gap-1"><button type="button" onClick={() => setEditing(localItem)} className="rounded-lg px-2 py-1 text-xs text-white/45 transition hover:bg-white/[0.06] hover:text-white">Edit</button><button type="button" onClick={() => setDeleting(localItem)} className="rounded-lg px-2 py-1 text-xs text-rose-200/70 transition hover:bg-rose-300/10">Delete</button></div>}<ChevronRight className="size-4 shrink-0 text-white/20" /></div>; })}</div></section>; })}{!shown.length && <div className={`${panel} p-8 text-center text-sm text-white/45`}>{statusFilter === "completed" ? "No completed assignments yet." : courseFilter !== "all" ? "No assignments for this course." : "No active assignments."}</div>}</div>{editing !== undefined && <AssignmentForm assignment={editing} courses={courses} onClose={() => setEditing(undefined)} onSave={local.saveAssignment} />}{deleting && <SchoolConfirm title="Delete Assignment?" message="This removes the local assignment only. Imported provider work remains unchanged." onCancel={() => setDeleting(null)} onConfirm={() => { local.removeAssignment(deleting.id); setDeleting(null); }} />}</div>;
+}
+function Summary({ label, value, tone }: { label: string; value: number; tone: string }) { return <div className={`${panel} p-4`}><p className="text-[10px] uppercase tracking-[0.18em] text-white/40">{label}</p><p className={`mt-2 text-3xl font-black ${tone}`}>{value}</p></div>; }

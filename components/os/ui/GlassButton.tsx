@@ -2,7 +2,7 @@
 
 import { ButtonHTMLAttributes } from "react";
 
-interface Props extends ButtonHTMLAttributes<HTMLButtonElement> {}
+type Props = ButtonHTMLAttributes<HTMLButtonElement>;
 
 export default function GlassButton({
   children,
@@ -21,8 +21,13 @@ export default function GlassButton({
         "backdrop-blur-xl",
         "transition-all",
         "duration-300",
+        "cursor-pointer",
         "hover:bg-white/10",
         "hover:scale-105",
+        "active:scale-[0.98]",
+        "disabled:cursor-not-allowed",
+        "disabled:opacity-50",
+        "disabled:hover:brightness-100",
         className,
       ].join(" ")}
     >

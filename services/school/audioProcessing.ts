@@ -2,17 +2,22 @@ import { getSchoolAssetById } from "./assetRepository";
 import { getSchoolAssetStore } from "./sources/storage";
 import { getSchoolAudioTranscript, updateSchoolAudioTranscript } from "./audioRepository";
 import { getSchoolSource, updateSchoolSourceRecord } from "./sources/repository";
-import { organizeSchoolTranscript } from "./audioOrganizer";
+import { organizeSchoolTranscript } from "./transcriptOrganizer";
 import { SchoolAudioValidationError, SchoolTranscriptionError, detectSchoolAudioSignature, normalizeSchoolAudioMime, validateSchoolAudio, type SchoolAudioMimeType } from "./audio";
 import { transcribeWithSchoolRouter } from "./transcriptionRouter";
 import { cleanupSchoolAudioAsset } from "./audioCleanup";
+import { isPretranscribedSchoolSourceType } from "./sourceTypes";
 
 function safeError(error: unknown) { if (error instanceof SchoolAudioValidationError) return "The recording could not be validated as audio."; if (error instanceof SchoolTranscriptionError) return error.code === "transcription_quota" ? "OpenAI transcription limit reached." : ["transcription_rate_limit", "transcription_provider_rate_limit", "transcription_provider_unavailable", "transcription_timeout"].includes(error.code) ? "Transcription temporarily unavailable." : error.code === "transcription_provider_format" || error.code === "transcription_unsupported_audio" ? "The transcription provider could not process this audio format." : error.code === "transcription_invalid_audio" ? "The transcription provider rejected this audio." : error.code === "transcription_provider_auth" || error.code === "transcription_auth_configuration" ? "Transcription is not configured correctly." : error.code === "transcription_too_large" ? "This recording is too large for the configured transcription providers." : "Transcription could not be completed."; return error instanceof Error ? error.message.replace(/\s+/g, " ").slice(0, 240) : "Audio processing failed."; }
 function logStage(voiceNoteId: string, stage: string, fields: Record<string, string>) { if (process.env.NODE_ENV === "production") console.info("voice_note_processing_stage", { operation: "voice_note_processing_stage", voiceNoteId, stage, ...fields }); }
+function logTranscriptTrace(stage: string, input: { transcriptId: string; sourceId: string; sourceType: string; status: string; transcript?: string | null }) { if (process.env.NODE_ENV !== "test") console.info("school_transcript_retry_trace", { operation: "school_transcript_retry_trace", stage, transcriptId: input.transcriptId, sourceId: input.sourceId, sourceType: input.sourceType, status: input.status, transcriptPresent: Boolean(input.transcript?.trim()), transcriptChars: input.transcript?.length ?? 0 }); }
 export async function processSchoolAudio(accountId: string, transcriptId: string) {
   const job = await getSchoolAudioTranscript(accountId, transcriptId); if (!job) return null;
-  const source = await getSchoolSource(accountId, job.sourceId); const asset = job.assetId ? await getSchoolAssetById(accountId, job.assetId) : null;
-  if (!source || (!asset && !job.transcript)) throw new Error("Recording is unavailable.");
+  logTranscriptTrace("existing_transcript_loaded", { transcriptId: job.id, sourceId: job.sourceId, sourceType: job.sourceType, status: job.status, transcript: job.transcript });
+  const source = await getSchoolSource(accountId, job.sourceId); const pretranscribed = isPretranscribedSchoolSourceType(job.sourceType); const asset = job.assetId ? await getSchoolAssetById(accountId, job.assetId) : null;
+  logTranscriptTrace("pretranscribed_detected", { transcriptId: job.id, sourceId: job.sourceId, sourceType: job.sourceType, status: job.status, transcript: job.transcript });
+  if (!source || (!pretranscribed && !asset && !job.transcript)) throw new Error(pretranscribed ? "Transcript is unavailable." : "Recording is unavailable.");
+  if (!job.transcript && pretranscribed) { await updateSchoolAudioTranscript(accountId, job.id, { status: "failed", processingError: "Transcript is unavailable." }); await updateSchoolSourceRecord(accountId, source.id, { processingStatus: "failed", processingError: "Transcript is unavailable." }); return getSchoolAudioTranscript(accountId, job.id); }
   if (!job.transcript) {
     if (!asset) throw new Error("Recording is unavailable.");
     await updateSchoolAudioTranscript(accountId, job.id, { status: "transcribing", audioCleanupStatus: "processing", processingError: null }); await updateSchoolSourceRecord(accountId, source.id, { processingStatus: "processing", processingError: null }); logStage(job.id, "transcription_router_started", { result: "started" });
@@ -22,6 +27,27 @@ export async function processSchoolAudio(accountId: string, transcriptId: string
   }
   const current = await getSchoolAudioTranscript(accountId, job.id); if (!current?.transcript) return current;
   if (current.assetId && current.audioCleanupStatus !== "deleted") { const cleanup = await cleanupSchoolAudioAsset(accountId, current.id); logStage(current.id, "audio_cleanup", { result: cleanup.status }); }
-  if (!current.organizedContent) { await updateSchoolAudioTranscript(accountId, job.id, { status: "organizing", processingError: null }); logStage(job.id, "organizer_started", { result: "started" }); try { const organized = await organizeSchoolTranscript({ transcript: current.transcript }); logStage(job.id, "organizer_finished", { result: "success" }); await updateSchoolAudioTranscript(accountId, job.id, { title: organized.title, organizedContent: organized.content, organizedTopics: organized.topics, status: "ready-for-review", processingError: null }); logStage(job.id, "organized_note_saved", { result: "success" }); await updateSchoolSourceRecord(accountId, source.id, { processingStatus: "needs_review", processingError: null, extractedText: current.transcript }); logStage(job.id, "ready_for_review", { result: "success" }); } catch (error) { const message = safeError(error); await updateSchoolAudioTranscript(accountId, job.id, { status: "failed", processingError: message }); await updateSchoolSourceRecord(accountId, source.id, { processingStatus: "failed", processingError: "Recording saved; organization failed. Transcript retained for retry." }); } }
+  if (!current.organizedContent) { await updateSchoolAudioTranscript(accountId, job.id, { status: "organizing", processingError: null }); logStage(job.id, "organizer_started", { result: "started" }); logTranscriptTrace("organizer_start", { transcriptId: job.id, sourceId: source.id, sourceType: job.sourceType, status: "organizing", transcript: current.transcript }); try { const organized = await organizeSchoolTranscript({ transcript: current.transcript, transcriptId: job.id }); logTranscriptTrace("organizer_complete", { transcriptId: job.id, sourceId: source.id, sourceType: job.sourceType, status: "organizing", transcript: current.transcript }); logStage(job.id, "organizer_finished", { result: "success" }); await updateSchoolAudioTranscript(accountId, job.id, { title: organized.title, organizedContent: organized.content, status: "ready-for-review", processingError: null, organizedTopics: organized.topics }); logStage(job.id, "organized_note_saved", { result: "success" }); await updateSchoolSourceRecord(accountId, source.id, { processingStatus: "needs_review", processingError: null, extractedText: current.transcript }); logStage(job.id, "ready_for_review", { result: "success" }); } catch { logTranscriptTrace("organizer_failed", { transcriptId: job.id, sourceId: source.id, sourceType: job.sourceType, status: "organizing", transcript: current.transcript }); const message = pretranscribed ? "Transcript saved. AI organization is temporarily unavailable." : "Recording saved; organization failed. Transcript retained for retry."; await updateSchoolAudioTranscript(accountId, job.id, { status: "failed", processingError: message }); await updateSchoolSourceRecord(accountId, source.id, { processingStatus: "failed", processingError: pretranscribed ? "Transcript saved; summary unavailable. Retry Summary is available." : "Recording saved; organization failed. Transcript retained for retry." }); } }
   return getSchoolAudioTranscript(accountId, job.id);
+}
+
+export async function regenerateSchoolAudioSummary(accountId: string, transcriptId: string) {
+  const current = await getSchoolAudioTranscript(accountId, transcriptId);
+  if (!current) return null;
+  if (current.status === "approved") throw new Error("Approved notes cannot be regenerated.");
+  if (!current.transcript?.trim()) throw new Error("Transcript is unavailable.");
+  const source = await getSchoolSource(accountId, current.sourceId);
+  if (!source) return null;
+  await updateSchoolAudioTranscript(accountId, current.id, { status: "organizing", processingError: null });
+  await updateSchoolSourceRecord(accountId, source.id, { processingStatus: "processing", processingError: null });
+  try {
+    const organized = await organizeSchoolTranscript({ transcript: current.transcript, transcriptId: current.id });
+    const updated = await updateSchoolAudioTranscript(accountId, current.id, { title: organized.title, organizedContent: organized.content, organizedTopics: organized.topics, status: "ready-for-review", processingError: null });
+    await updateSchoolSourceRecord(accountId, source.id, { processingStatus: "needs_review", processingError: null });
+    return updated;
+  } catch (error) {
+    await updateSchoolAudioTranscript(accountId, current.id, { status: "failed", processingError: "Summary regeneration failed. The previous summary was preserved." });
+    await updateSchoolSourceRecord(accountId, source.id, { processingStatus: "failed", processingError: "Summary regeneration failed. The previous summary was preserved." });
+    throw error;
+  }
 }

@@ -12,6 +12,7 @@ import { useLocalSchoolRepository } from "../data/localRepository";
 import { buildSchoolSnapshot, hydrateSchoolSnapshot } from "@/services/school/domain";
 import type { SchoolSnapshot } from "@/services/school/domain";
 import type { RecommendationNarration } from "@/services/school/planning/recommendationNarrator";
+import { resolveSchoolPlanningAssignments } from "@/services/school/courseResolution";
 
 interface UseSchoolDataOptions { enabled?: boolean }
 
@@ -65,14 +66,23 @@ export function useSchoolData({ enabled = true }: UseSchoolDataOptions = {}) {
     return () => window.removeEventListener("cosmic:school-refresh", refresh);
   }, [enabled]);
 
+  const baseSnapshot = useMemo(() => !enabled ? null : snapshot ?? (data ? buildSchoolSnapshot(data) : null), [data, enabled, snapshot]);
+  const normalizedSnapshot = useMemo(() => {
+    if (!baseSnapshot) return null;
+    return {
+      ...baseSnapshot,
+      ...(baseSnapshot.planningAssignments ? {
+        planningAssignments: resolveSchoolPlanningAssignments(baseSnapshot.planningAssignments, local.data.courses, local.data.terms),
+      } : {}),
+    };
+  }, [baseSnapshot, local.data.courses, local.data.terms]);
+
   const intelligence: SchoolIntelligence | null =
     useMemo(() => {
       if (!enabled || !data) return null;
 
-      return buildSchoolIntelligence(data, snapshot ?? undefined);
-    }, [data, enabled, snapshot]);
-
-  const normalizedSnapshot = useMemo(() => !enabled ? null : snapshot ?? (data ? buildSchoolSnapshot(data) : null), [data, enabled, snapshot]);
+      return buildSchoolIntelligence(data, normalizedSnapshot ?? undefined);
+    }, [data, enabled, normalizedSnapshot]);
 
   return {
     data: enabled ? data : null,

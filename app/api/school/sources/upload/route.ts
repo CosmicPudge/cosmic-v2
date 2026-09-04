@@ -12,6 +12,7 @@ import { upsertRawSchoolFindings } from "@/services/school/findingRepository";
 import { AIProviderError } from "@/services/ai/provider";
 import { safeDatabaseFailure } from "@/services/school/sources/dbDiagnostics";
 import { classifySchoolSourcePurpose } from "@/services/school/coursePlan";
+import { SCHOOL_AI_ENABLED } from "@/services/school/capabilities";
 
 function logSourceCreateFailure(error: unknown, sourceType: string, processingStatus: string) {
   if (process.env.NODE_ENV === "production") return;
@@ -38,6 +39,7 @@ function safeImageError(reason: string) {
 
 export async function POST(request: Request) {
   const account = await requireSchoolAccess(request);
+  if (!SCHOOL_AI_ENABLED) return NextResponse.json({ error: "school_ai_unavailable" }, { status: 503 });
   const form = await request.formData();
   const file = form.get("file");
   if (!(file instanceof File)) return NextResponse.json({ error: "A PDF, DOCX, image, TXT, or Markdown file is required." }, { status: 400 });

@@ -1,5 +1,5 @@
-import { SchoolAssignmentsCommand } from "@/components/school/AcademicCommandCenter";
+import { AssignmentsWorkloadManager } from "@/components/school/AssignmentsWorkloadManager";
 
 export default function SchoolAssignmentsPage() {
-  return <SchoolAssignmentsCommand />;
+  return <AssignmentsWorkloadManager />;
 }

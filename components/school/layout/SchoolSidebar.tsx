@@ -25,6 +25,7 @@ const navigation = [
   { href: "/school/week", label: "This Week", icon: CalendarDays },
   { href: "/school/courses", label: "Courses", icon: BookOpen },
   { href: "/school/notes", label: "Notes", icon: BookOpen },
+  { href: "/school/study", label: "Study", icon: BookOpen },
   { href: "/school/assignments", label: "Assignments", icon: ListChecks },
   { href: "/school/schedule", label: "Schedule", icon: CalendarDays },
   { href: "/school/sources", label: "Sources", icon: FolderOpen },

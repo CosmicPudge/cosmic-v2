@@ -10,7 +10,7 @@ export default function Dock() {
       <GlassPanel className="flex items-center gap-4 px-5 py-3">
 
         <button
-          className="flex h-14 w-14 items-center justify-center rounded-2xl text-3xl transition-all duration-200 hover:scale-110 hover:bg-white/10"
+          className="flex h-14 w-14 cursor-pointer items-center justify-center rounded-2xl text-3xl transition-all duration-200 hover:scale-110 hover:bg-white/10 active:scale-[0.98]"
         >
           🏠
         </button>

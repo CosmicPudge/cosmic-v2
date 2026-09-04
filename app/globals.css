@@ -1244,3 +1244,13 @@ html[data-cosmic-reduced-effects="true"] *::after {
 @keyframes cosmic-transition-in { from { opacity: 0; } to { opacity: 1; } }
 @keyframes cosmic-transition-drift { from { transform: translate3d(0, 0, 0) scale(1); } to { transform: translate3d(3%, -2%, 0) scale(1.04); } }
 @media (prefers-reduced-motion: reduce) { .cosmic-transition-surface, .cosmic-transition-progress span { animation: none; transition-duration: 120ms; } }
+
+/* Shared affordance baseline for raw semantic controls across Cosmic. */
+button:not(:disabled) { cursor: pointer; transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease, filter 180ms ease, opacity 180ms ease, transform 120ms ease; }
+button:not(:disabled):hover { filter: brightness(1.08); }
+button:not(:disabled):active { transform: scale(0.98); }
+button:disabled { cursor: not-allowed; opacity: 0.45; }
+button:disabled:hover { filter: none; }
+button:focus-visible, a[href]:focus-visible { outline: 2px solid rgba(165, 243, 252, 0.8); outline-offset: 2px; }
+a[href] { cursor: pointer; transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease, filter 180ms ease, opacity 180ms ease, transform 120ms ease; }
+a[href]:active { transform: scale(0.99); }

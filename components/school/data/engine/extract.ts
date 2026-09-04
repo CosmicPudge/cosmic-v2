@@ -27,7 +27,9 @@ export function extractAssignments(
       id: event.id,
       title: event.title,
       due: event.allDay ? event.start : event.end,
-      completed: false,
+      completed: event.sourceMetadata?.completionStatus === "completed",
+      ...(event.sourceMetadata?.completionStatus ? { completionStatus: event.sourceMetadata.completionStatus } : {}),
       priority: "medium",
+      ...(event.sourceMetadata?.url ? { sourceUrl: event.sourceMetadata.url } : {}),
     }));
 }

@@ -3,6 +3,7 @@ import { requireSchoolAccess } from "@/services/school/access";
 import { createSchoolSourceRecord, listSchoolSources } from "@/services/school/sources/repository";
 import { processSchoolSourceWithAI } from "@/services/school/sources/processSource";
 import { createSchoolSource } from "@/services/school/intelligence";
+import { SCHOOL_AI_ENABLED } from "@/services/school/capabilities";
 
 function safeSource(row: Awaited<ReturnType<typeof listSchoolSources>>[number]) {
   const intelligence = row.intelligence as { facts?: unknown[]; events?: unknown[]; actionItems?: unknown[]; conflicts?: unknown[] } | null;
@@ -17,6 +18,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   const account = await requireSchoolAccess(request);
+  if (!SCHOOL_AI_ENABLED) return NextResponse.json({ error: "school_ai_unavailable" }, { status: 503 });
   const body = await request.json() as { title?: unknown; text?: unknown; category?: unknown; notes?: unknown; sourceDate?: unknown };
   if (typeof body.title !== "string" || !body.title.trim() || typeof body.text !== "string") return NextResponse.json({ error: "Title and pasted text are required." }, { status: 400 });
   const id = crypto.randomUUID();
