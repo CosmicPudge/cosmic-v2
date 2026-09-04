@@ -40,6 +40,12 @@ export type LocalSpellChecker = ReturnType<typeof nspell>;
 const browserNspell = nspell as unknown as (dictionary: { aff: string; dic: string }) => LocalSpellChecker;
 
 let spellCheckerPromise: Promise<LocalSpellChecker> | undefined;
+let contextSpellcheckPromise: Promise<typeof import("./contextSpellcheck")> | undefined;
+
+export function loadContextSpellcheck(): Promise<typeof import("./contextSpellcheck")> {
+  contextSpellcheckPromise ??= import("./contextSpellcheck");
+  return contextSpellcheckPromise;
+}
 
 const commonEnglishWords = ["the", "and", "student", "class", "assignment"];
 
