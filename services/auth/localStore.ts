@@ -3,15 +3,15 @@ import "server-only";
 import { createHash, randomUUID } from "crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { dirname, join } from "path";
-import type { AccountIdentityRecord, AuthRepository, AuthSessionRecord, AuthUserRecord } from "./contracts";
+import type { AccountIdentityRecord, AuthRepository, AuthSessionRecord, AuthUserRecord, PasswordResetTokenRecord } from "./contracts";
 import { toPublicCosmicAccount } from "./serialization";
 
 type StoredAccount = AuthUserRecord;
 interface StoredSession { id: string; accountId: string; tokenHash: string; createdAt: string; expiresAt: string; lastUsedAt: string; revokedAt?: string; userAgent?: string }
-interface AuthStoreData { version: 1; accounts: StoredAccount[]; sessions: Record<string, StoredSession>; identities?: AccountIdentityRecord[] }
+interface AuthStoreData { version: 1; accounts: StoredAccount[]; sessions: Record<string, StoredSession>; identities?: AccountIdentityRecord[]; resetTokens?: PasswordResetTokenRecord[] }
 
 const AUTH_FILE = process.env.COSMIC_AUTH_FILE ?? join(process.cwd(), ".cosmic", "auth-store.json");
-const emptyStore: AuthStoreData = { version: 1, accounts: [], sessions: {}, identities: [] };
+const emptyStore: AuthStoreData = { version: 1, accounts: [], sessions: {}, identities: [], resetTokens: [] };
 function readStore(): AuthStoreData { try { if (!existsSync(AUTH_FILE)) return emptyStore; const parsed = JSON.parse(readFileSync(AUTH_FILE, "utf8")) as Partial<AuthStoreData>; return parsed.version === 1 && Array.isArray(parsed.accounts) && parsed.sessions && typeof parsed.sessions === "object" ? parsed as AuthStoreData : emptyStore; } catch { return emptyStore; } }
 function writeStore(store: AuthStoreData) { mkdirSync(dirname(AUTH_FILE), { recursive: true }); writeFileSync(AUTH_FILE, JSON.stringify(store, null, 2), { mode: 0o600 }); }
 function toSession(stored: StoredSession, account: AuthUserRecord): AuthSessionRecord { return { account: toPublicCosmicAccount(account), sessionId: stored.id, expiresAt: stored.expiresAt, createdAt: stored.createdAt, lastUsedAt: stored.lastUsedAt, ...(stored.userAgent ? { userAgent: stored.userAgent } : {}) }; }
@@ -30,6 +30,9 @@ export const fileAuthRepository: AuthRepository = {
   async createAccountIdentity(input) { const store = readStore(); const now = new Date().toISOString(); const identity: AccountIdentityRecord = { id: `identity_${randomUUID()}`, accountId: input.accountId, provider: input.provider, providerSubject: input.providerSubject, email: input.email, createdAt: now, lastUsedAt: now }; store.identities = [...(store.identities ?? []), identity]; writeStore(store); return identity; },
   async touchAccountIdentity(id) { const store = readStore(); const found = (store.identities ?? []).find((identity) => identity.id === id); if (!found) return null; found.lastUsedAt = new Date().toISOString(); writeStore(store); return found; },
   async deleteAccountIdentity(accountId, id) { const store = readStore(); const before = (store.identities ?? []).length; store.identities = (store.identities ?? []).filter((identity) => !(identity.accountId === accountId && identity.id === id)); if (store.identities.length !== before) { writeStore(store); return true; } return false; },
+  async createPasswordResetToken(input) { const store = readStore(); const token = { ...input, createdAt: new Date().toISOString() }; store.resetTokens = [...(store.resetTokens ?? []).filter((item) => item.userId !== input.userId || item.usedAt || Date.parse(item.expiresAt) <= Date.now()), token]; writeStore(store); return token; },
+  async findPasswordResetToken(tokenHash) { const store = readStore(); const token = (store.resetTokens ?? []).find((item) => item.tokenHash === tokenHash && !item.usedAt && Date.parse(item.expiresAt) > Date.now()); const user = token ? store.accounts.find((item) => item.id === token.userId) : undefined; return token && user ? { ...token, user: { ...user, status: user.status === "disabled" ? "disabled" : "active" } } : null; },
+  async completePasswordReset(tokenHash, passwordHash, passwordSalt) { const store = readStore(); const token = (store.resetTokens ?? []).find((item) => item.tokenHash === tokenHash && !item.usedAt && Date.parse(item.expiresAt) > Date.now()); const account = token ? store.accounts.find((item) => item.id === token.userId) : undefined; if (!token || !account || account.status === "disabled") return null; account.passwordHash = passwordHash; account.passwordSalt = passwordSalt; account.updatedAt = new Date().toISOString(); token.usedAt = new Date().toISOString(); writeStore(store); return account; },
 };
 
 export function hashSessionToken(token: string) { return createHash("sha256").update(token).digest("hex"); }

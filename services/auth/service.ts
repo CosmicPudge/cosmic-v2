@@ -17,3 +17,20 @@ export async function authenticateAccount(emailInput: string, password: string) 
 export async function createSession(accountId: string, userAgent?: string, options?: { sessionType?: "user" | "device"; deviceId?: string; authenticatedBootId?: string; expiresAt?: string }) { const token = randomBytes(32).toString("base64url"); const expiresAt = options?.expiresAt ?? new Date(Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1000).toISOString(); const session = await getAuthRepository().createSession({ userId: accountId, tokenHash: hashSessionToken(token), expiresAt, userAgent, sessionType: options?.sessionType, deviceId: options?.deviceId, authenticatedBootId: options?.authenticatedBootId }); return { token, ...session }; }
 export async function getSession(request: Request, bootId?: string) { const token = parseSessionCookie(request); const session = token ? await getAuthRepository().findSession(hashSessionToken(token)) : null; const bootMatch = bootId === undefined || session?.authenticatedBootId === bootId; if (session?.sessionType === "device" && bootId !== undefined && !bootMatch) { await getAuthRepository().revokeSession(hashSessionToken(token!)); if (process.env.NODE_ENV !== "production") console.info(`[kiosk-session] cookiePresent=true sessionFound=true authenticated=false sessionType=device deviceId=${session.deviceId ?? "null"} authenticatedBootId=${session.authenticatedBootId ?? "null"} requestedBootId=${bootId} bootMatch=false revoked=true expired=false`); return null; } if (process.env.NODE_ENV !== "production" && bootId !== undefined) console.info(`[kiosk-session] cookiePresent=${Boolean(token)} sessionFound=${Boolean(session)} authenticated=${Boolean(session && bootMatch)} sessionType=${session?.sessionType ?? "null"} deviceId=${session?.deviceId ?? "null"} authenticatedBootId=${session?.authenticatedBootId ?? "null"} requestedBootId=${bootId} bootMatch=${bootMatch} revoked=false expired=${Boolean(token && !session)}`); return session; }
 export async function destroySession(request: Request) { const token = parseSessionCookie(request); if (token) await getAuthRepository().revokeSession(hashSessionToken(token)); }
+
+export async function createPasswordReset(emailInput: string) {
+  const account = await getAuthRepository().findUserByEmail(normalizeEmail(emailInput));
+  if (!account || account.status !== "active") return null;
+  const token = randomBytes(32).toString("base64url");
+  await getAuthRepository().createPasswordResetToken({ id: `password_reset_${randomUUID()}`, userId: account.id, tokenHash: hashSessionToken(token), expiresAt: new Date(Date.now() + 30 * 60_000).toISOString() });
+  return token;
+}
+
+export async function completePasswordReset(token: string, password: string) {
+  if (!token || password.length < 10) throw new Error("Password must be at least 10 characters.");
+  const next = passwordRecord(password);
+  const account = await getAuthRepository().completePasswordReset(hashSessionToken(token), next.passwordHash, next.passwordSalt);
+  if (!account) throw new Error("This password reset link is invalid or expired.");
+  await getAuthRepository().revokeAllSessions(account.id);
+  return safeAccount(account);
+}

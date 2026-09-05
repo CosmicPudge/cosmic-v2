@@ -4,7 +4,7 @@ import { randomUUID } from "crypto";
 import { and, eq, gt, isNull } from "drizzle-orm";
 import { getDatabase } from "@/services/database/client";
 import type { AccountIdentityRecord, AuthRepository, AuthSessionRecord, AuthUserRecord } from "./contracts";
-import { accountIdentities, devices, sessions, users } from "@/services/database/schema";
+import { accountIdentities, devices, passwordResetTokens, sessions, users } from "@/services/database/schema";
 import { getAccountAccessState } from "./access";
 import { toPublicCosmicAccount } from "./serialization";
 
@@ -35,6 +35,9 @@ export const databaseAuthRepository: AuthRepository = {
   async createAccountIdentity(input) { const [row] = await getDatabase().insert(accountIdentities).values({ id: `identity_${randomUUID()}`, accountId: input.accountId, provider: input.provider, providerSubject: input.providerSubject, email: input.email ?? null }).returning(); return identity(row); },
   async touchAccountIdentity(id) { const [row] = await getDatabase().update(accountIdentities).set({ lastUsedAt: new Date() }).where(eq(accountIdentities.id, id)).returning(); return row ? identity(row) : null; },
   async deleteAccountIdentity(accountId, id) { const result = await getDatabase().delete(accountIdentities).where(and(eq(accountIdentities.accountId, accountId), eq(accountIdentities.id, id))).returning({ id: accountIdentities.id }); return result.length > 0; },
+  async createPasswordResetToken(input) { const [row] = await getDatabase().insert(passwordResetTokens).values({ id: input.id, userId: input.userId, tokenHash: input.tokenHash, expiresAt: new Date(input.expiresAt) }).returning(); return { id: row.id, userId: row.userId, tokenHash: row.tokenHash, createdAt: row.createdAt.toISOString(), expiresAt: row.expiresAt.toISOString(), ...(row.usedAt ? { usedAt: row.usedAt.toISOString() } : {}) }; },
+  async findPasswordResetToken(tokenHash) { const rows = await getDatabase().select({ token: passwordResetTokens, user: users }).from(passwordResetTokens).innerJoin(users, eq(passwordResetTokens.userId, users.id)).where(and(eq(passwordResetTokens.tokenHash, tokenHash), isNull(passwordResetTokens.usedAt), gt(passwordResetTokens.expiresAt, new Date()))).limit(1); const row = rows[0]; return row ? { id: row.token.id, userId: row.token.userId, tokenHash: row.token.tokenHash, createdAt: row.token.createdAt.toISOString(), expiresAt: row.token.expiresAt.toISOString(), user: account(row.user) } : null; },
+  async completePasswordReset(tokenHash, passwordHash, passwordSalt) { const database = getDatabase(); return database.transaction(async (transaction) => { const rows = await transaction.select({ token: passwordResetTokens, user: users }).from(passwordResetTokens).innerJoin(users, eq(passwordResetTokens.userId, users.id)).where(and(eq(passwordResetTokens.tokenHash, tokenHash), isNull(passwordResetTokens.usedAt), gt(passwordResetTokens.expiresAt, new Date()))).limit(1); const row = rows[0]; if (!row) return null; const [updated] = await transaction.update(users).set({ passwordHash, passwordSalt, updatedAt: new Date() }).where(eq(users.id, row.user.id)).returning(); await transaction.update(passwordResetTokens).set({ usedAt: new Date() }).where(and(eq(passwordResetTokens.id, row.token.id), isNull(passwordResetTokens.usedAt))); return updated ? account(updated) : null; }); },
 };
 
 function identity(row: typeof accountIdentities.$inferSelect): AccountIdentityRecord { return { id: row.id, accountId: row.accountId, provider: row.provider as AccountIdentityRecord["provider"], providerSubject: row.providerSubject, email: row.email, createdAt: row.createdAt.toISOString(), lastUsedAt: row.lastUsedAt.toISOString() }; }

@@ -13,6 +13,15 @@ export interface AuthSessionRecord extends CosmicSession {
   userAgent?: string;
 }
 
+export interface PasswordResetTokenRecord {
+  id: string;
+  userId: string;
+  tokenHash: string;
+  createdAt: string;
+  expiresAt: string;
+  usedAt?: string;
+}
+
 export interface CreateSessionInput {
   userId: string;
   tokenHash: string;
@@ -47,4 +56,7 @@ export interface AuthRepository {
   createAccountIdentity(input: { accountId: string; provider: Exclude<AccountIdentityRecord["provider"], "password">; providerSubject: string; email?: string }): Promise<AccountIdentityRecord>;
   touchAccountIdentity(id: string): Promise<AccountIdentityRecord | null>;
   deleteAccountIdentity(accountId: string, id: string): Promise<boolean>;
+  createPasswordResetToken(input: { id: string; userId: string; tokenHash: string; expiresAt: string }): Promise<PasswordResetTokenRecord>;
+  findPasswordResetToken(tokenHash: string): Promise<(PasswordResetTokenRecord & { user: AuthUserRecord }) | null>;
+  completePasswordReset(tokenHash: string, passwordHash: string, passwordSalt: string): Promise<AuthUserRecord | null>;
 }
