@@ -33,7 +33,7 @@ export const DASHBOARD_LAYOUTS: Record<
   },
 
   comfortable: {
-    maxWidth: 1800,
+    maxWidth: "min(2400px, max(1800px, 72vw))",
     paddingInline: 24,
     paddingBottom: 32,
     sectionGap: 24,
@@ -41,7 +41,7 @@ export const DASHBOARD_LAYOUTS: Record<
   },
 
   expanded: {
-    maxWidth: 2200,
+    maxWidth: "min(3000px, max(2200px, 72vw))",
     paddingInline: 32,
     paddingBottom: 40,
     sectionGap: 28,

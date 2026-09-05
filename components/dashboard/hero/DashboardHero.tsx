@@ -18,14 +18,12 @@ import HeroWeather from "./HeroWeather";
 export default function DashboardHero({ weather }: { weather: WeatherData | null }) {
   const loading = weather === null;
 
-  const { profile, tokens } = useDisplay();
+  const { profile, tokens, aspectRatio } = useDisplay();
 
   const hero = HERO_LAYOUTS[profile];
   useDashboardWidgetReadiness("hero-weather", loading ? "loading" : weather ? "ready" : "degraded");
 
-  const stack =
-    profile === "pocket" ||
-    profile === "compact";
+  const stack = profile === "pocket" || (profile === "compact" && aspectRatio < 1.35);
 
   return (
     <motion.section
@@ -49,7 +47,7 @@ export default function DashboardHero({ weather }: { weather: WeatherData | null
 
         {/* Content */}
         <div
-          className="relative z-10 flex h-full"
+          className="dashboard-hero-content relative z-10 flex h-full"
           style={{
             gap: hero.gap,
             padding: hero.padding,

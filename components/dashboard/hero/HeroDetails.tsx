@@ -87,7 +87,7 @@ export default function HeroDetails({
   if (loading || !weather) {
     return (
       <div
-        className="grid w-full grid-cols-2"
+        className="dashboard-hero-secondary grid w-full grid-cols-2"
         style={{
           gap: hero.gap,
         }}
@@ -96,7 +96,7 @@ export default function HeroDetails({
           <div
             key={index}
             className="
-              h-24
+              dashboard-hero-detail-skeleton h-24
               animate-pulse
               rounded-2xl
               bg-white/10
@@ -109,7 +109,7 @@ export default function HeroDetails({
 
   return (
     <div
-      className="grid w-full grid-cols-2"
+      className="dashboard-hero-secondary grid w-full grid-cols-2"
       style={{
         gap: hero.gap,
       }}

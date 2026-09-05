@@ -95,6 +95,8 @@ export default function GridItem({
         minWidth: 0,
       }}
       data-widget-id={widget.id}
+      data-widget-cols={cols}
+      className="dashboard-grid-item"
       data-resizable={widget.resizable}
       data-movable={widget.movable}
     >

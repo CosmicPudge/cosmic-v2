@@ -6,6 +6,7 @@ import { useDisplay } from "@/components/os/display";
 
 import { HERO_LAYOUTS } from "./heroLayouts";
 import { dashboardImage } from "@/components/dashboard/images/dashboardImageManifest";
+import DashboardImage from "@/components/dashboard/images/DashboardImage";
 
 function quickBriefImage() {
   const hour = new Date().getHours();
@@ -27,7 +28,7 @@ export default function HeroBackground() {
 
   return (
     <>
-      {image.src && <img src={image.src} alt="" aria-hidden="true" className="dashboard-hero-image absolute inset-0 h-full w-full object-cover" style={{ objectPosition: image.objectPosition }} />}
+      <DashboardImage src={image.src} objectPosition={image.objectPosition} loading="eager" className="dashboard-hero-image" />
       <div className="dashboard-hero-overlay absolute inset-0" aria-hidden="true" />
       <motion.div
         className="absolute inset-0"

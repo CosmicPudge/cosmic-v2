@@ -41,7 +41,7 @@ export default function HeroSun({
   if (loading || !weather) {
     return (
       <div
-        className="animate-pulse rounded-3xl bg-white/5"
+        className="dashboard-hero-sun animate-pulse rounded-3xl bg-white/5"
         style={{
           padding,
         }}
@@ -60,7 +60,7 @@ export default function HeroSun({
 
   return (
     <div
-      className="rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl"
+      className="dashboard-hero-sun rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl"
       style={{
         padding,
       }}

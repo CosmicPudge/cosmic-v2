@@ -7,7 +7,6 @@ import { dashboardWidgets } from "@/config/widgets";
 import { WIDGET_REGISTRY } from "@/components/dashboard/layout/widgetRegistry";
 import { WIDGET_LAYOUTS } from "@/components/dashboard/layout/widgetLayouts";
 
-import { GRID_PROFILES } from "./gridProfiles";
 import GridItem from "./GridItem";
 import { GridProvider } from "./GridContext";
 import { useGridLayout } from "./useGridLayout";
@@ -33,7 +32,6 @@ export default function WidgetGrid() {
 
   const { profile, tokens } = useDisplay();
 
-  const grid = GRID_PROFILES[profile];
   const adPlan = getDashboardAdPlan(widgets.length);
 
   void WIDGET_LAYOUTS;
@@ -41,12 +39,8 @@ export default function WidgetGrid() {
   return (
     <GridProvider>
       <section
-        className="grid w-full pt-2"
-        style={{
-          gridTemplateColumns: `repeat(${grid.columns}, minmax(0, 1fr))`,
-          gridAutoRows: `${grid.rowHeight}px`,
-          gap: tokens.widgetGap,
-        }}
+        className={`dashboard-widget-grid dashboard-grid-profile-${profile} grid w-full pt-2`}
+        style={{ gap: tokens.widgetGap }}
       >
         {widgets.flatMap((widget, index) => {
           const ad = adPlan.find((item) => item.afterIndex === index + 1);

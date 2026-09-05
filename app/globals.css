@@ -129,6 +129,8 @@ html, body { width: 100%; min-height: 100%; background: #030511; }
 .cosmic-top-navigation { flex: 0 0 auto; }
 .cosmic-top-navigation > div { min-height: 3.5rem; }
 @media (max-width: 700px) { .cosmic-top-navigation > div { min-height: 0; } .cosmic-top-navigation [aria-label="Cosmic applications"] { display: none; } }
+@media (min-width: 701px) and (max-width: 1199px) { .cosmic-top-navigation > div > [aria-label="Cosmic applications"] { display: none; } }
+.cosmic-top-navigation, .cosmic-top-navigation > div { min-width: 0; width: 100%; }
 
 .cosmic-kicker {
   font-size: 10px;
@@ -1270,6 +1272,53 @@ html[data-cosmic-reduced-effects="true"] *::after {
 .dashboard-widget-surface .kiosk-scene-motif { opacity: .7; }
 .dashboard-widget-surface .cosmic-widget-motif { display: none; }
 @media (prefers-reduced-motion: reduce) { .dashboard-widget, .dashboard-widget-surface { transition: none !important; } .dashboard-widget:hover { transform: none !important; } }
+
+/* The grid responds to available width; card content keeps its semantic footprint. */
+.dashboard-widget-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); grid-auto-rows: clamp(10.5rem, 11vw, 12rem); align-items: stretch; }
+.dashboard-grid-item { min-width: 0; }
+@media (max-width: 1199px) { .dashboard-widget-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: clamp(11rem, 17vw, 13rem); } .dashboard-grid-item[data-widget-cols="3"], .dashboard-grid-item[data-widget-cols="4"] { grid-column: span 2 !important; } }
+@media (max-width: 639px) { .dashboard-widget-grid { grid-template-columns: minmax(0, 1fr); grid-auto-rows: clamp(12rem, 42vw, 15rem); } .dashboard-grid-item[data-widget-cols="2"], .dashboard-grid-item[data-widget-cols="3"], .dashboard-grid-item[data-widget-cols="4"] { grid-column: span 1 !important; } }
+.dashboard-hero-image { object-fit: cover; }
+.dashboard-widget-surface { container-type: inline-size; }
+@container (max-width: 28rem) { .dashboard-widget-surface::after { background: linear-gradient(180deg, rgba(2,5,16,.02), rgba(2,5,16,.18) 30%, rgba(2,5,16,.82)); } }
+.dashboard-hero-content { min-width: 0; }
+@media (max-width: 639px) { .dashboard-hero-content { padding: 1.15rem !important; gap: 1rem !important; } .dashboard-hero-content h1 { max-width: 100%; overflow-wrap: anywhere; } .dashboard-hero-weather { align-items: flex-start !important; text-align: left !important; } .dashboard-hero-weather > div { justify-content: flex-start; text-align: left; } .dashboard-hero-weather > div > div { text-align: left; } .dashboard-hero-weather-skeleton:first-child { height: 5rem; width: 9rem; } .dashboard-hero-detail-skeleton { height: 4rem; } .dashboard-hero-content > div { max-width: 100%; } }
+@media (orientation: landscape) and (max-height: 500px) and (min-width: 520px) { .dashboard-hero-content { flex-direction: row !important; align-items: stretch; } .dashboard-hero-content > div:first-child { flex: 1 1 0%; } .dashboard-hero-content > div:last-child { flex: 0 1 46%; max-width: 46% !important; } }
+
+/* Short landscape viewports prioritize primary status, with secondary metrics below. */
+@media (orientation: landscape) and (max-height: 500px) and (min-width: 520px) {
+  .dashboard-hero-content { gap: clamp(.65rem, 1.8vw, 1rem) !important; padding: clamp(.75rem, 2.2vw, 1.25rem) !important; }
+  .dashboard-hero-content > div:first-child { gap: clamp(.65rem, 1.8vw, 1rem) !important; }
+  .dashboard-hero-content > div:last-child { display: grid !important; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-content: start; align-items: start; column-gap: clamp(.5rem, 1.5vw, .9rem); row-gap: clamp(.5rem, 1.5vw, .8rem); }
+  .dashboard-hero-content .dashboard-hero-clock,
+  .dashboard-hero-content .dashboard-hero-weather { min-width: 0; align-items: flex-end !important; }
+  .dashboard-hero-content .dashboard-hero-secondary { grid-column: 1 / -1; gap: clamp(.4rem, 1.2vw, .7rem) !important; }
+  .dashboard-hero-content .dashboard-hero-sun { padding: clamp(.7rem, 1.8vw, 1rem) !important; }
+  .dashboard-hero-content .dashboard-hero-sun .mb-5 { margin-bottom: .65rem !important; }
+  .dashboard-hero-content .dashboard-hero-greeting { gap: .5rem !important; }
+  .dashboard-hero-content .dashboard-hero-greeting-title { font-size: clamp(1.75rem, 4.5vw, 2.8rem) !important; }
+  .dashboard-hero-content .dashboard-hero-clock-value { font-size: clamp(1.9rem, 4.5vw, 3rem) !important; }
+  .dashboard-hero-content .dashboard-hero-clock-seconds { font-size: clamp(.75rem, 1.6vw, 1rem) !important; }
+  .dashboard-hero-content .dashboard-hero-temperature { font-size: clamp(2.7rem, 6vw, 4rem) !important; }
+  .dashboard-hero-content .dashboard-hero-weather > div:first-child { gap: clamp(.45rem, 1.5vw, .8rem) !important; }
+  .dashboard-hero-content .dashboard-hero-weather > div:last-child { padding-block: .35rem !important; padding-inline: .7rem !important; }
+}
+
+/* Tablet portrait keeps the cinematic panel while bringing the next section into view. */
+@media (orientation: portrait) and (min-width: 640px) and (max-width: 1199px) {
+  .dashboard-hero-content { gap: clamp(1rem, 2vw, 1.5rem) !important; padding: clamp(1.25rem, 3vw, 2rem) !important; }
+  .dashboard-hero-content > div:first-child,
+  .dashboard-hero-content > div:last-child { gap: clamp(.8rem, 1.8vw, 1.2rem) !important; }
+  .dashboard-hero-content .dashboard-hero-greeting { gap: .7rem !important; }
+  .dashboard-hero-content .dashboard-hero-greeting-title { font-size: clamp(2.4rem, 6vw, 3.5rem) !important; }
+  .dashboard-hero-content .dashboard-hero-sun { padding: clamp(1rem, 2.4vw, 1.5rem) !important; }
+  .dashboard-hero-content .dashboard-hero-sun .mb-5 { margin-bottom: 1rem !important; }
+  .dashboard-hero-content .dashboard-hero-secondary { gap: clamp(.65rem, 1.5vw, 1rem) !important; }
+  .dashboard-hero-content .dashboard-hero-secondary > div { padding-block: clamp(.65rem, 1.5vw, 1rem) !important; padding-inline: clamp(.7rem, 1.6vw, 1.15rem) !important; }
+  .dashboard-hero-content .dashboard-hero-detail-skeleton { height: 4.25rem !important; }
+}
+@media (orientation: landscape) and (min-width: 700px) and (max-height: 850px) { .dashboard-hero-content { flex-direction: row !important; align-items: stretch; } .dashboard-hero-content > div:first-child { flex: 1 1 0%; } .dashboard-hero-content > div:last-child { flex: 0 1 42%; max-width: 42% !important; } }
+@media (orientation: landscape) and (min-width: 1200px) { .dashboard-hero-content { flex-direction: row !important; align-items: stretch; } .dashboard-hero-content > div:first-child { flex: 1 1 0%; } .dashboard-hero-content > div:last-child { flex: 0 1 38%; max-width: 38% !important; } }
 
 @media (prefers-reduced-transparency: reduce) { .cosmic-sidebar, .cosmic-content-surface { background: #071022; backdrop-filter: none; -webkit-backdrop-filter: none; } }
 

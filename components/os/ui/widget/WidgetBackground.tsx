@@ -1,11 +1,11 @@
 "use client";
 
 import { useDisplay } from "@/components/os/display";
-import { useState } from "react";
 
 import type { WidgetAccent } from "./types";
 import type { WidgetPresentation } from "./WidgetContext";
 import { getModuleVisualIdentity } from "./moduleVisualIdentity";
+import DashboardImage from "@/components/dashboard/images/DashboardImage";
 
 interface Props {
   accent: WidgetAccent;
@@ -32,15 +32,13 @@ export default function WidgetBackground({
 }: Props) {
   const { tokens } = useDisplay();
   const visual = getModuleVisualIdentity(accent);
-  const [failedImageUrls, setFailedImageUrls] = useState<string[]>([]);
   const isKiosk = presentation === "kiosk";
-  const imageSource = [imageUrl, ...imageFallbackUrls].find((source) => source && !failedImageUrls.includes(source));
 
   return (
     <>
       {/* Main Accent */}
       <div className="cosmic-widget-panel kiosk-scene-surface absolute inset-0" data-cosmic-scene={accent} data-scene-state={sceneState} data-scene-variant={sceneVariant} style={{ background: isKiosk ? "var(--widget-panel, linear-gradient(145deg, rgba(10,17,39,.96), rgba(3,7,21,.92))" : "linear-gradient(145deg, rgba(10,17,39,.74), rgba(3,7,21,.68))" }} />
-      {imageSource ? <img key={imageSource} className={`${isKiosk ? "kiosk-scene-image" : "dashboard-widget-image"} absolute inset-0 h-full w-full object-cover`} src={imageSource} alt="" aria-hidden="true" loading={isKiosk ? "eager" : "lazy"} onError={() => setFailedImageUrls((current) => current.includes(imageSource) ? current : [...current, imageSource])} style={{ objectPosition: imagePosition, opacity: isKiosk ? imageOpacity : Math.max(imageOpacity, .62), filter: isKiosk ? `blur(${imageBlur}px)` : undefined, "--kiosk-scene-image-opacity": imageOpacity } as React.CSSProperties} /> : null}
+      <DashboardImage src={imageUrl} fallbackSrcs={imageFallbackUrls} objectPosition={imagePosition} loading={isKiosk ? "eager" : "lazy"} className={isKiosk ? "kiosk-scene-image" : "dashboard-widget-image"} opacity={isKiosk ? imageOpacity : Math.max(imageOpacity, .62)} blur={isKiosk ? imageBlur : undefined} />
       {isKiosk ? <SceneIllustration accent={accent} sceneState={sceneState} /> : null}
       {isKiosk ? <div className={`cosmic-widget-motif kiosk-scene-motif cosmic-widget-motif-${visual.motif} absolute inset-0`} aria-hidden="true" /> : null}
 

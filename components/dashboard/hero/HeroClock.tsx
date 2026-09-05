@@ -46,20 +46,20 @@ export default function HeroClock() {
   if (!mounted || !now) {
     return (
       <div
-        className="text-right"
+        className="dashboard-hero-clock text-right"
         style={{
           minWidth: 0,
         }}
       >
         <div
-          className="font-bold tracking-tight"
+          className="dashboard-hero-clock-value font-bold tracking-tight"
           style={clockStyle}
         >
           --:--
         </div>
 
         <div
-          className="font-medium text-white/60"
+          className="dashboard-hero-clock-seconds font-medium text-white/60"
           style={secondsStyle}
         >
           :--
@@ -80,20 +80,20 @@ export default function HeroClock() {
 
   return (
     <div
-      className="text-right"
+      className="dashboard-hero-clock text-right"
       style={{
         minWidth: 0,
       }}
     >
       <div
-        className="font-bold tracking-tight"
+        className="dashboard-hero-clock-value font-bold tracking-tight"
         style={clockStyle}
       >
         {time}
       </div>
 
       <div
-        className="font-medium text-white/60"
+        className="dashboard-hero-clock-seconds font-medium text-white/60"
         style={secondsStyle}
       >
         :{seconds}

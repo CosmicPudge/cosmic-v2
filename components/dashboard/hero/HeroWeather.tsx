@@ -28,9 +28,9 @@ export default function HeroWeather({
   if (loading || !weather) {
     return (
       <div className="flex flex-col items-end gap-3">
-        <div className="h-28 w-40 animate-pulse rounded-3xl bg-white/10" />
-        <div className="h-6 w-32 animate-pulse rounded-full bg-white/10" />
-        <div className="h-5 w-24 animate-pulse rounded-full bg-white/10" />
+        <div className="dashboard-hero-weather-skeleton h-28 w-40 animate-pulse rounded-3xl bg-white/10" />
+        <div className="dashboard-hero-weather-skeleton h-6 w-32 animate-pulse rounded-full bg-white/10" />
+        <div className="dashboard-hero-weather-skeleton h-5 w-24 animate-pulse rounded-full bg-white/10" />
       </div>
     );
   }
@@ -54,7 +54,7 @@ export default function HeroWeather({
         transition={{
           duration: 0.4,
         }}
-        className="flex flex-col items-end gap-2"
+        className="dashboard-hero-weather flex flex-col items-end gap-2"
         style={{
           minWidth: 0,
         }}
@@ -73,7 +73,7 @@ export default function HeroWeather({
 
           <div className="min-w-0 text-right">
             <div
-              className="font-bold tracking-tight"
+                className="dashboard-hero-temperature font-bold tracking-tight"
               style={{
                 fontSize:
                   hero.typography.temperature,

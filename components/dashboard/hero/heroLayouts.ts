@@ -33,23 +33,23 @@ export const HERO_LAYOUTS: Record<
   HeroLayout
 > = {
   pocket: {
-    minHeight: 320,
+    minHeight: 300,
 
-    padding: 20,
+    padding: 16,
 
-    gap: 20,
+    gap: 12,
 
-    rightColumnWidth: 260,
+    rightColumnWidth: 240,
 
     detailColumns: 1,
 
     typography: {
-      greeting: 48,
-      clock: 42,
-      seconds: 18,
-      temperature: 64,
-      weather: 22,
-      details: 14,
+      greeting: 38,
+      clock: 36,
+      seconds: 16,
+      temperature: 48,
+      weather: 16,
+      details: 12,
     },
   },
 

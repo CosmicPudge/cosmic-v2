@@ -40,7 +40,7 @@ export default function HeroGreeting() {
 
   return (
     <div
-      className="space-y-4"
+      className="dashboard-hero-greeting space-y-4"
       style={{
         minWidth: 0,
       }}
@@ -62,7 +62,7 @@ export default function HeroGreeting() {
         </p>
 
         <h1
-          className="font-bold tracking-tight"
+          className="dashboard-hero-greeting-title font-bold tracking-tight"
           style={{
             fontSize:
               hero.typography.greeting,
