@@ -1,6 +1,7 @@
 import type { SchoolSnapshot } from "@/services/school/domain";
 import type { SchoolPlanningAssignment } from "@/core/contracts/SchoolPlanning";
 import { isAssignmentActiveForPlanning, isAssignmentOverdue } from "../planning";
+import { dedupeSchoolAssignments } from "../assignmentIdentity";
 import { academicWorkConfig, classifyAcademicWork, isMajorAcademicWork, type AcademicWorkType } from "./academicWork";
 
 export type AcademicRecommendationKind = "do-now" | "do-next" | "prepare" | "warning" | "quick-win" | "upcoming";
@@ -73,6 +74,7 @@ export interface RecommendedWorkBlock {
   title?: string;
   workType?: AcademicWorkType;
 }
+export function recommendedWorkBlockKey(block: RecommendedWorkBlock, index: number) { return `${block.assignmentId}:${block.date.toISOString()}:${block.minutes}:${block.workType ?? ""}:${block.reason}:${index}`; }
 export interface ProactiveAssignmentPlan {
   assignmentId: string;
   recommendedWorkDate: Date;
@@ -124,7 +126,7 @@ export function buildProactivePlan(snapshot: SchoolSnapshot, now = new Date()): 
     const reduction = classCount >= proactivePlanningConfig.heavyClassCount ? proactivePlanningConfig.heavyClassReductionMinutes : classCount >= proactivePlanningConfig.moderateClassCount ? proactivePlanningConfig.moderateClassReductionMinutes : classCount ? proactivePlanningConfig.lightClassReductionMinutes : 0;
     return { date, capacityMinutes: Math.max(30, base - reduction), scheduledMinutes: 0, classCount };
   });
-  const activeAssignments = (snapshot.planningAssignments ?? []).filter((item) => isAssignmentActiveForPlanning(item) && (!item.dueAt || item.dueAt >= start || isAssignmentOverdue(item, now)));
+  const activeAssignments = dedupeSchoolAssignments(snapshot.planningAssignments ?? []).filter((item) => isAssignmentActiveForPlanning(item) && (!item.dueAt || item.dueAt >= start || isAssignmentOverdue(item, now)));
   const ranked = [...activeAssignments].sort((left, right) => {
     const leftDue = left.dueAt?.getTime() ?? Infinity; const rightDue = right.dueAt?.getTime() ?? Infinity;
     return leftDue - rightDue || (right.priority === "critical" ? 4 : right.priority === "high" ? 3 : right.priority === "normal" ? 2 : 1) - (left.priority === "critical" ? 4 : left.priority === "high" ? 3 : left.priority === "normal" ? 2 : 1) || left.title.localeCompare(right.title) || left.id.localeCompare(right.id);

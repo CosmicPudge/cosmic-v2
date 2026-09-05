@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { requireSchoolAccess } from "@/services/school/access";
 import { listSchoolSources } from "@/services/school/sources/repository";
+import { normalizeOpordDocument } from "@/services/school/opord/selectors";
 
 const CATEGORY = "afrotc-opord";
 function isOpord(row: Awaited<ReturnType<typeof listSchoolSources>>[number]) { return row.category === CATEGORY && row.intelligence && typeof row.intelligence === "object" && (row.intelligence as { documentKind?: string }).documentKind === "afrotc_opord"; }
-function safeSource(row: Awaited<ReturnType<typeof listSchoolSources>>[number]) { return { id: row.id, title: row.title, sourceType: row.sourceType, originalFileName: row.originalFileName, mimeType: row.mimeType, fileSize: row.fileSize, processingStatus: row.processingStatus, processingError: row.processingError, createdAt: row.createdAt, updatedAt: row.updatedAt, document: row.intelligence }; }
+function safeSource(row: Awaited<ReturnType<typeof listSchoolSources>>[number]) { return { id: row.id, title: row.title, sourceType: row.sourceType, originalFileName: row.originalFileName, mimeType: row.mimeType, fileSize: row.fileSize, processingStatus: row.processingStatus, processingError: row.processingError, createdAt: row.createdAt, updatedAt: row.updatedAt, document: normalizeOpordDocument(row.intelligence as never) }; }
 
 export async function GET(request: Request) {
   const account = await requireSchoolAccess(request);
