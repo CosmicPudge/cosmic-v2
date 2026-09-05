@@ -27,6 +27,15 @@ export const sessions = pgTable("sessions", {
   authenticatedBootId: text("authenticated_boot_id"),
 }, (table) => [uniqueIndex("sessions_token_hash_unique").on(table.sessionTokenHash), index("sessions_user_id_index").on(table.userId), index("sessions_expires_at_index").on(table.expiresAt), index("sessions_device_id_index").on(table.deviceId), check("sessions_type_check", sql`${table.sessionType} in ('user', 'device')`)]);
 
+export const passwordResetTokens = pgTable("password_reset_tokens", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  tokenHash: text("token_hash").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  usedAt: timestamp("used_at", { withTimezone: true }),
+}, (table) => [uniqueIndex("password_reset_tokens_token_hash_unique").on(table.tokenHash), index("password_reset_tokens_user_id_index").on(table.userId), index("password_reset_tokens_expires_at_index").on(table.expiresAt)]);
+
 export const devices = pgTable("devices", {
   id: text("id").primaryKey(),
   userId: text("user_id").references(() => users.id, { onDelete: "set null" }),

@@ -44,7 +44,7 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
     try { await fetch("/api/account/signout", { method: "POST" }); } finally { setLoading(false); }
   }, []);
 
-  useEffect(() => { const timer = window.setTimeout(() => void refresh(), 0); return () => window.clearTimeout(timer); }, [refresh]);
+  useEffect(() => { void Promise.resolve().then(() => refresh()); }, [refresh]);
   useEffect(() => {
     const timer = window.setInterval(() => void syncSession(false), 60_000);
     const onVisibility = () => { if (!document.hidden) void syncSession(false); };

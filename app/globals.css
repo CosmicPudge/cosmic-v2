@@ -68,38 +68,29 @@ html, body { width: 100%; min-height: 100%; background: #030511; }
 @media (max-height: 560px) and (min-width: 640px) { .kiosk-pairing-card { padding: .8rem 1.25rem; border-radius: 1.25rem; } .kiosk-pairing-card h1 { margin-top: .15rem; font-size: 1.55rem; } .kiosk-pairing-grid { margin-top: .4rem; grid-template-columns: 180px minmax(0, 1fr); gap: 1.25rem; } .kiosk-pairing-grid img { width: 170px; } .kiosk-pairing-grid p { margin-top: .35rem; } }
 
 .cosmic-os-root {
-  height: 100dvh;
   min-height: 100dvh;
-  overflow: hidden;
 }
 
 .cosmic-os-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 15rem) minmax(0, 1fr);
+  display: flex;
+  flex-direction: column;
   gap: clamp(.75rem, 1.5vw, 1.25rem);
-  height: 100%;
-  min-height: 0;
+  min-height: 100dvh;
   max-width: 100%;
   padding: clamp(.65rem, 1.5vw, 1.5rem);
-  overflow: hidden;
+  overflow: visible;
 }
 
 .cosmic-os-workspace {
   min-width: 0;
-  min-height: 0;
   max-width: 100%;
   overflow-x: hidden;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  scrollbar-gutter: stable;
+  overflow-y: visible;
 }
 
 .cosmic-os-workspace > * { min-width: 0; }
 
-@media (max-width: 1023px) {
-  .cosmic-os-layout { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
-  .cosmic-os-layout > [data-cosmic-navigation] { width: 100%; }
-}
+@media (max-width: 1023px) { .cosmic-os-layout > [data-cosmic-navigation] { width: 100%; } }
 
 @media (max-height: 700px) and (min-width: 1024px) {
   .cosmic-os-layout { padding-block: .5rem; gap: .65rem; }
@@ -130,9 +121,14 @@ html, body { width: 100%; min-height: 100%; background: #030511; }
 .cosmic-sidebar,
 .cosmic-content-surface {
   border: 1px solid rgba(130, 167, 255, .16);
-  background: linear-gradient(145deg, rgba(6, 15, 39, .9), rgba(1, 6, 22, .88));
-  box-shadow: 0 0 34px rgba(41, 56, 159, .1);
+  background: linear-gradient(145deg, rgba(6, 15, 39, .78), rgba(1, 6, 22, .72));
+  box-shadow: 0 12px 34px rgba(0, 0, 0, .16), inset 0 1px 0 rgba(255,255,255,.035);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
+.cosmic-top-navigation { flex: 0 0 auto; }
+.cosmic-top-navigation > div { min-height: 3.5rem; }
+@media (max-width: 700px) { .cosmic-top-navigation > div { min-height: 0; } .cosmic-top-navigation [aria-label="Cosmic applications"] { display: none; } }
 
 .cosmic-kicker {
   font-size: 10px;
@@ -1223,13 +1219,15 @@ html[data-cosmic-reduced-effects="true"] *::after {
   display: grid;
   place-items: center;
   overflow: hidden;
-  background: radial-gradient(circle at 50% 45%, rgba(44, 48, 105, .42), rgba(3, 5, 17, .97) 62%);
+  isolation: isolate;
+  background: #030511;
   color: rgba(255, 255, 255, .92);
   pointer-events: none;
-  animation: cosmic-transition-in 260ms ease-out both;
+  animation: cosmic-transition-in 110ms ease-out both;
 }
 .cosmic-transition-boot { pointer-events: auto; }
-.cosmic-transition-navigation { background: rgba(3, 5, 17, .68); backdrop-filter: blur(10px); }
+.cosmic-transition-navigation { background: rgba(3, 5, 17, .82); }
+.cosmic-transition-nebula { position: absolute; inset: 0; z-index: -2; background: radial-gradient(ellipse at 50% 44%, rgba(129, 92, 246, .2), transparent 34%), radial-gradient(ellipse at 24% 68%, rgba(37, 99, 235, .16), transparent 42%), radial-gradient(ellipse at 78% 28%, rgba(56, 189, 248, .1), transparent 36%), radial-gradient(ellipse at center, transparent 38%, rgba(0, 0, 0, .78) 100%); transform: scale(1); animation: cosmic-transition-nebula 360ms ease-out both; }
 .cosmic-transition-content { position: relative; z-index: 1; width: min(90vw, 30rem); padding: 2rem; text-align: center; }
 .cosmic-transition-mark { margin: 0 auto .75rem; color: rgba(165, 243, 252, .9); font-size: 2rem; text-shadow: 0 0 30px rgba(103, 232, 249, .8); }
 .cosmic-transition-kicker { color: rgba(207, 250, 254, .58); font-size: .68rem; font-weight: 700; letter-spacing: .28em; }
@@ -1239,11 +1237,41 @@ html[data-cosmic-reduced-effects="true"] *::after {
 .cosmic-transition-progress { height: .25rem; margin: 1.6rem auto .65rem; width: min(100%, 20rem); overflow: hidden; border-radius: 999px; background: rgba(255, 255, 255, .1); }
 .cosmic-transition-progress span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, rgba(103, 232, 249, .7), rgba(196, 181, 253, .9)); transition: width 300ms ease-out; }
 .cosmic-transition-count { color: rgba(255, 255, 255, .35); font-size: .7rem; }
-.cosmic-transition-stars { position: absolute; inset: -20%; opacity: .35; background-image: radial-gradient(circle, rgba(255,255,255,.8) 0 1px, transparent 1.5px), radial-gradient(circle, rgba(165,243,252,.55) 0 1px, transparent 1.5px); background-position: 0 0, 28px 42px; background-size: 88px 88px, 132px 132px; animation: cosmic-transition-drift 24s linear infinite; }
+.cosmic-transition-stars { position: absolute; inset: -20%; z-index: -1; opacity: .22; background-image: radial-gradient(circle, rgba(255,255,255,.8) 0 1px, transparent 1.5px), radial-gradient(circle, rgba(165,243,252,.55) 0 1px, transparent 1.5px); background-position: 0 0, 28px 42px; background-size: 88px 88px, 132px 132px; animation: cosmic-transition-drift 360ms ease-out both; }
 .cosmic-transition-reduced .cosmic-transition-stars { animation: none; }
 @keyframes cosmic-transition-in { from { opacity: 0; } to { opacity: 1; } }
-@keyframes cosmic-transition-drift { from { transform: translate3d(0, 0, 0) scale(1); } to { transform: translate3d(3%, -2%, 0) scale(1.04); } }
-@media (prefers-reduced-motion: reduce) { .cosmic-transition-surface, .cosmic-transition-progress span { animation: none; transition-duration: 120ms; } }
+@keyframes cosmic-transition-nebula { from { opacity: .7; transform: scale(1); } to { opacity: 1; transform: scale(1.03); } }
+@keyframes cosmic-transition-drift { from { transform: translate3d(0, 0, 0) scale(1); } to { transform: translate3d(1%, -1%, 0) scale(1.02); } }
+@media (prefers-reduced-motion: reduce) { .cosmic-transition-surface, .cosmic-transition-nebula, .cosmic-transition-stars, .cosmic-transition-progress span { animation: none; transition-duration: 80ms; } }
+
+/* Dashboard uses a quiet Cosmic canvas; content cards own their imagery. */
+.dashboard-environment { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; background: #030511; }
+.dashboard-widget-image { z-index: 0; object-fit: cover; transition: transform 500ms ease, opacity 350ms ease; }
+.dashboard-hero-image { z-index: 0; opacity: .9; }
+.dashboard-hero-overlay { z-index: 1; background: linear-gradient(90deg, rgba(2, 5, 16, .78), rgba(2, 5, 16, .3) 58%, rgba(2, 5, 16, .56)), linear-gradient(180deg, rgba(2, 5, 16, .08), rgba(2, 5, 16, .72)); pointer-events: none; }
+.dashboard-widget-surface:hover .dashboard-widget-image { transform: scale(1.015); }
+.dashboard-widget-surface::after { content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none; background: linear-gradient(180deg, rgba(2, 5, 16, .04), rgba(2, 5, 16, .16) 42%, rgba(2, 5, 16, .74)); }
+.dashboard-widget-surface .bg-white\/5, .dashboard-widget-surface .bg-black\/15, .dashboard-widget-surface .bg-cyan-200\/\[\.04\], .dashboard-widget-surface .bg-cyan-200\/\[0\.05\] { background-color: rgba(2, 5, 16, .28); }
+@media (prefers-reduced-motion: reduce) { .dashboard-widget-image, .dashboard-widget-surface:hover .dashboard-widget-image { transition: none; transform: none; } }
+.dashboard-environment-nebula, .dashboard-environment-stars, .dashboard-environment-veil { position: absolute; inset: 0; pointer-events: none; transition: opacity 1200ms ease, background 1200ms ease; }
+.dashboard-environment-nebula { background: radial-gradient(ellipse at 50% 25%, rgba(83, 76, 190, .18), transparent 34%), radial-gradient(ellipse at 12% 72%, rgba(37, 99, 235, .13), transparent 38%), radial-gradient(ellipse at 88% 18%, rgba(168, 85, 247, .1), transparent 34%); animation: dashboard-nebula-drift 32s ease-in-out infinite alternate; }
+.dashboard-environment-stars { opacity: .28; background-image: radial-gradient(circle, rgba(255,255,255,.7) 0 .7px, transparent 1px), radial-gradient(circle, rgba(165,243,252,.5) 0 .65px, transparent 1px); background-position: 0 0, 27px 39px; background-size: 83px 83px, 127px 127px; }
+.dashboard-environment-veil { background: linear-gradient(180deg, rgba(3,5,17,.14), rgba(3,5,17,.38) 68%, rgba(3,5,17,.62)), radial-gradient(ellipse at center, transparent 28%, rgba(0,0,10,.45) 100%); }
+@keyframes dashboard-nebula-drift { from { transform: scale(1); } to { transform: scale(1.035) translate3d(1%, -1%, 0); } }
+@media (prefers-reduced-motion: reduce) { .dashboard-environment-nebula { animation: none; } .dashboard-environment-nebula, .dashboard-environment-stars, .dashboard-environment-veil { transition: none; } }
+.dashboard-environment[data-reduced-motion="true"] .dashboard-environment-nebula { animation: none; }
+.dashboard-environment[data-reduced-motion="true"] .dashboard-environment-nebula, .dashboard-environment[data-reduced-motion="true"] .dashboard-environment-stars, .dashboard-environment[data-reduced-motion="true"] .dashboard-environment-veil { transition: none; }
+@media (max-width: 700px) { .dashboard-environment-nebula { opacity: .82; } .dashboard-environment-stars { opacity: .18; } }
+
+/* Dashboard modules share a quieter surface so the environment remains part of the layout. */
+.dashboard-widget-surface { border-radius: 1.5rem !important; border-color: rgba(190, 214, 255, .14) !important; background-color: rgba(9, 16, 34, .48); box-shadow: 0 14px 38px rgba(0, 0, 0, .2), inset 0 1px 0 rgba(255, 255, 255, .045); }
+.dashboard-widget:hover .dashboard-widget-surface { border-color: rgba(190, 224, 255, .24) !important; background-color: rgba(14, 24, 48, .54); }
+.dashboard-widget-surface > .relative > .kiosk-scene-glow { opacity: .42; }
+.dashboard-widget-surface .kiosk-scene-motif { opacity: .7; }
+.dashboard-widget-surface .cosmic-widget-motif { display: none; }
+@media (prefers-reduced-motion: reduce) { .dashboard-widget, .dashboard-widget-surface { transition: none !important; } .dashboard-widget:hover { transform: none !important; } }
+
+@media (prefers-reduced-transparency: reduce) { .cosmic-sidebar, .cosmic-content-surface { background: #071022; backdrop-filter: none; -webkit-backdrop-filter: none; } }
 
 /* Shared affordance baseline for raw semantic controls across Cosmic. */
 button:not(:disabled) { cursor: pointer; transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease, filter 180ms ease, opacity 180ms ease, transform 120ms ease; }

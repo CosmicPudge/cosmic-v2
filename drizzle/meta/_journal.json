@@ -316,6 +316,13 @@
       "when": 1788438400000,
       "tag": "0046_school_study_knowledge",
       "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "7",
+      "when": 1788440000000,
+      "tag": "0047_password_reset_tokens",
+      "breakpoints": true
     }
   ]
 }

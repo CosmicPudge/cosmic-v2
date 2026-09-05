@@ -24,7 +24,7 @@ function useEntitlementsInternal() {
       setData({ ...freeEntitlements, source: "account" });
     } finally { setLoading(false); }
   }, [account, accountLoading]);
-  useEffect(() => { const timer = window.setTimeout(() => void refresh(), 0); return () => window.clearTimeout(timer); }, [refresh]);
+  useEffect(() => { void Promise.resolve().then(() => refresh()); }, [refresh]);
   useEffect(() => { const update = () => void refresh(); window.addEventListener("cosmic:entitlements-updated", update); return () => window.removeEventListener("cosmic:entitlements-updated", update); }, [refresh]);
   return { data, loading: accountLoading || loading, refresh };
 }

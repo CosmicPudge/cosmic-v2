@@ -39,10 +39,10 @@ export default function WidgetBackground({
   return (
     <>
       {/* Main Accent */}
-      <div className="cosmic-widget-panel kiosk-scene-surface absolute inset-0" data-cosmic-scene={accent} data-scene-state={sceneState} data-scene-variant={sceneVariant} style={{ background: "var(--widget-panel, linear-gradient(145deg, rgba(10,17,39,.96), rgba(3,7,21,.92))" }} />
-      {isKiosk && imageSource ? <img key={imageSource} className="kiosk-scene-image absolute inset-0 h-full w-full object-cover" src={imageSource} alt="" aria-hidden="true" onError={() => setFailedImageUrls((current) => current.includes(imageSource) ? current : [...current, imageSource])} style={{ objectPosition: imagePosition, opacity: imageOpacity, filter: `blur(${imageBlur}px)`, "--kiosk-scene-image-opacity": imageOpacity } as React.CSSProperties} /> : null}
+      <div className="cosmic-widget-panel kiosk-scene-surface absolute inset-0" data-cosmic-scene={accent} data-scene-state={sceneState} data-scene-variant={sceneVariant} style={{ background: isKiosk ? "var(--widget-panel, linear-gradient(145deg, rgba(10,17,39,.96), rgba(3,7,21,.92))" : "linear-gradient(145deg, rgba(10,17,39,.74), rgba(3,7,21,.68))" }} />
+      {imageSource ? <img key={imageSource} className={`${isKiosk ? "kiosk-scene-image" : "dashboard-widget-image"} absolute inset-0 h-full w-full object-cover`} src={imageSource} alt="" aria-hidden="true" loading={isKiosk ? "eager" : "lazy"} onError={() => setFailedImageUrls((current) => current.includes(imageSource) ? current : [...current, imageSource])} style={{ objectPosition: imagePosition, opacity: isKiosk ? imageOpacity : Math.max(imageOpacity, .62), filter: isKiosk ? `blur(${imageBlur}px)` : undefined, "--kiosk-scene-image-opacity": imageOpacity } as React.CSSProperties} /> : null}
       {isKiosk ? <SceneIllustration accent={accent} sceneState={sceneState} /> : null}
-      <div className={`cosmic-widget-motif kiosk-scene-motif cosmic-widget-motif-${visual.motif} absolute inset-0`} aria-hidden="true" />
+      {isKiosk ? <div className={`cosmic-widget-motif kiosk-scene-motif cosmic-widget-motif-${visual.motif} absolute inset-0`} aria-hidden="true" /> : null}
 
       {/* Light Bloom */}
       <div

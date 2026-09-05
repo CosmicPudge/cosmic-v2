@@ -17,6 +17,7 @@ import type {
 } from "./types";
 
 import { WIDGET_TRANSITION } from "./constants";
+import { dashboardImage, type DashboardImageId } from "@/components/dashboard/images/dashboardImageManifest";
 
 interface Props extends WidgetBaseProps {
   hover?: boolean;
@@ -55,6 +56,12 @@ export default function Widget({
   const { tokens } = useDisplay();
   const parentContext = useWidgetContext();
   const visual = getModuleVisualIdentity(accent);
+  const automaticImageId = ({ outlook: "outlook", system: "system", finance: "finance", search: "global-search", briefing: "daily-briefing", cosmic: "cosmic-ai", notifications: "notifications", sports: "sports", school: "school", music: "music", garage: "garage", projects: "projects", notes: "notes" } as Partial<Record<WidgetAccent, DashboardImageId>>)[accent];
+  const automaticImage = automaticImageId
+    ? dashboardImage(automaticImageId)
+    : undefined;
+  const resolvedImageUrl = imageUrl ?? automaticImage?.src;
+  const resolvedImagePosition = imagePosition ?? automaticImage?.objectPosition;
 
   return (
     <WidgetProvider size={parentContext.size} accent={accent} presentation={parentContext.presentation}>
@@ -62,7 +69,7 @@ export default function Widget({
       whileHover={
         hover
           ? {
-              y: -4,
+              y: -2,
             }
           : undefined
       }
@@ -70,16 +77,18 @@ export default function Widget({
       data-widget-accent={accent}
       className={clsx(
         "relative h-full w-full min-h-0",
+        parentContext.presentation === "dashboard" && "dashboard-widget",
         className
       )}
     >
       <GlassPanel
-        hover={hover}
+        hover={hover && parentContext.presentation !== "dashboard"}
         className="
           relative
           h-full
           min-h-0
           overflow-hidden
+          dashboard-widget-surface
         "
         style={{
           borderRadius: tokens.radius.xl,
@@ -92,7 +101,7 @@ export default function Widget({
         } as CSSProperties}
       >
         {/* Full widget background */}
-        <WidgetBackground accent={accent} sceneState={sceneState} sceneVariant={sceneVariant} imageUrl={imageUrl} imageFallbackUrls={imageFallbackUrls} imagePosition={imagePosition} imageOpacity={imageOpacity} imageBlur={imageBlur} presentation={parentContext.presentation} />
+        <WidgetBackground accent={accent} sceneState={sceneState} sceneVariant={sceneVariant} imageUrl={resolvedImageUrl} imageFallbackUrls={imageFallbackUrls} imagePosition={resolvedImagePosition} imageOpacity={imageOpacity} imageBlur={imageBlur} presentation={parentContext.presentation} />
 
         {/* Widget content */}
         <div

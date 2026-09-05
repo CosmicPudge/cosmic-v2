@@ -100,6 +100,7 @@ export function CosmicTransitionProvider({ children }: { children: ReactNode }) 
   const [bootOffline, setBootOffline] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
   const [debugMode, setDebugMode] = useState<TransitionDebugMode>("normal");
+  const [pendingDestination, setPendingDestination] = useState<string>();
   const [dashboardReadiness, setDashboardReadiness] = useState<DashboardReadinessSummary>({ shellReady: false, criticalReady: false, widgets: [], shellMountedAt: null, criticalSettledAt: null });
   const [visible, setVisible] = useState(false);
   const [routeStates, setRouteStates] = useState<Record<string, { ready: boolean; status: "ready" | "degraded"; lastReadyAt?: number }>>({});
@@ -141,6 +142,22 @@ export function CosmicTransitionProvider({ children }: { children: ReactNode }) 
     };
   }, [settings.data.appearance.reducedEffects]);
 
+  useEffect(() => {
+    const onInternalNavigation = (event: MouseEvent) => {
+      if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      const anchor = target.closest<HTMLAnchorElement>("a[href]");
+      if (!anchor || anchor.target === "_blank" || anchor.hasAttribute("download")) return;
+      const url = new URL(anchor.href, window.location.href);
+      if (url.origin !== window.location.origin || url.pathname === window.location.pathname && url.search === window.location.search) return;
+      setPendingDestination(routeLabel(url.pathname));
+      if (bootComplete) setVisible(true);
+    };
+    document.addEventListener("click", onInternalNavigation, true);
+    return () => document.removeEventListener("click", onInternalNavigation, true);
+  }, [bootComplete]);
+
   const tasks = useMemo(() => [
     { id: "account", label: "Account", ready: !accountLoading, critical: true },
     { id: "scope", label: "Workspace", ready: !accountLoading && (account ? scope.id === `account-${account.id}` : scope.id === "local"), critical: true },
@@ -154,7 +171,7 @@ export function CosmicTransitionProvider({ children }: { children: ReactNode }) 
   useEffect(() => {
     if (bootComplete) return;
     const startedAt = performance.now();
-    const minimum = reducedMotion ? 250 : 900;
+    const minimum = reducedMotion ? 80 : 120;
     const maxTimer = window.setTimeout(() => setBootComplete(true), 7000);
     const finish = () => {
       const remaining = Math.max(0, minimum - (performance.now() - startedAt));
@@ -168,6 +185,7 @@ export function CosmicTransitionProvider({ children }: { children: ReactNode }) 
     if (initialPath.current === pathname) return;
     const from = initialPath.current;
     initialPath.current = pathname;
+    setPendingDestination(undefined);
     const accountChanged = lastScope.current !== scope.id;
     lastScope.current = scope.id;
     const startedAt = performance.now();
@@ -220,26 +238,28 @@ export function CosmicTransitionProvider({ children }: { children: ReactNode }) 
       setMetrics((current) => ({ ...current, revealedAt: performance.now(), durationMs: performance.now() - started, timedOut: true }));
       setVisible(false);
       if (process.env.NODE_ENV !== "production") console.info("[cosmic-transition] timeout", routeLabel(pathname));
-    }, reducedMotion ? 700 : 5000);
-    const settleDelay = debugMode === "instant" ? 0 : debugMode === "500ms" ? 500 : debugMode === "2s" ? 2000 : debugMode === "5s" ? 5000 : debugMode === "timeout" || debugMode === "failure" ? 6000 : reducedMotion ? 180 : 320;
-    const settle = window.setTimeout(() => {
+    }, reducedMotion ? 1200 : 7000);
+    const reveal = () => {
+      if (debugMode === "timeout" || debugMode === "failure") return;
+      if (debugMode !== "normal" && debugMode !== "instant") return;
       if (debugMode === "instant" || ((!navigation.accountSwitch || criticalReady) && (routeStatesRef.current[currentRoute]?.ready || !routeStatesRef.current[currentRoute]))) {
         const now = performance.now();
         setMetrics((current) => ({ ...current, criticalReadyAt: criticalReady ? now : current.criticalReadyAt, revealedAt: now, durationMs: now - started }));
         setVisible(false);
         if (process.env.NODE_ENV !== "production") console.info("[cosmic-transition] complete", routeLabel(pathname), `${Math.round(performance.now() - started)}ms`);
       }
-    }, settleDelay);
-    return () => { window.clearTimeout(max); window.clearTimeout(settle); };
-  }, [criticalReady, currentRoute, debugMode, navigation, pathname, reducedMotion]);
+    };
+    reveal();
+    return () => window.clearTimeout(max);
+  }, [criticalReady, currentRoute, debugMode, navigation, pathname, reducedMotion, routeStates]);
 
   const progress = Math.round((tasks.filter((task) => task.ready).length / tasks.length) * 100);
   const mode: CosmicTransitionMode = !bootComplete ? "cold-boot" : visible && navigation ? (navigation.accountSwitch ? "account-switch" : "navigation") : null;
   const intensity: CosmicTransitionIntensity = mode === "cold-boot" ? "BOOT" : mode === "account-switch" ? "HEAVY" : visible ? "NORMAL" : "INSTANT";
   const routeEntries = ROUTE_READINESS.map(([route, label, critical]) => ({ route, label, critical: [...critical], ready: Boolean(routeStates[route]?.ready), status: routeStates[route]?.status ?? "pending" })) satisfies RouteReadinessEntry[];
-  const value = useMemo(() => ({ mode, intensity, pathname, destination: routeLabel(pathname), bootComplete, bootOffline, reducedMotion, visible, progress, tasks, routeEntries, metrics, debugMode, dashboardReadiness, setDashboardReadiness: updateDashboardReadiness, markRouteReady, setRouteTask, prefetch }), [bootComplete, bootOffline, dashboardReadiness, debugMode, intensity, markRouteReady, metrics, mode, pathname, prefetch, progress, reducedMotion, routeEntries, setRouteTask, tasks, updateDashboardReadiness, visible]);
+  const value = useMemo(() => ({ mode, intensity, pathname, destination: pendingDestination ?? routeLabel(pathname), bootComplete, bootOffline, reducedMotion, visible, progress, tasks, routeEntries, metrics, debugMode, dashboardReadiness, setDashboardReadiness: updateDashboardReadiness, markRouteReady, setRouteTask, prefetch }), [bootComplete, bootOffline, dashboardReadiness, debugMode, intensity, markRouteReady, metrics, mode, pathname, pendingDestination, prefetch, progress, reducedMotion, routeEntries, setRouteTask, tasks, updateDashboardReadiness, visible]);
 
-  return <TransitionContext.Provider value={value}>{children}<CosmicTransitionSurface /></TransitionContext.Provider>;
+  return <TransitionContext.Provider value={value}>{children}<CosmicTransitionSurface key={`${pathname}-${visible}-${bootComplete}`} /></TransitionContext.Provider>;
 }
 
 export function useCosmicTransition() {
@@ -255,15 +275,22 @@ export function useRouteReadiness(route: string, ready = true, status: "ready" |
 
 function CosmicTransitionSurface() {
   const { mode, destination, bootComplete, bootOffline, reducedMotion, visible, progress, tasks } = useCosmicTransition();
+  const [longLoad, setLongLoad] = useState(false);
   const showingBoot = !bootComplete;
+  useEffect(() => {
+    if (showingBoot || !visible) return;
+    const timer = window.setTimeout(() => setLongLoad(true), reducedMotion ? 500 : 850);
+    return () => window.clearTimeout(timer);
+  }, [reducedMotion, showingBoot, visible]);
   if (!showingBoot && !visible) return null;
   return <div className={`cosmic-transition-surface ${showingBoot ? "cosmic-transition-boot" : "cosmic-transition-navigation"} ${reducedMotion ? "cosmic-transition-reduced" : ""}`} role="status" aria-live={showingBoot ? "polite" : "assertive"} aria-label={showingBoot ? "Preparing your Cosmic workspace" : `Opening ${destination}`}>
+    <div className="cosmic-transition-nebula" aria-hidden="true" />
     <div className="cosmic-transition-stars" aria-hidden="true" />
     <div className="cosmic-transition-content">
       <p className="cosmic-transition-mark" aria-hidden="true">✦</p>
       <p className="cosmic-transition-kicker">COSMIC OS</p>
       <h1>{showingBoot ? "Preparing your workspace" : mode === "account-switch" ? "Switching workspace" : `Opening ${destination}`}</h1>
-      <p className="cosmic-transition-copy">{showingBoot ? bootOffline ? "Using your saved Cosmic state while you’re offline." : "Getting the essentials ready…" : "Almost ready…"}</p>
+      <p className="cosmic-transition-copy">{showingBoot ? bootOffline ? "Using your saved Cosmic state while you’re offline." : "Getting the essentials ready…" : longLoad ? "The destination is taking a little longer to arrive…" : "Almost ready…"}</p>
       {showingBoot ? <><div className="cosmic-transition-progress" aria-hidden="true"><span style={{ width: `${Math.max(8, progress)}%` }} /></div><p className="cosmic-transition-count">{tasks.filter((task) => task.ready).length} of {tasks.length} essentials ready</p></> : <p className="cosmic-transition-destination">{destination}</p>}
     </div>
   </div>;
