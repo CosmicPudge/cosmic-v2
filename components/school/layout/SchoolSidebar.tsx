@@ -33,6 +33,7 @@ const navigation = [
   { href: "/school/resources", label: "Resources", icon: FolderOpen },
   { href: "/school/goals", label: "Goals", icon: Target },
   { href: "/school/afrotc", label: "AFROTC", icon: Flag },
+  { href: "/school/opords", label: "OPORDs", icon: Flag },
 ];
 
 export function SchoolSidebar() {

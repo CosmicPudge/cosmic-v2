@@ -1,7 +1,6 @@
 /**
- * Raw uploads are deliberately not exposed as public URLs. Phase 2 stores
- * extracted text and metadata in the private database; durable object storage
- * can be added here later without changing the source contract.
+ * Raw uploads are deliberately not exposed as public URLs. Stores are private
+ * and every operation requires an account-scoped key.
  */
 export interface SchoolAssetStore {
   put(input: { accountId: string; sourceId: string; bytes: Uint8Array; mimeType: string; safeFileName: string }): Promise<{ provider: string; key: string }>;
@@ -29,7 +28,7 @@ export class UnconfiguredSchoolAssetStore implements SchoolAssetStore {
 
 export class VercelBlobSchoolAssetStore implements SchoolAssetStore {
   async put(input: { accountId: string; sourceId: string; bytes: Uint8Array; mimeType: string; safeFileName: string }) {
-    const extension = input.safeFileName.toLowerCase().match(/\.(png|jpe?g|webp|mp3|m4a|wav|webm|aac|ogg)$/)?.[1] ?? "bin";
+    const extension = input.safeFileName.toLowerCase().match(/\.(pdf|docx|txt|md|png|jpe?g|webp|mp3|m4a|wav|webm|aac|ogg)$/)?.[1] ?? "bin";
     const pathname = `school/${input.accountId}/${input.sourceId}/${crypto.randomUUID()}.${extension}`;
     const blob = await put(pathname, Buffer.from(input.bytes), { access: "private", contentType: input.mimeType, addRandomSuffix: false });
     return { provider: "vercel-blob", key: blob.pathname };
