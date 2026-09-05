@@ -899,6 +899,19 @@ html[data-cosmic-reduced-effects="true"] *::after {
 .ambient-ring { display: block; height: 3.8rem; width: 3.8rem; flex: 0 0 auto; border: .45rem solid rgba(139,92,246,.12); border-top-color: rgba(192,132,252,.9); border-right-color: rgba(96,165,250,.78); border-radius: 999px; transform: rotate(24deg); }
 .ambient-ring.is-active { animation: ambient-breathe 3.5s ease-in-out infinite; }
 .ambient-system-pulse { height: 2.3rem; width: 2.3rem; flex: 0 0 auto; border: 1px solid rgba(192,132,252,.48); border-radius: 999px; box-shadow: 0 0 0 8px rgba(139,92,246,.05), 0 0 22px rgba(139,92,246,.18); }
+.ambient-now-playing { display: flex; min-width: 0; align-items: center; gap: .85rem; margin-top: .85rem; }
+.ambient-now-artwork { display: grid; width: clamp(4.2rem, 6vw, 6.4rem); aspect-ratio: 1; flex: 0 0 auto; place-items: center; overflow: hidden; border: 1px solid rgba(255,255,255,.14); border-radius: .9rem; background: radial-gradient(circle at 35% 30%, rgba(192,132,252,.3), rgba(20,27,62,.9)); background-position: center; background-size: cover; box-shadow: 0 12px 26px rgba(0,0,0,.26); color: rgba(255,255,255,.55); font-size: 1.8rem; }
+.ambient-now-artwork span { text-shadow: 0 2px 12px rgba(0,0,0,.6); }
+.ambient-now-details { min-width: 0; flex: 1 1 auto; }
+.ambient-now-status { display: flex; min-width: 0; align-items: center; gap: .35rem; overflow: hidden; color: rgba(167,243,208,.75); font-size: .58rem; letter-spacing: .14em; text-overflow: ellipsis; text-transform: uppercase; white-space: nowrap; }
+.ambient-now-title, .ambient-now-creator, .ambient-now-collection { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ambient-now-title { margin-top: .45rem; color: rgba(255,255,255,.92); font-size: clamp(.9rem, 1.25vw, 1.15rem); font-weight: 600; }
+.ambient-now-creator { margin-top: .25rem; color: rgba(226,232,240,.62); font-size: .78rem; }
+.ambient-now-collection { margin-top: .2rem; color: rgba(226,232,240,.4); font-size: .68rem; }
+.ambient-now-progress { margin-top: .7rem; }
+.ambient-now-progress-track { height: .22rem; overflow: hidden; border-radius: 99px; background: rgba(255,255,255,.16); }
+.ambient-now-progress-track span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, rgba(192,132,252,.95), rgba(96,165,250,.92)); transition: width .45s linear; }
+.ambient-now-progress > div:last-child { display: flex; justify-content: space-between; margin-top: .3rem; color: rgba(226,232,240,.48); font-size: .65rem; font-variant-numeric: tabular-nums; }
 .ambient-weather { justify-content: flex-start; }
 .ambient-weather-temp { font-size: 2rem; font-weight: 300; font-variant-numeric: tabular-nums; }
 .ambient-bottom-strip { display: grid; grid-column: 1 / -1; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .75rem; }
@@ -913,6 +926,7 @@ html[data-cosmic-reduced-effects="true"] *::after {
 @media (max-width: 900px) { .ambient-layout { grid-template-columns: minmax(0, 1fr) minmax(16rem, .85fr); } .ambient-time { font-size: clamp(4.8rem, 13vw, 8rem); } }
 @media (max-width: 700px) { .ambient-mode { min-height: calc(100svh - 1.5rem); gap: .8rem; } .ambient-top-meta span:last-child { display: none; } .ambient-layout { display: flex; flex-direction: column; gap: .8rem; overflow: visible; } .ambient-hero { min-height: auto; padding: .7rem .2rem 1rem; } .ambient-time { margin-top: 1.5rem; font-size: clamp(4.4rem, 22vw, 7rem); } .ambient-date { margin-top: 1rem; font-size: .95rem; } .ambient-greeting { margin-top: 1.5rem; font-size: 1.45rem; } .ambient-rail { grid-template-columns: repeat(2, minmax(0, 1fr)); display: grid; } .ambient-bottom-strip { grid-template-columns: 1fr; } .ambient-bottom-strip .ambient-card:nth-child(2) { display: none; } .ambient-wake-affordance { padding-bottom: .3rem; font-size: .55rem; letter-spacing: .14em; } }
 @media (max-width: 430px) { .ambient-topbar { align-items: flex-start; } .ambient-wordmark { letter-spacing: .22em; } .ambient-rail { grid-template-columns: 1fr; } .ambient-rail .ambient-card:nth-child(4) { display: none; } .ambient-card { border-radius: 1rem; padding: .85rem; } }
+@media (max-width: 430px) { .ambient-now-playing { gap: .7rem; } .ambient-now-artwork { width: 4.25rem; } .ambient-now-title { font-size: .92rem; } }
 @media (prefers-reduced-motion: reduce) { .ambient-mode *, .ambient-mode *::before, .ambient-mode *::after { animation: none !important; transition: none !important; } }
 
 @media (prefers-reduced-motion: reduce) {

@@ -3,9 +3,8 @@ import type {
   FootballPlayType,
   FootballSituation,
 } from "@/core/contracts/sports/Football";
-
-const ESPN_CORE_BASE =
-  "https://sports.core.api.espn.com/v2/sports/football/leagues/nfl";
+import { parseFootballFieldPosition } from "@/services/sports/football/field";
+import { espnFootballCoreEventUrl } from "../espnFootball/endpoints";
 
 export interface NFLNormalizedPlays {
   eventId: string;
@@ -473,6 +472,8 @@ function normalizeSituation(
     numberOrUndefined(
       start?.yardsToEndzone,
     );
+  const possessionText = stringOrUndefined(start?.possessionText);
+  const parsedPosition = parseFootballFieldPosition(possessionText);
 
   return {
     quarter:
@@ -500,15 +501,12 @@ function normalizeSituation(
       ),
 
     fieldPosition: {
+      territory: parsedPosition.territory,
       yardLine:
-        numberOrUndefined(
-          start?.yardLine,
-        ),
+        numberOrUndefined(start?.yardLine) ?? parsedPosition.yardLine,
 
       display:
-        stringOrUndefined(
-          start?.possessionText,
-        ),
+        possessionText,
 
       yardsToEndzone,
     },
@@ -524,9 +522,7 @@ function normalizeSituation(
       ),
 
     possessionText:
-      stringOrUndefined(
-        start?.possessionText,
-      ),
+      possessionText,
 
     redZone:
       yardsToEndzone !==
@@ -539,15 +535,7 @@ function normalizeSituation(
 export async function getNFLPlays(
   eventId: number | string,
 ): Promise<NFLNormalizedPlays> {
-  const event =
-    encodeURIComponent(
-      String(eventId),
-    );
-
-  const url =
-    `${ESPN_CORE_BASE}/events/` +
-    `${event}/competitions/` +
-    `${event}/plays?limit=500`;
+  const url = espnFootballCoreEventUrl("nfl", String(eventId), "plays", 500);
 
   const response =
     await fetch(url, {

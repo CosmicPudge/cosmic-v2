@@ -41,6 +41,8 @@ export class NascarProvider implements SportsProvider {
       const start = utcDate(mainSession?.start_time_utc) ?? utcDate(race.race_date) ?? utcDate(race.date_scheduled);
       if (id === undefined || !title || !start) return [];
       const track = string(race.track_name);
+      const trackId = string(race.track_id) ?? (number(race.track_id) !== undefined ? String(number(race.track_id)) : undefined);
+      const location = [string(race.track_city), string(race.track_state), string(race.track_country)].filter(Boolean).join(", ");
       const broadcast = string(race.television_broadcaster);
       return [{
         id: `${this.id}:${id}`,
@@ -51,7 +53,7 @@ export class NascarProvider implements SportsProvider {
         ...(track ? { venue: track } : {}),
         ...(broadcast ? { broadcast } : {}),
         source: "nascar",
-        metadata: { competition: "NASCAR Cup Series", eventName: title, ...(track ? { track } : {}), ...(number(race.scheduled_laps) !== undefined ? { detail: `${number(race.scheduled_laps)} laps` } : {}) },
+        metadata: { competition: "NASCAR Cup Series", eventName: title, ...(track ? { track } : {}), ...(trackId ? { trackId } : {}), ...(location ? { location } : {}), ...(string(race.track_type) ? { trackType: string(race.track_type), trackConfiguration: string(race.track_type) } : {}), ...(number(race.scheduled_laps) !== undefined ? { laps: number(race.scheduled_laps), detail: `${number(race.scheduled_laps)} laps` } : {}), ...(string(race.race_distance) ? { raceDistance: string(race.race_distance) } : {}) },
       }];
     });
     return { events, standings: await this.getStandings(now.getFullYear()) };

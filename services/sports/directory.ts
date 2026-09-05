@@ -5,6 +5,15 @@ export interface SportsDirectoryEntry {
   sport: SportKind;
   entityType?: "team" | "driver" | "constructor";
   name: string;
+  school?: string;
+  slug?: string;
+  uid?: string;
+  active?: boolean;
+  isAllStar?: boolean;
+  color?: string;
+  darkLogoUrl?: string;
+  conferenceId?: string;
+  conferenceName?: string;
   shortName?: string;
   abbreviation?: string;
   provider?: "mlb" | "espn" | "pending";
@@ -13,6 +22,11 @@ export interface SportsDirectoryEntry {
   fullTime?: boolean;
   carNumber?: string;
   driverNumber?: string;
+  nickname?: string;
+  conference?: string;
+  subdivision?: "FBS" | "FCS";
+  logoUrl?: string;
+  alternateColor?: string;
 }
 
 export const SPORTS_DIRECTORY_SEASON = 2026;
@@ -25,7 +39,6 @@ export const sportsDirectory: SportsDirectoryEntry[] = [
   ...entries("mlb", [["diamondbacks", "Arizona Diamondbacks", "ARI", "109"], ["braves", "Atlanta Braves", "ATL", "144"], ["orioles", "Baltimore Orioles", "BAL", "110"], ["red-sox", "Boston Red Sox", "BOS", "111"], ["cubs", "Chicago Cubs", "CHC", "112"], ["white-sox", "Chicago White Sox", "CWS", "145"], ["reds", "Cincinnati Reds", "CIN", "113"], ["guardians", "Cleveland Guardians", "CLE", "114"], ["rockies", "Colorado Rockies", "COL", "115"], ["tigers", "Detroit Tigers", "DET", "116"], ["astros", "Houston Astros", "HOU", "117"], ["royals", "Kansas City Royals", "KC", "118"], ["angels", "Los Angeles Angels", "LAA", "108"], ["dodgers", "Los Angeles Dodgers", "LAD", "119"], ["marlins", "Miami Marlins", "MIA", "146"], ["brewers", "Milwaukee Brewers", "MIL", "158"], ["twins", "Minnesota Twins", "MIN", "142"], ["mets", "New York Mets", "NYM", "121"], ["yankees", "New York Yankees", "NYY", "147"], ["athletics", "Athletics", "OAK", "133"], ["phillies", "Philadelphia Phillies", "PHI", "143"], ["pirates", "Pittsburgh Pirates", "PIT", "134"], ["padres", "San Diego Padres", "SD", "135"], ["giants", "San Francisco Giants", "SF", "137"], ["mariners", "Seattle Mariners", "SEA", "136"], ["cardinals", "St. Louis Cardinals", "STL", "138"], ["rays", "Tampa Bay Rays", "TB", "139"], ["rangers", "Texas Rangers", "TEX", "140"], ["blue-jays", "Toronto Blue Jays", "TOR", "141"], ["nationals", "Washington Nationals", "WSH", "120"]], "mlb"),
   ...entries("nba", [["hawks", "Atlanta Hawks", "ATL"], ["celtics", "Boston Celtics", "BOS"], ["nets", "Brooklyn Nets", "BKN"], ["hornets", "Charlotte Hornets", "CHA"], ["bulls", "Chicago Bulls", "CHI"], ["cavaliers", "Cleveland Cavaliers", "CLE"], ["mavericks", "Dallas Mavericks", "DAL"], ["nuggets", "Denver Nuggets", "DEN"], ["pistons", "Detroit Pistons", "DET"], ["warriors", "Golden State Warriors", "GSW"], ["rockets", "Houston Rockets", "HOU"], ["pacers", "Indiana Pacers", "IND"], ["clippers", "LA Clippers", "LAC"], ["lakers", "Los Angeles Lakers", "LAL"], ["grizzlies", "Memphis Grizzlies", "MEM"], ["heat", "Miami Heat", "MIA"], ["bucks", "Milwaukee Bucks", "MIL"], ["timberwolves", "Minnesota Timberwolves", "MIN"], ["pelicans", "New Orleans Pelicans", "NOP"], ["knicks", "New York Knicks", "NYK"], ["thunder", "Oklahoma City Thunder", "OKC"], ["magic", "Orlando Magic", "ORL"], ["76ers", "Philadelphia 76ers", "PHI"], ["suns", "Phoenix Suns", "PHX"], ["blazers", "Portland Trail Blazers", "POR"], ["kings", "Sacramento Kings", "SAC"], ["spurs", "San Antonio Spurs", "SAS"], ["raptors", "Toronto Raptors", "TOR"], ["jazz", "Utah Jazz", "UTA"], ["wizards", "Washington Wizards", "WAS"]]),
   ...entries("mls", [["atlanta", "Atlanta United", "ATL"], ["austin", "Austin FC", "ATX"], ["charlotte", "Charlotte FC", "CLT"], ["chicago", "Chicago Fire FC", "CHI"], ["cincinnati", "FC Cincinnati", "CIN"], ["colorado", "Colorado Rapids", "COL"], ["columbus", "Columbus Crew", "CLB"], ["dallas", "FC Dallas", "DAL"], ["dc", "D.C. United", "DC"], ["houston", "Houston Dynamo FC", "HOU"], ["miami", "Inter Miami CF", "MIA"], ["lafc", "Los Angeles FC", "LAFC"], ["galaxy", "LA Galaxy", "LA"], ["minnesota", "Minnesota United FC", "MIN"], ["montreal", "CF Montréal", "MTL"], ["nashville", "Nashville SC", "NSH"], ["new-england", "New England Revolution", "NE"], ["nycfc", "New York City FC", "NYC"], ["red-bulls", "New York Red Bulls", "RBNY"], ["orlando", "Orlando City SC", "ORL"], ["philadelphia", "Philadelphia Union", "PHI"], ["portland", "Portland Timbers", "POR"], ["real-salt-lake", "Real Salt Lake", "RSL"], ["san-diego", "San Diego FC", "SD"], ["san-jose", "San Jose Earthquakes", "SJ"], ["seattle", "Seattle Sounders FC", "SEA"], ["sporting-kc", "Sporting Kansas City", "SKC"], ["st-louis", "St. Louis CITY SC", "STL"], ["toronto", "Toronto FC", "TOR"], ["vancouver", "Vancouver Whitecaps FC", "VAN"]]),
-  team("college-football", "usu", "Utah State Aggies", undefined, "espn", "328"),
 ];
 
 const driver = (id: string, name: string, carNumber: string): SportsDirectoryEntry => ({ id: ["kyle-larson", "ryan-blaney", "chase-elliott"].includes(id) ? id : `nascar-${id}`, sport: "nascar", entityType: "driver", name, shortName: name.replace(/\s+(Jr\.|Jr|III)$/, ""), carNumber, season: SPORTS_DIRECTORY_SEASON, fullTime: true });

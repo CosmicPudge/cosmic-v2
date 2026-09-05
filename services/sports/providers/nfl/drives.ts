@@ -2,8 +2,7 @@ import type {
   FootballDriveSummary,
 } from "@/core/contracts/sports/Football";
 
-const ESPN_CORE_BASE =
-  "https://sports.core.api.espn.com/v2/sports/football/leagues/nfl";
+import { espnFootballCoreEventUrl } from "../espnFootball/endpoints";
 
 export interface NFLNormalizedDrives {
   eventId: string;
@@ -222,15 +221,7 @@ function isUsableDrive(
 export async function getNFLDrives(
   eventId: number | string,
 ): Promise<NFLNormalizedDrives> {
-  const event =
-    encodeURIComponent(
-      String(eventId),
-    );
-
-  const url =
-    `${ESPN_CORE_BASE}/events/` +
-    `${event}/competitions/` +
-    `${event}/drives?limit=100`;
+  const url = espnFootballCoreEventUrl("nfl", String(eventId), "drives", 100);
 
   const response =
     await fetch(url, {

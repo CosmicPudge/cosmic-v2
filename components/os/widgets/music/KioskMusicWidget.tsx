@@ -112,7 +112,7 @@ function useTrackProgress(positionMs: number, durationMs: number | undefined, pl
     const reset = window.setTimeout(() => setValue(start), 0);
     if (!playing || !durationMs) return () => window.clearTimeout(reset);
     const startedAt = Date.now();
-    const timer = window.setInterval(() => setValue(Math.min(durationMs, start + Date.now() - startedAt)), 250);
+    const timer = window.setInterval(() => setValue(Math.min(durationMs, start + Date.now() - startedAt)), 1_000);
     return () => { window.clearTimeout(reset); window.clearInterval(timer); };
   }, [durationMs, playing, positionMs, trackId]);
   return durationMs ? Math.min(durationMs, Math.max(0, value)) : Math.max(0, value);

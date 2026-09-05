@@ -97,12 +97,22 @@ function validatePreferences(value: Record<string, unknown>): CosmicUserPreferen
   const context = value.context;
   if (!isRecord(sports) || !Array.isArray(sports.enabledSports) || !Array.isArray(sports.followedTeams) || !Array.isArray(sports.followedDrivers) || !Array.isArray(sports.followedConstructors) || !isRecord(dashboard) || !Array.isArray(dashboard.visibleWidgets) || !Array.isArray(dashboard.widgetOrder) || !isRecord(dashboard.widgetSizes) || !isRecord(modules) || !isRecord(context) || !Array.isArray(context.enabledSources) || !Array.isArray(context.suppressedKinds)) return null;
   const enabledSports = sports.enabledSports.filter((item): item is CosmicUserPreferences["sports"]["enabledSports"][number] => ["mlb", "nfl", "nba", "mls", "f1", "nascar", "college-football"].includes(String(item)));
-  const followedTeams = sports.followedTeams.filter((item): item is CosmicUserPreferences["sports"]["followedTeams"][number] => isRecord(item) && typeof item.teamId === "string" && typeof item.label === "string" && (item.provider === "mlb" || item.provider === "espn" || item.provider === "pending") && ["mlb", "nfl", "nba", "mls", "college-football"].includes(String(item.sport))).map((item) => ({ sport: item.sport, provider: item.provider, teamId: item.teamId, label: item.label }));
+  const followedTeams = sports.followedTeams.filter((item): item is CosmicUserPreferences["sports"]["followedTeams"][number] => isRecord(item) && typeof item.teamId === "string" && typeof item.label === "string" && (item.provider === "mlb" || item.provider === "espn" || item.provider === "pending") && ["mlb", "nfl", "nba", "mls", "college-football"].includes(String(item.sport))).map((item) => ({
+    sport: item.sport,
+    provider: item.provider,
+    teamId: item.teamId,
+    label: item.label,
+    ...(typeof item.nickname === "string" ? { nickname: item.nickname.slice(0, 80) } : {}),
+    ...(typeof item.abbreviation === "string" ? { abbreviation: item.abbreviation.slice(0, 12) } : {}),
+    ...(typeof item.conference === "string" ? { conference: item.conference.slice(0, 120) } : {}),
+    ...(item.subdivision === "FBS" || item.subdivision === "FCS" ? { subdivision: item.subdivision } : {}),
+    ...(typeof item.logoUrl === "string" && /^https:\/\/(a\.espncdn\.com|site\.api\.espn\.com)\//.test(item.logoUrl) ? { logoUrl: item.logoUrl } : {}),
+  }));
   const followedDrivers = sports.followedDrivers.filter((item): item is { id: string; label: string; sport?: "f1" | "nascar" } => isRecord(item) && typeof item.id === "string" && typeof item.label === "string" && (item.sport === undefined || item.sport === "f1" || item.sport === "nascar")).map((item) => ({ id: item.id, label: item.label, ...(item.sport ? { sport: item.sport } : {}) }));
   const followedConstructors = sports.followedConstructors.filter((item): item is { id: string; label: string; sport?: "f1" } => isRecord(item) && typeof item.id === "string" && typeof item.label === "string" && (item.sport === undefined || item.sport === "f1")).map((item) => ({ id: item.id, label: item.label, ...(item.sport ? { sport: item.sport } : {}) }));
   const notificationDefaults = neutralPreferences.sports.notifications;
   const rawNotifications = isRecord(sports.notifications) ? sports.notifications : undefined;
-  const notifications = rawNotifications ? Object.fromEntries(Object.keys(notificationDefaults).map((key) => [key, rawNotifications[key] === true])) as unknown as CosmicUserPreferences["sports"]["notifications"] : notificationDefaults;
+  const notifications = rawNotifications ? Object.fromEntries(Object.keys(notificationDefaults).map((key) => [key, rawNotifications[key] === undefined ? notificationDefaults[key as keyof typeof notificationDefaults] : rawNotifications[key] === true])) as unknown as CosmicUserPreferences["sports"]["notifications"] : notificationDefaults;
   const moduleNames = ["sports", "finance", "school", "garage", "mail", "calendar", "projects", "notes"] as const;
   const normalizedModules = Object.fromEntries(moduleNames.map((name) => [name, modules[name] !== false])) as CosmicUserPreferences["modules"];
   const contextDensity = dashboard.contextDensity === "sparse" || dashboard.contextDensity === "full" ? dashboard.contextDensity : "balanced";

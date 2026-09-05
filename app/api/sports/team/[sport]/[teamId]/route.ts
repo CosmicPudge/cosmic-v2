@@ -1,4 +1,5 @@
 import { sportsDirectory } from "@/services/sports/directory";
+import { getCollegeFootballDirectory } from "@/services/sports/providers/college-football-directory";
 import { EspnTeamProvider } from "@/services/sports/providers/espn-team";
 import { MlbAngelsProvider } from "@/services/sports/providers/mlb";
 import type { SportKind } from "@/core/contracts/Sports";
@@ -7,10 +8,13 @@ const NBA_IDS: Record<string, string> = { hawks: "1", celtics: "2", nets: "17", 
 
 export async function GET(_request: Request, { params }: { params: Promise<{ sport: string; teamId: string }> }) {
   const { sport, teamId } = await params;
-  if (sport !== "nfl" && sport !== "mlb" && sport !== "nba") return Response.json({ error: "Unsupported team sport." }, { status: 400 });
-  const entry = sportsDirectory.find((item) => item.sport === sport && item.id === `${sport}-${teamId}`);
+  if (sport !== "nfl" && sport !== "mlb" && sport !== "nba" && sport !== "college-football") return Response.json({ error: "Unsupported team sport." }, { status: 400 });
+  const directory = sport === "college-football" ? await getCollegeFootballDirectory().catch(() => []) : sportsDirectory;
+  const entry = directory.find((item) => item.sport === sport && (item.id === `${sport}-${teamId}` || item.providerId === teamId));
   if (!entry) return Response.json({ error: "Team was not found." }, { status: 404 });
-  const provider = sport === "mlb"
+  const provider = sport === "college-football"
+    ? new EspnTeamProvider({ id: `${sport}-team-${teamId}`, sport, teamId: entry.providerId ?? teamId, leaguePath: "football/college-football", cacheSeconds: 900 })
+    : sport === "mlb"
     ? new MlbAngelsProvider({ teamId: entry.providerId, teamName: entry.name })
     : new EspnTeamProvider({ id: `${sport}-team-${teamId}`, sport: sport as Extract<SportKind, "nfl" | "nba">, teamId: entry.providerId ?? NBA_IDS[teamId] ?? teamId, leaguePath: sport === "nfl" ? "football/nfl" : "basketball/nba", cacheSeconds: 900 });
   try {

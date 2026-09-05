@@ -5,8 +5,8 @@ export function isFollowedName(sport: SportKind, name: string | undefined, prefe
   if (!name) return false;
   const normalized = name.toLowerCase();
   return preferences.sports.followedTeams.some((item) => item.sport === sport && item.label.toLowerCase() === normalized)
-    || preferences.sports.followedDrivers.some((item) => item.sport === sport && item.label.toLowerCase() === normalized)
-    || preferences.sports.followedConstructors.some((item) => item.sport === sport && item.label.toLowerCase() === normalized);
+    || preferences.sports.followedDrivers.some((item) => (item.sport === sport || (sport === "f1" && item.sport === undefined)) && item.label.toLowerCase() === normalized)
+    || preferences.sports.followedConstructors.some((item) => (item.sport === sport || (sport === "f1" && item.sport === undefined)) && item.label.toLowerCase() === normalized);
 }
 
 export function isFollowedStanding(standing: SportsStanding, preferences: CosmicUserPreferences): boolean {

@@ -106,6 +106,16 @@ export interface FootballSituation {
   possessionText?: string;
 
   redZone?: boolean;
+
+  /** Provider-supplied play clock, when available. */
+  playClock?: string;
+
+  /** Normalized offensive field coordinates, measured from 0 to 100. */
+  lineOfScrimmage?: number;
+
+  firstDownYardLine?: number;
+
+  ballYardLine?: number;
 }
 
 export interface FootballDriveSummary {

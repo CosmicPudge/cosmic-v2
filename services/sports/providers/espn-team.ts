@@ -1,6 +1,7 @@
 import type { SportKind, SportsEvent, SportsEventStatus, SportsStanding, SportsTeam } from "@/core/contracts/Sports";
 import type { SportsProvider, SportsProviderResult } from "./types";
 import { date, fetchJson, isRecord, number, records, string } from "./types";
+import { espnFootballStandingsUrl, espnFootballTeamScheduleUrl } from "./espnFootball/endpoints";
 
 interface TeamProviderConfig {
   id: string;
@@ -61,7 +62,7 @@ export class EspnTeamProvider implements SportsProvider {
 
   async getSnapshot(now: Date): Promise<SportsProviderResult> {
     const year = now.getFullYear();
-    const url = `https://site.api.espn.com/apis/site/v2/sports/${this.config.leaguePath}/teams/${this.config.teamId}/schedule?dates=${year}`;
+    const url = espnFootballTeamScheduleUrl(this.config.sport === "nfl" ? "nfl" : "college-football", this.config.teamId, year);
     const payload = await fetchJson(url, this.cacheSeconds);
     const root = isRecord(payload) ? payload : undefined;
     const events = records(root?.events).flatMap((event): SportsEvent[] => {
@@ -87,7 +88,7 @@ export class EspnTeamProvider implements SportsProvider {
         awayTeam,
         ...(venue ? { venue } : {}),
         source: "espn",
-        metadata: { competition: this.sport === "nfl" ? "NFL" : this.sport === "nba" ? "NBA" : "College Football", ...(seasonType ? { seasonType } : {}) },
+      metadata: { competition: this.sport === "nfl" ? "NFL" : this.sport === "nba" ? "NBA" : "College Football", ...(seasonType ? { seasonType } : {}), providerTeamId: this.config.teamId },
       }];
     });
     return { events, ...(this.config.sport === "nfl" ? { standings: await this.getStandings(year) } : {}) };
@@ -95,7 +96,7 @@ export class EspnTeamProvider implements SportsProvider {
 
   private async getStandings(season: number): Promise<SportsStanding[]> {
     try {
-      const payload = await fetchJson(`https://site.api.espn.com/apis/v2/sports/football/nfl/standings?season=${season}`, 900);
+      const payload = await fetchJson(espnFootballStandingsUrl("nfl", season), 900);
       const root = isRecord(payload) ? payload : {};
       return records(root.children).flatMap((conference) => {
         const conferenceName = string(conference.name) ?? string(conference.abbreviation);
@@ -118,4 +119,5 @@ export class EspnTeamProvider implements SportsProvider {
 }
 
 export const packersProvider = new EspnTeamProvider({ id: "nfl-packers-espn-fallback", sport: "nfl", teamId: "9", leaguePath: "football/nfl", cacheSeconds: 600 });
-export const usuFootballProvider = new EspnTeamProvider({ id: "college-football-usu-espn-fallback", sport: "college-football", teamId: "328", leaguePath: "football/college-football", cacheSeconds: 900 });
+export const utahFootballProvider = new EspnTeamProvider({ id: "college-football-utah-espn-fallback", sport: "college-football", teamId: "254", leaguePath: "football/college-football", cacheSeconds: 900 });
+export const usuFootballProvider = utahFootballProvider;

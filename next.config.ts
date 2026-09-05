@@ -1,6 +1,12 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  images: {
+    remotePatterns: [
+      { protocol: "https", hostname: "a.espncdn.com" },
+      { protocol: "https", hostname: "site.api.espn.com" },
+    ],
+  },
   serverExternalPackages: ["pdfjs-dist"],
   allowedDevOrigins: [
     "192.168.1.71",

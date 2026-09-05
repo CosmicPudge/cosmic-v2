@@ -15,6 +15,7 @@ export interface SportsTeam {
   abbreviation?: string;
   score?: number;
   record?: string;
+  logo?: string;
 }
 
 export interface SportsEventMetadata {
@@ -31,6 +32,22 @@ export interface SportsEventMetadata {
   clock?: string;
   minute?: number;
   sessionKind?: "practice" | "qualifying" | "sprint" | "race";
+  location?: string;
+  trackType?: string;
+  circuitLength?: string;
+  laps?: number;
+  raceDistance?: string;
+  driverId?: string;
+  constructorId?: string;
+  qualifyingPosition?: number;
+  gridPosition?: number;
+  finishingPosition?: number;
+  points?: number;
+  providerTeamId?: string;
+  circuitId?: string;
+  trackId?: string;
+  trackConfiguration?: string;
+  outlineAsset?: string;
 }
 
 export interface SportsProviderCapabilities {

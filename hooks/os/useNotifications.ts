@@ -9,37 +9,58 @@ import { markAllNotificationsRead, markNotificationRead, mergeNotifications, not
 import { useEntitlements } from "@/hooks/os/useEntitlements";
 import { useSchoolData } from "@/components/school/hooks/useSchoolData";
 import { deserializeSchoolBaseline, detectSchoolChanges, serializeSchoolBaseline, type SchoolBaseline } from "@/services/school/changes";
+import { useSettingsRepository } from "@/services/settings/localRepository";
+import { buildSportsSignals, sportsSignalState, type SportsSignalState } from "@/services/sports/signals";
 
 const SCHOOL_BASELINE_KEY = "cosmic.school.notification-baseline";
+const SPORTS_SIGNAL_STATE_KEY = "cosmic.sports.signal-state";
 
 function formatCalendarBody(start: Date, location?: string) {
   const time = start.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
   return location ? `${time} · ${location}` : time;
 }
 
-function buildSourceNotifications(calendar: ReturnType<typeof useCalendar>["calendar"], sports: ReturnType<typeof useSports>["data"]): CosmicNotification[] {
+function buildSourceNotifications(calendar: ReturnType<typeof useCalendar>["calendar"], sports: ReturnType<typeof useSports>["data"], sportsSignals: CosmicNotification[]): CosmicNotification[] {
   const calendarNotifications = (calendar?.upcoming ?? []).slice(0, 3).map((event) => ({ id: `calendar:${event.id}:upcoming`, source: "calendar" as const, title: event.title, body: formatCalendarBody(event.start, event.location), timestamp: event.start.toISOString(), read: false, importance: event.priority === "high" ? "important" as const : "normal" as const, ...(event.category ? { category: event.category } : {}), icon: "calendar" }));
-  const sportsNotifications = (sports?.live ?? []).slice(0, 3).map((event) => ({ id: `sports:${event.id}:live`, source: "sports" as const, title: event.title, body: event.statusDetail ?? "Live now", timestamp: event.start.toISOString(), read: false, importance: "normal" as const, category: event.sport, icon: "sports" }));
-  return [...calendarNotifications, ...sportsNotifications];
+  return [...calendarNotifications, ...sportsSignals];
 }
 
 export function useNotifications() {
   const scope = useCosmicScope();
   const { calendar } = useCalendar();
   const { data: sports } = useSports();
+  const { data: settings } = useSettingsRepository();
   const { data: entitlements } = useEntitlements();
   const school = useSchoolData({ enabled: entitlements.features["school.basic"] });
   const [stored, setStored] = useState<CosmicNotification[]>([]);
   const [ready, setReady] = useState(false);
   const [schoolBaseline, setSchoolBaseline] = useState<SchoolBaseline | null>(null);
   const [schoolBaselineReady, setSchoolBaselineReady] = useState(false);
+  const [sportsState, setSportsState] = useState<SportsSignalState>({});
+  const [sportsStateReady, setSportsStateReady] = useState(false);
   const schoolChanges = useMemo(() => schoolBaselineReady && school.snapshot ? detectSchoolChanges(schoolBaseline, school.snapshot) : [], [school.snapshot, schoolBaseline, schoolBaselineReady]);
-  const incoming = useMemo(() => [...buildSourceNotifications(calendar, sports), ...schoolChanges.map((change) => ({ id: change.id, source: "school" as const, title: change.title, body: change.body, timestamp: change.timestamp, read: false, importance: "important" as const, category: change.type, icon: "school", href: "/school" }))], [calendar, schoolChanges, sports]);
+  const sportsSignals = useMemo(() => sports && sportsStateReady ? buildSportsSignals(sports, settings.preferences, new Date(), sportsState, new Set(stored.map((item) => item.id))) : [], [settings.preferences, sports, sportsState, sportsStateReady, stored]);
+  const incoming = useMemo(() => [...buildSourceNotifications(calendar, sports, sportsSignals), ...schoolChanges.map((change) => ({ id: change.id, source: "school" as const, title: change.title, body: change.body, timestamp: change.timestamp, read: false, importance: "important" as const, category: change.type, icon: "school", href: "/school" }))], [calendar, schoolChanges, sports, sportsSignals]);
   const merged = useMemo(() => mergeNotifications(stored, incoming), [stored, incoming]);
   useEffect(() => {
     const timer = window.setTimeout(() => { setStored(readNotificationSnapshot(scope.id).notifications); setReady(true); }, 0);
     return () => window.clearTimeout(timer);
   }, [scope.id]);
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      try {
+        const raw = window.localStorage.getItem(`${SPORTS_SIGNAL_STATE_KEY}:${scope.id}`);
+        setSportsState(raw ? JSON.parse(raw) as SportsSignalState : {});
+      } catch { setSportsState({}); }
+      setSportsStateReady(true);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [scope.id]);
+  useEffect(() => {
+    if (!sports || !sportsStateReady) return;
+    const timer = window.setTimeout(() => window.localStorage.setItem(`${SPORTS_SIGNAL_STATE_KEY}:${scope.id}`, JSON.stringify(sportsSignalState(sports))), 0);
+    return () => window.clearTimeout(timer);
+  }, [scope.id, sports, sportsStateReady]);
   useEffect(() => {
     const key = `${SCHOOL_BASELINE_KEY}:${scope.id}`;
     const timer = window.setTimeout(() => {

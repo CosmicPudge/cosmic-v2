@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import type { SportsDirectoryEntry } from "@/services/sports/directory";
 import { useCosmicScope } from "@/services/storage/scope";
+import Image from "next/image";
 
 interface SportsEntitySelectorProps {
   label: string;
@@ -13,11 +14,13 @@ interface SportsEntitySelectorProps {
   onToggle: (entry: SportsDirectoryEntry) => void;
   onClear: () => void;
   summary?: string;
+  loading?: boolean;
+  unavailableMessage?: string;
 }
 
 const keyFor = (entry: SportsDirectoryEntry) => entry.providerId ?? entry.id;
 
-export default function SportsEntitySelector({ label, placeholder, entries = [], groups, selectedIds, onToggle, onClear, summary: suppliedSummary }: SportsEntitySelectorProps) {
+export default function SportsEntitySelector({ label, placeholder, entries = [], groups, selectedIds, onToggle, onClear, summary: suppliedSummary, loading = false, unavailableMessage }: SportsEntitySelectorProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [placement, setPlacement] = useState<"below" | "above">("below");
@@ -31,7 +34,7 @@ export default function SportsEntitySelector({ label, placeholder, entries = [],
   const selected = allEntries.filter((entry) => selectedIds.includes(keyFor(entry)));
   const filteredGroups = useMemo(() => {
     const needle = query.trim().toLowerCase();
-    return menuGroups.map((group) => ({ ...group, entries: needle ? group.entries.filter((entry) => [entry.name, entry.shortName, entry.abbreviation, entry.id, entry.carNumber, entry.driverNumber].filter(Boolean).some((value) => value?.toLowerCase().includes(needle))) : group.entries })).filter((group) => group.entries.length > 0);
+    return menuGroups.map((group) => ({ ...group, entries: needle ? group.entries.filter((entry) => [entry.name, entry.school, entry.nickname, entry.shortName, entry.abbreviation, entry.id, entry.carNumber, entry.driverNumber, entry.conference, entry.subdivision].filter(Boolean).some((value) => value?.toLowerCase().includes(needle))) : group.entries })).filter((group) => group.entries.length > 0);
   }, [menuGroups, query]);
   const summary = suppliedSummary ?? (selected.length === 0 ? placeholder : selected.length === 1 ? selected[0].name : `${selected[0].name} + ${selected.length - 1} more`);
 
@@ -81,7 +84,7 @@ export default function SportsEntitySelector({ label, placeholder, entries = [],
     {open && <div id={inputId} style={{ maxHeight }} className={`absolute inset-x-0 z-30 flex flex-col overflow-hidden rounded-xl border border-white/15 bg-[#17232c]/95 shadow-2xl shadow-black/40 backdrop-blur-xl max-sm:fixed max-sm:inset-x-3 max-sm:bottom-3 max-sm:top-20 max-sm:mt-0 max-sm:mb-0 ${placement === "above" ? "bottom-[calc(100%+0.5rem)]" : "top-[calc(100%+0.5rem)]"}`}>
       <div className="border-b border-white/10 p-2"><input autoFocus value={query} onChange={(event) => setQuery(event.target.value)} onKeyDown={(event) => { if (event.key === "Escape") setOpen(false); }} placeholder={`Search ${label.toLowerCase()}…`} aria-label={`Search ${label}`} className="h-9 w-full rounded-lg border border-white/10 bg-black/20 px-3 text-sm text-white outline-none placeholder:text-white/35 focus:border-cyan-200/45" /></div>
       {selected.length > 0 && <div className="shrink-0 border-b border-white/10 px-3 py-2"><div className="mb-1 flex items-center justify-between text-[10px] uppercase tracking-[0.14em] text-white/35"><span>Selected</span><button type="button" onClick={onClear} className="min-h-8 px-1 text-cyan-200/80 hover:text-cyan-100">Clear all</button></div><div className="flex max-h-20 flex-wrap gap-1.5 overflow-y-auto">{selected.map((entry) => <span key={entry.id} className="rounded-md bg-cyan-200/10 px-2 py-1 text-xs text-cyan-50">{entry.name}</span>)}</div></div>}
-      <div role="listbox" aria-label={label} className="min-h-0 flex-1 overflow-y-auto p-1.5">{filteredGroups.length ? filteredGroups.map((group) => <div key={group.label}>{groups && <p className="px-2.5 pb-1 pt-2 text-[10px] font-medium uppercase tracking-[0.14em] text-white/35">{group.label}</p>}{group.entries.map((entry) => { const checked = selectedIds.includes(keyFor(entry)); return <button key={entry.id} type="button" role="option" aria-selected={checked} onClick={() => onToggle(entry)} className="flex min-h-10 w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm text-white/75 hover:bg-white/[0.08] focus-visible:bg-white/[0.08] focus-visible:outline-none"><span className={`flex size-4 shrink-0 items-center justify-center rounded border text-[10px] ${checked ? "border-cyan-200/70 bg-cyan-200/80 text-slate-900" : "border-white/20"}`}>{checked ? "✓" : ""}</span><span className="truncate">{entry.name}</span>{(entry.abbreviation || entry.carNumber || entry.driverNumber) && <span className="ml-auto text-[10px] text-white/30">{entry.abbreviation ?? `#${entry.carNumber ?? entry.driverNumber}`}</span>}</button>; })}</div>) : <p className="px-3 py-4 text-center text-sm text-white/40">No matches</p>}</div>
+      <div role="listbox" aria-label={label} className="min-h-0 flex-1 overflow-y-auto p-1.5">{loading ? <p className="px-3 py-4 text-center text-sm text-white/40">Loading directory…</p> : filteredGroups.length ? filteredGroups.map((group) => <div key={group.label}>{groups && <p className="px-2.5 pb-1 pt-2 text-[10px] font-medium uppercase tracking-[0.14em] text-white/35">{group.label}</p>}{group.entries.map((entry) => { const checked = selectedIds.includes(keyFor(entry)); return <button key={entry.id} type="button" role="option" aria-selected={checked} onClick={() => onToggle(entry)} className="flex min-h-10 w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm text-white/75 hover:bg-white/[0.08] focus-visible:bg-white/[0.08] focus-visible:outline-none">{entry.logoUrl ? <Image src={entry.logoUrl} alt="" aria-hidden width={28} height={28} unoptimized className="size-7 shrink-0 object-contain" onError={(event) => { event.currentTarget.style.display = "none"; }} /> : <span className="size-7 shrink-0" />}<span className={`flex size-4 shrink-0 items-center justify-center rounded border text-[10px] ${checked ? "border-cyan-200/70 bg-cyan-200/80 text-slate-900" : "border-white/20"}`}>{checked ? "✓" : ""}</span><span className="min-w-0 flex-1 truncate"><span className="block truncate">{entry.name}{entry.nickname ? ` · ${entry.nickname}` : ""}</span>{entry.conference || entry.subdivision ? <span className="block truncate text-[10px] text-white/35">{[entry.conference, entry.subdivision].filter(Boolean).join(" · ")}</span> : null}</span>{(entry.abbreviation || entry.carNumber || entry.driverNumber) && <span className="ml-auto text-[10px] text-white/30">{entry.abbreviation ?? `#${entry.carNumber ?? entry.driverNumber}`}</span>}</button>; })}</div>) : <p className="px-3 py-4 text-center text-sm text-white/40">{unavailableMessage ?? "No matches"}</p>}</div>
     </div>}
   </div>;
 }

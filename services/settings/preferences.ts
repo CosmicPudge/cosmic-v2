@@ -3,7 +3,7 @@ import { defaultAIPermissions } from "@/core/contracts/AI";
 
 export const neutralPreferences: CosmicUserPreferences = {
   version: 1,
-  sports: { enabledSports: ["mlb", "nfl", "nba", "mls", "f1", "nascar"], followedTeams: [], followedDrivers: [], followedConstructors: [], notifications: { gameStartingSoon: false, gameStarted: false, scoreChange: false, closeGameLate: false, finalResult: false, qualifyingStartingSoon: false, raceStartingSoon: false, followedResult: false } },
+  sports: { enabledSports: ["mlb", "nfl", "college-football", "nba", "mls", "f1", "nascar"], followedTeams: [], followedDrivers: [], followedConstructors: [], notifications: { gameStartingSoon: true, gameStarted: false, scoreChange: false, closeGameLate: false, finalResult: true, qualifyingStartingSoon: true, raceStartingSoon: true, followedResult: true, delayPostponement: true, qualifyingResult: true, raceResult: true, nascarResult: true, standingsChange: false } },
   garage: { notifications: { maintenanceDueSoon: false, maintenanceOverdue: false, criticalIssueReminder: false, vehicleReminderDue: false, diagnosticCodeDetected: false, connectedVehicleNeedsAttention: false } },
   dashboard: { visibleWidgets: [], widgetOrder: [], widgetSizes: {}, contextDensity: "balanced" },
   modules: { sports: true, finance: true, school: true, garage: true, mail: true, calendar: true, projects: true, notes: true },
@@ -14,14 +14,14 @@ export const neutralPreferences: CosmicUserPreferences = {
 export const referencePreferences: CosmicUserPreferences = {
   ...neutralPreferences,
   sports: {
-    enabledSports: ["mlb", "nfl", "nba", "mls", "f1", "nascar"],
+    enabledSports: ["mlb", "nfl", "college-football", "nba", "mls", "f1", "nascar"],
     followedTeams: [
       { sport: "mlb", provider: "mlb", teamId: "108", label: "Los Angeles Angels" },
       { sport: "nfl", provider: "espn", teamId: "9", label: "Green Bay Packers" },
-      { sport: "college-football", provider: "espn", teamId: "328", label: "Utah State Aggies" },
+      { sport: "college-football", provider: "espn", teamId: "254", label: "Utah Utes" },
     ],
-    followedDrivers: [{ id: "max-verstappen", label: "Max Verstappen" }],
-    followedConstructors: [{ id: "red-bull-racing", label: "Red Bull Racing" }],
+    followedDrivers: [{ id: "max-verstappen", label: "Max Verstappen", sport: "f1" }, { id: "nascar-carson-hocevar", label: "Carson Hocevar", sport: "nascar" }],
+    followedConstructors: [{ id: "red-bull-racing", label: "Red Bull Racing", sport: "f1" }],
     notifications: neutralPreferences.sports.notifications,
   },
   modules: { ...neutralPreferences.modules },

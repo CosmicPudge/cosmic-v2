@@ -2,6 +2,7 @@ import { getSportsSnapshot } from "@/services/sports/snapshot";
 import { getMLBLiveData } from "@/services/sports/providers/mlb/live";
 import { getNFLLiveData } from "@/services/sports/providers/nfl/live";
 import { getNBAEventDetail } from "@/services/sports/providers/nba-detail";
+import { getCollegeFootballLiveData } from "@/services/sports/providers/college-football-detail";
 import { getCurrentCosmicAccount, kioskBootId } from "@/services/auth/server";
 import { getAccountPreferences } from "@/services/settings/accountPreferences";
 import { referencePreferences } from "@/services/settings/preferences";
@@ -44,7 +45,9 @@ export async function GET(request: Request, { params }: { params: Promise<{ even
       : event.sport === "nfl" && ["live", "delayed", "final"].includes(event.status)
         ? getNFLLiveData(upstreamId(event.id))
         : event.sport === "nba" && ["pregame", "live", "delayed", "final"].includes(event.status)
-          ? getNBAEventDetail(upstreamId(event.id), event.status === "live" || event.status === "delayed" ? 15 : 120)
+        ? getNBAEventDetail(upstreamId(event.id), event.status === "live" || event.status === "delayed" ? 15 : 120)
+          : event.sport === "college-football" && ["pregame", "live", "delayed", "final"].includes(event.status)
+            ? getCollegeFootballLiveData(upstreamId(event.id))
           : Promise.resolve(null);
     detail = requestDetail.catch(() => null);
     detailCache.set(cacheKey, { value: detail, expiresAt: Date.now() + (event.status === "live" || event.status === "delayed" ? 1_500 : 15_000) });

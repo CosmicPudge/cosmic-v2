@@ -16,6 +16,11 @@ export interface SportsFollowedTeam {
   provider: "mlb" | "espn" | "pending";
   teamId: string;
   label: string;
+  nickname?: string;
+  abbreviation?: string;
+  conference?: string;
+  subdivision?: "FBS" | "FCS";
+  logoUrl?: string;
 }
 
 export interface SportsFollowedDriver {
@@ -39,6 +44,11 @@ export interface SportsNotificationPreferences {
   qualifyingStartingSoon: boolean;
   raceStartingSoon: boolean;
   followedResult: boolean;
+  delayPostponement?: boolean;
+  qualifyingResult?: boolean;
+  raceResult?: boolean;
+  nascarResult?: boolean;
+  standingsChange?: boolean;
 }
 
 export interface GarageNotificationPreferences {

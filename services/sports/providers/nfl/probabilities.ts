@@ -3,8 +3,7 @@ import type {
   FootballWinProbabilityPoint,
 } from "@/core/contracts/sports/Football";
 
-const ESPN_CORE_BASE =
-  "https://sports.core.api.espn.com/v2/sports/football/leagues/nfl";
+import { espnFootballProbabilityUrl } from "../espnFootball/endpoints";
 
 export interface NFLNormalizedProbabilities {
   eventId: string;
@@ -38,14 +37,6 @@ function numberOrUndefined(
   }
 
   return undefined;
-}
-
-function stringOrUndefined(
-  value: unknown,
-): string | undefined {
-  return typeof value === "string"
-    ? value
-    : undefined;
 }
 
 function unwrapItems(
@@ -132,15 +123,7 @@ function normalizeProbability(
 export async function getNFLProbabilities(
   eventId: number | string,
 ): Promise<NFLNormalizedProbabilities> {
-  const event =
-    encodeURIComponent(
-      String(eventId),
-    );
-
-  const url =
-    `${ESPN_CORE_BASE}/events/` +
-    `${event}/competitions/` +
-    `${event}/probabilities?limit=500`;
+  const url = espnFootballProbabilityUrl(String(eventId));
 
   const response =
     await fetch(url, {

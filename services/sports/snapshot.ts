@@ -1,26 +1,23 @@
 import type { SportsEvent, SportsProviderError, SportsSnapshot, SportsSource } from "@/core/contracts/Sports";
 import { sportsProviders } from "./providers";
-import { officialSourceReferences, sportOrder } from "./preferences";
+import { favoriteFirstSections, officialSourceReferences, sportOrder } from "./preferences";
 import type { CosmicUserPreferences } from "@/core/contracts/Settings";
 import { neutralPreferences } from "@/services/settings/preferences";
 
-function byStart(first: SportsEvent, second: SportsEvent): number {
-  return first.start.getTime() - second.start.getTime();
+function eventDedupeKey(event: SportsEvent): string {
+  if ((event.sport === "nfl" || event.sport === "college-football") && event.homeTeam && event.awayTeam) {
+    const teams = [event.homeTeam.id ?? event.homeTeam.name, event.awayTeam.id ?? event.awayTeam.name].sort().join("|");
+    return `${event.sport}:${event.start.toISOString()}:${teams}`;
+  }
+  return event.id;
 }
 
-function isLive(event: SportsEvent): boolean {
-  return event.status === "live" || event.status === "delayed";
-}
-
-function isRecent(event: SportsEvent): boolean {
-  return event.status === "final" || event.status === "cancelled" || event.status === "postponed";
-}
-
-function unique(events: SportsEvent[]): SportsEvent[] {
+export function dedupeSportsEvents(events: SportsEvent[]): SportsEvent[] {
   const seen = new Set<string>();
   return events.filter((event) => {
-    if (seen.has(event.id)) return false;
-    seen.add(event.id);
+    const key = eventDedupeKey(event);
+    if (seen.has(key)) return false;
+    seen.add(key);
     return true;
   });
 }
@@ -59,10 +56,11 @@ export async function getSportsSnapshot(now = new Date(), preferences: CosmicUse
     sources.push({ id: item.provider.id, sport: item.provider.sport, providerName: item.provider.providerName, official: item.provider.official, fallback: item.provider.fallback, status: "unavailable", capabilities: item.provider.capabilities, cacheSeconds: item.provider.cacheSeconds, ...(item.provider.sourceUrl ? { sourceUrl: item.provider.sourceUrl } : {}) });
   }
 
-  const normalized = unique(events).filter((event) => eventMatchesSportsPreferences(event, preferences));
-  const live = normalized.filter(isLive).sort(byStart);
-  const upcoming = normalized.filter((event) => !isLive(event) && !isRecent(event)).sort(byStart);
-  const recent = normalized.filter((event) => !isLive(event) && isRecent(event)).sort((first, second) => second.start.getTime() - first.start.getTime());
+  const normalized = dedupeSportsEvents(events).filter((event) => eventMatchesSportsPreferences(event, preferences));
+  const sections = favoriteFirstSections(normalized, preferences);
+  const live = sections.now;
+  const upcoming = sections.next;
+  const recent = sections.recent;
   const featured: SportsEvent[] = [];
   for (const sport of sportOrder) {
     const event = live.find((item) => item.sport === sport) ?? upcoming.find((item) => item.sport === sport) ?? recent.find((item) => item.sport === sport);
@@ -73,10 +71,5 @@ export async function getSportsSnapshot(now = new Date(), preferences: CosmicUse
 }
 
 function eventMatchesSportsPreferences(event: SportsEvent, preferences: CosmicUserPreferences) {
-  if (!preferences.sports.enabledSports.includes(event.sport)) return false;
-  if (event.sport === "f1" || event.sport === "nascar") {
-    const followed = [...preferences.sports.followedDrivers, ...preferences.sports.followedConstructors];
-    return followed.length > 0;
-  }
-  return preferences.sports.followedTeams.some((team) => team.sport === event.sport && ([event.homeTeam?.id, event.awayTeam?.id].includes(team.teamId) || [event.homeTeam?.name, event.awayTeam?.name].some((name) => name?.toLowerCase() === team.label.toLowerCase())));
+  return preferences.sports.enabledSports.includes(event.sport);
 }

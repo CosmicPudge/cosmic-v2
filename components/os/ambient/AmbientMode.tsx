@@ -15,6 +15,7 @@ import mapWeatherCondition from "@/components/icons/weather/mapWeatherCondition"
 import { getRelevantTimedEvent } from "@/services/calendar/relevance";
 import { formatAmbientDate, formatClockTime, formatDuration, getTimerRemaining } from "@/services/clock/time";
 import type { CosmicWeatherCondition } from "@/components/cosmic-icons/types";
+import AmbientMusic from "@/components/os/ambient/AmbientMusic";
 
 function formatEventTime(date: Date) { return date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }); }
 function firstName(displayName: string | undefined, email: string | undefined) { return displayName?.trim().split(/\s+/)[0] || email?.split("@")[0] || "there"; }
@@ -52,7 +53,6 @@ export default function AmbientMode() {
   const sportEvent = liveSport ?? sports.data?.upcoming[0];
   const name = firstName(account?.displayName, account?.email);
   const online = snapshot.network.online;
-  const status = !online ? "Working from cached data" : snapshot.power.reducedMotion ? "Quiet mode is active" : "All systems are ready";
 
   return <div className="ambient-mode" aria-label="Ambient Mode. Tap or press any key to wake Cosmic OS">
     <div className="ambient-topbar"><div className="ambient-wordmark" aria-label="Cosmic OS"><span className="ambient-orbit-mark" aria-hidden="true">◎</span><span>COSMIC OS</span></div><div className="ambient-top-meta"><span>{online ? "Connected" : "Offline"}</span><span className="ambient-status-dot" data-offline={!online} aria-hidden="true" /><span>Local time</span></div></div>
@@ -62,7 +62,7 @@ export default function AmbientMode() {
         <AmbientCard title="Next up" icon="calendar">{calendar.loading && !calendar.calendar ? <p className="ambient-muted">Reading your calendar…</p> : calendar.error && !calendar.calendar ? <p className="ambient-muted">Calendar unavailable.</p> : eventSelection.event ? <div><p className="ambient-card-value">{eventSelection.event.title}</p><p className="ambient-card-detail">{eventSelection.current ? "Happening now" : formatEventTime(eventSelection.event.start)}{eventSelection.event.location ? ` · ${eventSelection.event.location}` : ""}</p></div> : <div><p className="ambient-card-value">The rest of today is open</p><p className="ambient-card-detail">No upcoming events.</p></div>}</AmbientCard>
         <AmbientCard title="Sports live" icon="sports">{sports.loading && !sports.data ? <p className="ambient-muted">Checking followed sports…</p> : sportEvent ? <div><div className="ambient-inline-status"><span className={`ambient-live-dot ${liveSport ? "is-live" : ""}`} />{liveSport ? "Live now" : "Up next"}</div><p className="ambient-card-value">{sportEvent.title}</p><p className="ambient-card-detail">{liveSport ? sportEvent.statusDetail ?? "Live score available" : formatEventTime(sportEvent.start)}</p></div> : <p className="ambient-muted">No followed games right now.</p>}</AmbientCard>
         <AmbientCard title="Focus timer" icon="clock"><div className="ambient-focus-card"><div><p className="ambient-timer">{activeTimer && now ? formatDuration(getTimerRemaining(activeTimer, now.getTime())) : "—"}</p><p className="ambient-card-detail">{activeTimer ? `${activeTimer.label} · ${activeTimer.status}` : "No active timer"}</p></div><span className={`ambient-ring ${activeTimer ? "is-active" : ""}`} aria-hidden="true" /></div></AmbientCard>
-        <AmbientCard title="Cosmic status" icon="system"><div className="ambient-system-status"><span className="ambient-system-pulse" aria-hidden="true" /><div><p className="ambient-card-value">{status}</p><p className="ambient-card-detail">{online ? "Your workspace is aligned with the cosmos." : "Recent information remains available."}</p></div></div></AmbientCard>
+        <AmbientCard title="Now playing" icon="system"><AmbientMusic /></AmbientCard>
       </aside>
       <div className="ambient-bottom-strip">
         <AmbientCard title="Weather" icon="weather">{weather.loading && !weather.weather ? <p className="ambient-muted">Locating conditions…</p> : weather.error || !weather.weather ? <p className="ambient-muted">Weather unavailable.</p> : <div className="ambient-weather"><CosmicIcon icon="weather" condition={cosmicWeatherCondition(weather.weather.condition, weather.weather.daylightProgress > 0 && weather.weather.daylightProgress < 100)} size={52} label="Current weather" glow="blue" /><div><p className="ambient-weather-temp">{Math.round(weather.weather.temp)}°</p><p className="ambient-card-detail">{weather.weather.condition} · {weather.weather.city}</p></div></div>}</AmbientCard>

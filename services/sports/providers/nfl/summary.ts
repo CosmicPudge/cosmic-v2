@@ -8,9 +8,7 @@ import type {
   FootballVenueInfo,
   FootballWeatherInfo,
 } from "@/core/contracts/sports/Football";
-
-const ESPN_NFL_BASE =
-  "https://site.api.espn.com/apis/site/v2/sports/football/nfl";
+import { espnFootballSummaryUrl } from "../espnFootball/endpoints";
 
 export interface NFLNormalizedSummary {
   eventId: string;
@@ -1295,11 +1293,7 @@ function normalizeScoringPlays(
 export async function getNFLSummary(
   eventId: number | string,
 ): Promise<NFLNormalizedSummary> {
-  const url =
-    `${ESPN_NFL_BASE}/summary?event=` +
-    encodeURIComponent(
-      String(eventId),
-    );
+  const url = espnFootballSummaryUrl("nfl", String(eventId));
 
   const response =
     await fetch(url, {
