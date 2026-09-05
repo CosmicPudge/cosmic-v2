@@ -35,7 +35,7 @@ function Desktop() {
   return (
     <div data-cosmic-os-root className="cosmic-os-root relative w-full text-white">
       <div className="cosmic-dashboard-frame cosmic-os-layout relative z-10">
-        <Sidebar />
+        <Sidebar variant="top" />
         <div data-cosmic-workspace className="cosmic-os-workspace"><DashboardBoundary><Dashboard /></DashboardBoundary></div>
       </div>
 
