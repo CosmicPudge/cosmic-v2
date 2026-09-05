@@ -14,6 +14,7 @@ import KioskCalendarScene from "./KioskCalendarScene";
 
 import useCalendar from "@/hooks/os/useCalendar";
 import { useDashboardWidgetReadiness } from "@/components/dashboard/readiness/DashboardReadiness";
+import { dashboardImage } from "@/components/dashboard/images/dashboardImageManifest";
 
 export default function CalendarWidget() {
   const { size, presentation } = useWidgetContext();
@@ -29,7 +30,7 @@ export default function CalendarWidget() {
   }
 
   return (
-    <Widget accent="calendar">
+    <Widget accent="calendar" imageUrl={dashboardImage("calendar").src} imageOpacity={.72} imageBlur={0}>
       <WidgetHeader
         title="Calendar"
         subtitle="Today's schedule"

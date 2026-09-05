@@ -37,7 +37,7 @@ export function getCriticalDashboardWidgetIds(settings: CosmicSettingsLocalData,
   const grid = GRID_PROFILES[profile];
   const reservedViewport = profile === "pocket" ? 500 : profile === "compact" ? 540 : profile === "comfortable" ? 600 : 660;
   const visibleRows = Math.max(1, Math.floor((height - reservedViewport) / grid.rowHeight));
-  const ids: string[] = ["hero-weather", "context"];
+  const ids: string[] = ["hero-weather"];
   let row = 0;
   let column = 0;
   for (const widget of activeWidgets(settings).filter((item) => item.id !== "school" || schoolEnabled)) {

@@ -1,4 +1,5 @@
 import type { WeatherData } from "@/engines/environment";
+import { dashboardImage, type DashboardImageId } from "@/components/dashboard/images/dashboardImageManifest";
 
 export type WeatherSceneId =
   | "clear-day"
@@ -60,7 +61,7 @@ export function resolveWeatherKioskScene(weather: WeatherData | null, developmen
     ? developmentOverride
     : conditionId(weather);
   const imageId = id === "fallback" ? undefined : id;
-  const base = imageId ? `/kiosk/scenes/weather/weather-${imageId}.png` : undefined;
+  const base = imageId ? dashboardImage(`weather-${imageId}` as DashboardImageId).src : undefined;
   const fallbackIds = imageId === "heavy-rain" || imageId === "thunderstorm"
     ? ["rain"]
     : imageId === "partly-cloudy-night" || imageId === "partly-cloudy-day" || imageId === "fog"
@@ -70,7 +71,7 @@ export function resolveWeatherKioskScene(weather: WeatherData | null, developmen
   return {
     id,
     src: base,
-    fallbackSrcs: fallbackIds.map((fallbackId) => `/kiosk/scenes/weather/weather-${fallbackId}.png`),
+    fallbackSrcs: fallbackIds.map((fallbackId) => dashboardImage(`weather-${fallbackId}` as DashboardImageId).src).filter((src): src is string => Boolean(src)),
     objectPosition: id.includes("night") ? "center 42%" : id === "fog" ? "center 55%" : "center center",
   };
 }

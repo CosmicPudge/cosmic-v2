@@ -38,6 +38,11 @@ export default function WeatherWidget() {
   return (
     <Widget
       accent="weather"
+      imageUrl={scene.src}
+      imageFallbackUrls={scene.fallbackSrcs}
+      imagePosition={scene.objectPosition}
+      imageOpacity={.86}
+      imageBlur={0}
     >
       <WidgetHeader
         title="Weather"

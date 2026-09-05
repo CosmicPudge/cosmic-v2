@@ -20,6 +20,8 @@ import { useDisplay } from "@/components/os/display";
 import { useCosmicTransition, useRouteReadiness } from "@/components/os/transition";
 import { useCosmicAccount } from "@/components/account/AccountProvider";
 import { useEntitlements } from "@/hooks/os/useEntitlements";
+import useWeather from "@/hooks/os/useWeather";
+import DashboardEnvironment from "@/components/dashboard/background/DashboardEnvironment";
 import { useSettingsRepository } from "@/services/settings/localRepository";
 import { useCosmicScope } from "@/services/storage/scope";
 import { DashboardReadinessProvider, getCriticalDashboardWidgetIds, useDashboardReadiness } from "@/components/dashboard/readiness/DashboardReadiness";
@@ -28,13 +30,15 @@ function DashboardContent() {
   useDashboardShortcuts();
 
   const { profile } = useDisplay();
+  const { weather } = useWeather();
+  const { data: settings } = useSettingsRepository();
 
   const layout = DASHBOARD_LAYOUTS[profile];
 
   return (
     <main
       data-dashboard-root
-      className="mx-auto flex w-full min-w-0 flex-col"
+      className="relative isolate z-0 mx-auto flex w-full min-w-0 flex-col"
       style={{
         maxWidth: layout.maxWidth,
         gap: layout.sectionGap,
@@ -42,8 +46,9 @@ function DashboardContent() {
         paddingBottom: layout.paddingBottom,
       }}
     >
+      <DashboardEnvironment reducedMotion={settings.appearance.reducedEffects} />
       <DashboardRegion>
-        <DashboardHero />
+        <DashboardHero weather={weather} />
       </DashboardRegion>
 
       <DashboardRegion>

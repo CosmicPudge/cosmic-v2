@@ -15,7 +15,7 @@ export default function DashboardRegion({
 }: DashboardRegionProps) {
   return (
     <section
-      className={className}
+      className={`relative z-10 ${className}`}
       style={{
         width: "100%",
         minWidth: 0,

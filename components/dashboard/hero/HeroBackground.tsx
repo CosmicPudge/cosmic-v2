@@ -4,60 +4,31 @@ import { motion } from "framer-motion";
 
 import { useDisplay } from "@/components/os/display";
 
-import type { WeatherData } from "@/engines/environment";
-
 import { HERO_LAYOUTS } from "./heroLayouts";
+import { dashboardImage } from "@/components/dashboard/images/dashboardImageManifest";
 
-interface Props {
-  weather: WeatherData | null;
+function quickBriefImage() {
+  const hour = new Date().getHours();
+  const id = hour < 6 ? "quick-brief-night" : hour < 12 ? "quick-brief-morning" : hour < 17 ? "quick-brief-day" : hour < 22 ? "quick-brief-evening" : "quick-brief-night";
+  return dashboardImage(id);
 }
 
-export default function HeroBackground({
-  weather,
-}: Props) {
+export default function HeroBackground() {
   const { profile } = useDisplay();
 
   const hero = HERO_LAYOUTS[profile];
-
-  const condition =
-    weather?.condition.toLowerCase() ?? "";
-
-  let primary = "rgba(255,255,255,0.10)";
-  let secondary = "rgba(255,255,255,0.02)";
-
-  if (condition.includes("clear")) {
-    primary = "rgba(255,210,120,0.18)";
-    secondary = "rgba(255,255,255,0.04)";
-  }
-
-  if (condition.includes("cloud")) {
-    primary = "rgba(190,205,235,0.15)";
-    secondary = "rgba(255,255,255,0.03)";
-  }
-
-  if (condition.includes("rain")) {
-    primary = "rgba(70,130,255,0.18)";
-    secondary = "rgba(20,40,90,0.06)";
-  }
-
-  if (condition.includes("storm")) {
-    primary = "rgba(120,90,255,0.20)";
-    secondary = "rgba(40,30,90,0.08)";
-  }
-
-  if (condition.includes("snow")) {
-    primary = "rgba(255,255,255,0.20)";
-    secondary = "rgba(180,220,255,0.06)";
-  }
 
   const glowScale =
     hero.minHeight / 360;
 
   const noiseSize =
     Math.round(22 * glowScale);
+  const image = quickBriefImage();
 
   return (
     <>
+      {image.src && <img src={image.src} alt="" aria-hidden="true" className="dashboard-hero-image absolute inset-0 h-full w-full object-cover" style={{ objectPosition: image.objectPosition }} />}
+      <div className="dashboard-hero-overlay absolute inset-0" aria-hidden="true" />
       <motion.div
         className="absolute inset-0"
         animate={{
@@ -77,7 +48,7 @@ export default function HeroBackground({
           background: `
             radial-gradient(
               circle at 20% 20%,
-              ${primary},
+              rgba(94, 83, 220, .16),
               transparent 55%
             )
           `,
@@ -103,7 +74,7 @@ export default function HeroBackground({
           background: `
             radial-gradient(
               circle at 80% 70%,
-              ${secondary},
+              rgba(24, 196, 255, .05),
               transparent 65%
             )
           `,

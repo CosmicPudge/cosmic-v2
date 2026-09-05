@@ -20,6 +20,7 @@ import {
   WidgetBody,
   WidgetHeader,
 } from "@/components/os/ui/widget";
+import { currentClockImage } from "@/components/dashboard/images/dashboardImageManifest";
 
 export default function ClockWidget() {
   const { size, presentation } = useWidgetContext();
@@ -36,13 +37,20 @@ export default function ClockWidget() {
         .map((alarm) => ({ alarm, occurrence: getNextAlarmOccurrence(alarm, now) }))
         .filter((entry) => entry.occurrence !== null)
         .sort((left, right) => left.occurrence!.getTime() - right.occurrence!.getTime())[0];
+  const clockImage = currentClockImage();
 
   if (presentation === "kiosk") {
     return <KioskClockScene now={now} format={format} nextAlarm={nextAlarm?.occurrence ?? null} />;
   }
 
   return (
-    <Widget accent="clock">
+    <Widget
+      accent="clock"
+      imageUrl={clockImage.src}
+      imagePosition={clockImage.objectPosition}
+      imageOpacity={.78}
+      imageBlur={0}
+    >
       <WidgetHeader
         title="Clock"
         subtitle={size === "small" ? undefined : "Local time"}

@@ -16,12 +16,14 @@ import SportsCurrent from "./SportsCurrent";
 import SportsScores from "./SportsScores";
 import SportsStandings from "./SportsStandings";
 import SportsFooter from "./SportsFooter";
+import { dashboardImage } from "@/components/dashboard/images/dashboardImageManifest";
 
 export default function SportsWidget() {
   const { size, presentation } = useWidgetContext();
   const { data, loading, error } = useSports();
   const { data: settings } = useSettingsRepository();
   const liveOrFeatured = data ? prioritizeFollowedEvents(data.live, settings.preferences)[0] ?? prioritizeFollowedEvents(data.featured, settings.preferences)[0] : undefined;
+  const sportsImage = liveOrFeatured?.sport.toLowerCase().includes("mlb") || liveOrFeatured?.sport.toLowerCase().includes("baseball") ? dashboardImage("sports-mlb") : liveOrFeatured?.sport.toLowerCase().includes("f1") || liveOrFeatured?.sport.toLowerCase().includes("formula") ? dashboardImage("sports-f1") : dashboardImage("sports");
   const upcoming = data ? prioritizeFollowedEvents(data.upcoming, settings.preferences) : [];
   const standings = data ? Object.values(data.standings).flat() : [];
   useDashboardWidgetReadiness("sports", loading && !data ? "loading" : error && !data ? "degraded" : "ready");
@@ -30,6 +32,10 @@ export default function SportsWidget() {
   return (
     <Widget
       accent="sports"
+      imageUrl={sportsImage.src}
+      imagePosition={sportsImage.objectPosition}
+      imageOpacity={.8}
+      imageBlur={0}
     >
       <WidgetHeader
         title="Sports"

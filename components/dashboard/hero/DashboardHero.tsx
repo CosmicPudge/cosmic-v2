@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 
 import { useDisplay } from "@/components/os/display";
 import GlassPanel from "@/components/os/ui/GlassPanel";
-import useWeather from "@/hooks/os/useWeather";
+import type { WeatherData } from "@/engines/environment";
 
 import HeroBackground from "./HeroBackground";
 import HeroClock from "./HeroClock";
@@ -15,8 +15,8 @@ import HeroSun from "./HeroSun";
 import { useDashboardWidgetReadiness } from "@/components/dashboard/readiness/DashboardReadiness";
 import HeroWeather from "./HeroWeather";
 
-export default function DashboardHero() {
-  const { weather, loading } = useWeather();
+export default function DashboardHero({ weather }: { weather: WeatherData | null }) {
+  const loading = weather === null;
 
   const { profile, tokens } = useDisplay();
 
@@ -45,7 +45,7 @@ export default function DashboardHero() {
         }}
       >
         {/* Full-bleed weather background */}
-        <HeroBackground weather={weather} />
+        <HeroBackground />
 
         {/* Content */}
         <div
