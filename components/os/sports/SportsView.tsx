@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useState } from "react";
+import { useVisiblePolling } from "@/hooks/useVisiblePolling";
 
 import BroadcastHero from "@/components/apps/sports/BroadcastHero";
 
@@ -20,40 +21,29 @@ export default function SportsView() {
 
   const [loading, setLoading] =
     useState(true);
+  const [refreshRate, setRefreshRate] = useState(300000);
 
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-
-    async function loadSports() {
+  const loadSports = useCallback(async () => {
       try {
         const data = await getSports();
 
         setSports(data);
-
-        if (interval) clearInterval(interval);
-
-        const refreshRate =
+        setRefreshRate(
           data.state === "live"
             ? 10000
             : data.state === "pregame"
             ? 60000
-            : 300000;
-
-        interval = setInterval(loadSports, refreshRate);
+            : 300000
+        );
 
       } catch (error) {
         console.error(error);
       } finally {
         setLoading(false);
       }
-    }
-
-    loadSports();
-
-    return () => {
-      if (interval) clearInterval(interval);
-    };
   }, []);
+
+  useVisiblePolling(loadSports, refreshRate, { immediate: true });
 
   if (loading) {
     return (

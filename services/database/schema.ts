@@ -36,6 +36,68 @@ export const passwordResetTokens = pgTable("password_reset_tokens", {
   usedAt: timestamp("used_at", { withTimezone: true }),
 }, (table) => [uniqueIndex("password_reset_tokens_token_hash_unique").on(table.tokenHash), index("password_reset_tokens_user_id_index").on(table.userId), index("password_reset_tokens_expires_at_index").on(table.expiresAt)]);
 
+export const pushSubscriptions = pgTable("push_subscriptions", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  endpoint: text("endpoint").notNull(),
+  p256dh: text("p256dh").notNull(),
+  auth: text("auth").notNull(),
+  status: text("status").notNull().default("active"),
+  userAgent: text("user_agent"),
+  deviceLabel: text("device_label"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  lastSuccessAt: timestamp("last_success_at", { withTimezone: true }),
+  lastFailureAt: timestamp("last_failure_at", { withTimezone: true }),
+  failureCode: text("failure_code"),
+}, (table) => [
+  uniqueIndex("push_subscriptions_endpoint_unique").on(table.endpoint),
+  index("push_subscriptions_user_id_index").on(table.userId),
+  index("push_subscriptions_status_index").on(table.status),
+  check("push_subscriptions_status_check", sql`${table.status} in ('active', 'inactive', 'expired')`),
+]);
+
+export const pushDeliveries = pgTable("push_deliveries", {
+  id: text("id").primaryKey(),
+  signalId: text("signal_id").notNull(),
+  subscriptionId: text("subscription_id").notNull().references(() => pushSubscriptions.id, { onDelete: "cascade" }),
+  category: text("category").notNull(),
+  eventId: text("event_id"),
+  sport: text("sport"),
+  status: text("status").notNull().default("pending"),
+  attemptCount: integer("attempt_count").notNull().default(0),
+  providerCode: integer("provider_code"),
+  firstAttemptAt: timestamp("first_attempt_at", { withTimezone: true }),
+  lastAttemptAt: timestamp("last_attempt_at", { withTimezone: true }),
+  deliveredAt: timestamp("delivered_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  title: text("title"),
+  body: text("body"),
+  route: text("route"),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  uniqueIndex("push_deliveries_signal_subscription_unique").on(table.signalId, table.subscriptionId),
+  index("push_deliveries_signal_id_index").on(table.signalId),
+  index("push_deliveries_status_index").on(table.status),
+  check("push_deliveries_status_check", sql`${table.status} in ('pending', 'sending', 'delivered', 'temporary_failure', 'permanent_failure')`),
+]);
+
+export const sportsEventCheckpoints = pgTable("sports_event_checkpoints", {
+  id: text("id").primaryKey(),
+  sport: text("sport").notNull(),
+  eventId: text("event_id").notNull(),
+  provider: text("provider").notNull(),
+  eventStatus: text("event_status").notNull(),
+  normalizedState: jsonb("normalized_state").notNull(),
+  observedAt: timestamp("observed_at", { withTimezone: true }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  uniqueIndex("sports_event_checkpoints_identity_unique").on(table.provider, table.sport, table.eventId),
+  index("sports_event_checkpoints_status_index").on(table.eventStatus),
+  index("sports_event_checkpoints_observed_at_index").on(table.observedAt),
+]);
+
 export const devices = pgTable("devices", {
   id: text("id").primaryKey(),
   userId: text("user_id").references(() => users.id, { onDelete: "set null" }),

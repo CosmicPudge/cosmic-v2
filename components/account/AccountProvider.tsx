@@ -46,7 +46,8 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => { void Promise.resolve().then(() => refresh()); }, [refresh]);
   useEffect(() => {
-    const timer = window.setInterval(() => void syncSession(false), 60_000);
+    // Session refresh is lifecycle-driven; this long fallback is only for tabs left open indefinitely.
+    const timer = window.setInterval(() => void syncSession(false), 10 * 60_000);
     const onVisibility = () => { if (!document.hidden) void syncSession(false); };
     document.addEventListener("visibilitychange", onVisibility);
     return () => { window.clearInterval(timer); document.removeEventListener("visibilitychange", onVisibility); };

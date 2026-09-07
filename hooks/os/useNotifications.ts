@@ -9,7 +9,7 @@ import { markAllNotificationsRead, markNotificationRead, mergeNotifications, not
 import { useEntitlements } from "@/hooks/os/useEntitlements";
 import { useSchoolData } from "@/components/school/hooks/useSchoolData";
 import { deserializeSchoolBaseline, detectSchoolChanges, serializeSchoolBaseline, type SchoolBaseline } from "@/services/school/changes";
-import { useSettingsRepository } from "@/services/settings/localRepository";
+import { useSettingsData } from "@/components/apps/settings/SettingsProvider";
 import { buildSportsSignals, sportsSignalState, type SportsSignalState } from "@/services/sports/signals";
 
 const SCHOOL_BASELINE_KEY = "cosmic.school.notification-baseline";
@@ -29,7 +29,7 @@ export function useNotifications() {
   const scope = useCosmicScope();
   const { calendar } = useCalendar();
   const { data: sports } = useSports();
-  const { data: settings } = useSettingsRepository();
+  const { data: settings } = useSettingsData();
   const { data: entitlements } = useEntitlements();
   const school = useSchoolData({ enabled: entitlements.features["school.basic"] });
   const [stored, setStored] = useState<CosmicNotification[]>([]);

@@ -11,6 +11,7 @@ import { kioskApiUrl } from "@/services/kioskRequest";
 import { useEntitlements } from "@/hooks/os/useEntitlements";
 import { useSchoolData } from "@/components/school/hooks/useSchoolData";
 import { mergeSchoolCalendarSnapshot } from "@/services/calendar/schoolAdapter";
+import { useCosmicScope } from "@/services/storage/scope";
 
 interface CalendarResponse {
   today: Array<Omit<CalendarEvent, "start" | "end"> & {
@@ -78,12 +79,24 @@ function hydrateSnapshot(
 }
 
 const DEFAULT_REFRESH_INTERVAL_MS = 5 * 60 * 1000;
+const calendarCache = new Map<string, { expiresAt: number; value: CalendarSnapshot }>();
+
+async function requestCalendarSnapshot(scopeId: string): Promise<CalendarSnapshot> {
+  const cached = calendarCache.get(scopeId);
+  if (cached && cached.expiresAt > Date.now()) return cached.value;
+  const response = await fetch(kioskApiUrl("/api/calendar"), { credentials: "include", cache: "no-store" });
+  if (!response.ok) throw new Error("Calendar is temporarily unavailable.");
+  const snapshot = hydrateSnapshot(await response.json());
+  calendarCache.set(scopeId, { value: snapshot, expiresAt: Date.now() + 60_000 });
+  return snapshot;
+}
 
 interface UseCalendarOptions {
   refreshMs?: number;
 }
 
 export default function useCalendar({ refreshMs = DEFAULT_REFRESH_INTERVAL_MS }: UseCalendarOptions = {}) {
+  const scope = useCosmicScope();
   const { data: entitlements } = useEntitlements();
   const school = useSchoolData({ enabled: entitlements.features["school.basic"] });
   const [calendar, setCalendar] =
@@ -108,23 +121,7 @@ export default function useCalendar({ refreshMs = DEFAULT_REFRESH_INTERVAL_MS }:
 
         setError(null);
 
-        const response = await fetch(
-          kioskApiUrl("/api/calendar"),
-          {
-            cache: "no-store",
-          }
-        );
-
-        if (!response.ok) {
-          throw new Error(
-            "Calendar is temporarily unavailable."
-          );
-        }
-
-        let snapshot =
-          hydrateSnapshot(
-            await response.json()
-          );
+        let snapshot = await requestCalendarSnapshot(scope.id);
         if (school.snapshot) snapshot = mergeSchoolCalendarSnapshot(snapshot, school.snapshot);
 
         if (!cancelled) {
@@ -153,20 +150,18 @@ export default function useCalendar({ refreshMs = DEFAULT_REFRESH_INTERVAL_MS }:
     return () => {
       cancelled = true;
     };
-  }, [school.snapshot]);
+  }, [school.snapshot, scope.id]);
 
   const refresh = useCallback(async () => {
     try {
-      const response = await fetch(kioskApiUrl("/api/calendar"), { credentials: "include", cache: "no-store" });
-      if (!response.ok) throw new Error("Calendar is temporarily unavailable.");
-      let snapshot = hydrateSnapshot(await response.json());
+      let snapshot = await requestCalendarSnapshot(scope.id);
       if (school.snapshot) snapshot = mergeSchoolCalendarSnapshot(snapshot, school.snapshot);
       setCalendar(snapshot);
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unknown calendar error");
     }
-  }, [school.snapshot]);
+  }, [school.snapshot, scope.id]);
 
   useVisiblePolling(refresh, refreshMs, { immediate: false });
 

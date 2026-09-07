@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 
 import { useSettingsData } from "@/components/apps/settings/SettingsProvider";
+import { registerCosmicServiceWorker } from "@/services/push/registration";
 import type { SystemSnapshot } from "@/core/contracts/System";
 import {
   createSystemSnapshot,
@@ -103,6 +104,9 @@ export function SystemProvider({ children }: { children: React.ReactNode }) {
       if (active) setRaw((current) => ({ ...current, storage }));
     });
     if ("serviceWorker" in navigator) {
+      void registerCosmicServiceWorker().then((registration) => {
+        if (active) setRaw((current) => ({ ...current, serviceWorkerRegistered: Boolean(registration) }));
+      });
       void navigator.serviceWorker.getRegistration().then((registration) => {
         if (active) setRaw((current) => ({ ...current, serviceWorkerRegistered: Boolean(registration) }));
       }).catch(() => undefined);

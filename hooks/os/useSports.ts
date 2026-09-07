@@ -17,6 +17,7 @@ type SportsWireSnapshot = Omit<SportsSnapshot, "live" | "upcoming" | "recent" | 
 };
 
 const pendingRequests = new Map<string, Promise<SportsSnapshot>>();
+const snapshotCache = new Map<string, { expiresAt: number; value: SportsSnapshot }>();
 
 function sportsRefreshMs(snapshot: SportsSnapshot | null): number {
   if (!snapshot) return 15_000;
@@ -70,6 +71,8 @@ function isWireSnapshot(value: unknown): value is SportsWireSnapshot {
 
 async function requestSnapshot(sport: SportKind | undefined, scopeId: string): Promise<SportsSnapshot> {
   const key = `${scopeId}:${sport ?? "all"}`;
+  const cached = snapshotCache.get(key);
+  if (cached && cached.expiresAt > Date.now()) return cached.value;
   const pendingRequest = pendingRequests.get(key);
   if (pendingRequest) return pendingRequest;
   const query = sport ? `?sport=${encodeURIComponent(sport)}` : "";
@@ -78,7 +81,10 @@ async function requestSnapshot(sport: SportKind | undefined, scopeId: string): P
       if (!response.ok) throw new Error("Sports data is temporarily unavailable.");
       const payload: unknown = await response.json();
       if (!isWireSnapshot(payload)) throw new Error("Sports response was invalid.");
-      return hydrateSnapshot(payload);
+      const snapshot = hydrateSnapshot(payload);
+      const refreshMs = snapshot.live.length ? 15_000 : snapshot.upcoming.length ? 60_000 : 5 * 60_000;
+      snapshotCache.set(key, { value: snapshot, expiresAt: Date.now() + refreshMs });
+      return snapshot;
     })
     .finally(() => { pendingRequests.delete(key); });
   pendingRequests.set(key, request);
@@ -103,6 +109,13 @@ export function useSports(options: SportsHookOptions = {}) {
     }
   }, [sport, scope.id]);
   useEffect(() => { const timer = window.setTimeout(() => { setData(null); setLoading(true); setError(null); }, 0); return () => window.clearTimeout(timer); }, [scope.id]);
+  useEffect(() => {
+    const invalidate = () => {
+      for (const key of snapshotCache.keys()) if (key.startsWith(`${scope.id}:`)) snapshotCache.delete(key);
+    };
+    window.addEventListener("cosmic:settings-local-data-updated", invalidate);
+    return () => window.removeEventListener("cosmic:settings-local-data-updated", invalidate);
+  }, [scope.id]);
 
   const intervalMs = typeof refreshMs === "function" ? refreshMs(data) : refreshMs;
   useVisiblePolling(refresh, intervalMs, { immediate: data === null });

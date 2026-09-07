@@ -10,10 +10,11 @@ export async function GET(request: Request) {
     const kioskRequest = searchParams.get("cosmic-kiosk") === "1";
     const bootId = kioskRequest ? searchParams.get("cosmic-boot") ?? "" : undefined;
     const session = await getSession(request, bootId);
+    const diagnostics = searchParams.get("diagnostics") === "1";
     const headers = new Headers({ "Cache-Control": "no-store" });
     if (kioskRequest && !session) headers.set("Set-Cookie", expiredSessionCookie());
     if (process.env.NODE_ENV !== "production") console.info(`[pair] HTTP GET /api/account/session status=200 authenticated=${Boolean(session)} sessionType=${session?.sessionType ?? "none"}`);
-    return Response.json({ repositoryMode: getAuthRepositoryMode(), database: await checkDatabase(), ...(session ? { authenticated: true, isAdmin: await isAdminAccount(session.account.id), ...session } : { authenticated: false, isAdmin: false }) }, { headers });
+    return Response.json({ repositoryMode: getAuthRepositoryMode(), ...(diagnostics ? { database: await checkDatabase() } : {}), ...(session ? { authenticated: true, isAdmin: await isAdminAccount(session.account.id), ...session } : { authenticated: false, isAdmin: false }) }, { headers });
   } catch {
     return Response.json({ error: "Account session service is unavailable." }, { status: 503, headers: { "Cache-Control": "no-store" } });
   }

@@ -14,7 +14,7 @@ import { useConnectedFinanceData } from "@/components/apps/finance/useConnectedF
 import { calculateAccountBalance } from "@/services/finance/domain";
 import { mergeFinanceAccounts } from "@/services/finance/merged";
 import { useLocalSchoolRepository } from "@/components/school/data/localRepository";
-import { useSettingsRepository } from "@/services/settings/localRepository";
+import { useSettingsData } from "@/components/apps/settings/SettingsProvider";
 import { useCosmicScope } from "@/services/storage/scope";
 import { eventMatchesPreferences } from "@/services/sports/preferences";
 import { buildContextSnapshot } from "@/services/context/domain";
@@ -39,7 +39,7 @@ export function useCosmicContext() {
   const connectedFinance = useConnectedFinanceData(25);
   const entitlements = useEntitlements();
   const school = useLocalSchoolRepository({ enabled: entitlements.data.features["school.basic"] });
-  const settings = useSettingsRepository();
+  const settings = useSettingsData();
   const scope = useCosmicScope();
   const schoolBasicEnabled = entitlements.data.features["school.basic"];
   const [opordSources, setOpordSources] = useState<OpordSource[]>([]);
