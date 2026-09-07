@@ -1,3 +1,5 @@
+import { cosmicApi } from "./apiBase";
+
 export type CosmicSportsGame = {
   state: string;
   opponent: string;
@@ -9,27 +11,29 @@ export type CosmicSportsGame = {
   homeScore: number | null;
   status: string;
 
-  live?: {
+  live?: CosmicSportsLive;
+};
+
+export type CosmicSportsLive = {
     inning: number | null;
     inningHalf: string | null;
-    outs: number;
-    balls: number;
-    strikes: number;
-    firstBase: boolean;
-    secondBase: boolean;
-    thirdBase: boolean;
+    period?: string | number | null;
+    outs: number | null;
+    balls: number | null;
+    strikes: number | null;
+    firstBase: boolean | null;
+    secondBase: boolean | null;
+    thirdBase: boolean | null;
     batter: string | null;
     pitcher: string | null;
     playDescription: string | null;
-  };
 };
 
 export type CosmicSportsResponse = {
   game: CosmicSportsGame | null;
 };
 
-const SPORTS_API =
-  "http://localhost:3000/api/glasses/sports";
+const SPORTS_API = cosmicApi("sports");
 
 export async function getCosmicSports(): Promise<CosmicSportsResponse> {
   const response = await fetch(SPORTS_API, {

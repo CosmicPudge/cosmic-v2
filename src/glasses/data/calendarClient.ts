@@ -1,3 +1,5 @@
+import { cosmicApi } from "./apiBase";
+
 export type CosmicCalendarEvent = {
   title: string;
   start: string;
@@ -5,14 +7,15 @@ export type CosmicCalendarEvent = {
   location: string | null;
   calendarName: string | null;
   minutesUntil: number;
+  allDay?: boolean;
+  cancelled?: boolean;
 };
 
 export type CosmicCalendarResponse = {
   nextEvent: CosmicCalendarEvent | null;
 };
 
-const CALENDAR_API =
-  "http://localhost:3000/api/glasses/calendar";
+const CALENDAR_API = cosmicApi("calendar");
 
 export async function getNextCalendarEvent(): Promise<CosmicCalendarResponse> {
   const response = await fetch(CALENDAR_API, {

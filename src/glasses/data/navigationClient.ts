@@ -1,3 +1,5 @@
+import { cosmicApi } from "./apiBase";
+
 export type CosmicNavigationManeuver = {
   instruction: string;
   type: string;
@@ -19,8 +21,7 @@ export type CosmicNavigationResponse = {
   navigation: CosmicNavigationState | null;
 };
 
-const NAVIGATION_API =
-  "http://localhost:3000/api/glasses/navigation";
+const NAVIGATION_API = cosmicApi("navigation");
 
 export async function getCosmicNavigation(): Promise<CosmicNavigationResponse> {
   const response = await fetch(

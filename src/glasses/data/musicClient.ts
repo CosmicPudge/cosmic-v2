@@ -1,3 +1,5 @@
+import { cosmicApi } from "./apiBase";
+
 export type CosmicMusicTrack = {
   title: string;
   artists: string[];
@@ -17,8 +19,7 @@ export type CosmicMusicResponse = {
   playback: CosmicMusicPlayback | null;
 };
 
-const MUSIC_API =
-  "http://localhost:3000/api/glasses/music";
+const MUSIC_API = cosmicApi("music");
 
 export async function getCosmicMusic(): Promise<CosmicMusicResponse> {
   const response = await fetch(MUSIC_API, {

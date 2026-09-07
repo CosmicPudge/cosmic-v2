@@ -5,4 +5,5 @@ export const HUD = {
   timeId: 1,
   statusId: 2,
   cardId: 3,
+  contextId: 4,
 } as const;

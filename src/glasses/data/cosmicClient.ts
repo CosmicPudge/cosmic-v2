@@ -1,3 +1,5 @@
+import { cosmicApi } from "./apiBase";
+
 export type CosmicStatus = {
   device: {
     mode: string;
@@ -21,8 +23,7 @@ export type CosmicStatus = {
   timestamp: string;
 };
 
-const COSMIC_API =
-  "http://localhost:3000/api/glasses/status";
+const COSMIC_API = cosmicApi("status");
 
 export async function getCosmicStatus(): Promise<CosmicStatus> {
   const response = await fetch(COSMIC_API, {

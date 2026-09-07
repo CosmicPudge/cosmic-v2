@@ -13,6 +13,26 @@ import { getCosmicStatus } from "../data/cosmicClient";
 import { getNextCalendarEvent } from "../data/calendarClient";
 import { getCosmicSports } from "../data/sportsClient";
 import { getCosmicMusic } from "../data/musicClient";
+import { getCosmicCallStatus } from "../data/callClient";
+import type { CosmicCallStatus } from "../data/callClient";
+import type { CosmicSportsResponse } from "../data/sportsClient";
+import {
+  formatSportsContext as formatSportsContextValue,
+  formatSportsScore,
+} from "./sportsContext";
+import {
+  formatNavigationDistance as formatNavigationDistanceValue,
+  getNavigationArrow,
+  getNavigationManeuverLabel,
+  shouldUseLargeNavigationArrow,
+  formatUrgentNavigationContext,
+} from "./navigationContext";
+import {
+  formatCalendarContext,
+} from "./calendarContext";
+import type {
+  CosmicCalendarEvent,
+} from "../data/calendarClient";
 
 import { getCosmicNavigation } from "../data/navigationClient";
 
@@ -28,6 +48,12 @@ import type {
 import {
   canReplaceView,
 } from "../context/priority";
+import {
+  resolveContext,
+} from "../context/contextResolver";
+import {
+  LatestWriteQueue,
+} from "./latestWriteQueue";
 
 export class CosmicHudService {
   private bridge:
@@ -38,6 +64,17 @@ export class CosmicHudService {
     >;
   private lastSportsContent = "";
   private lastStatusContent = "";
+  private lastClockContent = "";
+  private lastContextStripContent = "";
+  private contextSportsRefreshAt = 0;
+  private contextSportsRefreshInterval = 30_000;
+  private contextCalendarRefreshAt = 0;
+  private contextCalendarRefreshInterval = 30_000;
+  private contextCalendarEvent: CosmicCalendarEvent | null = null;
+  private lastSportsContextContent = "";
+  private contextStripRefreshInFlight = false;
+  private contextStripOperationId = 0;
+  private callStatus: CosmicCallStatus | null = null;
   private currentView = 0;
   private lastMusicRefresh = 0;
   private lastMusicContent = "";
@@ -47,6 +84,26 @@ export class CosmicHudService {
   private sportsRefreshInterval = 30_000;
   private lastRenderedContent:
     Record<string, string> = {};
+  private liveRefreshInFlight = new Set<string>();
+  private bridgeWrites = new Map<string, LatestWriteQueue>();
+  private navigationOperationId = 0;
+  private renderEpoch = 0;
+  private clockUpdateInFlight = false;
+  private clockUpdatePending = false;
+  private readonly diagnosticsEnabled =
+    import.meta.env.DEV &&
+    new URLSearchParams(
+      globalThis.location?.search ?? "",
+    ).has("hudDiagnostics");
+  private readonly heartbeatMode =
+    this.diagnosticsEnabled
+      ? new URLSearchParams(
+        globalThis.location?.search ?? "",
+      ).get("hudHeartbeat")
+      : null;
+  private diagnosticCounts = new Map<string, number>();
+  private lastClockTickAt: number | null = null;
+  private heartbeatCounter = 0;
 
   private activePriority:
     HudPriority = "passive";
@@ -142,6 +199,20 @@ export class CosmicHudService {
         content: "",
         isEventCapture: 0,
       });
+    const contextContainer =
+      new TextContainerProperty({
+        xPosition: 188,
+        yPosition: 8,
+        width: 200,
+        height: 60,
+        borderWidth: 0,
+        borderColor: 5,
+        paddingLength: 0,
+        containerID: HUD.contextId,
+        containerName: "cosmic-context",
+        content: "",
+        isEventCapture: 0,
+      });
     const inputContainer =
       new TextContainerProperty({
         xPosition: 0,
@@ -156,19 +227,16 @@ export class CosmicHudService {
         content: " ",
         isEventCapture: 1,
       });
-    setInterval(() => {
-      void this.updateCalendarCountdown();
-    }, 10_000);
-
     await this.bridge
       .createStartUpPageContainer(
         new CreateStartUpPageContainer(
           {
-            containerTotalNum: 4,
+            containerTotalNum: 5,
 
             textObject: [
               timeContainer,
               statusContainer,
+              contextContainer,
               cardContainer,
               inputContainer,
             ],
@@ -178,24 +246,160 @@ export class CosmicHudService {
 
     this.registerInput();
 
-    await this.updateClock();
+    await this.updateClock("initialize");
     await this.updateCosmicStatus();
 
-    setInterval(() => {
-      void this.updateClock();
-    }, 1000);
+    if (!this.heartbeatMode) {
+      await this.refreshContextStrip();
+    }
 
-    setInterval(() => {
-      void this.updateCosmicStatus();
-    }, 60_000);
+    this.schedulePassiveLoop(
+      "calendar-countdown",
+      10_000,
+      () => this.updateCalendarCountdown(),
+    );
+    this.schedulePassiveLoop(
+      "clock",
+      1_000,
+      () => this.updateClock("timer"),
+    );
+    this.schedulePassiveLoop(
+      "status",
+      60_000,
+      () => this.updateCosmicStatus(),
+    );
+    this.schedulePassiveLoop(
+      "live-refresh",
+      1_000,
+      () => this.runLiveRefresh(),
+    );
 
-    // Start live card refreshes.
-    setInterval(() => {
-      void this.runLiveRefresh();
-    }, 2000);
+    if (this.heartbeatMode) {
+      this.schedulePassiveLoop(
+        "diagnostic-heartbeat",
+        1_000,
+        () => this.updateDiagnosticHeartbeat(),
+      );
+    }
 
     console.log(
       "Cosmic HUD service initialized",
+    );
+  }
+
+  private schedulePassiveLoop(
+    name: string,
+    intervalMs: number,
+    callback: () => Promise<void>,
+  ) {
+    let lastFiredAt: number | null = null;
+
+    const tick = async () => {
+      const firedAt = Date.now();
+      this.logDiagnostic(
+        `${name} timer fired`,
+        {
+          elapsedMs: lastFiredAt === null
+            ? null
+            : firedAt - lastFiredAt,
+          intervalMs,
+        },
+      );
+      lastFiredAt = firedAt;
+
+      try {
+        await callback();
+      } catch (error) {
+        console.error(
+          `Passive ${name} update failed:`,
+          error,
+        );
+      } finally {
+        setTimeout(() => {
+          void tick();
+        }, intervalMs);
+      }
+    };
+
+    setTimeout(() => {
+      void tick();
+    }, intervalMs);
+  }
+
+  private logDiagnostic(
+    name: string,
+    details: Record<string, unknown> = {},
+  ) {
+    if (!this.diagnosticsEnabled) {
+      return;
+    }
+
+    const count =
+      (this.diagnosticCounts.get(name) ?? 0) + 1;
+    this.diagnosticCounts.set(name, count);
+
+    if (count > 10 && count % 30 !== 0) {
+      return;
+    }
+
+    console.debug(
+      `[HUD diagnostic] ${name}`,
+      {
+        count,
+        performanceNow: Math.round(performance.now()),
+        visibilityState: document.visibilityState,
+        ...details,
+      },
+    );
+  }
+
+  private async updateDiagnosticHeartbeat() {
+    if (!this.heartbeatMode) {
+      return;
+    }
+
+    this.heartbeatCounter += 1;
+    const content = `TEST ${String(this.heartbeatCounter).padStart(2, "0")}`;
+    const startedAt = performance.now();
+
+    if (this.heartbeatMode === "direct") {
+      const success =
+        await this.bridge
+          .textContainerUpgrade(
+            new TextContainerUpgrade({
+              containerID: HUD.contextId,
+              containerName: "cosmic-context",
+              contentOffset: 0,
+              contentLength: 0,
+              content,
+            }),
+          );
+      this.logDiagnostic(
+        "direct heartbeat resolved",
+        {
+          content,
+          success,
+          durationMs: Math.round(
+            performance.now() - startedAt,
+          ),
+        },
+      );
+      return;
+    }
+
+    await this.updateText(
+      HUD.contextId,
+      "cosmic-context",
+      content,
+    );
+    this.logDiagnostic(
+      "queued heartbeat resolved",
+      {
+        content,
+        durationMs: Math.round(
+          performance.now() - startedAt,
+        ),
+      },
     );
   }
 
@@ -517,12 +721,6 @@ export class CosmicHudService {
       if (
         game.state === "live"
       ) {
-        const awayScore =
-          game.awayScore ?? 0;
-
-        const homeScore =
-          game.homeScore ?? 0;
-
         const live =
           game.live;
 
@@ -552,7 +750,7 @@ export class CosmicHudService {
             "ANGELS  LIVE",
 
           body: [
-            `${game.awayAbbr} ${awayScore}   ${game.homeAbbr} ${homeScore}`,
+            `${game.awayAbbr} ${formatSportsScore(game.awayScore)}   ${game.homeAbbr} ${formatSportsScore(game.homeScore)}`,
             `${inningText}  ${outsText}`,
             countText,
           ]
@@ -703,62 +901,17 @@ export class CosmicHudService {
   private formatDistance(
     meters: number,
   ) {
-    const feet =
-      meters * 3.28084;
-
-    if (feet <= 80) {
-      return "NOW";
-    }
-
-    if (feet < 1000) {
-      return `${Math.round(
-        feet / 10,
-      ) * 10} ft`;
-    }
-
-    const miles =
-      meters / 1609.344;
-
-    if (miles < 0.5) {
-      return `${Math.round(
-        feet / 50,
-      ) * 50} ft`;
-    }
-
-    return `${miles.toFixed(
-      1,
-    )} mi`;
+    return formatNavigationDistanceValue(meters);
   }
 
   private getNavigationTitle(
     navigation:
       CosmicNavigationState,
   ) {
-    const modifier =
-      navigation
-        .nextManeuver
-        ?.modifier;
-
-    switch (modifier) {
-      case "left":
-      case "slight left":
-      case "sharp left":
-        return "TURN LEFT";
-
-      case "right":
-      case "slight right":
-      case "sharp right":
-        return "TURN RIGHT";
-
-      case "straight":
-        return "CONTINUE";
-
-      case "uturn":
-        return "U-TURN";
-
-      default:
-        return "NAVIGATION";
-    }
+    return getNavigationManeuverLabel(
+      navigation.nextManeuver?.type,
+      navigation.nextManeuver?.modifier,
+    );
   }
 
   private buildNavigationView(
@@ -784,9 +937,16 @@ export class CosmicHudService {
         maneuver.distanceMeters,
       );
 
+    const arrow =
+      getNavigationArrow(
+        maneuver.type,
+        maneuver.modifier,
+      );
+    const title =
+      this.getNavigationTitle(navigation);
     const street =
-      maneuver.streetName ||
-      maneuver.instruction;
+      maneuver.streetName?.trim() ||
+      null;
 
     const arrival =
       navigation.arrivalTime
@@ -803,16 +963,40 @@ export class CosmicHudService {
         )
         : `${navigation.etaMinutes} min`;
 
+    if (
+      arrow &&
+      shouldUseLargeNavigationArrow(
+        maneuver.distanceMeters,
+        maneuver.type,
+        maneuver.modifier,
+      )
+    ) {
+      const body = [
+        maneuver.type.toLowerCase().includes("arriv")
+          ? "ARRIVE"
+          : distance,
+        street,
+      ].filter(Boolean).join("\n");
+
+      return {
+        id: "navigation",
+        title: arrow,
+        body,
+        priority:
+          maneuver.distanceMeters <= 130
+            ? "critical"
+            : "attention",
+        timeoutMs: 8000,
+      };
+    }
+
     return {
       id: "navigation",
 
-      title:
-        this.getNavigationTitle(
-          navigation,
-        ),
+      title,
 
       body: [
-        street,
+        street || maneuver.instruction,
         "",
         distance,
         "",
@@ -873,12 +1057,30 @@ export class CosmicHudService {
   // --------------------------------------------------
 
   private async runLiveRefresh() {
+    await this.refreshContextStrip();
+
     if (!this.isCardVisible) {
       return;
     }
 
     const current =
       hudViews[this.currentView];
+
+    if (
+      current.id !== "music" &&
+      current.id !== "sports" &&
+      current.id !== "calendar"
+    ) {
+      return;
+    }
+
+    if (
+      this.liveRefreshInFlight.has(current.id)
+    ) {
+      return;
+    }
+
+    this.liveRefreshInFlight.add(current.id);
 
     const now = Date.now();
 
@@ -978,7 +1180,246 @@ export class CosmicHudService {
         "Live HUD refresh failed:",
         error,
       );
+    } finally {
+      this.liveRefreshInFlight.delete(
+        current.id,
+      );
     }
+  }
+
+  // --------------------------------------------------
+  // CONTEXT STRIP
+  // --------------------------------------------------
+
+  private truncateContext(
+    content: string,
+  ) {
+    const maxLength = 25;
+
+    return content.length > maxLength
+      ? `${content.slice(0, maxLength - 1)}…`
+      : content;
+  }
+
+  private formatCallContext(
+    call: CosmicCallStatus,
+  ) {
+    if (call.state === "ringing") {
+      return call.outgoing === false ? "Incoming Call" : "Calling";
+    }
+
+    if (call.state === "dialing") {
+      return "Calling";
+    }
+
+    if (call.state !== "connected" && call.state !== "held") {
+      return "";
+    }
+
+    const connectedAt = call.connectedAt
+      ? new Date(call.connectedAt).getTime()
+      : null;
+    const elapsedSeconds = connectedAt
+      ? Math.max(0, Math.floor((Date.now() - connectedAt) / 1000))
+      : 0;
+    const minutes = Math.floor(elapsedSeconds / 60);
+    const seconds = String(elapsedSeconds % 60).padStart(2, "0");
+    const label = call.state === "held" ? "Call Held" : "Active Call";
+
+    return this.truncateContext(
+      `${label} • ${String(minutes).padStart(2, "0")}:${seconds}`,
+    );
+  }
+
+  private formatSportsContext(
+    response: CosmicSportsResponse,
+  ) {
+    return formatSportsContextValue(response);
+  }
+
+  private async renderContextStrip(
+    content: string,
+  ) {
+    if (
+      content === this.lastContextStripContent
+    ) {
+      return;
+    }
+
+    const operationId =
+      ++this.contextStripOperationId;
+
+    await this.updateText(
+      HUD.contextId,
+      "cosmic-context",
+      content,
+      () =>
+        operationId ===
+        this.contextStripOperationId,
+    );
+
+    if (
+      operationId ===
+      this.contextStripOperationId
+    ) {
+      this.lastContextStripContent = content;
+    }
+  }
+
+  private async refreshContextStrip() {
+    if (this.contextStripRefreshInFlight) {
+      this.logDiagnostic(
+        "context refresh skipped while in flight",
+      );
+      return;
+    }
+
+    this.contextStripRefreshInFlight = true;
+    this.logDiagnostic("context refresh started");
+
+    try {
+      let navigationContext = "";
+      const refreshCalendar =
+        Date.now() >= this.contextCalendarRefreshAt;
+      const refreshSports =
+        Date.now() >= this.contextSportsRefreshAt;
+
+      const [navigationResult, callResult, calendarResult, sportsResult] =
+        await Promise.allSettled([
+          getCosmicNavigation(),
+          getCosmicCallStatus(),
+          refreshCalendar
+            ? getNextCalendarEvent()
+            : Promise.resolve(null),
+          refreshSports
+            ? getCosmicSports()
+            : Promise.resolve(null),
+        ]);
+
+      if (navigationResult.status === "fulfilled") {
+        navigationContext =
+          formatUrgentNavigationContext(
+            navigationResult.value,
+          );
+        this.logDiagnostic(
+          "navigation context resolved",
+          { active: Boolean(navigationContext) },
+        );
+      } else {
+        console.error(
+          "Failed to refresh navigation context:",
+          navigationResult.reason,
+        );
+      }
+
+      if (callResult.status === "fulfilled") {
+        this.callStatus = callResult.value;
+        this.logDiagnostic(
+          "call context resolved",
+          { state: this.callStatus?.state ?? null },
+        );
+      } else {
+        this.callStatus = null;
+        console.error(
+          "Failed to refresh call context:",
+          callResult.reason,
+        );
+      }
+
+      if (refreshCalendar) {
+        if (calendarResult.status === "fulfilled") {
+          this.contextCalendarEvent =
+            calendarResult.value?.nextEvent ?? null;
+        } else {
+          console.error(
+            "Failed to refresh calendar context:",
+            calendarResult.reason,
+          );
+        }
+
+        this.contextCalendarRefreshAt =
+          Date.now() +
+          this.contextCalendarRefreshInterval;
+      }
+
+      if (refreshSports) {
+        if (sportsResult.status === "fulfilled") {
+          const sports = sportsResult.value;
+          this.logDiagnostic(
+            "sports context request resolved",
+            {
+              state: sports?.game?.state ?? null,
+            },
+          );
+
+          this.contextSportsRefreshInterval =
+            sports?.game?.state === "live"
+              ? 1000
+              : 30_000;
+          this.contextSportsRefreshAt =
+            Date.now() +
+            this.contextSportsRefreshInterval;
+          this.lastSportsContextContent =
+            sports ? this.formatSportsContext(sports) : "";
+        } else {
+          console.error(
+            "Failed to refresh sports context:",
+            sportsResult.reason,
+          );
+          // Retry promptly after a failed live read without blocking the
+          // other context sources or displaying an invented result.
+          this.contextSportsRefreshAt =
+            Date.now() + 1000;
+        }
+      }
+
+      const callContext =
+        this.callStatus &&
+        this.callStatus.state !== "idle" &&
+        this.callStatus.state !== "ended"
+          ? this.formatCallContext(this.callStatus)
+          : "";
+      const calendarContext =
+        formatCalendarContext(this.contextCalendarEvent);
+      const resolvedContext = resolveContext({
+        navigation: navigationContext,
+        call: callContext,
+        calendar: calendarContext,
+        sports: this.lastSportsContextContent,
+      });
+
+      this.logDiagnostic(
+        "context source selected",
+        resolvedContext,
+      );
+      await this.renderContextStrip(
+        resolvedContext.content,
+      );
+    } catch (error) {
+      console.error(
+        "Failed to refresh context strip:",
+        error,
+      );
+      await this.renderContextStrip("");
+    } finally {
+      this.contextStripRefreshInFlight =
+        false;
+    }
+  }
+
+  private async updateActiveCallDuration() {
+    if (
+      this.callStatus?.state !== "connected" &&
+      this.callStatus?.state !== "held"
+    ) {
+      return;
+    }
+
+    await this.renderContextStrip(
+      this.formatCallContext(
+        this.callStatus,
+      ),
+    );
   }
 
   private async refreshVisibleView(
@@ -997,6 +1438,13 @@ export class CosmicHudService {
 
     const content =
       `${view.title}\n\n${view.body}`;
+    const renderEpoch =
+      this.renderEpoch;
+    const isCurrentRender = () =>
+      this.isCardVisible &&
+      this.renderEpoch === renderEpoch &&
+      hudViews[this.currentView]?.id ===
+        view.id;
 
     /*
      * Don't send the same content to
@@ -1010,15 +1458,20 @@ export class CosmicHudService {
       return;
     }
 
-    this.lastRenderedContent[
-      view.id
-    ] = content;
-
     await this.updateText(
       HUD.cardId,
       "cosmic-card",
       content,
+      isCurrentRender,
     );
+
+    if (!isCurrentRender()) {
+      return;
+    }
+
+    this.lastRenderedContent[
+      view.id
+    ] = content;
 
     console.log(
       `LIVE HUD UPDATED: ${view.id}`,
@@ -1029,31 +1482,90 @@ export class CosmicHudService {
   // --------------------------------------------------
 
   private async updateText(
-  id: number,
-  name: string,
-  content: string,
-) {
-  const success =
-    await this.bridge
-      .textContainerUpgrade(
-        new TextContainerUpgrade({
-          containerID: id,
-          containerName: name,
-          contentOffset: 0,
-          contentLength: 0,
-          content,
-        }),
+    id: number,
+    name: string,
+    content: string,
+    shouldWrite: () => boolean = () => true,
+  ) {
+    const key = `${id}:${name}`;
+    const queue = this.bridgeWrites.get(key) ??
+      new LatestWriteQueue(
+        async (nextContent) => {
+          const startedAt = performance.now();
+          this.logDiagnostic(
+            "bridge write invoked",
+            {
+              containerID: id,
+              containerName: name,
+              content: nextContent,
+            },
+          );
+
+          const success =
+            await this.bridge
+              .textContainerUpgrade(
+                new TextContainerUpgrade({
+                  containerID: id,
+                  containerName: name,
+                  contentOffset: 0,
+                  contentLength: 0,
+                  content: nextContent,
+                }),
+              );
+
+          if (!success) {
+            throw new Error(
+              `textContainerUpgrade returned false for ${name}`,
+            );
+          }
+
+          this.logDiagnostic(
+            "bridge write resolved",
+            {
+              containerID: id,
+              containerName: name,
+              content: nextContent,
+              success,
+              durationMs: Math.round(
+                performance.now() - startedAt,
+              ),
+            },
+          );
+
+          console.log(
+            "TEXT UPDATE:",
+            {
+              name,
+              success,
+              content: nextContent,
+            },
+          );
+        },
+        (type, nextContent, durationMs) => {
+          const details = {
+            containerID: id,
+            containerName: name,
+            content: nextContent,
+            ...(durationMs === undefined
+              ? {}
+              : { durationMs: Math.round(durationMs) }),
+          };
+
+          if (type === "slow") {
+            console.warn("Slow bridge update:", details);
+          } else if (type === "timeout") {
+            console.error("Timed out bridge update:", details);
+          } else if (type === "coalesced") {
+            console.warn("Coalesced bridge update:", details);
+          } else {
+            console.warn("Discarded stale bridge update:", details);
+          }
+        },
       );
 
-  console.log(
-    "TEXT UPDATE:",
-    {
-      name,
-      success,
-      content,
-    },
-  );
-}
+    this.bridgeWrites.set(key, queue);
+    await queue.enqueue(content, shouldWrite);
+  }
 
   // --------------------------------------------------
   // CLOCK
@@ -1071,12 +1583,65 @@ export class CosmicHudService {
     );
   }
 
-  private async updateClock() {
-    await this.updateText(
-      HUD.timeId,
-      "cosmic-time",
-      this.getTime(),
+  private async updateClock(
+    source: "initialize" | "timer",
+  ) {
+    const now = Date.now();
+    this.logDiagnostic(
+      "clock update entered",
+      {
+        source,
+        elapsedSincePreviousMs:
+          this.lastClockTickAt === null
+            ? null
+            : now - this.lastClockTickAt,
+      },
     );
+    this.lastClockTickAt = now;
+
+    if (this.clockUpdateInFlight) {
+      this.clockUpdatePending = true;
+      this.logDiagnostic(
+        "clock update coalesced",
+      );
+      return;
+    }
+
+    this.clockUpdateInFlight = true;
+
+    try {
+      const content = this.getTime();
+
+      if (
+        content !== this.lastClockContent
+      ) {
+        this.logDiagnostic(
+          "clock content generated",
+          { content },
+        );
+
+        await this.updateText(
+          HUD.timeId,
+          "cosmic-time",
+          content,
+        );
+
+        this.lastClockContent = content;
+        this.logDiagnostic(
+          "clock update resolved",
+          { content },
+        );
+      }
+
+      await this.updateActiveCallDuration();
+    } finally {
+      this.clockUpdateInFlight = false;
+
+      if (this.clockUpdatePending) {
+        this.clockUpdatePending = false;
+        void this.updateClock("timer");
+      }
+    }
   }
 
   // --------------------------------------------------
@@ -1099,6 +1664,9 @@ export class CosmicHudService {
 }
 
   async dismissCard() {
+    this.navigationOperationId += 1;
+    this.renderEpoch += 1;
+
     if (this.dismissTimer) {
       clearTimeout(
         this.dismissTimer,
@@ -1142,15 +1710,15 @@ export class CosmicHudService {
     const content =
       `${view.title}\n\n${view.body}`;
 
-    this.lastRenderedContent[
-      view.id
-    ] = content;
-
     await this.updateText(
       HUD.cardId,
       "cosmic-card",
       content,
     );
+
+    this.lastRenderedContent[
+      view.id
+    ] = content;
 
     this.resetDismissTimer();
   }
@@ -1161,7 +1729,12 @@ export class CosmicHudService {
 
   private async renderView(
     view: HudView,
+    shouldRender: () => boolean = () => true,
   ) {
+    if (!shouldRender()) {
+      return;
+    }
+
     this.isCardVisible = true;
 
     this.activePriority =
@@ -1170,15 +1743,20 @@ export class CosmicHudService {
     const content =
       `${view.title}\n\n${view.body}`;
 
-    this.lastRenderedContent[
-      view.id
-    ] = content;
-
     await this.updateText(
       HUD.cardId,
       "cosmic-card",
       content,
+      shouldRender,
     );
+
+    if (!shouldRender()) {
+      return;
+    }
+
+    this.lastRenderedContent[
+      view.id
+    ] = content;
 
     this.resetDismissTimer();
   }
@@ -1189,7 +1767,12 @@ export class CosmicHudService {
   async showContext(
     view: HudView,
     force = false,
+    shouldRender: () => boolean = () => true,
   ) {
+    if (!shouldRender()) {
+      return;
+    }
+
     if (
       !canReplaceView(
         view,
@@ -1215,6 +1798,7 @@ export class CosmicHudService {
 
     await this.renderView(
       view,
+      shouldRender,
     );
   }
 
@@ -1222,11 +1806,19 @@ export class CosmicHudService {
   // LOAD CURRENT VIEW
   // --------------------------------------------------
 
-  private async loadCurrentView() {
+  private async loadCurrentView(
+    operationId: number,
+  ) {
     const view =
       hudViews[
       this.currentView
       ];
+    const renderEpoch =
+      this.renderEpoch;
+    const isCurrentOperation = () =>
+      operationId ===
+        this.navigationOperationId &&
+      renderEpoch === this.renderEpoch;
 
     if (
       view.id === "calendar"
@@ -1235,6 +1827,7 @@ export class CosmicHudService {
         await this
           .getCalendarCard(),
         true,
+        isCurrentOperation,
       );
 
       return;
@@ -1252,6 +1845,7 @@ export class CosmicHudService {
   await this.showContext(
     sportsView,
     true,
+    isCurrentOperation,
   );
 
   return;
@@ -1269,6 +1863,7 @@ export class CosmicHudService {
       await this.showContext(
         musicView,
         true,
+        isCurrentOperation,
       );
 
       return;
@@ -1281,13 +1876,15 @@ export class CosmicHudService {
         await this
           .getNavigationCard(),
         true,
+        isCurrentOperation,
       );
 
       return;
     }
 
-    await this
-      .renderCurrentCard();
+    if (isCurrentOperation()) {
+      await this.renderCurrentCard();
+    }
   }
 
   // --------------------------------------------------
@@ -1295,11 +1892,14 @@ export class CosmicHudService {
   // --------------------------------------------------
 
   private async nextCard() {
+    const operationId =
+      ++this.navigationOperationId;
+
     if (
       !this.isCardVisible
     ) {
       await this
-        .loadCurrentView();
+        .loadCurrentView(operationId);
 
       return;
     }
@@ -1310,15 +1910,18 @@ export class CosmicHudService {
       hudViews.length;
 
     await this
-      .loadCurrentView();
+      .loadCurrentView(operationId);
   }
 
   private async previousCard() {
+    const operationId =
+      ++this.navigationOperationId;
+
     if (
       !this.isCardVisible
     ) {
       await this
-        .loadCurrentView();
+        .loadCurrentView(operationId);
 
       return;
     }
@@ -1332,7 +1935,7 @@ export class CosmicHudService {
       hudViews.length;
 
     await this
-      .loadCurrentView();
+      .loadCurrentView(operationId);
   }
 
   // --------------------------------------------------
