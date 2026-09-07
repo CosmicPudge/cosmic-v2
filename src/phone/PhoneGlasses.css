@@ -23,17 +23,30 @@ button:hover, button.selected { border-color: #91f8bf; background: rgba(39,126,7
 .hud-stage.dark-backing::before { content: ""; position: absolute; inset: 0; background: rgba(0,0,0,.68); }
 .hud-stage.show-container-bounds .hud-container { outline: 1px dashed rgba(255,150,100,.55); }
 .show-stage-bounds { outline: 1px solid rgba(145,248,191,.9); }
+.stage-shell.show-stage-bounds .hud-stage::before { content: ""; position: absolute; z-index: 8; left: 50%; top: 0; width: 1px; height: 100%; background: rgba(145,248,191,.45); pointer-events: none; }
+.stage-shell.show-stage-bounds .hud-stage::after { content: ""; position: absolute; z-index: 8; left: calc(50% - 5px); top: 213px; width: 9px; height: 9px; border: 1px solid rgba(255,208,122,.95); border-radius: 50%; box-shadow: 0 0 0 3px rgba(255,208,122,.18); pointer-events: none; }
 .hud-container { position: absolute; overflow: hidden; white-space: pre-wrap; }
 .hud-cosmic-time { text-align: left; }
 .hud-cosmic-status { text-align: right; }
 .hud-cosmic-context { text-align: center; font-size: 15px; line-height: 1.2; }
-.hud-cosmic-card { text-align: center; font-size: 21px; line-height: 1.2; padding: 18px 8px; }
+.hud-cosmic-card { text-align: center; font-size: 21px; line-height: 1.2; padding: 18px 8px; perspective: 420px; }
 .hud-cosmic-card > div:first-child { font-size: 34px; line-height: 1; }
+.hud-cosmic-card.navigation-arrow-card > div:first-child { display: inline-block; transform: rotateX(8deg) rotateY(-10deg) translateZ(8px); text-shadow: 0 0 9px rgba(184,255,207,.8); }
 .camera-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity .2s; }
 .camera-video.visible { opacity: 1; }
 .mode-camera { background: #111; }
-.mode-black .scene-backdrop, .mode-black .camera-video { display: none; }
+.mode-camera .scene-backdrop, .mode-black .scene-backdrop, .mode-black .camera-video { display: none; }
 .mode-scene .camera-video { display: none; }
+.mode-camera .phone-toolbar > span, .mode-camera .phone-statusline { opacity: 0; }
+.camera-start-button { pointer-events: auto; border-color: rgba(145,248,191,.7); background: rgba(15,65,45,.72); font-size: 11px; padding: 6px 9px; }
+.phone-navigation-visual { position: absolute; z-index: 3; left: 288px; top: 218px; width: 150px; height: 104px; transform-origin: 50% 100%; transform-style: preserve-3d; perspective: 700px; pointer-events: none; filter: drop-shadow(0 8px 12px rgba(20,255,154,.24)); }
+.phone-navigation-visual svg { width: 100%; height: 100%; overflow: visible; transform: perspective(700px) rotateX(16deg); }
+.phone-navigation-trail path { fill: rgba(90,255,178,.27); stroke: rgba(191,255,220,.7); stroke-width: 1.5; }
+.phone-navigation-arrow-side { fill: url(#phone-arrow-side); transform: translateY(7px); opacity: .88; }
+.phone-navigation-arrow-face { fill: url(#phone-arrow-face); stroke: rgba(229,255,240,.92); stroke-width: 1.4; }
+.phone-navigation-arrow-highlight { fill: rgba(255,255,255,.38); }
+.phone-navigation-u-turn path { fill: none; stroke: #9dffd0; stroke-width: 8; stroke-linecap: round; stroke-linejoin: round; }
+.phone-navigation-u-turn path:last-child { fill: #9dffd0; stroke: none; }
 .scene-backdrop { position: absolute; inset: 0; overflow: hidden; background: #19344a; }
 .scene-sky { position: absolute; inset: 0 0 45%; background: linear-gradient(#6aa6d5, #d8e2cf); }
 .scene-road { position: absolute; inset: 40% -20% -15%; background: linear-gradient(75deg, #30363b 0 48%, #454b50 49% 51%, #30363b 52%); transform: perspective(400px) rotateX(10deg); }

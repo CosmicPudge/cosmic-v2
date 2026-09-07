@@ -39,12 +39,11 @@ import {
   formatCalendarContext,
 } from "../glasses/hud/calendarContext";
 import {
-  formatNavigationDistance,
-  formatUrgentNavigationContext,
-  getNavigationArrow,
-  getNavigationManeuverLabel,
+  buildNavigationPresentation,
+  formatNavigationContext,
   shouldUseLargeNavigationArrow,
-} from "../glasses/hud/navigationContext";
+  type NavigationPresentation,
+} from "../glasses/hud/navigationPresentation";
 import {
   formatSportsContext,
 } from "../glasses/hud/sportsContext";
@@ -59,6 +58,11 @@ import {
   shouldResumePhoneRefresh,
   type PhoneBackendStatus,
 } from "./phoneRuntime";
+import { formatPhoneNavigationDiagnostics } from "./navigationDiagnostics";
+import {
+  getPhoneNavigationVisual,
+  PHONE_FIXTURE_BEARING_PRESETS,
+} from "./navigationVisual";
 import "./PhoneGlasses.css";
 
 type PreviewMode = "camera" | "black" | "scene";
@@ -75,8 +79,6 @@ type DrawerSection =
 type Calibration = {
   opacity: number;
   scale: number;
-  offsetX: number;
-  offsetY: number;
   contrast: number;
   darkBacking: boolean;
 };
@@ -107,8 +109,6 @@ const CALENDAR_PRESETS = [
 const DEFAULT_CALIBRATION: Calibration = {
   opacity: 1,
   scale: 1,
-  offsetX: 0,
-  offsetY: 0,
   contrast: 1,
   darkBacking: false,
 };
@@ -116,9 +116,14 @@ const DEFAULT_CALIBRATION: Calibration = {
 function readCalibration(): Calibration {
   try {
     const saved = localStorage.getItem(CALIBRATION_KEY);
-    return saved
-      ? { ...DEFAULT_CALIBRATION, ...JSON.parse(saved) }
-      : DEFAULT_CALIBRATION;
+    if (!saved) return DEFAULT_CALIBRATION;
+    const parsed = JSON.parse(saved) as Partial<Calibration>;
+    return {
+      opacity: Number(parsed.opacity ?? DEFAULT_CALIBRATION.opacity),
+      scale: Number(parsed.scale ?? DEFAULT_CALIBRATION.scale),
+      contrast: Number(parsed.contrast ?? DEFAULT_CALIBRATION.contrast),
+      darkBacking: Boolean(parsed.darkBacking ?? DEFAULT_CALIBRATION.darkBacking),
+    };
   } catch {
     return DEFAULT_CALIBRATION;
   }
@@ -128,6 +133,7 @@ function fixtureNavigation(
   step: number,
   modifier: string,
   streetName: string,
+  targetBearing: number,
 ): CosmicNavigationResponse {
   const preset = NAVIGATION_FIXTURE_STEPS[step];
   if (!preset || preset.meters < 0) {
@@ -147,6 +153,7 @@ function fixtureNavigation(
         modifier,
         streetName: streetName.trim() || null,
         distanceMeters: preset.meters,
+        targetBearing,
       },
     },
   };
@@ -243,49 +250,34 @@ function fixtureCallStatus(now: number): CosmicCallStatus {
 }
 
 function cardForNavigation(
-  response: CosmicNavigationResponse | null,
+  presentation: NavigationPresentation,
 ) {
-  const maneuver = response?.navigation?.nextManeuver;
-  if (!maneuver) return null;
+  if (presentation.distanceMeters === null || presentation.passed) return null;
 
-  const arrow = getNavigationArrow(
-    maneuver.type,
-    maneuver.modifier,
-  );
-  const distance = formatNavigationDistance(
-    maneuver.distanceMeters,
-  );
-  const street = maneuver.streetName?.trim();
-
-  if (arrow && shouldUseLargeNavigationArrow(
-    maneuver.distanceMeters,
-    maneuver.type,
-    maneuver.modifier,
-  )) {
+  if (presentation.arrow && shouldUseLargeNavigationArrow(presentation)) {
     return {
-      title: arrow,
+      title: presentation.label,
       body: [
-        maneuver.type.toLowerCase().includes("arriv")
+        presentation.arrived
           ? "ARRIVE"
-          : distance,
-        street,
+          : presentation.distanceText,
+        presentation.streetName,
       ].filter(Boolean).join("\n"),
+      navigationArrow: true,
+      relativeBearing: presentation.relativeBearing,
     };
   }
 
   return {
-    title: getNavigationManeuverLabel(
-      maneuver.type,
-      maneuver.modifier,
-    ),
-    body: [street || maneuver.instruction, distance]
+    title: presentation.label,
+    body: [presentation.streetName || presentation.instruction, presentation.distanceText]
       .filter(Boolean)
       .join("\n"),
   };
 }
 
 export function PhoneGlasses() {
-  const [mode, setMode] = useState<PreviewMode>("black");
+  const [mode, setMode] = useState<PreviewMode>("camera");
   const [dataMode, setDataMode] = useState<DataMode>("real");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [section, setSection] = useState<DrawerSection>("display");
@@ -299,6 +291,8 @@ export function PhoneGlasses() {
   const [fixtureStep, setFixtureStep] = useState(2);
   const [fixtureModifier, setFixtureModifier] = useState("right");
   const [fixtureStreet, setFixtureStreet] = useState("400 N");
+  const [fixtureHeading, setFixtureHeading] = useState(0);
+  const [fixtureTargetBearing, setFixtureTargetBearing] = useState(90);
   const [fixtureCalendarMinutes, setFixtureCalendarMinutes] = useState(8);
   const [fixtureCalendarAnchor, setFixtureCalendarAnchor] = useState(() => Date.now());
   const [fixtureTitle, setFixtureTitle] = useState("ENGR 1010");
@@ -550,7 +544,7 @@ export function PhoneGlasses() {
   };
 
   const fixtureNavigationResponse = dataMode === "fixture"
-    ? fixtureNavigation(fixtureStep, fixtureModifier, fixtureStreet)
+    ? fixtureNavigation(fixtureStep, fixtureModifier, fixtureStreet, fixtureTargetBearing)
     : navigation;
   const fixtureCalendarEvent = dataMode === "fixture"
     ? fixtureCalendar(
@@ -563,9 +557,18 @@ export function PhoneGlasses() {
     )
     : calendar;
   const calendarText = formatCalendarContext(fixtureCalendarEvent, now);
-  const navigationText = formatUrgentNavigationContext(
+  const navigationHeading = dataMode === "fixture" ? fixtureHeading : heading;
+  const navigationPresentation = buildNavigationPresentation(
     fixtureNavigationResponse ?? { navigation: null },
+    navigationHeading,
   );
+  const navigationText = formatNavigationContext(navigationPresentation);
+  const navigationDiagnostics = formatPhoneNavigationDiagnostics(
+    dataMode,
+    navigationHeading,
+    navigationPresentation,
+  );
+  const navigationVisual = getPhoneNavigationVisual(navigationPresentation);
   const callText = dataMode === "fixture"
     ? formatCall(fixtureCall ? fixtureCallStatus(now) : null)
     : formatCall(call);
@@ -578,7 +581,10 @@ export function PhoneGlasses() {
     calendar: calendarText,
     sports: sportsText,
   });
-  const cardNavigation = cardForNavigation(fixtureNavigationResponse);
+  const showNavigationVisual = resolved.source === "navigation" &&
+    navigationPresentation.visible &&
+    (Boolean(navigationPresentation.arrow) || navigationPresentation.behind);
+  const cardNavigation = cardForNavigation(navigationPresentation);
   const card = resolved.source === "navigation"
     ? cardNavigation
       : resolved.source === "calendar"
@@ -588,6 +594,7 @@ export function PhoneGlasses() {
     ? hudViews[inputCardIndex]
     : null;
   const renderedCard = inputCard ?? card;
+  const cardHasNavigationArrow = inputCard === null && Boolean(cardNavigation?.navigationArrow);
   const timeText = new Intl.DateTimeFormat("en-US", {
     hour: "numeric",
     minute: "2-digit",
@@ -598,6 +605,12 @@ export function PhoneGlasses() {
     { id: HUD.contextId, name: "cosmic-context", x: 188, y: 8, width: 200, height: 60, content: resolved.content },
     { id: HUD.cardId, name: "cosmic-card", x: 120, y: 95, width: 336, height: 150, content: renderedCard ? `${renderedCard.title}\n\n${renderedCard.body}` : "" },
   ];
+
+  const applyFixtureBearingPreset = (fixture: typeof PHONE_FIXTURE_BEARING_PRESETS[number]) => {
+    setDataMode("fixture");
+    setFixtureHeading(fixture.heading);
+    setFixtureTargetBearing(fixture.target);
+  };
 
   const backendMessage = dataMode !== "real"
     ? ""
@@ -624,6 +637,7 @@ export function PhoneGlasses() {
       </div>
       <div className="phone-toolbar">
         <span>Cosmic Glasses · {dataMode.toUpperCase()}</span>
+        {mode === "camera" && !videoReady && <button className="camera-start-button" type="button" onClick={() => void startCamera()}>Start camera</button>}
         <button className="settings-button" type="button" onClick={() => setDrawerOpen(true)} aria-label="Open phone preview settings">⚙</button>
       </div>
       {backendMessage && <div className="backend-banner" role="status">{backendMessage}</div>}
@@ -634,13 +648,50 @@ export function PhoneGlasses() {
             style={{
               opacity: calibration.opacity,
               filter: `contrast(${calibration.contrast})`,
-              transform: `translate(${calibration.offsetX}px, ${calibration.offsetY}px) scale(${stageScale * calibration.scale})`,
+              transform: `translate(-50%, -50%) scale(${stageScale * calibration.scale})`,
             }}
           >
+            {showNavigationVisual && <div
+              className={`phone-navigation-visual${navigationVisual.behind ? " behind" : ""}`}
+              style={{
+                transform: `translate3d(calc(-50% + ${navigationVisual.translateX}px), -50%, 0) rotateY(${navigationVisual.yawDegrees}deg) rotateZ(${navigationVisual.rollDegrees}deg) scale(${navigationVisual.scale})`,
+              }}
+              aria-hidden="true"
+            >
+              <svg viewBox="0 0 120 104" role="presentation">
+                <defs>
+                  <linearGradient id="phone-arrow-face" x1="0" x2="1" y1="0" y2="1">
+                    <stop offset="0" stopColor="#e7fff0" stopOpacity=".95" />
+                    <stop offset=".52" stopColor="#6cffae" stopOpacity=".8" />
+                    <stop offset="1" stopColor="#159b70" stopOpacity=".9" />
+                  </linearGradient>
+                  <linearGradient id="phone-arrow-side" x1="0" x2="0" y1="0" y2="1">
+                    <stop offset="0" stopColor="#68ffb1" stopOpacity=".7" />
+                    <stop offset="1" stopColor="#0b5d52" stopOpacity=".9" />
+                  </linearGradient>
+                  <filter id="phone-arrow-glow" x="-50%" y="-50%" width="200%" height="200%">
+                    <feGaussianBlur stdDeviation="3" result="blur" />
+                    <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+                  </filter>
+                </defs>
+                <g className="phone-navigation-trail" filter="url(#phone-arrow-glow)">
+                  <path d="M60 96 45 78h9V61h12v17h9Z" />
+                  <path d="M60 82 49 68h7V55h8v13h7Z" />
+                </g>
+                {navigationVisual.behind ? <g className="phone-navigation-u-turn" filter="url(#phone-arrow-glow)">
+                  <path d="M31 72V39c0-15 12-27 27-27s27 12 27 27v8h-12v-8c0-8-7-15-15-15s-15 7-15 15v33Z" />
+                  <path d="m20 65 18 18 18-18H45V54H32v11Z" />
+                </g> : <g className="phone-navigation-arrow" filter="url(#phone-arrow-glow)">
+                  <path className="phone-navigation-arrow-side" d="m60 8 28 31H72v49H48V39H32Z" />
+                  <path className="phone-navigation-arrow-face" d="m60 2 28 31H72v49H48V33H32Z" />
+                  <path className="phone-navigation-arrow-highlight" d="M60 10 77 29H67v45h-7Z" />
+                </g>}
+              </svg>
+            </div>}
             {visibleContainers.map((container) => (
               <div
                 key={container.name}
-                className={`hud-container hud-${container.name}`}
+                className={`hud-container hud-${container.name}${container.name === "cosmic-card" && cardHasNavigationArrow ? " navigation-arrow-card" : ""}`}
                 style={{ left: container.x, top: container.y, width: container.width, height: container.height }}
                 data-container-id={container.id}
               >
@@ -665,13 +716,11 @@ export function PhoneGlasses() {
           <div className="drawer-content">
             {section === "display" && <>
               <h2>Display</h2>
-              <div className="mode-buttons">{(["camera", "black", "scene"] as PreviewMode[]).map((item) => <button key={item} type="button" className={mode === item ? "selected" : ""} onClick={() => changeMode(item)}>{item.toUpperCase()}</button>)}</div>
+              <div className="mode-buttons">{(["camera", "black"] as PreviewMode[]).map((item) => <button key={item} type="button" className={mode === item ? "selected" : ""} onClick={() => changeMode(item)}>{item.toUpperCase()}</button>)}</div>
               {mode === "camera" && <button type="button" onClick={() => void startCamera()}>Start camera</button>}
               {cameraError && <p className="error-text">{cameraError}</p>}
               <label>HUD opacity <input type="range" min="0.3" max="1" step="0.05" value={calibration.opacity} onChange={(event) => updateCalibration({ opacity: Number(event.target.value) })} /></label>
               <label>HUD scale <input type="range" min="0.75" max="1.4" step="0.01" value={calibration.scale} onChange={(event) => updateCalibration({ scale: Number(event.target.value) })} /></label>
-              <label>Horizontal offset <input type="range" min="-80" max="80" value={calibration.offsetX} onChange={(event) => updateCalibration({ offsetX: Number(event.target.value) })} /></label>
-              <label>Vertical offset <input type="range" min="-80" max="80" value={calibration.offsetY} onChange={(event) => updateCalibration({ offsetY: Number(event.target.value) })} /></label>
               <label>Contrast <input type="range" min="0.6" max="1.5" step="0.05" value={calibration.contrast} onChange={(event) => updateCalibration({ contrast: Number(event.target.value) })} /></label>
               <label className="check-row"><input type="checkbox" checked={calibration.darkBacking} onChange={(event) => updateCalibration({ darkBacking: event.target.checked })} /> Dark text backing</label>
               <label className="check-row"><input type="checkbox" checked={showBounds} onChange={(event) => setShowBounds(event.target.checked)} /> Show 576×288 bounds</label>
@@ -688,11 +737,13 @@ export function PhoneGlasses() {
             {section === "navigation" && <>
               <h2>Navigation fixture lab</h2>
               <p className="hint">Fixture-only. Current step: {NAVIGATION_FIXTURE_STEPS[fixtureStep]?.label}</p>
-              <label>Maneuver <select value={fixtureModifier} onChange={(event) => setFixtureModifier(event.target.value)}>{["straight", "slight left", "left", "sharp left", "slight right", "right", "sharp right", "uturn"].map((item) => <option key={item}>{item}</option>)}</select></label>
-              <label>Road name <input value={fixtureStreet} onChange={(event) => setFixtureStreet(event.target.value)} placeholder="Optional real-looking fixture" /></label>
+              <label>Heading <select disabled={dataMode !== "fixture"} value={fixtureHeading} onChange={(event) => setFixtureHeading(Number(event.target.value))}>{[0, 45, 90, 180, 270, 350].map((item) => <option key={item} value={item}>{item}°</option>)}</select></label>
+              <label>Target bearing <select disabled={dataMode !== "fixture"} value={fixtureTargetBearing} onChange={(event) => setFixtureTargetBearing(Number(event.target.value))}>{[0, 45, 90, 180, 270, 10].map((item) => <option key={item} value={item}>{item}°</option>)}</select></label>
+              <label>Maneuver <select disabled={dataMode !== "fixture"} value={fixtureModifier} onChange={(event) => setFixtureModifier(event.target.value)}>{["straight", "slight left", "left", "sharp left", "slight right", "right", "sharp right", "uturn"].map((item) => <option key={item}>{item}</option>)}</select></label>
+              <label>Road name <input disabled={dataMode !== "fixture"} value={fixtureStreet} onChange={(event) => setFixtureStreet(event.target.value)} placeholder="Optional real-looking fixture" /></label>
               <div className="step-buttons"><button type="button" onClick={() => setFixtureStep((step) => nextFixtureStep(step, -1, NAVIGATION_FIXTURE_STEPS.length))}>Previous step</button><button type="button" onClick={() => setFixtureStep((step) => nextFixtureStep(step, 1, NAVIGATION_FIXTURE_STEPS.length))}>Next step</button></div>
               <div className="step-buttons"><button type="button" onClick={() => setAutoApproach((value) => !value)}>{autoApproach ? "Stop approach" : "Auto approach"}</button><button type="button" onClick={() => { setAutoApproach(false); setFixtureStep(NAVIGATION_FIXTURE_STEPS.length - 1); }}>Pass maneuver</button></div>
-              <p>Arrow: {getNavigationArrow("turn", fixtureModifier) ?? "text fallback"}</p>
+              <p>Arrow: {navigationPresentation.arrow ?? "text fallback"} · relative {navigationPresentation.relativeBearing === null ? "—" : `${Math.round(navigationPresentation.relativeBearing)}°`}</p>
             </>}
             {section === "calendar" && <>
               <h2>Calendar fixture lab</h2>
@@ -707,7 +758,7 @@ export function PhoneGlasses() {
               <h2>Sensors</h2>
               <div className="step-buttons"><button type="button" onClick={startLocation}>Start real location</button><button type="button" onClick={stopLocation}>Stop location</button></div><p>Location: {locationStatus}</p>
               <div className="step-buttons"><button type="button" onClick={() => void startHeading()}>Start heading diagnostics</button><button type="button" onClick={stopHeading}>Stop heading</button></div><p>Heading: {heading === null ? "—" : `${Math.round(heading)}°`} · {headingStatus}</p>
-              <p className="hint">Heading never rotates arrows because the navigation API provides no maneuver bearing.</p>
+              <p className="hint">Arrows use the shared target-bearing and phone-heading presentation when both values are available.</p>
             </>}
             {section === "input" && <>
               <h2>Input emulation</h2>
@@ -716,7 +767,10 @@ export function PhoneGlasses() {
             </>}
             {section === "diagnostics" && <>
               <h2>Diagnostics</h2>
-              <dl><dt>Current time</dt><dd>{new Date(now).toLocaleTimeString()}</dd><dt>Visibility</dt><dd>{document.visibilityState}</dd><dt>Timer cadence</dt><dd>{timerCadence === null ? "—" : `${timerCadence} ms`}</dd><dt>Backend</dt><dd>{backendStatus}</dd><dt>Context source</dt><dd>{resolved.source}</dd><dt>Last HUD update</dt><dd>{lastUpdate}</dd><dt>Phone render count</dt><dd>{renderCount}</dd><dt>Camera</dt><dd>{cameraStatus}</dd><dt>Location</dt><dd>{locationStatus}</dd><dt>Heading</dt><dd>{headingStatus}</dd></dl>
+              <p className="hint">Fixture presets switch to FIXTURE mode and use the same shared presentation model as REAL mode.</p>
+              <div className="preset-grid bearing-presets">{PHONE_FIXTURE_BEARING_PRESETS.map((fixture) => <button key={fixture.label} type="button" onClick={() => applyFixtureBearingPreset(fixture)}>{fixture.label}</button>)}</div>
+              <button type="button" onClick={() => changeMode("scene")}>Developer scene fallback</button>
+              <dl><dt>Mode</dt><dd>{navigationDiagnostics.mode.toUpperCase()}</dd><dt>Heading</dt><dd>{navigationDiagnostics.heading}</dd><dt>Target</dt><dd>{navigationDiagnostics.target}</dd><dt>Relative</dt><dd>{navigationDiagnostics.relative}</dd><dt>Distance</dt><dd>{navigationDiagnostics.distance}</dd><dt>Current time</dt><dd>{new Date(now).toLocaleTimeString()}</dd><dt>Visibility</dt><dd>{document.visibilityState}</dd><dt>Timer cadence</dt><dd>{timerCadence === null ? "—" : `${timerCadence} ms`}</dd><dt>Backend</dt><dd>{backendStatus}</dd><dt>Context source</dt><dd>{resolved.source}</dd><dt>Last HUD update</dt><dd>{lastUpdate}</dd><dt>Phone render count</dt><dd>{renderCount}</dd><dt>Camera</dt><dd>{cameraStatus}</dd><dt>Location</dt><dd>{locationStatus}</dd><dt>Heading sensor</dt><dd>{headingStatus}</dd></dl>
             </>}
           </div>
         </aside>

@@ -1,94 +1,61 @@
-import type {
-  CosmicNavigationResponse,
-} from "../data/navigationClient";
+import type { CosmicNavigationResponse } from "../data/navigationClient";
+import {
+  buildNavigationPresentation,
+  formatNavigationContext,
+  formatNavigationDistance,
+  relativeBearing,
+  normalizeHeading,
+  type NavigationPresentation,
+} from "./navigationPresentation.ts";
+
+export {
+  buildNavigationPresentation,
+  formatNavigationContext,
+  formatNavigationDistance,
+  normalizeHeading,
+  relativeBearing,
+};
 
 export const NAVIGATION_CONTEXT_DISTANCE_METERS = 800;
 
-const MAX_NAVIGATION_CONTEXT_LENGTH = 25;
-
-function truncateNavigationContext(content: string) {
-  return content.length > MAX_NAVIGATION_CONTEXT_LENGTH
-    ? `${content.slice(0, MAX_NAVIGATION_CONTEXT_LENGTH - 1)}…`
-    : content;
-}
-
-export function formatNavigationDistance(meters: number) {
-  if (!Number.isFinite(meters) || meters < 0) {
-    return "";
-  }
-
-  const feet = meters * 3.28084;
-
-  if (feet <= 80) {
-    return "NOW";
-  }
-
-  if (feet < 1000) {
-    return `${Math.round(feet / 10) * 10} ft`;
-  }
-
-  const miles = meters / 1609.344;
-  if (miles < 0.5) {
-    return `${Math.round(feet / 50) * 50} ft`;
-  }
-
-  return `${miles.toFixed(1)} mi`;
+function responseFor(
+  type: string | null | undefined,
+  modifier: string | null | undefined,
+  distanceMeters = 0,
+  targetBearing: number | null = null,
+): CosmicNavigationResponse {
+  return {
+    navigation: {
+      destination: "",
+      etaMinutes: 0,
+      distanceMiles: 0,
+      traffic: "light",
+      arrivalTime: null,
+      nextManeuver: {
+        instruction: "",
+        type: type ?? "unknown",
+        modifier,
+        streetName: null,
+        distanceMeters,
+        targetBearing,
+      },
+    },
+  };
 }
 
 export function getNavigationManeuverLabel(
   type: string | null | undefined,
   modifier: string | null | undefined,
 ) {
-  const normalizedType = type?.trim().toLowerCase() ?? "";
-  const normalizedModifier = modifier?.trim().toLowerCase() ?? "";
-
-  if (normalizedType.includes("arriv")) {
-    return "ARRIVE";
-  }
-
-  if (normalizedType.includes("exit")) {
-    return "EXIT";
-  }
-
-  if (["left", "slight left", "sharp left"].includes(normalizedModifier)) {
-    return "TURN LEFT";
-  }
-
-  if (["right", "slight right", "sharp right"].includes(normalizedModifier)) {
-    return "TURN RIGHT";
-  }
-
-  if (normalizedModifier === "straight") {
-    return "CONTINUE";
-  }
-
-  if (normalizedModifier === "uturn") {
-    return "U-TURN";
-  }
-
-  return "NAVIGATION";
+  return buildNavigationPresentation(responseFor(type, modifier)).label;
 }
 
-// These are the conservative screen-fixed glyphs used by the large card.
-// The EvenHub SDK does not publish a hardware glyph matrix, so U-turns and
-// unknown maneuvers deliberately fall back to the existing text treatment.
 export function getNavigationArrow(
   type: string | null | undefined,
   modifier: string | null | undefined,
+  bearing: number | null = null,
 ) {
-  const normalizedType = type?.trim().toLowerCase() ?? "";
-  const normalizedModifier = modifier?.trim().toLowerCase() ?? "";
-
-  if (normalizedType.includes("arriv")) return "◎";
-  if (normalizedModifier === "straight") return "↑";
-  if (normalizedModifier === "slight right") return "↗";
-  if (normalizedModifier === "right") return "→";
-  if (normalizedModifier === "sharp right") return "↘";
-  if (normalizedModifier === "slight left") return "↖";
-  if (normalizedModifier === "left") return "←";
-  if (normalizedModifier === "sharp left") return "↙";
-
-  return null;
+  return buildNavigationPresentation(responseFor(type, modifier, 0, bearing)).arrow;
 }
 
 export function shouldUseLargeNavigationArrow(
@@ -96,33 +63,17 @@ export function shouldUseLargeNavigationArrow(
   type: string | null | undefined,
   modifier: string | null | undefined,
 ) {
-  return Number.isFinite(distanceMeters) &&
-    distanceMeters >= 0 &&
-    distanceMeters <= 250 &&
-    getNavigationArrow(type, modifier) !== null;
+  const presentation = buildNavigationPresentation(responseFor(type, modifier, distanceMeters));
+  return presentation.distanceMeters !== null &&
+    presentation.distanceMeters <= 250 &&
+    presentation.arrow !== null;
 }
 
 export function formatUrgentNavigationContext(
   response: CosmicNavigationResponse,
+  deviceHeading: number | null = null,
 ) {
-  const maneuver = response.navigation?.nextManeuver;
-  if (!maneuver || !Number.isFinite(maneuver.distanceMeters)) {
-    return "";
-  }
-
-  if (
-    maneuver.distanceMeters < 0 ||
-    maneuver.distanceMeters > NAVIGATION_CONTEXT_DISTANCE_METERS
-  ) {
-    return "";
-  }
-
-  const distance = formatNavigationDistance(maneuver.distanceMeters);
-  if (!distance) {
-    return "";
-  }
-
-  return truncateNavigationContext(
-    `${getNavigationManeuverLabel(maneuver.type, maneuver.modifier)} • ${distance}`,
-  );
+  return formatNavigationContext(buildNavigationPresentation(response, deviceHeading));
 }
+
+export type { NavigationPresentation };

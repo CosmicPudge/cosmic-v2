@@ -6,6 +6,7 @@ export type CosmicNavigationManeuver = {
   modifier: string | null;
   streetName: string | null;
   distanceMeters: number;
+  targetBearing?: number | null;
 };
 
 export type CosmicNavigationState = {

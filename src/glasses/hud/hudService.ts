@@ -21,12 +21,10 @@ import {
   formatSportsScore,
 } from "./sportsContext";
 import {
-  formatNavigationDistance as formatNavigationDistanceValue,
-  getNavigationArrow,
-  getNavigationManeuverLabel,
-  shouldUseLargeNavigationArrow,
-  formatUrgentNavigationContext,
-} from "./navigationContext";
+  buildNavigationPresentation,
+  formatNavigationContext,
+  shouldUseLargeNavigationArrow as shouldUsePresentationArrow,
+} from "./navigationPresentation";
 import {
   formatCalendarContext,
 } from "./calendarContext";
@@ -898,22 +896,6 @@ export class CosmicHudService {
   // NAVIGATION FORMATTING
   // --------------------------------------------------
 
-  private formatDistance(
-    meters: number,
-  ) {
-    return formatNavigationDistanceValue(meters);
-  }
-
-  private getNavigationTitle(
-    navigation:
-      CosmicNavigationState,
-  ) {
-    return getNavigationManeuverLabel(
-      navigation.nextManeuver?.type,
-      navigation.nextManeuver?.modifier,
-    );
-  }
-
   private buildNavigationView(
     navigation:
       CosmicNavigationState,
@@ -932,21 +914,11 @@ export class CosmicHudService {
       };
     }
 
-    const distance =
-      this.formatDistance(
-        maneuver.distanceMeters,
-      );
-
-    const arrow =
-      getNavigationArrow(
-        maneuver.type,
-        maneuver.modifier,
-      );
-    const title =
-      this.getNavigationTitle(navigation);
-    const street =
-      maneuver.streetName?.trim() ||
-      null;
+    const presentation = buildNavigationPresentation({ navigation });
+    const distance = presentation.distanceText;
+    const arrow = presentation.arrow;
+    const title = presentation.label;
+    const street = presentation.streetName;
 
     const arrival =
       navigation.arrivalTime
@@ -965,14 +937,10 @@ export class CosmicHudService {
 
     if (
       arrow &&
-      shouldUseLargeNavigationArrow(
-        maneuver.distanceMeters,
-        maneuver.type,
-        maneuver.modifier,
-      )
+      shouldUsePresentationArrow(presentation)
     ) {
       const body = [
-        maneuver.type.toLowerCase().includes("arriv")
+        presentation.arrived
           ? "ARRIVE"
           : distance,
         street,
@@ -983,7 +951,7 @@ export class CosmicHudService {
         title: arrow,
         body,
         priority:
-          maneuver.distanceMeters <= 130
+          presentation.urgency === "critical"
             ? "critical"
             : "attention",
         timeoutMs: 8000,
@@ -1004,10 +972,7 @@ export class CosmicHudService {
       ].join("\n"),
 
       priority:
-        maneuver.distanceMeters <=
-          130
-          ? "critical"
-          : "attention",
+        presentation.urgency === "critical" ? "critical" : "attention",
 
       timeoutMs: 8000,
     };
@@ -1297,10 +1262,9 @@ export class CosmicHudService {
         ]);
 
       if (navigationResult.status === "fulfilled") {
-        navigationContext =
-          formatUrgentNavigationContext(
-            navigationResult.value,
-          );
+        navigationContext = formatNavigationContext(
+          buildNavigationPresentation(navigationResult.value),
+        );
         this.logDiagnostic(
           "navigation context resolved",
           { active: Boolean(navigationContext) },
