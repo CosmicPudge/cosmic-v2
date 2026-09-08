@@ -34,11 +34,20 @@ type AICounter = {
   estimatedCostUsd: number | null;
 };
 
+type ToolCounter = {
+  requests: number;
+  successes: number;
+  failures: number;
+  totalDurationMs: number;
+  errors: Record<MetricErrorCategory, number>;
+};
+
 const MAX_KEYS = 128;
 const database = new Map<string, Counter>();
 const providers = new Map<string, Counter>();
 const caches = new Map<string, CacheCounter>();
 const ai = new Map<string, AICounter>();
+const tools = new Map<string, ToolCounter>();
 
 function emptyErrors(): Record<MetricErrorCategory, number> {
   return { timeout: 0, rate_limit: 0, connection: 0, validation: 0, upstream: 0, unknown: 0 };
@@ -56,6 +65,10 @@ function emptyAICounter(): AICounter {
   return { requests: 0, failures: 0, totalDurationMs: 0, usageKnownRequests: 0, usageUnknownRequests: 0, inputTokens: 0, outputTokens: 0, cachedTokens: 0, estimatedCostUsd: null };
 }
 
+function emptyToolCounter(): ToolCounter {
+  return { requests: 0, successes: 0, failures: 0, totalDurationMs: 0, errors: emptyErrors() };
+}
+
 function boundedGet<T>(map: Map<string, T>, key: string, create: () => T): T {
   const existing = map.get(key);
   if (existing) return existing;
@@ -71,6 +84,25 @@ function safeKey(value: string): string {
 
 function duration(value: number | undefined): number {
   return Number.isFinite(value) && value && value > 0 ? Math.round(value) : 0;
+}
+
+export function estimateAICostUsd(input: { provider: string; model: string; inputTokens?: number; outputTokens?: number; cachedTokens?: number }): number | undefined {
+  const configured = process.env.COSMIC_AI_PRICING_JSON;
+  if (!configured) return undefined;
+  try {
+    const pricing = JSON.parse(configured) as Record<string, { inputPer1k?: unknown; outputPer1k?: unknown; cachedInputPer1k?: unknown }>;
+    const rate = pricing[`${input.provider}:${input.model}`];
+    if (!rate) return undefined;
+    const inputRate = typeof rate.inputPer1k === "number" ? rate.inputPer1k : undefined;
+    const outputRate = typeof rate.outputPer1k === "number" ? rate.outputPer1k : undefined;
+    const cachedRate = typeof rate.cachedInputPer1k === "number" ? rate.cachedInputPer1k : inputRate;
+    if (inputRate === undefined || outputRate === undefined || cachedRate === undefined) return undefined;
+    const cachedTokens = Math.min(input.cachedTokens ?? 0, input.inputTokens ?? 0);
+    const uncachedTokens = Math.max(0, (input.inputTokens ?? 0) - cachedTokens);
+    return (uncachedTokens * inputRate + cachedTokens * cachedRate + (input.outputTokens ?? 0) * outputRate) / 1000;
+  } catch {
+    return undefined;
+  }
 }
 
 function recordError(counter: Counter, category: MetricErrorCategory | undefined) {
@@ -127,6 +159,14 @@ export function recordAIMetric(input: { provider: string; model: string; feature
   if (Number.isFinite(input.estimatedCostUsd)) counter.estimatedCostUsd = (counter.estimatedCostUsd ?? 0) + (input.estimatedCostUsd ?? 0);
 }
 
+export function recordToolMetric(input: { tool: string; durationMs?: number; success: boolean; errorCategory?: MetricErrorCategory }) {
+  const counter = boundedGet(tools, safeKey(input.tool), emptyToolCounter);
+  counter.requests += 1;
+  counter.totalDurationMs += duration(input.durationMs);
+  if (input.success) counter.successes += 1;
+  else { counter.failures += 1; if (input.errorCategory) counter.errors[input.errorCategory] += 1; }
+}
+
 export function getObservabilitySnapshot() {
   return {
     generatedAt: new Date().toISOString(),
@@ -134,6 +174,7 @@ export function getObservabilitySnapshot() {
     providers: Object.fromEntries(providers),
     caches: Object.fromEntries(caches),
     ai: Object.fromEntries(ai),
+    tools: Object.fromEntries(tools),
     limits: { maxKeysPerCategory: MAX_KEYS },
   };
 }
@@ -143,4 +184,5 @@ export function resetObservabilityForTests() {
   providers.clear();
   caches.clear();
   ai.clear();
+  tools.clear();
 }

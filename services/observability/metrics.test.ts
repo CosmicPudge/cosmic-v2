@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { classifyMetricError, getObservabilitySnapshot, recordAIMetric, recordCacheMetric, recordDatabaseMetric, recordProviderMetric, resetObservabilityForTests } from "./metrics";
+import { classifyMetricError, estimateAICostUsd, getObservabilitySnapshot, recordAIMetric, recordCacheMetric, recordDatabaseMetric, recordProviderMetric, recordToolMetric, resetObservabilityForTests } from "./metrics";
 
 test.beforeEach(() => resetObservabilityForTests());
 
@@ -37,4 +37,20 @@ test("categorizes safe operational errors", () => {
   assert.equal(classifyMetricError(new Error("HTTP 429")), "rate_limit");
   assert.equal(classifyMetricError(new Error("getaddrinfo ENOTFOUND")), "connection");
   assert.equal(classifyMetricError(new Error("private token should not be logged")), "unknown");
+});
+
+test("calculates cost only from configured fixture pricing", () => {
+  process.env.COSMIC_AI_PRICING_JSON = JSON.stringify({ "openai:fixture-model": { inputPer1k: 1, outputPer1k: 2, cachedInputPer1k: 0.25 } });
+  assert.equal(estimateAICostUsd({ provider: "openai", model: "fixture-model", inputTokens: 1_000, cachedTokens: 200, outputTokens: 500 }), 1.85);
+  delete process.env.COSMIC_AI_PRICING_JSON;
+  assert.equal(estimateAICostUsd({ provider: "openai", model: "fixture-model", inputTokens: 1_000, outputTokens: 500 }), undefined);
+});
+
+test("aggregates deterministic tool counters without payload data", () => {
+  recordToolMetric({ tool: "current_weather", durationMs: 5, success: true });
+  recordToolMetric({ tool: "calendar_lookup", durationMs: 7, success: false, errorCategory: "connection" });
+  const snapshot = getObservabilitySnapshot();
+  assert.equal(snapshot.tools.current_weather.successes, 1);
+  assert.equal(snapshot.tools.calendar_lookup.failures, 1);
+  assert.equal(snapshot.tools.calendar_lookup.errors.connection, 1);
 });
