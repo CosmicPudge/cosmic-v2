@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import type { FinanceAccount, FinanceBudget, FinanceCategory, FinanceRecurringCadence, FinanceRecurringItem, FinanceSnapshot, FinanceTransaction, FinanceTransactionDirection } from "@/core/contracts/Finance";
 import { advanceRecurringDate, calculateBudgetStatus, calculateExpectedCashFlow, formatMoney, getAverageDailySpending, getMerchantTotals, getMonthComparison, getUpcomingRecurringItems, parseMoneyToMinor, transactionImpactMinor } from "@/services/finance/domain";
 import CosmicPlusGate from "@/components/cosmic-plus/CosmicPlusGate";
@@ -23,6 +23,7 @@ interface Props {
   saveBudget: (budget: FinanceBudget) => void;
   removeBudget: (id: string) => void;
   saveCategory: (category: FinanceCategory) => void;
+  connectedTransactions: ConnectedFinanceTransaction[];
 }
 
 type RecurringDraft = { accountId: string; name: string; merchant: string; amount: string; direction: FinanceTransactionDirection; cadence: FinanceRecurringCadence; nextExpectedDate: string; categoryId: string };
@@ -37,10 +38,8 @@ export default function FinanceIntelligence(props: Props) {
   return entitlements.features["finance.recurring"] ? <FinanceIntelligencePremium {...props} /> : <CosmicPlusGate feature="finance.recurring" title="Recurring Finance, budgets, and forecasting" />;
 }
 
-function FinanceIntelligencePremium({ data, selectedAccount, balances, saveTransaction, saveRecurringItem, removeRecurringItem, saveBudget, removeBudget, saveCategory }: Props) {
+function FinanceIntelligencePremium({ data, selectedAccount, balances, saveTransaction, saveRecurringItem, removeRecurringItem, saveBudget, removeBudget, saveCategory, connectedTransactions }: Props) {
   const hidden = data.hideBalances;
-  const [connectedTransactions, setConnectedTransactions] = useState<ConnectedFinanceTransaction[]>([]);
-  useEffect(() => { let active = true; void fetch("/api/finance/connected-data?limit=200", { cache: "no-store" }).then((response) => response.ok ? response.json() as Promise<{ transactions?: ConnectedFinanceTransaction[] }> : { transactions: [] }).then((body) => { if (active) setConnectedTransactions(body.transactions ?? []); }).catch(() => undefined); return () => { active = false; }; }, []);
   const categories = data.categories.filter((category) => !category.archived);
   const categoryName = (categoryId: string) => data.categories.find((category) => category.id === categoryId)?.name ?? "Other";
   const upcoming = useMemo(() => getUpcomingRecurringItems(data.recurringItems, new Date(), 30), [data.recurringItems]);

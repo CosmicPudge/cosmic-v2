@@ -2,6 +2,7 @@ import type { FinanceAccount, FinanceAccountType, FinanceCategory, FinanceTransa
 
 export type ConnectedFinanceAccount = {
   id: string;
+  connectionId: string;
   name: string;
   type: string;
   subtype?: string | null;
