@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
   if (!process.env.CRON_SECRET || request.headers.get("authorization") !== `Bearer ${process.env.CRON_SECRET}`) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
-  const connections = await getDatabase().select().from(providerConnections).where(eq(providerConnections.provider, "canvas")); const results: Array<{ status: string; eventsSeen?: number; created?: number; updated?: number; unmatched?: number }> = [];
+  const connections = await getDatabase().select({ id: providerConnections.id, userId: providerConnections.userId, providerAccountId: providerConnections.providerAccountId }).from(providerConnections).where(eq(providerConnections.provider, "canvas")); const results: Array<{ status: string; eventsSeen?: number; created?: number; updated?: number; unmatched?: number }> = [];
   for (const connection of connections) {
     if (connection.providerAccountId !== "canvas-personal-calendar") continue;
     if (!getSchoolAccess({ id: connection.userId }).enabled) continue;

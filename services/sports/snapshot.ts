@@ -3,6 +3,7 @@ import { sportsProviders } from "./providers";
 import { favoriteFirstSections, officialSourceReferences, sportOrder } from "./preferences";
 import type { CosmicUserPreferences } from "@/core/contracts/Settings";
 import { neutralPreferences } from "@/services/settings/preferences";
+import { recordCacheMetric } from "@/services/observability/metrics";
 
 function eventDedupeKey(event: SportsEvent): string {
   if ((event.sport === "nfl" || event.sport === "college-football") && event.homeTeam && event.awayTeam) {
@@ -10,6 +11,31 @@ function eventDedupeKey(event: SportsEvent): string {
     return `${event.sport}:${event.start.toISOString()}:${teams}`;
   }
   return event.id;
+}
+
+const snapshotCache = new Map<string, { expiresAt: number; value: SportsSnapshot }>();
+const snapshotRequests = new Map<string, Promise<SportsSnapshot>>();
+const MAX_SNAPSHOT_CACHE_ENTRIES = 64;
+
+function snapshotCacheKey(preferences: CosmicUserPreferences): string {
+  return JSON.stringify({
+    enabledSports: [...preferences.sports.enabledSports].sort(),
+    followedTeams: preferences.sports.followedTeams.map((team) => `${team.sport}:${team.provider}:${team.teamId}:${team.label}`).sort(),
+    followedDrivers: preferences.sports.followedDrivers.map((driver) => `${driver.sport ?? "f1"}:${driver.id}`).sort(),
+    followedConstructors: preferences.sports.followedConstructors.map((constructor) => `${constructor.sport ?? "f1"}:${constructor.id}`).sort(),
+  });
+}
+
+function snapshotTtl(snapshot: SportsSnapshot): number {
+  if (snapshot.live.length) return 5_000;
+  if (snapshot.upcoming.length) return 60_000;
+  return 5 * 60_000;
+}
+
+function trimSnapshotCache() {
+  if (snapshotCache.size < MAX_SNAPSHOT_CACHE_ENTRIES) return;
+  const oldest = [...snapshotCache.entries()].sort((left, right) => left[1].expiresAt - right[1].expiresAt)[0];
+  if (oldest) { snapshotCache.delete(oldest[0]); recordCacheMetric({ cache: "sports.snapshot", event: "evictions" }); }
 }
 
 export function dedupeSportsEvents(events: SportsEvent[]): SportsEvent[] {
@@ -23,6 +49,29 @@ export function dedupeSportsEvents(events: SportsEvent[]): SportsEvent[] {
 }
 
 export async function getSportsSnapshot(now = new Date(), preferences: CosmicUserPreferences = neutralPreferences): Promise<SportsSnapshot> {
+  const cacheKey = snapshotCacheKey(preferences);
+  const cached = snapshotCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) { recordCacheMetric({ cache: "sports.snapshot", event: "hits" }); return cached.value; }
+  recordCacheMetric({ cache: "sports.snapshot", event: "misses" });
+  const pending = snapshotRequests.get(cacheKey);
+  if (pending) { recordCacheMetric({ cache: "sports.snapshot", event: "coalesced" }); return pending; }
+
+  const request = loadSportsSnapshot(now, preferences).then((snapshot) => {
+    recordCacheMetric({ cache: "sports.snapshot", event: "refreshes" });
+    trimSnapshotCache();
+    snapshotCache.set(cacheKey, { value: snapshot, expiresAt: Date.now() + snapshotTtl(snapshot) });
+    return snapshot;
+  }).catch((error) => {
+    recordCacheMetric({ cache: "sports.snapshot", event: "failures" });
+    throw error;
+  }).finally(() => {
+    snapshotRequests.delete(cacheKey);
+  });
+  snapshotRequests.set(cacheKey, request);
+  return request;
+}
+
+async function loadSportsSnapshot(now: Date, preferences: CosmicUserPreferences): Promise<SportsSnapshot> {
   const providers = sportsProviders(preferences);
   const results = await Promise.all(providers.map(async (provider) => {
     try {

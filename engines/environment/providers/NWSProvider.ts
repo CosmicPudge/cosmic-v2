@@ -5,6 +5,7 @@ export async function getWeatherAlerts(
   const response = await fetch(
     `https://api.weather.gov/alerts/active?point=${lat},${lon}`,
     {
+      next: { revalidate: 120 },
       headers: {
         "User-Agent": "Cosmic Weather",
         Accept: "application/geo+json",

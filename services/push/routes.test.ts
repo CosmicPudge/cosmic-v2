@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { safePushRoute } from "./routes.js";
-import { parsePushSubscription, safeDeviceLabel } from "./validation.js";
+import { safePushRoute } from "./routes";
+import { parsePushSubscription, safeDeviceLabel } from "./validation";
 
 test("push routes allow only internal Sports destinations", () => {
   assert.equal(safePushRoute("/sports"), "/sports");

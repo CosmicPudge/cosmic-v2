@@ -1,4 +1,5 @@
 import type { SportKind, SportsEvent, SportsProviderCapabilities, SportsStanding } from "@/core/contracts/Sports";
+import { classifyMetricError, recordProviderMetric } from "@/services/observability/metrics";
 
 export interface SportsProviderResult {
   events: SportsEvent[];
@@ -48,7 +49,16 @@ export function date(value: unknown): Date | undefined {
 }
 
 export async function fetchJson(url: string, revalidate: number): Promise<unknown> {
-  const response = await fetch(url, { next: { revalidate } });
-  if (!response.ok) throw new Error(`Request failed (${response.status})`);
-  return response.json() as Promise<unknown>;
+  const startedAt = performance.now();
+  try {
+    const response = await fetch(url, { next: { revalidate }, signal: AbortSignal.timeout(15_000) });
+    const responseBytes = Number(response.headers.get("content-length") ?? 0) || undefined;
+    if (!response.ok) throw new Error(`Request failed (${response.status})`);
+    const value = await response.json() as unknown;
+    recordProviderMetric({ provider: "sports", operation: "fetchJson", durationMs: performance.now() - startedAt, responseBytes });
+    return value;
+  } catch (error) {
+    recordProviderMetric({ provider: "sports", operation: "fetchJson", durationMs: performance.now() - startedAt, errorCategory: classifyMetricError(error) });
+    throw error;
+  }
 }

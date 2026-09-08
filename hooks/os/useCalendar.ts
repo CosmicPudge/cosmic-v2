@@ -80,15 +80,23 @@ function hydrateSnapshot(
 
 const DEFAULT_REFRESH_INTERVAL_MS = 5 * 60 * 1000;
 const calendarCache = new Map<string, { expiresAt: number; value: CalendarSnapshot }>();
+const calendarRequests = new Map<string, Promise<CalendarSnapshot>>();
 
 async function requestCalendarSnapshot(scopeId: string): Promise<CalendarSnapshot> {
   const cached = calendarCache.get(scopeId);
   if (cached && cached.expiresAt > Date.now()) return cached.value;
-  const response = await fetch(kioskApiUrl("/api/calendar"), { credentials: "include", cache: "no-store" });
-  if (!response.ok) throw new Error("Calendar is temporarily unavailable.");
-  const snapshot = hydrateSnapshot(await response.json());
-  calendarCache.set(scopeId, { value: snapshot, expiresAt: Date.now() + 60_000 });
-  return snapshot;
+  const pending = calendarRequests.get(scopeId);
+  if (pending) return pending;
+  const request = fetch(kioskApiUrl("/api/calendar"), { credentials: "include", cache: "no-store" })
+    .then(async (response) => {
+      if (!response.ok) throw new Error("Calendar is temporarily unavailable.");
+      const snapshot = hydrateSnapshot(await response.json());
+      calendarCache.set(scopeId, { value: snapshot, expiresAt: Date.now() + 60_000 });
+      return snapshot;
+    })
+    .finally(() => { calendarRequests.delete(scopeId); });
+  calendarRequests.set(scopeId, request);
+  return request;
 }
 
 interface UseCalendarOptions {
