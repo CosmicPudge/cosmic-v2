@@ -1,10 +1,5 @@
-import AmbientMode from "@/components/os/ambient/AmbientMode";
-import AmbientShell from "@/components/os/ambient/AmbientShell";
+import StandaloneDesktopKiosk from "@/components/os/kiosk/StandaloneDesktopKiosk";
 
 export default function AmbientPage() {
-  return (
-    <AmbientShell>
-      <AmbientMode />
-    </AmbientShell>
-  );
+  return <StandaloneDesktopKiosk />;
 }

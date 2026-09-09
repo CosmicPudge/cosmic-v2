@@ -15,6 +15,7 @@ import { AccountProvider } from "@/components/account/AccountProvider";
 import { AdProvider } from "@/components/ads/AdProvider";
 import { EntitlementsProvider } from "@/hooks/os/useEntitlements";
 import { CosmicTransitionProvider } from "@/components/os/transition";
+import DesktopKioskPresentation from "@/components/os/kiosk/DesktopKioskPresentation";
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? "https://cosmicpudge.shop"),
@@ -73,6 +74,7 @@ export default function RootLayout({
                             <SearchProvider>
                               <CosmicTransitionProvider>
                                 {children}
+                                <DesktopKioskPresentation />
                               </CosmicTransitionProvider>
                             </SearchProvider>
                           </ClockProvider>

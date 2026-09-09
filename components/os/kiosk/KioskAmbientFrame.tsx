@@ -19,19 +19,10 @@ function simulatedHour(value: string | null) {
   return Number.isInteger(hour) && hour >= 0 && hour <= 23 ? hour : null;
 }
 
-function KioskClock({ now }: { now: Date | null }) {
-  return (
-    <div className="kiosk-clock rounded-full border border-white/10 bg-black/25 px-3 py-1 text-center text-[clamp(.7rem,1.1vw,.95rem)] font-medium tabular-nums tracking-[.12em] text-white/75 backdrop-blur-sm" aria-label="Current local time">
-      {now ? now.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : "--:--"}
-    </div>
-  );
-}
-
 export default function KioskAmbientFrame({ children }: Props) {
   const searchParams = useSearchParams();
   const [now, setNow] = useState<Date | null>(null);
-  const [persistentClockHidden, setPersistentClockHiddenState] = useState(false);
-  const setPersistentClockHidden = useCallback((hidden: boolean) => setPersistentClockHiddenState(hidden), []);
+  const setPersistentClockHidden = useCallback(() => undefined, []);
   const overrideHour = simulatedHour(searchParams.get("simulate-kiosk-hour"));
 
   useEffect(() => {
@@ -54,7 +45,6 @@ export default function KioskAmbientFrame({ children }: Props) {
       <div className="kiosk-ambient-frame fixed inset-0 h-[100dvh] w-[100dvw] overflow-hidden">
         {children}
       <div className={`kiosk-night-dimmer pointer-events-none absolute inset-0 z-40 transition-opacity duration-[1500ms] motion-reduce:transition-none ${night ? "opacity-100" : "opacity-0"}`} aria-hidden="true" />
-        {!persistentClockHidden && <div className="pointer-events-none absolute inset-x-0 top-2 z-50 flex justify-center"><KioskClock now={now} /></div>}
       </div>
     </KioskAmbientContext.Provider>
   );

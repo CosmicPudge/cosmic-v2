@@ -12,6 +12,7 @@ import type { CosmicIconName } from "@/components/cosmic-icons";
 import { useEntitlements } from "@/hooks/os/useEntitlements";
 import { useSettingsRepository } from "@/services/settings/localRepository";
 import { isNavigationRouteActive, navigationModuleEnabled } from "./navigationRoutes";
+import { useKioskPresentation } from "@/hooks/os/useKioskPresentation";
 
 const sidebarIcons: Record<string, CosmicIconName> = {
   dashboard: "dashboard", search: "search", system: "system", calendar: "calendar", gmail: "gmail",
@@ -27,6 +28,8 @@ export default function Sidebar({ variant = "side" }: { variant?: "side" | "top"
   const { data: entitlements } = useEntitlements();
   const { data: settings } = useSettingsRepository();
   const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
+  const { enterManual } = useKioskPresentation();
+  const enterKiosk = enterManual;
   const navigationRef = useRef<HTMLElement>(null);
 
   const visibleApps = useMemo(() => apps.filter((app) => (app.id !== "school" || entitlements.features["school.basic"]) && navigationModuleEnabled(app.id, settings.preferences.modules)), [entitlements.features, settings.preferences.modules]);
@@ -80,7 +83,8 @@ export default function Sidebar({ variant = "side" }: { variant?: "side" | "top"
         {mobileMoreOpen && <nav className="grid max-h-[min(50vh,24rem)] grid-cols-2 gap-1 overflow-y-auto rounded-xl border border-white/10 bg-black/20 p-1 xl:hidden" aria-label="More Cosmic applications">
           {mobileMore.map((app) => <Link key={app.id} href={app.route} aria-current={isNavigationRouteActive(pathname, app.route) ? "page" : undefined} onClick={() => setMobileMoreOpen(false)} className={`flex min-h-11 items-center gap-2 rounded-lg px-2 text-left text-xs transition focus-visible:outline-2 focus-visible:outline-cyan-200 ${isNavigationRouteActive(pathname, app.route) ? "bg-cyan-200/10 text-white" : "text-white/60 hover:bg-white/[.07] hover:text-white"}`}><CosmicIcon icon={sidebarIcons[app.id] ?? "system"} size={22} state={isNavigationRouteActive(pathname, app.route) ? "active" : "idle"} /><span className="truncate">{app.name}</span></Link>)}
         </nav>}
-        {variant === "side" && <div className="mt-auto hidden rounded-xl border border-violet-200/15 bg-violet-400/[.06] p-3 lg:block"><p className="cosmic-kicker">Cosmic member</p><p className="mt-2 text-sm text-white/75">Everything in orbit.</p><p className="mt-1 text-xs text-violet-200/60">Build. Focus. Transcend.</p></div>}
+        {variant === "top" && <button type="button" onClick={enterKiosk} className="flex h-12 shrink-0 items-center rounded-xl border border-cyan-200/20 bg-cyan-200/[.08] px-3 text-xs font-semibold uppercase tracking-[.12em] text-cyan-100/80 transition hover:bg-cyan-200/[.15] hover:text-white focus-visible:outline-2 focus-visible:outline-cyan-200" aria-label="Enter Kiosk Mode">Kiosk</button>}
+        {variant === "side" && <div className="mt-auto hidden rounded-xl border border-violet-200/15 bg-violet-400/[.06] p-3 lg:block"><button type="button" onClick={enterKiosk} className="mb-3 w-full rounded-lg border border-cyan-200/20 bg-cyan-200/[.08] px-3 py-2 text-left text-xs font-semibold uppercase tracking-[.12em] text-cyan-100/80 transition hover:bg-cyan-200/[.15] hover:text-white focus-visible:outline-2 focus-visible:outline-cyan-200">Enter Kiosk Mode</button><p className="cosmic-kicker">Cosmic member</p><p className="mt-2 text-sm text-white/75">Everything in orbit.</p><p className="mt-1 text-xs text-violet-200/60">Build. Focus. Transcend.</p></div>}
       </div>
     </aside>
   );
