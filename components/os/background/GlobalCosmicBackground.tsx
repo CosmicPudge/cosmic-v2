@@ -19,7 +19,7 @@ export default function GlobalCosmicBackground() {
     return null;
   }
 
-  const isAmbient = pathname === "/os/ambient";
+  const isAmbient = pathname === "/kiosk";
   const selectedMotion = settings.data.appearance.reducedEffects || snapshot.power.reducedMotion
     ? "off"
     : snapshot.power.effective === "reduced"

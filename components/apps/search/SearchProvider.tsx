@@ -66,7 +66,7 @@ export function SearchProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const openSearch = useCallback((query = "") => {
-    if (pathname === "/os/ambient") return;
+    if (pathname === "/kiosk") return;
     previousFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     setOverlayQuery(query);
     setOverlayOpen(true);
@@ -78,14 +78,14 @@ export function SearchProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (pathname !== "/os/ambient") return;
+    if (pathname !== "/kiosk") return;
     const closeForAmbient = window.setTimeout(() => setOverlayOpen(false), 0);
     return () => window.clearTimeout(closeForAmbient);
   }, [pathname]);
 
   useEffect(() => {
     const handleShortcut = (event: KeyboardEvent) => {
-      if (pathname === "/os/ambient") return;
+      if (pathname === "/kiosk") return;
       if ((event.metaKey || event.ctrlKey) && event.key.toLocaleLowerCase() === "k") {
         event.preventDefault();
         openSearch();

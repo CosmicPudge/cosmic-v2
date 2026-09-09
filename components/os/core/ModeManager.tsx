@@ -22,8 +22,8 @@ export default function ModeManager() {
         break;
 
       case "ambient":
-        if (pathname !== "/os/ambient") {
-          router.push("/os/ambient");
+        if (pathname !== "/kiosk") {
+          router.push("/kiosk");
         }
         break;
 

@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect } from "react";
+import { useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { useSettingsData } from "@/components/apps/settings/SettingsProvider";
 import { useKioskPresentationStore } from "@/stores/kioskPresentationStore";
 import { resolveKioskIdleTimeout, shouldWakeDesktopKiosk } from "./kioskPresentationLifecycle";
@@ -13,19 +15,33 @@ function resolveIdleTimeout(configuredTimeout: number) {
 }
 
 export function useKioskPresentation() {
+  const router = useRouter();
   const active = useKioskPresentationStore((state) => state.active);
   const entry = useKioskPresentationStore((state) => state.entry);
-  const enterManual = useKioskPresentationStore((state) => state.enterManual);
-  const exit = useKioskPresentationStore((state) => state.exit);
+  const enterManualState = useKioskPresentationStore((state) => state.enterManual);
+  const exitState = useKioskPresentationStore((state) => state.exit);
+  const enterManual = useCallback(() => {
+    enterManualState();
+    router.push("/kiosk");
+  }, [enterManualState, router]);
+  const exit = useCallback(() => {
+    exitState();
+    if (window.location.pathname === "/kiosk") router.replace("/os");
+  }, [exitState, router]);
   return { active, entry, enterManual, exit };
 }
 
 export default function useKioskPresentationLifecycle() {
+  const router = useRouter();
   const settings = useSettingsData();
   const active = useKioskPresentationStore((state) => state.active);
   const entry = useKioskPresentationStore((state) => state.entry);
   const enterIdle = useKioskPresentationStore((state) => state.enterIdle);
   const exit = useKioskPresentationStore((state) => state.exit);
+  const enterIdleKiosk = useCallback(() => {
+    enterIdle();
+    router.replace("/kiosk");
+  }, [enterIdle, router]);
 
   useEffect(() => {
     if (!settings.ready || !settings.data.ambient.enabled || settings.data.ambient.idleMinutes === null) return;
@@ -41,7 +57,7 @@ export default function useKioskPresentationLifecycle() {
     const resetTimer = () => {
       if (document.hidden || useKioskPresentationStore.getState().active) return;
       clearTimer();
-      timer = window.setTimeout(() => enterIdle(), timeout);
+      timer = window.setTimeout(enterIdleKiosk, timeout);
     };
     const wake = (event: Event) => {
       const isExitControl = Boolean((event.target as Element | null)?.closest("[data-kiosk-exit]"));
@@ -107,7 +123,7 @@ export default function useKioskPresentationLifecycle() {
       window.removeEventListener("pointermove", handlePointerMove, true);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [enterIdle, exit, entry, settings.data.ambient.enabled, settings.data.ambient.idleMinutes, settings.ready]);
+  }, [enterIdleKiosk, exit, entry, settings.data.ambient.enabled, settings.data.ambient.idleMinutes, settings.ready]);
 
   useEffect(() => {
     if (!active) return;

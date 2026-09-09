@@ -1,5 +1,5 @@
-import StandaloneDesktopKiosk from "@/components/os/kiosk/StandaloneDesktopKiosk";
+import { redirect } from "next/navigation";
 
 export default function AmbientPage() {
-  return <StandaloneDesktopKiosk />;
+  redirect("/kiosk");
 }
