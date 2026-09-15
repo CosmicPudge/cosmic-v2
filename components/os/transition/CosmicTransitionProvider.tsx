@@ -3,7 +3,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
 
-import { useCosmicAccount } from "@/components/account/AccountProvider";
 import { useEntitlements } from "@/hooks/os/useEntitlements";
 import { useSettingsData } from "@/components/apps/settings/SettingsProvider";
 import { useCosmicScope } from "@/services/storage/scope";
@@ -91,7 +90,6 @@ const routeKey = (pathname: string) => ROUTE_READINESS.find(([route]) => pathnam
 
 export function CosmicTransitionProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname() ?? "/";
-  const { account, loading: accountLoading } = useCosmicAccount();
   const { loading: entitlementsLoading } = useEntitlements();
   const settings = useSettingsData();
   const scope = useCosmicScope();
@@ -159,12 +157,12 @@ export function CosmicTransitionProvider({ children }: { children: ReactNode }) 
   }, [bootComplete]);
 
   const tasks = useMemo(() => [
-    { id: "account", label: "Account", ready: !accountLoading, critical: true },
-    { id: "scope", label: "Workspace", ready: !accountLoading && (account ? scope.id === `account-${account.id}` : scope.id === "local"), critical: true },
+    { id: "application", label: "Cosmic", ready: true, critical: true },
+    { id: "scope", label: "Workspace", ready: true, critical: true },
     { id: "preferences", label: "Preferences", ready: settings.ready, critical: true },
     { id: "entitlements", label: "Access", ready: !entitlementsLoading, critical: true },
     { id: "dashboard", label: "Dashboard", ready: pathname !== "/os" || Boolean(routeStates["/os"]?.ready), critical: true },
-  ], [account, accountLoading, entitlementsLoading, pathname, routeStates, scope.id, settings.ready]);
+  ], [entitlementsLoading, pathname, routeStates, scope.id, settings.ready]);
 
   const criticalReady = tasks.filter((task) => task.critical).every((task) => task.ready);
 

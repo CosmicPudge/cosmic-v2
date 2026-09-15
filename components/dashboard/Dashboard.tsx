@@ -18,7 +18,6 @@ import { useDashboardShortcuts } from "./state/useDashboardShortcuts";
 
 import { useDisplay } from "@/components/os/display";
 import { useCosmicTransition, useRouteReadiness } from "@/components/os/transition";
-import { useCosmicAccount } from "@/components/account/AccountProvider";
 import { useEntitlements } from "@/hooks/os/useEntitlements";
 import useWeather from "@/hooks/os/useWeather";
 import DashboardEnvironment from "@/components/dashboard/background/DashboardEnvironment";
@@ -71,13 +70,12 @@ function DashboardContent() {
 }
 
 function DashboardReady() {
-  const { account, loading: accountLoading } = useCosmicAccount();
   const { loading: entitlementsLoading } = useEntitlements();
   const settings = useSettingsRepository();
   const scope = useCosmicScope();
   const dashboard = useDashboardReadiness();
   const { setDashboardReadiness } = useCosmicTransition();
-  const baseReady = !accountLoading && !entitlementsLoading && settings.ready && (account ? scope.id === `account-${account.id}` : scope.id === "local");
+  const baseReady = !entitlementsLoading && settings.ready;
   useRouteReadiness("/os", baseReady && dashboard.shellReady && dashboard.criticalReady, dashboard.widgets.some((item) => item.status === "degraded") ? "degraded" : "ready");
   useEffect(() => { setDashboardReadiness(dashboard); }, [dashboard, setDashboardReadiness]);
   return null;

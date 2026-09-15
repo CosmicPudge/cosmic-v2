@@ -3,17 +3,19 @@
 import { createContext, createElement, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 import type { CosmicEntitlements } from "@/core/contracts/Entitlements";
 import { freeEntitlements } from "@/core/contracts/Entitlements";
-import { useCosmicAccount } from "@/components/account/AccountProvider";
+import { useOptionalCosmicAccount } from "@/components/account/AccountProvider";
 
 type EntitlementState = ReturnType<typeof useEntitlementsInternal>;
 const EntitlementsContext = createContext<EntitlementState | null>(null);
 
 function useEntitlementsInternal() {
-  const { account, loading: accountLoading } = useCosmicAccount();
+  const accountState = useOptionalCosmicAccount();
+  const account = accountState?.account ?? null;
+  const accountLoading = accountState?.loading ?? false;
   const [data, setData] = useState<CosmicEntitlements>(freeEntitlements);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const refresh = useCallback(async () => {
-    if (accountLoading) return;
+    if (!accountState || accountLoading) return;
     if (!account) { setData(freeEntitlements); setLoading(false); return; }
     setLoading(true);
     try {
@@ -23,8 +25,14 @@ function useEntitlementsInternal() {
     } catch {
       setData({ ...freeEntitlements, source: "account" });
     } finally { setLoading(false); }
-  }, [account, accountLoading]);
-  useEffect(() => { void Promise.resolve().then(() => refresh()); }, [refresh]);
+  }, [account, accountLoading, accountState]);
+  useEffect(() => {
+    if (!accountState) {
+      void Promise.resolve().then(() => { setData(freeEntitlements); setLoading(false); });
+      return;
+    }
+    void Promise.resolve().then(() => refresh());
+  }, [accountState, refresh]);
   useEffect(() => { const update = () => void refresh(); window.addEventListener("cosmic:entitlements-updated", update); return () => window.removeEventListener("cosmic:entitlements-updated", update); }, [refresh]);
   return { data, loading: accountLoading || loading, refresh };
 }

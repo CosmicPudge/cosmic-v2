@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getCurrentCosmicAccount } from "@/services/auth/server";
 
 import { authReturnUrl } from "@/services/auth/returnUrl";
+import { isPersonalOsUiRoute } from "@/services/auth/proxyPolicy";
 
 const PUBLIC_API_ROUTES = new Set([
   "/api/account/session",
@@ -94,6 +95,13 @@ export async function proxy(request: NextRequest) {
 
   // Kiosk must reach its own pairing gate before any private content can mount.
   if (pathname === "/os/kiosk") {
+    return NextResponse.next();
+  }
+
+  // The normal Cosmic shell is a personal application. Keep this exemption
+  // below the kiosk branch and above account-backed request authorization so
+  // device mode and private APIs retain their existing boundaries.
+  if (isPersonalOsUiRoute(pathname)) {
     return NextResponse.next();
   }
 

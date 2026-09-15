@@ -1,8 +1,9 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
+import { PERSONAL_COSMIC_APPLICATION } from "@/core/contracts/Application";
 
-export type CosmicScopeKind = "local" | "account" | "dev";
+export type CosmicScopeKind = "personal" | "local" | "account" | "device" | "dev";
 
 export interface CosmicDataScope {
   id: string;
@@ -11,7 +12,8 @@ export interface CosmicDataScope {
 
 export const ACTIVE_SCOPE_STORAGE_KEY = "cosmic.active-scope";
 export const SCOPE_CHANGED_EVENT = "cosmic:scope-changed";
-export const DEFAULT_COSMIC_SCOPE: CosmicDataScope = { id: "local", kind: "local" };
+export const PERSONAL_COSMIC_SCOPE: CosmicDataScope = PERSONAL_COSMIC_APPLICATION.scope;
+export const DEFAULT_COSMIC_SCOPE: CosmicDataScope = PERSONAL_COSMIC_SCOPE;
 
 function normalizeScopeId(value: string) {
   return value.trim().replace(/[^a-zA-Z0-9_-]/g, "-").slice(0, 80) || "local";
@@ -24,7 +26,7 @@ export function getDefaultCosmicScope(): CosmicDataScope {
 export function getActiveCosmicScope(): CosmicDataScope {
   if (typeof window === "undefined") return DEFAULT_COSMIC_SCOPE;
   const id = normalizeScopeId(window.localStorage.getItem(ACTIVE_SCOPE_STORAGE_KEY) ?? DEFAULT_COSMIC_SCOPE.id);
-  return { id, kind: id === "local" ? "local" : id.startsWith("account-") ? "account" : "dev" };
+  return { id, kind: id === "personal" ? "personal" : id === "local" ? "local" : id.startsWith("account-") ? "account" : "dev" };
 }
 
 export function createScopedStorageKey(domain: string, scopeId = getActiveCosmicScope().id) {
@@ -34,7 +36,7 @@ export function createScopedStorageKey(domain: string, scopeId = getActiveCosmic
 export function setActiveCosmicScope(scope: CosmicDataScope | string) {
   const next = typeof scope === "string" ? normalizeScopeId(scope) : normalizeScopeId(scope.id);
   window.localStorage.setItem(ACTIVE_SCOPE_STORAGE_KEY, next);
-  const kind = typeof scope === "string" ? (next === "local" ? "local" : "dev") : scope.kind;
+  const kind = typeof scope === "string" ? (next === "personal" ? "personal" : next === "local" ? "local" : "dev") : scope.kind;
   window.dispatchEvent(new CustomEvent(SCOPE_CHANGED_EVENT, { detail: { id: next, kind } satisfies CosmicDataScope }));
 }
 
@@ -49,7 +51,7 @@ function subscribe(listener: () => void) {
 }
 
 export function useCosmicScope() {
-  useSyncExternalStore(subscribe, () => `${getActiveCosmicScope().id}:${revision}`, () => "local:0");
+  useSyncExternalStore(subscribe, () => `${getActiveCosmicScope().id}:${revision}`, () => `${DEFAULT_COSMIC_SCOPE.id}:0`);
   return getActiveCosmicScope();
 }
 
@@ -61,6 +63,13 @@ export function readScopedOrLegacy(domain: string, scopeId = getActiveCosmicScop
   const scopedKey = createScopedStorageKey(domain, scopeId);
   const scoped = window.localStorage.getItem(scopedKey);
   if (scoped !== null) return { raw: scoped, key: scopedKey, migrated: false };
+  if (normalizeScopeId(scopeId) === PERSONAL_COSMIC_SCOPE.id) {
+    const localKey = createScopedStorageKey(domain, "local");
+    const local = window.localStorage.getItem(localKey);
+    if (local !== null) return { raw: local, key: scopedKey, sourceKey: localKey, migrated: false };
+    const legacy = window.localStorage.getItem(legacyKey);
+    if (legacy !== null) return { raw: legacy, key: scopedKey, sourceKey: legacyKey, migrated: false };
+  }
   if (normalizeScopeId(scopeId) !== "local") return { raw: null, key: scopedKey, migrated: false };
   const legacy = window.localStorage.getItem(legacyKey);
   return { raw: legacy, key: scopedKey, migrated: Boolean(legacy) };

@@ -2,7 +2,6 @@
 
 import { useMemo } from "react";
 
-import { useCosmicAccount } from "@/components/account/AccountProvider";
 import CosmicIcon from "@/components/cosmic-icons/CosmicIcon";
 import { useClockData } from "@/components/apps/clock/ClockProvider";
 import { useSystem } from "@/components/os/system/SystemProvider";
@@ -45,13 +44,12 @@ export default function AmbientMode() {
   const sports = useSports({ refreshMs: (snapshot) => snapshot?.live.length ? 15_000 : 60_000 });
   const projects = useProjects();
   const { snapshot } = useSystem();
-  const { account } = useCosmicAccount();
   const eventSelection = useMemo(() => now && calendar.calendar ? getRelevantTimedEvent([...calendar.calendar.today, ...calendar.calendar.upcoming], now) : { event: undefined, current: false }, [calendar.calendar, now]);
   const activeTimer = clock.data.timers.find((timer) => timer.status === "running") ?? clock.data.timers.find((timer) => timer.status === "paused");
   const reminders = projects.data.tasks.filter((task) => !task.completed).slice(0, 2);
   const liveSport = sports.data?.live[0];
   const sportEvent = liveSport ?? sports.data?.upcoming[0];
-  const name = firstName(account?.displayName, account?.email);
+  const name = firstName(undefined, undefined);
   const online = snapshot.network.online;
 
   return <div className="ambient-mode" aria-label="Ambient Mode. Tap or press any key to wake Cosmic OS">

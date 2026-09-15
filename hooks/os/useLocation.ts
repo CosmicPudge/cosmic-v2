@@ -28,7 +28,7 @@ function resolveFallback(scopeId: string) {
     weatherLog("location-state=available");
     return saved;
   }
-  if (scopeId === "local") {
+  if (scopeId === "local" || scopeId === "personal") {
     weatherLog("location-state=available");
     return DEVELOPMENT_LOCATION;
   }

@@ -15,6 +15,7 @@ import { AccountProvider } from "@/components/account/AccountProvider";
 import { AdProvider } from "@/components/ads/AdProvider";
 import { EntitlementsProvider } from "@/hooks/os/useEntitlements";
 import { CosmicTransitionProvider } from "@/components/os/transition";
+import { PersonalCosmicProvider } from "@/components/os/core/CosmicApplicationProvider";
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? "https://cosmicpudge.shop"),
@@ -58,9 +59,10 @@ export default function RootLayout({
     />
   </head>
       <body className="isolate min-h-full overflow-x-hidden bg-[#030511] text-white">
-        <SettingsProvider>
-          <AccountProvider>
-            <EntitlementsProvider>
+        <PersonalCosmicProvider>
+          <SettingsProvider>
+            <AccountProvider>
+              <EntitlementsProvider>
               <AdProvider>
                 <SystemProvider>
                   <GlobalCosmicBackground />
@@ -82,9 +84,10 @@ export default function RootLayout({
                   </div>
                 </SystemProvider>
               </AdProvider>
-            </EntitlementsProvider>
-          </AccountProvider>
-        </SettingsProvider>
+              </EntitlementsProvider>
+            </AccountProvider>
+          </SettingsProvider>
+        </PersonalCosmicProvider>
       </body>
     </html>
   );
