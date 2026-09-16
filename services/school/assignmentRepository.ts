@@ -3,6 +3,7 @@ import { and, asc, eq } from "drizzle-orm";
 import { getDatabase } from "@/services/database/client";
 import { schoolAssignments } from "@/services/database/schema";
 import type { SchoolPlanningAssignment } from "@/core/contracts/SchoolPlanning";
+import { prepareSchoolOwnerWrite } from "./ownershipTransition";
 
 export type SchoolAssignmentRow = typeof schoolAssignments.$inferSelect;
 
@@ -29,12 +30,14 @@ export async function getSchoolAssignment(accountId: string, id: string) {
 }
 
 export async function createSchoolAssignment(input: typeof schoolAssignments.$inferInsert) {
-  const [row] = await getDatabase().insert(schoolAssignments).values(input).returning();
+  const values = await prepareSchoolOwnerWrite(input, input.userId);
+  const [row] = await getDatabase().insert(schoolAssignments).values(values).returning();
   return row ? toAssignment(row) : null;
 }
 
 export async function updateSchoolAssignment(accountId: string, id: string, input: Partial<typeof schoolAssignments.$inferInsert>) {
-  const [row] = await getDatabase().update(schoolAssignments).set({ ...input, updatedAt: new Date() }).where(and(eq(schoolAssignments.userId, accountId), eq(schoolAssignments.id, id))).returning();
+  const values = await prepareSchoolOwnerWrite(input, accountId);
+  const [row] = await getDatabase().update(schoolAssignments).set({ ...values, updatedAt: new Date() }).where(and(eq(schoolAssignments.userId, accountId), eq(schoolAssignments.id, id))).returning();
   return row ? toAssignment(row) : null;
 }
 
@@ -46,7 +49,8 @@ export async function deleteSchoolAssignment(accountId: string, id: string) {
 /** Provider refreshes update only provider-owned columns; planning fields are intentionally omitted. */
 export async function upsertCanvasAssignments(assignments: Array<typeof schoolAssignments.$inferInsert>) {
   if (!assignments.length) return [];
-  const rows = await Promise.all(assignments.map((assignment) => getDatabase().insert(schoolAssignments).values(assignment).onConflictDoUpdate({
+  const values = await Promise.all(assignments.map((assignment) => prepareSchoolOwnerWrite(assignment, assignment.userId)));
+  const rows = await Promise.all(values.map((assignment) => getDatabase().insert(schoolAssignments).values(assignment).onConflictDoUpdate({
     target: [schoolAssignments.userId, schoolAssignments.sourceType, schoolAssignments.sourceId, schoolAssignments.externalId],
     set: { title: assignment.title, description: assignment.description, courseId: assignment.courseId, courseName: assignment.courseName, dueAt: assignment.dueAt, availableAt: assignment.availableAt, lockAt: assignment.lockAt, completionStatus: assignment.completionStatus, pointsPossible: assignment.pointsPossible, published: assignment.published, canvasUrl: assignment.canvasUrl, sourceUpdatedAt: assignment.sourceUpdatedAt, lastSyncedAt: assignment.lastSyncedAt, updatedAt: new Date() },
   }).returning()));
