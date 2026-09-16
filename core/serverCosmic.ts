@@ -9,12 +9,15 @@ import { SubscriptionCalendarProvider } from "@/services/calendar/subscriptionCa
 import { CombinedCalendarProvider } from "@/services/calendar/combinedCalendarProvider";
 import { getCalendarSubscriptions } from "@/services/calendar/subscriptionConfig";
 import { MailEngine } from "@/engines/mail";
-import { getGmailToken, GmailProvider, type GmailToken } from "@/services/mail/gmail";
-import { OutlookProvider, type OutlookToken } from "@/services/mail/outlook";
+import { getGmailToken, GmailProvider, getPersonalGmailToken, refreshPersonalGmailToken, resolveGoogleCredential, storePersonalGmailToken, type GmailToken } from "@/services/mail/gmail";
+import { resolveMicrosoftCredential, OutlookProvider, storePersonalOutlookToken, type OutlookToken } from "@/services/mail/outlook";
 import { getConnectionsForCapability } from "@/services/providers/capabilities";
 import { getProviderCredentials, listProviderConnections, setProviderCredentials } from "@/services/providers/store";
 import { getCurrentCosmicAccount } from "@/services/auth/server";
+import { providerAccessContext } from "@/services/providers/access";
+import { resolvePrivateRequestContext } from "@/services/auth/privateContext";
 import { getAccountCalendarContext } from "@/services/calendar/accountProvider";
+import { isDatabaseConfigured } from "@/services/database/client";
 
 const shouldUseAppleCalendar =
   process.env.NODE_ENV !== "production" &&
@@ -64,12 +67,12 @@ export function getAppleCalendarWriter(): AppleCalendarWriter | null {
 export async function getAccountCalendarWriter(request: Request): Promise<AppleCalendarWriter | null> {
   const account = await getCurrentCosmicAccount(request);
   const connectionId = new URL(request.url).searchParams.get("connectionId") ?? undefined;
-  if (account && process.env.DATABASE_URL) return (await getAccountCalendarContext(account.id, connectionId))?.writer ?? null;
+  if (account && isDatabaseConfigured()) return (await getAccountCalendarContext(account.id, connectionId))?.writer ?? null;
   return process.env.NODE_ENV === "production" ? null : appleCalendarWriter;
 }
 
 export async function refreshAppleCalendarAfterWrite(request?: Request): Promise<void> {
-  if (request && (await getCurrentCosmicAccount(request)) && process.env.DATABASE_URL) return;
+  if (request && (await getCurrentCosmicAccount(request)) && isDatabaseConfigured()) return;
   if (appleProvider instanceof AppleCalendarProvider) {
     appleProvider.invalidateCache();
   }
@@ -87,8 +90,17 @@ export async function refreshAppleCalendarAfterWrite(request?: Request): Promise
 }
 
 export async function getServerMailEngine(request?: Request): Promise<MailEngine | null> {
+  const personal = request ? resolvePrivateRequestContext(request, "private-personal") : null;
+  if (personal) {
+    try {
+      const token = await resolveGoogleCredential(providerAccessContext(personal));
+      if (token) return new MailEngine(new GmailProvider(token, "", async (next) => { await storePersonalGmailToken(next); }));
+      const outlookToken = await resolveMicrosoftCredential(providerAccessContext(personal));
+      return outlookToken ? new MailEngine(new OutlookProvider(outlookToken, "", "", async (next) => { await storePersonalOutlookToken(next); })) : null;
+    } catch { return null; }
+  }
   const account = request ? await getCurrentCosmicAccount(request) : null;
-  if (account && process.env.DATABASE_URL) {
+  if (account && isDatabaseConfigured()) {
     const connection = (await listProviderConnections(account.id)).find((item) => item.provider === "gmail");
     const token = connection ? await getProviderCredentials(account.id, connection.id) : null;
     return token && connection ? new MailEngine(new GmailProvider(token as unknown as GmailToken, connection.email ?? undefined, async (next) => { await setProviderCredentials(account.id, connection.id, next as unknown as Record<string, unknown>); })) : null;
@@ -100,8 +112,17 @@ export async function getServerMailEngine(request?: Request): Promise<MailEngine
 }
 
 export async function getServerGmailToken(request: Request): Promise<GmailToken | null> {
+  const personal = resolvePrivateRequestContext(request, "private-personal");
+  if (personal) {
+    try {
+      const token = await getPersonalGmailToken();
+      return token && token.expires_at && token.expires_at <= Date.now() + 60_000 && token.refresh_token
+        ? await refreshPersonalGmailToken(token)
+        : token;
+    } catch { return null; }
+  }
   const account = await getCurrentCosmicAccount(request);
-  if (account && !process.env.DATABASE_URL) return null;
+  if (account && !isDatabaseConfigured()) return null;
   if (!account) return process.env.NODE_ENV === "production" ? null : getGmailToken();
   const connection = (await listProviderConnections(account.id)).find((item) => item.provider === "gmail");
   return connection ? await getProviderCredentials<GmailToken>(account.id, connection.id) : null;
@@ -109,7 +130,7 @@ export async function getServerGmailToken(request: Request): Promise<GmailToken 
 
 export async function getServerSchoolMailProviders(request: Request) {
   const account = await getCurrentCosmicAccount(request);
-  if (!account || !process.env.DATABASE_URL) return [];
+  if (!account || !isDatabaseConfigured()) return [];
   const providers: Array<{ provider: "gmail" | "outlook"; connectionId: string; engine: MailEngine }> = [];
   const connections = await getConnectionsForCapability(account.id, "mail.read");
   for (const connection of connections.filter((item) => item.provider === "gmail" || item.provider === "outlook")) {

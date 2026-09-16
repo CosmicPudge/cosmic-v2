@@ -3,7 +3,11 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { dirname, join } from "path";
 import type { MailAddress, MailMessage } from "@/core/contracts";
 import type { MailProviderAdapter } from "@/engines/mail";
-import { setProviderCredentials, upsertProviderConnection } from "@/services/providers/store";
+import { getProviderCredentials, listProviderConnections, setProviderCredentials, upsertProviderConnection } from "@/services/providers/store";
+import { isDatabaseConfigured } from "@/services/database/client";
+import { createLocalProviderCredentialStore } from "@/services/providers/localCredentialStore";
+import type { ProviderAccessContext } from "@/services/providers/access";
+import { requireProviderCredentialOwner } from "@/services/providers/access";
 
 export interface GmailToken { access_token: string; refresh_token?: string; expires_at?: number; token_type?: string; scope?: string; }
 interface GmailPart { mimeType?: string; body?: { data?: string; attachmentId?: string }; parts?: GmailPart[]; filename?: string; headers?: Array<{ name: string; value: string }>; }
@@ -15,13 +19,13 @@ const tokenPath = join(process.cwd(), ".cosmic", "gmail-token.json");
 export function isGmailConfigured(): boolean { return Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET && process.env.GOOGLE_REDIRECT_URI); }
 export function getGmailToken(): GmailToken | null { if (developmentToken) return developmentToken; try { if (existsSync(tokenPath)) return JSON.parse(readFileSync(tokenPath, "utf8")) as GmailToken; const value = process.env[TOKEN_KEY]; return value ? JSON.parse(value) as GmailToken : null; } catch { return null; } }
 export function storeGmailToken(token: GmailToken): void { const previous = getGmailToken(); developmentToken = { ...previous, ...token, ...(token.refresh_token ? { refresh_token: token.refresh_token } : {}) }; mkdirSync(dirname(tokenPath), { recursive: true }); writeFileSync(tokenPath, JSON.stringify(developmentToken), { mode: 0o600 }); }
-export function getGoogleAuthorizationUrl(state: string): string {
+export function getGoogleAuthorizationUrl(state: string, codeChallenge?: string): string {
   if (!isGmailConfigured()) throw new Error("Gmail OAuth is not configured.");
-  const query = new URLSearchParams({ client_id: process.env.GOOGLE_CLIENT_ID!, redirect_uri: process.env.GOOGLE_REDIRECT_URI!, response_type: "code", scope: "https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.send", access_type: "offline", prompt: "consent", state });
+  const query = new URLSearchParams({ client_id: process.env.GOOGLE_CLIENT_ID!, redirect_uri: process.env.GOOGLE_REDIRECT_URI!, response_type: "code", scope: "https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.send", access_type: "offline", prompt: "consent", state, ...(codeChallenge ? { code_challenge: codeChallenge, code_challenge_method: "S256" } : {}) });
   return `https://accounts.google.com/o/oauth2/v2/auth?${query}`;
 }
-export async function exchangeGoogleCode(code: string): Promise<GmailToken> {
-  const response = await fetch("https://oauth2.googleapis.com/token", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ code, client_id: process.env.GOOGLE_CLIENT_ID!, client_secret: process.env.GOOGLE_CLIENT_SECRET!, redirect_uri: process.env.GOOGLE_REDIRECT_URI!, grant_type: "authorization_code" }) });
+export async function exchangeGoogleCode(code: string, codeVerifier?: string): Promise<GmailToken> {
+  const response = await fetch("https://oauth2.googleapis.com/token", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ code, client_id: process.env.GOOGLE_CLIENT_ID!, client_secret: process.env.GOOGLE_CLIENT_SECRET!, redirect_uri: process.env.GOOGLE_REDIRECT_URI!, grant_type: "authorization_code", ...(codeVerifier ? { code_verifier: codeVerifier } : {}) }) });
   if (!response.ok) throw new Error("Google OAuth token exchange failed.");
   const token = await response.json() as GmailToken & { expires_in?: number };
   return { ...token, expires_at: token.expires_in ? Date.now() + token.expires_in * 1000 : undefined };
@@ -35,16 +39,29 @@ export async function storeAccountGmailToken(userId: string, token: GmailToken) 
   await setProviderCredentials(userId, connection.id, token as unknown as Record<string, unknown>);
   return connection;
 }
-async function refreshGmailToken(token: GmailToken): Promise<GmailToken> { if (!token.refresh_token) throw new Error("Gmail reconnect required."); const response = await fetch("https://oauth2.googleapis.com/token", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ refresh_token: token.refresh_token, client_id: process.env.GOOGLE_CLIENT_ID!, client_secret: process.env.GOOGLE_CLIENT_SECRET!, grant_type: "refresh_token" }) }); if (!response.ok) throw new Error("Gmail reconnect required."); const refreshed = await response.json() as GmailToken & { expires_in?: number }; const next = { ...token, ...refreshed, refresh_token: refreshed.refresh_token ?? token.refresh_token, expires_at: refreshed.expires_in ? Date.now() + refreshed.expires_in * 1000 : token.expires_at }; storeGmailToken(next); return next; }
+const personalOwner = { kind: "personal", id: "personal" } as const;
+function personalCredentialStore() { return createLocalProviderCredentialStore(); }
+export async function getPersonalGmailToken() { return personalCredentialStore().get(personalOwner, "google") as Promise<GmailToken | null>; }
+export async function storePersonalGmailToken(token: GmailToken) { await personalCredentialStore().set(personalOwner, "google", token as unknown as Record<string, unknown>); }
+export async function deletePersonalGmailToken() { return personalCredentialStore().delete(personalOwner, "google"); }
+export async function refreshPersonalGmailToken(token: GmailToken) { const next = await refreshGmailToken(token); await storePersonalGmailToken(next); return next; }
+export async function resolveGoogleCredential(accessContext: ProviderAccessContext) {
+  const owner = requireProviderCredentialOwner(accessContext);
+  if (owner.kind === "personal") return getPersonalGmailToken();
+  if (!isDatabaseConfigured()) return null;
+  const connection = (await listProviderConnections(owner.accountId)).find((item) => item.provider === "gmail");
+  return connection ? getProviderCredentials<GmailToken>(owner.accountId, connection.id) : null;
+}
+export async function refreshGmailToken(token: GmailToken): Promise<GmailToken> { if (!token.refresh_token) throw new Error("Gmail reconnect required."); const response = await fetch("https://oauth2.googleapis.com/token", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ refresh_token: token.refresh_token, client_id: process.env.GOOGLE_CLIENT_ID!, client_secret: process.env.GOOGLE_CLIENT_SECRET!, grant_type: "refresh_token" }) }); if (!response.ok) throw new Error("Gmail reconnect required."); const refreshed = await response.json() as GmailToken & { expires_in?: number }; return { ...token, ...refreshed, refresh_token: refreshed.refresh_token ?? token.refresh_token, expires_at: refreshed.expires_in ? Date.now() + refreshed.expires_in * 1000 : token.expires_at }; }
 export class GmailProvider implements MailProviderAdapter {
-  constructor(private token: GmailToken, private readonly accountId = process.env.GOOGLE_GMAIL_ACCOUNT_ID, private readonly onTokenUpdated?: (token: GmailToken) => Promise<void>) {}
+  constructor(private token: GmailToken, private readonly accountId = process.env.GOOGLE_GMAIL_ACCOUNT_ID, private readonly onTokenUpdated: (token: GmailToken) => Promise<void> = async (next) => { storeGmailToken(next); }) {}
   async getMessages(options: { limit?: number; unreadOnly?: boolean } = {}): Promise<MailMessage[]> {
     const query = new URLSearchParams({ maxResults: String(options.limit ?? 20), ...(options.unreadOnly ? { q: "is:unread" } : {}) });
     const list = await this.request<{ messages?: Array<{ id: string }> }>(`/messages?${query}`);
     return Promise.all((list.messages ?? []).map(({ id }) => this.getMessage(id)));
   }
   async getMessage(id: string): Promise<MailMessage> { const message = await this.request<GmailMessage>(`/messages/${encodeURIComponent(id)}?format=full`); return normalizeGmailMessage(message, this.accountId); }
-  private async request<T>(path: string): Promise<T> { if (this.token.expires_at && this.token.expires_at <= Date.now() + 60_000) { this.token = await refreshGmailToken(this.token); await this.onTokenUpdated?.(this.token); } const response = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me${path}`, { headers: { Authorization: `Bearer ${this.token.access_token}` } }); if (response.status === 401) { this.token = await refreshGmailToken(this.token); await this.onTokenUpdated?.(this.token); return this.request(path); } if (!response.ok) throw new Error("Gmail request failed."); return response.json() as Promise<T>; }
+  private async request<T>(path: string): Promise<T> { if (this.token.expires_at && this.token.expires_at <= Date.now() + 60_000) { this.token = await refreshGmailToken(this.token); await this.onTokenUpdated(this.token); } const response = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me${path}`, { headers: { Authorization: `Bearer ${this.token.access_token}` } }); if (response.status === 401) { this.token = await refreshGmailToken(this.token); await this.onTokenUpdated(this.token); return this.request(path); } if (!response.ok) throw new Error("Gmail request failed."); return response.json() as Promise<T>; }
 }
 export function canSendGmail(token = getGmailToken()): boolean { return Boolean(token?.scope?.split(" ").includes("https://www.googleapis.com/auth/gmail.send")); }
 export async function sendGmailReply(original: MailMessage, bodyText: string): Promise<{ id: string; threadId?: string; provider: "gmail"; sentAt: Date }> { const token = getGmailToken(); if (!token || !canSendGmail(token)) throw new Error("Reconnect Gmail to enable sending."); if (!bodyText.trim() || bodyText.length > 10_000) throw new Error("Reply must contain 1–10,000 characters."); if (/\b(no-?reply|do-?not-?reply)\b/i.test(original.from.email)) throw new Error("This sender does not accept replies."); const subject = /^re:/i.test(original.subject) ? original.subject : `Re: ${original.subject}`; const referenceIds = Array.from(new Set([...(original.references ?? []), ...(original.messageIdHeader ? [original.messageIdHeader] : [])])); const raw = Buffer.from([`To: ${original.from.email}`, `Subject: ${subject}`, ...(original.messageIdHeader ? [`In-Reply-To: ${original.messageIdHeader}`] : []), ...(referenceIds.length ? [`References: ${referenceIds.join(" ")}`] : []), "Content-Type: text/plain; charset=UTF-8", "", bodyText].join("\r\n"), "utf8").toString("base64url"); const response = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/messages/send", { method: "POST", headers: { Authorization: `Bearer ${token.access_token}`, "Content-Type": "application/json" }, body: JSON.stringify({ raw, ...(original.threadId ? { threadId: original.threadId } : {}) }) }); if (!response.ok) throw new Error("Gmail could not send the reply."); const sent = await response.json() as { id: string; threadId?: string }; return { id: sent.id, ...(sent.threadId ? { threadId: sent.threadId } : {}), provider: "gmail", sentAt: new Date() }; }

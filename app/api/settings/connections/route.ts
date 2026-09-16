@@ -1,12 +1,14 @@
 import { getCalendarSubscriptions } from "@/services/calendar/subscriptionConfig";
-import { getGmailToken, isGmailConfigured } from "@/services/mail/gmail";
-import { isOutlookConfigured } from "@/services/mail/outlook";
-import { configured as spotifyConfigured, disconnect as disconnectSpotify, readToken as readSpotifyToken } from "@/services/music/spotify";
+import { deletePersonalGmailToken, getGmailToken, getPersonalGmailToken, isGmailConfigured } from "@/services/mail/gmail";
+import { deletePersonalOutlookToken, getPersonalOutlookToken, isOutlookConfigured } from "@/services/mail/outlook";
+import { configured as spotifyConfigured, deletePersonalSpotifyToken, disconnect as disconnectSpotify, getPersonalSpotifyToken, readToken as readSpotifyToken } from "@/services/music/spotify";
 import { getCurrentCosmicAccount } from "@/services/auth/server";
 import { deleteProviderConnection, listProviderConnections } from "@/services/providers/store";
 import { isCredentialEncryptionConfigured } from "@/services/providers/credentialCrypto";
 import { clearWritableEventTargets } from "@/services/calendar/writableEventRegistry";
 import { normalizeProviderId } from "@/services/providers/normalize";
+import { isDatabaseConfigured } from "@/services/database/client";
+import { resolvePrivateRequestContext } from "@/services/auth/privateContext";
 
 export const dynamic = "force-dynamic";
 
@@ -52,8 +54,32 @@ function ownedConnectionStatus(connections: Array<{ provider: string; providerTy
 }
 
 export async function GET(request: Request) {
+  const personal = resolvePrivateRequestContext(request, "private-personal");
+  if (personal) {
+    const gmailReady = isGmailConfigured();
+    const outlookReady = isOutlookConfigured();
+    try {
+      const gmailToken = await getPersonalGmailToken();
+      const gmailReconnectRequired = Boolean(gmailToken?.expires_at && gmailToken.expires_at <= Date.now() && !gmailToken.refresh_token);
+      const gmailConnected = Boolean(gmailToken) && !gmailReconnectRequired;
+      const outlookToken = await getPersonalOutlookToken();
+      const outlookReconnectRequired = Boolean(outlookToken?.expires_at && outlookToken.expires_at <= Date.now() && !outlookToken.refresh_token);
+      const outlookConnected = Boolean(outlookToken) && !outlookReconnectRequired;
+      const spotifyToken = await getPersonalSpotifyToken();
+      const spotifyReconnectRequired = Boolean(spotifyToken?.expires_at && spotifyToken.expires_at <= Date.now() && !spotifyToken.refresh_token);
+      const spotifyConnected = Boolean(spotifyToken) && !spotifyReconnectRequired;
+      return Response.json({
+        calendar: [calendarStatus()],
+        spotify: { configured: spotifyConfigured(), connected: spotifyConnected, status: !spotifyConfigured() ? "unavailable" : spotifyReconnectRequired ? "reconnect-required" : spotifyConnected ? "connected" : "disconnected", provider: "Spotify", detail: !spotifyConfigured() ? "OAuth is not configured" : spotifyConnected ? "Personal authorization is stored on this server" : "Ready to connect" },
+        gmail: { configured: gmailReady, connected: gmailConnected, status: !gmailReady ? "unavailable" : gmailReconnectRequired ? "reconnect-required" : gmailConnected ? "connected" : "disconnected", provider: "Gmail", detail: !gmailReady ? "OAuth is not configured" : gmailConnected ? "Personal authorization is stored on this server" : "Ready to connect" },
+        outlook: { configured: outlookReady, connected: outlookConnected, status: !outlookReady ? "unavailable" : outlookReconnectRequired ? "reconnect-required" : outlookConnected ? "connected" : "disconnected", provider: "Outlook", detail: !outlookReady ? "OAuth is not configured" : outlookConnected ? "Personal authorization is stored on this server" : "Ready to connect" },
+      });
+    } catch {
+      return Response.json({ calendar: [calendarStatus()], spotify: unavailableStatus("Spotify", "Personal credential storage unavailable", false), gmail: unavailableStatus("Gmail", "Personal credential storage unavailable", false), outlook: unavailableStatus("Outlook", "Personal credential storage unavailable", false) });
+    }
+  }
   const account = await getCurrentCosmicAccount(request);
-  if (account && process.env.DATABASE_URL && isCredentialEncryptionConfigured()) {
+  if (account && isDatabaseConfigured() && isCredentialEncryptionConfigured()) {
     const connections = await listProviderConnections(account.id);
     return Response.json(ownedConnectionStatus(connections));
   }
@@ -89,10 +115,17 @@ export async function GET(request: Request) {
 }
 
 export async function DELETE(request: Request) {
+  const personal = resolvePrivateRequestContext(request, "private-personal");
+  if (personal) {
+    const payload: unknown = await request.json().catch(() => null);
+    if (typeof payload !== "object" || payload === null || !("provider" in payload) || (payload.provider !== "gmail" && payload.provider !== "microsoft" && payload.provider !== "spotify")) return Response.json({ error: "Unsupported personal connection." }, { status: 400 });
+    try { if (payload.provider === "gmail") await deletePersonalGmailToken(); else if (payload.provider === "microsoft") await deletePersonalOutlookToken(); else await deletePersonalSpotifyToken(); return Response.json({ disconnected: true, provider: payload.provider }); }
+    catch { return Response.json({ error: "Personal credential storage is unavailable." }, { status: 503 }); }
+  }
   const account = await getCurrentCosmicAccount(request);
-  if (account && (!process.env.DATABASE_URL || !isCredentialEncryptionConfigured())) return Response.json({ error: "Account-owned connections are unavailable until durable storage is configured." }, { status: 503 });
+  if (account && (!isDatabaseConfigured() || !isCredentialEncryptionConfigured())) return Response.json({ error: "Account-owned connections are unavailable until durable storage is configured." }, { status: 503 });
   const payload: unknown = await request.json().catch(() => null);
-  if (account && process.env.DATABASE_URL && isCredentialEncryptionConfigured()) {
+  if (account && isDatabaseConfigured() && isCredentialEncryptionConfigured()) {
     const connectionId = typeof payload === "object" && payload !== null && "connectionId" in payload && typeof payload.connectionId === "string" ? payload.connectionId : null;
     if (!connectionId) return Response.json({ error: "connectionId is required." }, { status: 400 });
     if (!(await deleteProviderConnection(account.id, connectionId))) return Response.json({ error: "Connection not found." }, { status: 404 });

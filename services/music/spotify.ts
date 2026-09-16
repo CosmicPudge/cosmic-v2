@@ -6,6 +6,10 @@ import type { MusicArtist, MusicCapabilities, MusicSnapshot } from "@/core/contr
 import { normalizeSpotifyPlayback, resolveSpotifyPlaybackFallback, spotifyRawPlaybackDiagnostics, type SpotifyPlaybackResponse } from "@/services/music/spotifyPlayback";
 import { getProviderCredentials, listProviderConnections, markProviderReconnectRequired, setProviderCredentials, upsertProviderConnection } from "@/services/providers/store";
 import { normalizeProviderId } from "@/services/providers/normalize";
+import { isDatabaseConfigured } from "@/services/database/client";
+import { createLocalProviderCredentialStore } from "@/services/providers/localCredentialStore";
+import type { ProviderAccessContext } from "@/services/providers/access";
+import { requireProviderCredentialOwner } from "@/services/providers/access";
 
 export type Token = { access_token: string; refresh_token?: string; expires_at?: number; scope?: string };
 const path = join(process.cwd(), ".cosmic", "spotify-token.json");
@@ -18,9 +22,22 @@ const artistRequests = new Map<string, Promise<Map<string, MusicArtist>>>();
 function trackSuffix(id?: string) { return id ? id.slice(-4) : "none"; }
 
 export const configured = () => Boolean(process.env.SPOTIFY_CLIENT_ID && process.env.SPOTIFY_CLIENT_SECRET && process.env.SPOTIFY_REDIRECT_URI);
+export const SPOTIFY_SCOPES = ["user-read-playback-state", "user-read-currently-playing", "user-modify-playback-state"] as const;
 export const readToken = (): Token | undefined => { try { return JSON.parse(readFileSync(path, "utf8")) as Token; } catch { return undefined; } };
 export const storeToken = (token: Token) => { mkdirSync(dirname(path), { recursive: true }); writeFileSync(path, JSON.stringify({ ...readToken(), ...token, refresh_token: token.refresh_token ?? readToken()?.refresh_token }), { mode: 0o600 }); };
 export const disconnect = () => { if (existsSync(path)) unlinkSync(path); };
+const personalOwner = { kind: "personal", id: "personal" } as const;
+function personalCredentialStore() { return createLocalProviderCredentialStore(); }
+export async function getPersonalSpotifyToken() { return personalCredentialStore().get(personalOwner, "spotify") as Promise<Token | null>; }
+export async function storePersonalSpotifyToken(token: Token) { await personalCredentialStore().set(personalOwner, "spotify", token as unknown as Record<string, unknown>); }
+export async function deletePersonalSpotifyToken() { return personalCredentialStore().delete(personalOwner, "spotify"); }
+export async function resolveSpotifyCredential(accessContext: ProviderAccessContext) {
+  const owner = requireProviderCredentialOwner(accessContext);
+  if (owner.kind === "personal") return getPersonalSpotifyToken();
+  if (!isDatabaseConfigured()) return null;
+  const connection = (await listProviderConnections(owner.accountId)).find((item) => normalizeProviderId(item.provider) === "spotify");
+  return connection ? getProviderCredentials<Token>(owner.accountId, connection.id) : null;
+}
 
 function selectSpotifyArtistImage(images?: Array<{ url: string; width?: number; height?: number }>) {
   const usable = images?.filter((image) => image.url) ?? [];
@@ -59,6 +76,12 @@ async function token() {
   if (!current.expires_at || current.expires_at > Date.now() + 60_000) return current;
   const next = await refreshToken(current);
   storeToken(next);
+  return next;
+}
+
+export async function refreshPersonalSpotifyToken(current: Token) {
+  const next = await refreshToken(current);
+  await storePersonalSpotifyToken(next);
   return next;
 }
 
@@ -169,10 +192,11 @@ export async function snapshot(): Promise<MusicSnapshot> {
   try { return (await snapshotWithToken(await token())).snapshot; } catch (error) { return disconnected(error instanceof Error ? error.message : "Spotify authorization needs to reconnect."); }
 }
 
-export async function exchange(code: string) {
-  const response = await fetch("https://accounts.spotify.com/api/token", { method: "POST", headers: { Authorization: `Basic ${Buffer.from(`${process.env.SPOTIFY_CLIENT_ID}:${process.env.SPOTIFY_CLIENT_SECRET}`).toString("base64")}`, "Content-Type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ grant_type: "authorization_code", code, redirect_uri: process.env.SPOTIFY_REDIRECT_URI ?? "" }) });
+export async function exchange(code: string, codeVerifier?: string) {
+  const response = await fetch("https://accounts.spotify.com/api/token", { method: "POST", headers: { Authorization: `Basic ${Buffer.from(`${process.env.SPOTIFY_CLIENT_ID}:${process.env.SPOTIFY_CLIENT_SECRET}`).toString("base64")}`, "Content-Type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ grant_type: "authorization_code", code, redirect_uri: process.env.SPOTIFY_REDIRECT_URI ?? "", ...(codeVerifier ? { code_verifier: codeVerifier } : {}) }) });
   if (!response.ok) throw new Error("Spotify authorization failed.");
   const data = await response.json() as Token & { expires_in: number };
+  if (!data.access_token) throw new Error("Spotify authorization token is missing.");
   return { ...data, expires_at: Date.now() + data.expires_in * 1000 };
 }
 
@@ -212,6 +236,16 @@ export async function accountSnapshotWithDiagnostics(userId: string) {
   return result;
 }
 
+export async function personalSnapshotWithDiagnostics() {
+  if (!configured()) return { snapshot: disconnected("Spotify is not configured on this server.") };
+  try {
+    const current = await getPersonalSpotifyToken();
+    if (!current) return { snapshot: disconnected("Spotify is not connected personally.") };
+    const resolved = current.expires_at && current.expires_at <= Date.now() + 60_000 ? await refreshPersonalSpotifyToken(current) : current;
+    return snapshotWithToken(resolved, async () => (await refreshPersonalSpotifyToken(resolved)).access_token);
+  } catch (error) { return { snapshot: disconnected(error instanceof Error ? error.message : "Spotify authorization needs to reconnect.") }; }
+}
+
 async function actionWithToken(current: Token, name: "play" | "pause" | "next" | "previous" | "seek" | "volume", value?: number) {
   const paths = { play: ["PUT", "/me/player/play"], pause: ["PUT", "/me/player/pause"], next: ["POST", "/me/player/next"], previous: ["POST", "/me/player/previous"], seek: ["PUT", `/me/player/seek?position_ms=${value}`], volume: ["PUT", `/me/player/volume?volume_percent=${value}`] } as const;
   const [method, pathName] = paths[name];
@@ -221,3 +255,9 @@ async function actionWithToken(current: Token, name: "play" | "pause" | "next" |
 
 export async function accountAction(userId: string, name: "play" | "pause" | "next" | "previous" | "seek" | "volume", value?: number) { const owned = await ownedToken(userId); if (!owned) throw new Error("Spotify is not connected to this Cosmic account."); return actionWithToken(owned.token, name, value); }
 export async function action(name: "play" | "pause" | "next" | "previous" | "seek" | "volume", value?: number) { return actionWithToken(await token(), name, value); }
+export async function personalAction(name: "play" | "pause" | "next" | "previous" | "seek" | "volume", value?: number) {
+  const current = await getPersonalSpotifyToken();
+  if (!current) throw new Error("Spotify is not connected personally.");
+  const resolved = current.expires_at && current.expires_at <= Date.now() + 60_000 ? await refreshPersonalSpotifyToken(current) : current;
+  return actionWithToken(resolved, name, value);
+}
