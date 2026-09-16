@@ -18,6 +18,8 @@ import { providerAccessContext } from "@/services/providers/access";
 import { resolvePrivateRequestContext } from "@/services/auth/privateContext";
 import { getAccountCalendarContext } from "@/services/calendar/accountProvider";
 import { isDatabaseConfigured } from "@/services/database/client";
+import { personalCalendarAccessContext } from "@/services/calendar/access";
+import { getPersonalCalendarContext } from "@/services/calendar/personalProvider";
 
 const shouldUseAppleCalendar =
   process.env.NODE_ENV !== "production" &&
@@ -65,6 +67,7 @@ export function getAppleCalendarWriter(): AppleCalendarWriter | null {
 }
 
 export async function getAccountCalendarWriter(request: Request): Promise<AppleCalendarWriter | null> {
+  if (personalCalendarAccessContext(request)) return (await getPersonalCalendarContext())?.writer ?? null;
   const account = await getCurrentCosmicAccount(request);
   const connectionId = new URL(request.url).searchParams.get("connectionId") ?? undefined;
   if (account && isDatabaseConfigured()) return (await getAccountCalendarContext(account.id, connectionId))?.writer ?? null;

@@ -4,6 +4,7 @@ import {
 } from "@/core/serverCosmic";
 import { CalDavConflictError } from "@/services/calendar/caldav";
 import { requireCosmicAccount } from "@/services/auth/server";
+import { assertSameOrigin } from "@/services/security/origin";
 
 const MAX_TITLE_LENGTH = 200;
 const MAX_LOCATION_LENGTH = 300;
@@ -21,6 +22,7 @@ function getEventId(context: { params: Promise<{ id: string }> }): Promise<strin
 
 export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
+    assertSameOrigin(request);
     if (process.env.NODE_ENV === "production") await requireCosmicAccount(request);
     const id = await getEventId(context);
     const body = await request.json() as Record<string, unknown>;
@@ -53,6 +55,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
 
 export async function DELETE(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
+    assertSameOrigin(request);
     if (process.env.NODE_ENV === "production") await requireCosmicAccount(request);
     const writer = await getAccountCalendarWriter(request);
     if (!writer) return Response.json({ error: "Calendar editing is not configured." }, { status: 403 });

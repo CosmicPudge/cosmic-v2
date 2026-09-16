@@ -4,6 +4,7 @@ import {
 } from "@/core/serverCosmic";
 import { CalendarDuplicateError } from "@/services/calendar/appleCalendarWriter";
 import { requireCosmicAccount } from "@/services/auth/server";
+import { assertSameOrigin } from "@/services/security/origin";
 
 export const dynamic = "force-dynamic";
 
@@ -27,6 +28,7 @@ function optionalText(value: unknown, maxLength: number): string | undefined {
 
 export async function POST(request: Request) {
   try {
+    assertSameOrigin(request);
     if (process.env.NODE_ENV === "production") await requireCosmicAccount(request);
     const body: unknown = await request.json();
 

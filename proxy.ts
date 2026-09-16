@@ -101,6 +101,13 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
+  const isPersonalCalendarDevelopmentRequest = process.env.NODE_ENV === "development"
+    && Boolean(resolvePrivateRequestContext(request, "private-personal"))
+    && (pathname === "/api/calendar" || pathname.startsWith("/api/calendar/"));
+  if (isPersonalCalendarDevelopmentRequest) {
+    return NextResponse.next();
+  }
+
   // Cosmic Glasses local development.
   // Production still requires normal authentication/device enrollment.
   if (

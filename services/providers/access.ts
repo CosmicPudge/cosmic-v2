@@ -8,7 +8,7 @@ import type {
 } from "@/services/auth/privateContext";
 import { resolveDurableOwner, type DurableOwner } from "@/services/ownership/owner";
 
-export type ProviderId = "google" | "microsoft" | "spotify";
+export type ProviderId = "google" | "microsoft" | "spotify" | "calendar";
 
 export type ProviderCredentialOwner = DurableOwner;
 

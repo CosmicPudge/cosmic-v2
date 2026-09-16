@@ -16,6 +16,19 @@ export async function GET(
   const url = new URL(request.url);
   const isKiosk = url.searchParams.get("cosmic-kiosk") === "1";
   const session = await getCurrentCosmicSession(request, { allowDevice: true, bootId: kioskBootId(request) });
+  if (personalCalendarAccessContext(request)) {
+    try {
+      const personal = await getPersonalCalendarContext();
+      if (!personal) return Response.json({ events: [], personalStatus: "not-connected", error: "Calendar is not connected." }, { status: 200, headers: { "Cache-Control": "no-store" } });
+      if (url.searchParams.get("start") || url.searchParams.get("end")) {
+        const start = new Date(url.searchParams.get("start") ?? "");
+        const end = new Date(url.searchParams.get("end") ?? "");
+        if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start) return Response.json({ error: "Invalid calendar date range." }, { status: 400 });
+        return Response.json({ events: await personal.engine.getEvents({ start, end }), personalStatus: "connected" });
+      }
+      return Response.json({ ...(await personal.engine.getSnapshot()), personalStatus: "connected" });
+    } catch { return Response.json({ events: [], personalStatus: "storage-unavailable", error: "Personal Calendar is temporarily unavailable." }, { status: 503 }); }
+  }
   const account = session?.account;
   if (process.env.NODE_ENV === "production" && !account) return Response.json({ error: "Authentication required for private calendar access." }, { status: 401 });
   let calendar: Awaited<ReturnType<typeof getCalendarEngineForRequest>> = null;
