@@ -6,12 +6,11 @@ import type {
   PersonalPrincipal,
   PrivateRequestContext,
 } from "@/services/auth/privateContext";
+import { resolveDurableOwner, type DurableOwner } from "@/services/ownership/owner";
 
 export type ProviderId = "google" | "microsoft" | "spotify";
 
-export type ProviderCredentialOwner =
-  | { readonly kind: "personal"; readonly id: "personal" }
-  | { readonly kind: "legacy-account"; readonly accountId: string };
+export type ProviderCredentialOwner = DurableOwner;
 
 export interface ProviderAccessContext {
   readonly principal: PrivateRequestContext["principal"];
@@ -28,9 +27,7 @@ export function providerAccessContext(requestContext: PrivateRequestContext): Pr
 export function providerCredentialOwner(
   principal: PersonalPrincipal | AccountPrincipal | DevicePrincipal,
 ): ProviderCredentialOwner | null {
-  if (principal.kind === "personal") return { kind: "personal", id: "personal" };
-  if (principal.kind === "account") return { kind: "legacy-account", accountId: principal.accountId };
-  return null;
+  return resolveDurableOwner(principal);
 }
 
 export function requireProviderCredentialOwner(context: ProviderAccessContext): ProviderCredentialOwner {
