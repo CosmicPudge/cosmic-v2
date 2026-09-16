@@ -15,15 +15,14 @@ import { calculateAccountBalance } from "@/services/finance/domain";
 import { mergeFinanceAccounts } from "@/services/finance/merged";
 import { useLocalSchoolRepository } from "@/components/school/data/localRepository";
 import { useSettingsData } from "@/components/apps/settings/SettingsProvider";
-import { useCosmicScope } from "@/services/storage/scope";
+import { readScopedOrLegacy, useCosmicScope } from "@/services/storage/scope";
 import { eventMatchesPreferences } from "@/services/sports/preferences";
 import { buildContextSnapshot } from "@/services/context/domain";
 import { calendarContext, clockContext, financeContext, garageContext, mailContext, musicContext, schoolContext, sportsContext } from "@/services/context/adapters";
-import { useEntitlements } from "@/hooks/os/useEntitlements";
+import { usePersonalCapabilities } from "@/hooks/os/usePersonalCapabilities";
 import { getAfrotcBriefing } from "@/services/school/opord/briefing";
 import type { OpordSource } from "@/services/school/opord/selectors";
 
-const afrotcCategoryKey = "cosmic.afrotc.cadet-category";
 const iso = (value: Date | number) => new Date(value).toISOString();
 
 export function useCosmicContext() {
@@ -37,11 +36,11 @@ export function useCosmicContext() {
   const clock = useClockRepository();
   const finance = useFinanceRepository();
   const connectedFinance = useConnectedFinanceData(25);
-  const entitlements = useEntitlements();
-  const school = useLocalSchoolRepository({ enabled: entitlements.data.features["school.basic"] });
+  const entitlements = usePersonalCapabilities();
+  const school = useLocalSchoolRepository({ enabled: entitlements.features["school.basic"] });
   const settings = useSettingsData();
   const scope = useCosmicScope();
-  const schoolBasicEnabled = entitlements.data.features["school.basic"];
+  const schoolBasicEnabled = entitlements.features["school.basic"];
   const [opordSources, setOpordSources] = useState<OpordSource[]>([]);
   const [dismissed, setDismissed] = useState<Record<string, number>>({});
   useEffect(() => { const timer = window.setTimeout(() => setDismissed({}), 0); return () => window.clearTimeout(timer); }, [scope.id]);
@@ -54,7 +53,7 @@ export function useCosmicContext() {
 
   const financeAccounts = useMemo(() => mergeFinanceAccounts(finance.data.accounts.filter((account) => !account.archived), connectedFinance.accounts, new Map(finance.data.accounts.map((account) => [account.id, calculateAccountBalance(account, finance.data.transactions)]))), [connectedFinance.accounts, finance.data.accounts, finance.data.transactions]);
   const afrotc = useMemo(() => {
-    const category = typeof window === "undefined" ? undefined : window.localStorage.getItem(afrotcCategoryKey) ?? undefined;
+    const category = typeof window === "undefined" ? undefined : readScopedOrLegacy("afrotc-cadet-category").raw ?? undefined;
     return getAfrotcBriefing(schoolBasicEnabled ? opordSources : [], category, now);
   }, [now, opordSources, schoolBasicEnabled]);
   const afrotcItem = useMemo(() => afrotc.event ? [{ id: `school:afrotc:${afrotc.event.source.id}:${afrotc.event.event.id}`, priority: afrotc.status === "today" ? "attention" as const : "glance" as const, source: "school" as const, kind: afrotc.status === "today" ? "afrotc-today" : "afrotc-upcoming" as const, title: afrotc.event.event.title, subtitle: [afrotc.event.uniform, afrotc.event.location, afrotc.event.event.reportTime.status === "explicit" ? `Report ${afrotc.event.event.reportTime.value}` : undefined].filter(Boolean).join(" · ") || "AFROTC event", timestamp: iso(now), destination: `/school/opords/${encodeURIComponent(afrotc.event.source.id)}#${afrotc.event.event.id}`, metadata: { entityId: `afrotc:${afrotc.event.source.id}:${afrotc.event.event.id}` } }] : [], [afrotc, now]);
@@ -72,11 +71,11 @@ export function useCosmicContext() {
 
   const moduleForSource: Record<string, keyof typeof settings.data.preferences.modules> = { sports: "sports", finance: "finance", school: "school", garage: "garage", mail: "mail", calendar: "calendar" };
   const basicContextKinds = new Set(["current-event", "next-event", "current-class", "next-class", "assignment", "live-event", "upcoming-event", "maintenance", "timer", "unread"]);
-  const entitledCandidates = (entitlements.data.features["context.full"] ? candidates : candidates.filter((item) => basicContextKinds.has(item.kind))).filter((item) => item.source !== "school" || entitlements.data.features["school.basic"]);
+  const entitledCandidates = (entitlements.features["context.full"] ? candidates : candidates.filter((item) => basicContextKinds.has(item.kind))).filter((item) => item.source !== "school" || entitlements.features["school.basic"]);
   const visible = entitledCandidates.filter((item) => settings.data.preferences.context.enabledSources.length === 0 || settings.data.preferences.context.enabledSources.includes(item.source)).filter((item) => !settings.data.preferences.context.suppressedKinds.includes(item.kind)).filter((item) => moduleForSource[item.source] ? settings.data.preferences.modules[moduleForSource[item.source]] : true).filter((item) => !dismissed[item.id]);
   const snapshot = useMemo(() => buildContextSnapshot(visible, now), [visible, now]);
   const dismiss = (item: CosmicContextItem) => setDismissed((current) => ({ ...current, [item.id]: nowValue ?? 0 }));
-  return { ...snapshot, candidates: entitledCandidates, dismiss, loading: calendar.loading || sports.loading || !finance.ready || connectedFinance.loading || !school.ready || !clock.ready || !settings.ready || entitlements.loading };
+  return { ...snapshot, candidates: entitledCandidates, dismiss, loading: calendar.loading || sports.loading || !finance.ready || connectedFinance.loading || !school.ready || !clock.ready || !settings.ready };
 }
 
 export default useCosmicContext;

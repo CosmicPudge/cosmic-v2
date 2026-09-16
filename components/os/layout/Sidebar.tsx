@@ -9,7 +9,7 @@ import { useOptionalBoot } from "@/components/os/boot/BootManager";
 import { useCosmicTransition } from "@/components/os/transition";
 import { CosmicIcon } from "@/components/cosmic-icons";
 import type { CosmicIconName } from "@/components/cosmic-icons";
-import { useEntitlements } from "@/hooks/os/useEntitlements";
+import { usePersonalCapabilities } from "@/hooks/os/usePersonalCapabilities";
 import { useSettingsRepository } from "@/services/settings/localRepository";
 import { isNavigationRouteActive, navigationModuleEnabled } from "./navigationRoutes";
 import { useKioskPresentation } from "@/hooks/os/useKioskPresentation";
@@ -25,7 +25,7 @@ export default function Sidebar({ variant = "side" }: { variant?: "side" | "top"
   const boot = useOptionalBoot();
   const { prefetch } = useCosmicTransition();
   const pathname = usePathname() ?? "/";
-  const { data: entitlements } = useEntitlements();
+  const entitlements = usePersonalCapabilities();
   const { data: settings } = useSettingsRepository();
   const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
   const { enterManual } = useKioskPresentation();

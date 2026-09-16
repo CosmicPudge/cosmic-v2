@@ -9,7 +9,7 @@ import GarageCosmicPlusGate from "@/components/apps/garage/GarageCosmicPlusGate"
 import GarageM4Experience from "@/components/apps/garage/GarageM4Experience";
 import VehicleScanner from "@/components/apps/garage/VehicleScanner";
 import type { VehicleScanKind } from "@/core/contracts/VehicleScanning";
-import { useEntitlements } from "@/hooks/os/useEntitlements";
+import { usePersonalCapabilities } from "@/hooks/os/usePersonalCapabilities";
 import { canAddActiveVehicle, countActiveVehicles, getGarageVehicleLimitState, isActiveVehicleStatus } from "@/lib/garage/limits";
 import { useRouteReadiness } from "@/components/os/transition";
 
@@ -28,7 +28,7 @@ const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD
 export default function GarageView() {
   const garage = useGarage();
   useRouteReadiness("/garage", !garage.loading, garage.error ? "degraded" : "ready");
-  const { data: entitlements } = useEntitlements();
+  const entitlements = usePersonalCapabilities();
   const [tab, setTab] = useState<Tab>("Overview");
   const [editing, setEditing] = useState<string | null>(null);
   const [collectionFilter, setCollectionFilter] = useState("all");

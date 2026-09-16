@@ -21,7 +21,7 @@ import {
   type RecentSearch,
 } from "@/services/search/recentRepository";
 import SearchOverlay from "@/components/os/overlays/SearchOverlay";
-import { useEntitlements } from "@/hooks/os/useEntitlements";
+import { usePersonalCapabilities } from "@/hooks/os/usePersonalCapabilities";
 
 interface SearchRuntimeValue {
   engine: SearchEngine;
@@ -38,7 +38,7 @@ const SearchRuntimeContext = createContext<SearchRuntimeValue | null>(null);
 
 export function SearchProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { data: entitlements } = useEntitlements();
+  const entitlements = usePersonalCapabilities();
   const schoolEnabled = entitlements.features["school.basic"];
   const engine = useMemo(() => {
     const instance = new SearchEngine();

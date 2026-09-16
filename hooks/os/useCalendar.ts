@@ -8,7 +8,7 @@ import type {
 } from "@/core/contracts";
 import { useVisiblePolling } from "@/hooks/useVisiblePolling";
 import { kioskApiUrl } from "@/services/kioskRequest";
-import { useEntitlements } from "@/hooks/os/useEntitlements";
+import { usePersonalCapabilities } from "@/hooks/os/usePersonalCapabilities";
 import { useSchoolData } from "@/components/school/hooks/useSchoolData";
 import { mergeSchoolCalendarSnapshot } from "@/services/calendar/schoolAdapter";
 import { useCosmicScope } from "@/services/storage/scope";
@@ -105,7 +105,7 @@ interface UseCalendarOptions {
 
 export default function useCalendar({ refreshMs = DEFAULT_REFRESH_INTERVAL_MS }: UseCalendarOptions = {}) {
   const scope = useCosmicScope();
-  const { data: entitlements } = useEntitlements();
+  const entitlements = usePersonalCapabilities();
   const school = useSchoolData({ enabled: entitlements.features["school.basic"] });
   const [calendar, setCalendar] =
     useState<CalendarSnapshot | null>(null);

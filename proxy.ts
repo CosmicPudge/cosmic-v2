@@ -4,6 +4,7 @@ import { getCurrentCosmicAccount } from "@/services/auth/server";
 
 import { authReturnUrl } from "@/services/auth/returnUrl";
 import { isPersonalOsUiRoute } from "@/services/auth/proxyPolicy";
+import { resolvePrivateRequestContext } from "@/services/auth/privateContext";
 
 const PUBLIC_API_ROUTES = new Set([
   "/api/account/session",
@@ -66,6 +67,37 @@ export async function proxy(request: NextRequest) {
   }
 
   if (isApi && PUBLIC_API_ROUTES.has(pathname)) {
+    return NextResponse.next();
+  }
+
+  // Local School UI may mount through the personal request boundary. Only
+  // the calendar adapter is currently converted; other School APIs retain
+  // their existing account/ownership authorization.
+  const isPersonalSchoolDevelopmentRequest = process.env.NODE_ENV === "development"
+    && (pathname === "/school" || pathname.startsWith("/school/") || pathname === "/api/school" || pathname.startsWith("/api/school/"))
+    && Boolean(resolvePrivateRequestContext(request, "private-personal"));
+  if (isPersonalSchoolDevelopmentRequest && isApi && pathname !== "/api/school/calendar") {
+    return NextResponse.json(
+      { error: "school-storage-unavailable-in-personal-mode" },
+      { status: 503, headers: { "Cache-Control": "no-store" } },
+    );
+  }
+  if (isPersonalSchoolDevelopmentRequest) {
+    return NextResponse.next();
+  }
+
+  // The Finance page is personal/local-first, but connected Finance remains
+  // durable and account-owned until an explicit storage mapping exists.
+  const isPersonalFinanceDevelopmentRequest = process.env.NODE_ENV === "development"
+    && Boolean(resolvePrivateRequestContext(request, "private-personal"))
+    && (pathname === "/finance" || pathname.startsWith("/finance/") || pathname.startsWith("/api/finance/"));
+  if (isPersonalFinanceDevelopmentRequest && isApi) {
+    return NextResponse.json(
+      { error: "storage-unavailable-in-personal-mode" },
+      { status: 503, headers: { "Cache-Control": "no-store" } },
+    );
+  }
+  if (isPersonalFinanceDevelopmentRequest) {
     return NextResponse.next();
   }
 

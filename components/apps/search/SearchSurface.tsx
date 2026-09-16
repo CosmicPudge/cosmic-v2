@@ -16,7 +16,7 @@ import { apps } from "@/config/apps";
 import type { SearchCategory, SearchResult } from "@/core/contracts/Search";
 import { useSearchResults } from "@/hooks/os/useSearch";
 import { useSearchRuntime } from "./SearchProvider";
-import { useEntitlements } from "@/hooks/os/useEntitlements";
+import { usePersonalCapabilities } from "@/hooks/os/usePersonalCapabilities";
 
 const categories: Array<{ id: SearchCategory | "all"; label: string }> = [
   { id: "all", label: "All" },
@@ -65,7 +65,7 @@ export default function SearchSurface({
   const [category, setCategory] = useState<SearchCategory | "all">("all");
   const [selectedIndex, setSelectedIndex] = useState(0);
   const { engine, recentSearches, recordSearch, clearRecents } = useSearchRuntime();
-  const { data: entitlements } = useEntitlements();
+  const entitlements = usePersonalCapabilities();
   const snapshot = useSearchResults(query, category, categoryForPath(pathname));
   const registeredCategories = useMemo(() => new Set(engine.getCategories()), [engine]);
   const visibleCategories = categories.filter((entry) => (entry.id !== "school" || entitlements.features["school.basic"]) && (entry.id === "all" || registeredCategories.has(entry.id)));

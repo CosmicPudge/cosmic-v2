@@ -13,11 +13,11 @@ import { useGridLayout } from "./useGridLayout";
 import { useSettingsRepository } from "@/services/settings/localRepository";
 import AdSlot from "@/components/ads/AdSlot";
 import { getDashboardAdPlan } from "@/core/contracts/Advertising";
-import { useEntitlements } from "@/hooks/os/useEntitlements";
+import { usePersonalCapabilities } from "@/hooks/os/usePersonalCapabilities";
 
 export default function WidgetGrid() {
   const { data: settings } = useSettingsRepository();
-  const { data: entitlements } = useEntitlements();
+  const entitlements = usePersonalCapabilities();
   const moduleByWidget: Record<string, keyof typeof settings.preferences.modules | undefined> = { sports: "sports", finance: "finance", school: "school", garage: "garage", projects: "projects", notes: "notes", calendar: "calendar", outlook: "mail" };
   const widgets = useGridLayout(
     dashboardWidgets.filter((widget) => (widget.id !== "school" || entitlements.features["school.basic"]) &&

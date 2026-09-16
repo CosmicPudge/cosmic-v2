@@ -18,7 +18,7 @@ import { useDashboardShortcuts } from "./state/useDashboardShortcuts";
 
 import { useDisplay } from "@/components/os/display";
 import { useCosmicTransition, useRouteReadiness } from "@/components/os/transition";
-import { useEntitlements } from "@/hooks/os/useEntitlements";
+import { usePersonalCapabilities } from "@/hooks/os/usePersonalCapabilities";
 import useWeather from "@/hooks/os/useWeather";
 import DashboardEnvironment from "@/components/dashboard/background/DashboardEnvironment";
 import { useSettingsRepository } from "@/services/settings/localRepository";
@@ -70,12 +70,10 @@ function DashboardContent() {
 }
 
 function DashboardReady() {
-  const { loading: entitlementsLoading } = useEntitlements();
   const settings = useSettingsRepository();
-  const scope = useCosmicScope();
   const dashboard = useDashboardReadiness();
   const { setDashboardReadiness } = useCosmicTransition();
-  const baseReady = !entitlementsLoading && settings.ready;
+  const baseReady = settings.ready;
   useRouteReadiness("/os", baseReady && dashboard.shellReady && dashboard.criticalReady, dashboard.widgets.some((item) => item.status === "degraded") ? "degraded" : "ready");
   useEffect(() => { setDashboardReadiness(dashboard); }, [dashboard, setDashboardReadiness]);
   return null;
@@ -84,7 +82,7 @@ function DashboardReady() {
 export default function Dashboard() {
   const { profile, height } = useDisplay();
   const { data: settings } = useSettingsRepository();
-  const { data: entitlements } = useEntitlements();
+  const entitlements = usePersonalCapabilities();
   const scope = useCosmicScope();
   const criticalWidgetIds = useMemo(() => getCriticalDashboardWidgetIds(settings, profile, height, entitlements.features["school.basic"]), [entitlements.features, height, profile, settings]);
   return (

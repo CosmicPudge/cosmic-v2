@@ -6,7 +6,7 @@ import useCalendar from "@/hooks/os/useCalendar";
 import { useSports } from "@/hooks/os/useSports";
 import { useCosmicScope } from "@/services/storage/scope";
 import { markAllNotificationsRead, markNotificationRead, mergeNotifications, notificationChanged, NOTIFICATIONS_UPDATE_EVENT, readNotificationSnapshot, replaceNotificationSnapshot, sortNotifications } from "@/services/notificationService";
-import { useEntitlements } from "@/hooks/os/useEntitlements";
+import { usePersonalCapabilities } from "@/hooks/os/usePersonalCapabilities";
 import { useSchoolData } from "@/components/school/hooks/useSchoolData";
 import { deserializeSchoolBaseline, detectSchoolChanges, serializeSchoolBaseline, type SchoolBaseline } from "@/services/school/changes";
 import { useSettingsData } from "@/components/apps/settings/SettingsProvider";
@@ -30,7 +30,7 @@ export function useNotifications() {
   const { calendar } = useCalendar();
   const { data: sports } = useSports();
   const { data: settings } = useSettingsData();
-  const { data: entitlements } = useEntitlements();
+  const entitlements = usePersonalCapabilities();
   const school = useSchoolData({ enabled: entitlements.features["school.basic"] });
   const [stored, setStored] = useState<CosmicNotification[]>([]);
   const [ready, setReady] = useState(false);

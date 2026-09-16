@@ -7,12 +7,12 @@ import WidgetFooter from "@/components/os/ui/widget/WidgetFooter";
 import { WidgetEmpty } from "@/components/os/ui/widget";
 import { useWidgetContext } from "@/components/os/ui/widget/WidgetContext";
 import KioskSceneFrame from "@/components/os/widgets/shared/KioskSceneFrame";
-import { useEntitlements } from "@/hooks/os/useEntitlements";
+import { usePersonalCapabilities } from "@/hooks/os/usePersonalCapabilities";
 import { useSchoolData } from "@/components/school/hooks/useSchoolData";
 
 export default function BriefingWidget() {
   const { presentation } = useWidgetContext();
-  const { data: entitlements } = useEntitlements();
+  const entitlements = usePersonalCapabilities();
   const school = useSchoolData({ enabled: entitlements.features["school.basic"] });
   const nextAssignment = school.snapshot?.actionItems.find((item) => item.due >= new Date());
   const sourceAction = school.snapshot?.sourceIntelligence?.actionItems.find((item) => item.status !== "completed");
