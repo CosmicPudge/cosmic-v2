@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { CalendarEvent } from "@/core/contracts";
 import CalendarCreateEventModal from "./CalendarCreateEventModal";
 import CalendarEditEventModal from "./CalendarEditEventModal";
+import PersonalCalendarConnection from "./PersonalCalendarConnection";
 import { useVisiblePolling } from "@/hooks/useVisiblePolling";
 
 interface CalendarRangeResponse {
@@ -14,7 +15,11 @@ interface CalendarRangeResponse {
       end: string;
     }
   >;
+  personalStatus?: "connected" | "not-connected" | "storage-unavailable";
+  error?: string;
 }
+
+type PersonalCalendarStatus = "not-connected" | "configured" | "unavailable" | "unauthorized";
 
 type CalendarFilter =
   | "all"
@@ -130,6 +135,11 @@ function getDayRange(date: Date) {
     start,
     end,
   };
+}
+
+function isLoopbackPersonalShell(): boolean {
+  if (typeof window === "undefined" || process.env.NODE_ENV !== "development") return false;
+  return ["localhost", "127.0.0.1", "::1"].includes(window.location.hostname);
 }
 
 function getEventCategory(
@@ -520,6 +530,8 @@ export default function CalendarView() {
     useState(false);
 
   const [refreshKey, setRefreshKey] = useState(0);
+  const [personalMode, setPersonalMode] = useState(isLoopbackPersonalShell);
+  const [personalStatus, setPersonalStatus] = useState<PersonalCalendarStatus>("not-connected");
 
   const loadDay = useCallback(async () => {
       try {
@@ -541,14 +553,29 @@ export default function CalendarView() {
           }
         );
 
-        if (!response.ok) {
-          throw new Error(
-            "Calendar is temporarily unavailable."
-          );
+        const responseText = await response.text();
+        let data: CalendarRangeResponse = { events: [] };
+        if (responseText.trim()) {
+          try {
+            data = JSON.parse(responseText) as CalendarRangeResponse;
+          } catch {
+            data.error = "Calendar returned an unreadable response.";
+          }
+        } else {
+          data.error = "Calendar returned an empty response.";
         }
 
-        const data: CalendarRangeResponse =
-          await response.json();
+        if (data.personalStatus) {
+          setPersonalMode(true);
+          setPersonalStatus(data.personalStatus === "connected" ? "configured" : data.personalStatus === "storage-unavailable" ? "unavailable" : "not-connected");
+        } else if (response.status === 401) {
+          setPersonalMode(false);
+          setPersonalStatus("unauthorized");
+        }
+
+        if (!response.ok) {
+          throw new Error(data.error ?? "Calendar is temporarily unavailable.");
+        }
 
         setEvents(data.events.map(hydrateEvent));
       } catch (err) {
@@ -668,6 +695,7 @@ export default function CalendarView() {
   return (
     <>
       <div className="flex min-h-0 flex-col gap-6">
+        {personalMode && <PersonalCalendarConnection status={personalStatus} onChanged={() => setRefreshKey((current) => current + 1)} />}
         {/* Header */}
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
@@ -728,6 +756,7 @@ export default function CalendarView() {
             <button
               type="button"
               onClick={() => setCreateEventOpen(true)}
+              disabled={personalMode && (personalStatus !== "configured" || loading || !!error)}
               className="rounded-xl border border-white/10 bg-white/10 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/15"
             >
               + New Event

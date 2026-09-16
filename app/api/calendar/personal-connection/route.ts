@@ -15,7 +15,7 @@ export async function GET(request: Request) {
   try {
     personal(request);
     const connection = await getPersonalCalendarConnection();
-    return NextResponse.json({ configured: isCredentialEncryptionConfigured(), connected: Boolean(connection), provider: connection ? "CalDAV" : null, status: connection ? "connected" : "not-connected" }, { headers: { "Cache-Control": "no-store" } });
+    return NextResponse.json({ configured: isCredentialEncryptionConfigured(), connected: Boolean(connection), provider: connection ? "CalDAV" : null, status: connection ? "configured" : "not-connected", verified: false }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) { if (error instanceof Response) return error; return NextResponse.json({ error: "Personal Calendar status is unavailable." }, { status: 503 }); }
 }
 
@@ -32,7 +32,7 @@ export async function POST(request: Request) {
     const defaultCalendarName = typeof body.defaultCalendarName === "string" && body.defaultCalendarName.trim() ? body.defaultCalendarName.trim() : undefined;
     await savePersonalCalendarConnection({ serverUrl, username, password, ...(defaultCalendarName ? { defaultCalendarName } : {}) });
     invalidatePersonalCalendarContext();
-    return NextResponse.json({ connected: true, provider: "CalDAV", status: "connected" }, { status: 201 });
+    return NextResponse.json({ connected: true, provider: "CalDAV", status: "configured", verified: false }, { status: 201 });
   } catch (error) { if (error instanceof Response) return error; return NextResponse.json({ error: "Personal Calendar connection could not be saved." }, { status: 400 }); }
 }
 

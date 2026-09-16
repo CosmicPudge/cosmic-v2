@@ -103,7 +103,12 @@ export async function proxy(request: NextRequest) {
 
   const isPersonalCalendarDevelopmentRequest = process.env.NODE_ENV === "development"
     && Boolean(resolvePrivateRequestContext(request, "private-personal"))
-    && (pathname === "/api/calendar" || pathname.startsWith("/api/calendar/"));
+    && (
+      pathname === "/calendar"
+      || pathname.startsWith("/calendar/")
+      || pathname === "/api/calendar"
+      || pathname.startsWith("/api/calendar/")
+    );
   if (isPersonalCalendarDevelopmentRequest) {
     return NextResponse.next();
   }
