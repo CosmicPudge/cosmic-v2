@@ -13,6 +13,25 @@ export const users = pgTable("users", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [uniqueIndex("users_normalized_email_unique").on(table.normalizedEmail)]);
 
+export const cosmicOwners = pgTable("cosmic_owners", {
+  id: text("id").primaryKey(),
+  kind: text("kind").notNull(),
+  externalKey: text("external_key").notNull(),
+  legacyAccountId: text("legacy_account_id").references(() => users.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  uniqueIndex("cosmic_owners_kind_external_key_unique").on(table.kind, table.externalKey),
+  uniqueIndex("cosmic_owners_legacy_account_id_unique").on(table.legacyAccountId).where(sql`${table.legacyAccountId} is not null`),
+  index("cosmic_owners_kind_index").on(table.kind),
+  check("cosmic_owners_kind_check", sql`${table.kind} in ('personal', 'legacy-account')`),
+  check("cosmic_owners_identity_check", sql`(
+    (${table.kind} = 'personal' and ${table.externalKey} = 'personal' and ${table.legacyAccountId} is null)
+    or
+    (${table.kind} = 'legacy-account' and ${table.legacyAccountId} is not null and ${table.externalKey} = ${table.legacyAccountId})
+  )`),
+]);
+
 export const sessions = pgTable("sessions", {
   id: text("id").primaryKey(),
   userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
