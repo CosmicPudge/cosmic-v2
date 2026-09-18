@@ -1,5 +1,7 @@
 import type { Course, SchoolTerm } from "@/core/contracts/School";
 import type { SchoolPlanningAssignment } from "@/core/contracts/SchoolPlanning";
+import type { SchoolCanvasCourse } from "./domain";
+import { matchSchoolCourse } from "./courseIdentity";
 
 export interface CanvasCourseDescriptor {
   raw: string;
@@ -79,16 +81,16 @@ export function resolveSchoolPlanningAssignments(
   assignments: SchoolPlanningAssignment[],
   courses: Course[],
   terms: SchoolTerm[],
+  providerCourses: SchoolCanvasCourse[] = [],
 ): SchoolPlanningAssignment[] {
   return assignments.map((assignment) => {
     if (assignment.sourceType !== "canvas-calendar" && assignment.sourceType !== "canvas-api") return assignment;
     const resolved = resolveCanvasAssignment(assignment.title, courses, terms);
-    if (!resolved) return assignment;
-    const course = resolved.course;
+    const course = resolved?.course ?? matchSchoolCourse({ source: assignment.sourceType, ...(assignment.sourceType === "canvas-api" && assignment.courseId ? { providerCourseId: assignment.courseId } : {}), ...(assignment.courseName ? { courseName: assignment.courseName } : {}) }, courses, terms, providerCourses).course;
+    if (!resolved && !course) return assignment;
     return {
       ...assignment,
-      title: resolved.displayTitle,
-      rawTitle: assignment.rawTitle ?? resolved.rawTitle,
+      ...(resolved ? { title: resolved.displayTitle, rawTitle: assignment.rawTitle ?? resolved.rawTitle } : {}),
       ...(course ? { courseId: course.id, courseName: course.name } : {}),
     };
   });

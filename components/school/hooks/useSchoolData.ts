@@ -72,7 +72,7 @@ export function useSchoolData({ enabled = true }: UseSchoolDataOptions = {}) {
     return {
       ...baseSnapshot,
       ...(baseSnapshot.planningAssignments ? {
-        planningAssignments: resolveSchoolPlanningAssignments(baseSnapshot.planningAssignments, local.data.courses, local.data.terms),
+        planningAssignments: resolveSchoolPlanningAssignments(baseSnapshot.planningAssignments, local.data.courses, local.data.terms, baseSnapshot.canvasCourses),
       } : {}),
     };
   }, [baseSnapshot, local.data.courses, local.data.terms]);
