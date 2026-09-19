@@ -4,25 +4,16 @@ import { useCallback, useEffect, useState } from "react";
 import type { AcademicGoal, Assignment, Course, Grade, SchoolResource, SchoolTerm } from "@/core/contracts/School";
 import { createScopedStorageKey, migrateLegacyStorage, readScopedOrLegacy, useCosmicScope } from "@/services/storage/scope";
 import { useCloudSnapshotSync } from "@/services/sync/useCloudSnapshotSync";
+import { emptyLocalSchoolData, normalizeLocalSchoolData, type LocalSchoolDataShape } from "./localDataHydration";
 
 export const SCHOOL_STORAGE_KEY = "cosmic.school.local-data";
 export const SCHOOL_UPDATE_EVENT = "cosmic:school-local-data-updated";
 const VERSION = 1;
 
-export interface LocalSchoolData {
-  version: 1;
-  terms: SchoolTerm[];
-  courses: Course[];
-  assignments: Assignment[];
-  grades: Grade[];
-  goals: AcademicGoal[];
-  resources: SchoolResource[];
-}
-
-export const emptySchoolData: LocalSchoolData = { version: VERSION, terms: [], courses: [], assignments: [], grades: [], goals: [], resources: [] };
+export type LocalSchoolData = LocalSchoolDataShape;
+export const emptySchoolData: LocalSchoolData = emptyLocalSchoolData;
 
 function isRecord(value: unknown): value is Record<string, unknown> { return typeof value === "object" && value !== null && !Array.isArray(value); }
-function readArray<T>(value: unknown, guard: (item: unknown) => item is T): T[] { return Array.isArray(value) ? value.filter(guard) : []; }
 function hasId(value: unknown): value is { id: string } { return isRecord(value) && typeof value.id === "string"; }
 function isGrade(value: unknown): value is Grade { return isRecord(value) && typeof value.courseId === "string"; }
 function isLocalSchoolData(value: unknown): value is LocalSchoolData {
@@ -43,15 +34,7 @@ export function readSchoolSnapshot(scopeId?: string): LocalSchoolData {
     if (!raw) return emptySchoolData;
     const parsed: unknown = JSON.parse(raw);
     if (!isRecord(parsed) || parsed.version !== VERSION) return emptySchoolData;
-    return {
-      version: VERSION,
-      terms: readArray(parsed.terms, hasId) as SchoolTerm[],
-      courses: readArray(parsed.courses, hasId) as Course[],
-      assignments: readArray(parsed.assignments, hasId) as Assignment[],
-      grades: readArray(parsed.grades, isGrade),
-      goals: readArray(parsed.goals, hasId) as AcademicGoal[],
-      resources: readArray(parsed.resources, hasId) as SchoolResource[],
-    };
+    return normalizeLocalSchoolData(parsed);
   } catch { return emptySchoolData; }
 }
 
@@ -76,7 +59,11 @@ export function useLocalSchoolRepository(options: { enabled?: boolean } = {}) {
     }, 0);
     return () => window.clearTimeout(timeout);
   }, [enabled, scope.id]);
-  const sync = useCloudSnapshotSync({ domain: "school", scope, ready: enabled && ready && loadedScope === scope.id, data, setData, equals: (left, right) => JSON.stringify(left) === JSON.stringify(right) });
+  const setNormalizedData = useCallback((value: LocalSchoolData) => {
+    const normalized = normalizeLocalSchoolData(value);
+    setData((current) => JSON.stringify(current) === JSON.stringify(normalized) ? current : normalized);
+  }, []);
+  const sync = useCloudSnapshotSync({ domain: "school", scope, ready: enabled && ready && loadedScope === scope.id, data, setData: setNormalizedData, equals: (left, right) => JSON.stringify(left) === JSON.stringify(right) });
   useEffect(() => {
     if (!enabled || !ready) return;
     if (loadedScope !== scope.id) return;
@@ -96,11 +83,11 @@ export function useLocalSchoolRepository(options: { enabled?: boolean } = {}) {
       const detail = event.detail as { scopeId?: string; data?: unknown };
       if (detail.scopeId && detail.scopeId !== scope.id) return;
       const next: unknown = detail.data ?? detail;
-      if (isLocalSchoolData(next)) setData(next);
+      if (isLocalSchoolData(next)) setNormalizedData(next);
     }
     window.addEventListener(SCHOOL_UPDATE_EVENT, syncLocal);
     return () => window.removeEventListener(SCHOOL_UPDATE_EVENT, syncLocal);
-  }, [enabled, scope.id]);
+  }, [enabled, scope.id, setNormalizedData]);
 
   const update = useCallback((recipe: (current: LocalSchoolData) => LocalSchoolData) => setData((current) => recipe(current)), []);
   const removeCourse = useCallback((id: string) => update((current) => ({ ...current, courses: current.courses.filter((course) => course.id !== id), assignments: current.assignments.filter((assignment) => assignment.courseId !== id), grades: current.grades.filter((grade) => grade.courseId !== id), resources: current.resources.filter((resource) => resource.courseId !== id) })), [update]);
