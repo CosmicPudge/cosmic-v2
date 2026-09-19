@@ -5,6 +5,8 @@ import type { AcademicGoal, Assignment, Course, Grade, SchoolResource, SchoolTer
 import { createScopedStorageKey, migrateLegacyStorage, readScopedOrLegacy, useCosmicScope } from "@/services/storage/scope";
 import { useCloudSnapshotSync } from "@/services/sync/useCloudSnapshotSync";
 import { emptyLocalSchoolData, normalizeLocalSchoolData, type LocalSchoolDataShape } from "./localDataHydration";
+import { deleteLocalResource, deleteLocalStudyCard, deleteLocalStudySet, reviewLocalStudyCard, saveLocalResource, saveLocalStudyCards, saveLocalStudySet, type StudyCardInput } from "@/services/school/localStudy";
+import type { ReviewRating } from "@/services/school/studyReview";
 
 export const SCHOOL_STORAGE_KEY = "cosmic.school.local-data";
 export const SCHOOL_UPDATE_EVENT = "cosmic:school-local-data-updated";
@@ -109,8 +111,28 @@ export function useLocalSchoolRepository(options: { enabled?: boolean } = {}) {
     removeGrade: (id: string) => update((current) => ({ ...current, grades: current.grades.filter((item) => item.id !== id) })),
     saveGoal: (goal: AcademicGoal) => update((current) => ({ ...current, goals: current.goals.some((item) => item.id === goal.id) ? current.goals.map((item) => item.id === goal.id ? goal : item) : [...current.goals, goal] })),
     removeGoal: (id: string) => update((current) => ({ ...current, goals: current.goals.filter((item) => item.id !== id) })),
-    saveResource: (resource: SchoolResource) => update((current) => ({ ...current, resources: current.resources.some((item) => item.id === resource.id) ? current.resources.map((item) => item.id === resource.id ? resource : item) : [...current.resources, resource] })),
-    removeResource: (id: string) => update((current) => ({ ...current, resources: current.resources.filter((item) => item.id !== id) })),
+    saveResource: (resource: SchoolResource) => update((current) => saveLocalResource(current, resource)),
+    removeResource: (id: string) => update((current) => deleteLocalResource(current, id)),
+    saveStudySet: (input: Parameters<typeof saveLocalStudySet>[1]) => {
+      const result = saveLocalStudySet(data, input);
+      if ("error" in result) return result;
+      update((current) => saveLocalStudySet(current, input).data);
+      return { set: result.set };
+    },
+    removeStudySet: (id: string) => update((current) => deleteLocalStudySet(current, id)),
+    saveStudyCards: (cards: StudyCardInput[]) => {
+      const result = saveLocalStudyCards(data, cards);
+      if ("error" in result) return result;
+      update((current) => saveLocalStudyCards(current, cards).data);
+      return {};
+    },
+    removeStudyCard: (id: string) => update((current) => deleteLocalStudyCard(current, id)),
+    reviewStudyCard: (id: string, rating: ReviewRating, now = new Date()) => {
+      const result = reviewLocalStudyCard(data, id, rating, now);
+      if ("error" in result) return result;
+      update((current) => reviewLocalStudyCard(current, id, rating, now).data);
+      return { card: result.card };
+    },
     reset: () => setData(emptySchoolData),
   };
 }

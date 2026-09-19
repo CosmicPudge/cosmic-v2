@@ -1,22 +1,159 @@
 "use client";
+
 import Link from "next/link";
-import { use, useEffect, useState } from "react";
+import { use, useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useSchool } from "@/components/school/context/SchoolDataContext";
+import { StudyDialog } from "@/components/school/StudyDialog";
+import type { LocalStudyCard } from "@/components/school/data/localDataHydration";
 import { parseBulkCards } from "@/services/school/studyBulk";
-import { isCardDue, type ReviewRating } from "@/services/school/studyReview";
-type SetRow = { id: string; title: string; description: string | null; courseId: string | null };
-type Card = { id: string; front: string; back: string; notes: string | null; reviewCount: number; intervalDays: number; lastReviewedAt: string | null; nextReviewAt: string | null; createdAt: string };
-const input = "w-full rounded-xl border border-white/10 bg-black/15 px-3 py-2.5 text-sm text-white outline-none focus:border-sky-200/50";
-export default function StudySetPage({ params }: { params: Promise<{ setId: string }> }) { const { setId } = use(params); const [set, setSet] = useState<SetRow | null>(null); const [cards, setCards] = useState<Card[]>([]); const [error, setError] = useState(""); const [mode, setMode] = useState<"add" | "bulk" | "edit" | "study" | null>(null); const [front, setFront] = useState(""); const [back, setBack] = useState(""); const [bulk, setBulk] = useState(""); const [title, setTitle] = useState(""); const [description, setDescription] = useState(""); const [current, setCurrent] = useState(0); const [revealed, setRevealed] = useState(false); const [saving, setSaving] = useState(false);
-  async function load() { const [setResponse, cardResponse] = await Promise.all([fetch(`/api/school/study/sets/${setId}`), fetch(`/api/school/study/sets/${setId}/cards`)]); const setBody = await setResponse.json(); const cardBody = await cardResponse.json(); if (!setResponse.ok) throw new Error(setBody.error); setSet(setBody.set); setTitle(setBody.set.title); setDescription(setBody.set.description ?? ""); setCards(cardBody.cards ?? []); }
-  useEffect(() => { void Promise.resolve().then(load).catch((cause: unknown) => setError(cause instanceof Error ? cause.message : "Study set unavailable.")); }, [setId]);
-  async function addCards(items: Array<{ front: string; back: string }>) { setSaving(true); const response = await fetch(`/api/school/study/sets/${setId}/cards`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ cards: items }) }); const body = await response.json(); setSaving(false); if (!response.ok) return setError(body.error ?? "Cards could not be saved."); setMode(null); setFront(""); setBack(""); setBulk(""); await load(); }
-  async function editSet() { const response = await fetch(`/api/school/study/sets/${setId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title, description }) }); if (!response.ok) { const body = await response.json(); setError(body.error); return; } setMode(null); await load(); }
-  async function deleteSet() { if (!window.confirm("Delete this study set and its cards?")) return; const response = await fetch(`/api/school/study/sets/${setId}`, { method: "DELETE" }); if (response.ok) window.location.href = "/school/study"; }
-  async function review(rating: ReviewRating) { const card = cards[current]; if (!card || saving) return; setSaving(true); const response = await fetch(`/api/school/study/cards/${card.id}/review`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ rating }) }); const body = await response.json(); setSaving(false); if (!response.ok) return setError(body.error ?? "Review could not be saved."); setCards((items) => items.map((item) => item.id === card.id ? body.card : item)); setRevealed(false); setCurrent((value) => value + 1); }
-  useEffect(() => { if (mode !== "study") return; const handler = (event: KeyboardEvent) => { if (["INPUT", "TEXTAREA", "SELECT"].includes((event.target as HTMLElement).tagName) || (event.target as HTMLElement).isContentEditable) return; if (event.code === "Space") { event.preventDefault(); if (!revealed) setRevealed(true); } if (revealed && ["1", "2", "3", "4"].includes(event.key)) void review((["again", "hard", "good", "easy"] as ReviewRating[])[Number(event.key) - 1]); }; window.addEventListener("keydown", handler); return () => window.removeEventListener("keydown", handler); }, [mode, revealed, current, cards, saving]);
-  if (!set) return <div className="py-16 text-sm text-white/50">Loading study set…</div>;
-  const dueCards = cards.filter((card) => isCardDue({ lastReviewedAt: card.lastReviewedAt ? new Date(card.lastReviewedAt) : null, nextReviewAt: card.nextReviewAt ? new Date(card.nextReviewAt) : null })); const queue = [...dueCards, ...cards.filter((card) => !card.lastReviewedAt && !dueCards.some((item) => item.id === card.id))]; const card = queue[current];
-  return <div className="mx-auto max-w-4xl space-y-5"><Link href="/school/study" className="text-sm text-white/45 hover:text-white">← Study</Link><header className="rounded-[1.35rem] border border-white/[0.09] bg-[#101c35]/75 p-5"><div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start"><div><p className="text-xs uppercase tracking-wider text-sky-200/55">{set.courseId ?? "General study set"}</p><h1 className="mt-2 text-3xl font-black text-white">{set.title}</h1>{set.description && <p className="mt-2 text-sm text-white/55">{set.description}</p>}</div><div className="flex flex-wrap gap-2"><button type="button" onClick={() => { setCurrent(0); setRevealed(false); setMode("study"); }} disabled={!queue.length} className="rounded-xl bg-sky-200/15 px-3 py-2 text-sm font-semibold text-sky-50 disabled:opacity-40">Study {dueCards.length ? `(${dueCards.length} due)` : ""}</button><button type="button" onClick={() => setMode("add")} className="rounded-xl border border-white/10 px-3 py-2 text-sm text-white/70">Add Card</button><button type="button" onClick={() => setMode("bulk")} className="rounded-xl border border-white/10 px-3 py-2 text-sm text-white/70">Bulk Add</button><button type="button" onClick={() => setMode("edit")} className="rounded-xl border border-white/10 px-3 py-2 text-sm text-white/70">Edit Set</button><button type="button" onClick={() => void deleteSet()} className="rounded-xl border border-rose-200/20 px-3 py-2 text-sm text-rose-100/75">Delete</button></div></div><div className="mt-5 grid grid-cols-3 gap-3"><Stat label="Cards" value={cards.length} /><Stat label="New" value={cards.filter((item) => !item.lastReviewedAt).length} /><Stat label="Due" value={dueCards.length} /></div></header>{error && <p className="text-sm text-red-200">{error}</p>}{mode === "study" ? <section className="rounded-[1.35rem] border border-sky-200/15 bg-sky-200/[0.06] p-6">{card ? <><div className="flex items-center justify-between text-xs text-white/45"><span>Card {current + 1} of {queue.length}</span><span>Space to reveal · 1–4 to rate</span></div><div className="mt-8 min-h-56 rounded-2xl border border-white/10 bg-black/15 p-6"><p className="text-[10px] uppercase tracking-[0.2em] text-sky-200/60">Front</p><p className="mt-4 whitespace-pre-wrap text-xl leading-8 text-white">{card.front}</p>{revealed && <><p className="mt-8 border-t border-white/10 pt-6 text-[10px] uppercase tracking-[0.2em] text-emerald-200/60">Back</p><p className="mt-4 whitespace-pre-wrap text-lg leading-8 text-white/80">{card.back}</p></>}</div>{!revealed ? <button type="button" onClick={() => setRevealed(true)} className="mt-5 w-full rounded-xl bg-white px-4 py-3 font-semibold text-slate-950">Reveal Answer</button> : <div className="mt-5 grid grid-cols-4 gap-2">{(["again", "hard", "good", "easy"] as ReviewRating[]).map((rating, index) => <button type="button" key={rating} disabled={saving} onClick={() => void review(rating)} className="rounded-xl border border-white/10 px-2 py-3 text-sm capitalize text-white/75 hover:bg-white/[0.06]">{index + 1} · {rating}</button>)}</div>}</> : <div><h2 className="text-xl font-semibold text-white">Session complete</h2><p className="mt-2 text-sm text-white/55">You reviewed {queue.length} card{queue.length === 1 ? "" : "s"}.</p><button type="button" onClick={() => setMode(null)} className="mt-5 rounded-xl border border-white/10 px-3 py-2 text-sm text-white/70">Back to cards</button></div>}</section> : <section className="rounded-[1.35rem] border border-white/[0.09] bg-[#101c35]/75 p-5"><p className="text-[10px] uppercase tracking-[0.2em] text-sky-200/55">Cards</p>{cards.map((item) => <div key={item.id} className="border-b border-white/[0.07] py-4 last:border-0"><p className="whitespace-pre-wrap text-sm text-white/85">{item.front}</p><p className="mt-2 whitespace-pre-wrap text-sm text-white/50">{item.back}</p><p className="mt-2 text-xs text-white/30">{item.reviewCount} reviews{isCardDue({ lastReviewedAt: item.lastReviewedAt ? new Date(item.lastReviewedAt) : null, nextReviewAt: item.nextReviewAt ? new Date(item.nextReviewAt) : null }) ? " · due" : ""}</p></div>)}{!cards.length && <p className="mt-3 text-sm text-white/45">No cards yet.</p>}</section>}{mode === "add" && <Form title="Add Card" onClose={() => setMode(null)} onSave={() => void addCards([{ front, back }])}><textarea autoFocus value={front} onChange={(event) => setFront(event.target.value)} placeholder="Front" className={input} rows={4} /><textarea value={back} onChange={(event) => setBack(event.target.value)} placeholder="Back" className={input} rows={5} /></Form>}{mode === "bulk" && <Form title="Bulk Add Cards" onClose={() => setMode(null)} onSave={() => void addCards(parseBulkCards(bulk).cards)}><p className="text-xs text-white/45">One card per line: Question[TAB]Answer or Question | Answer. Parsed: {parseBulkCards(bulk).cards.length}; invalid: {parseBulkCards(bulk).invalidRows.length}</p><textarea autoFocus value={bulk} onChange={(event) => setBulk(event.target.value)} placeholder="Question&#9;Answer" className={input} rows={10} /></Form>}{mode === "edit" && <Form title="Edit Study Set" onClose={() => setMode(null)} onSave={() => void editSet()}><input autoFocus value={title} onChange={(event) => setTitle(event.target.value)} className={input} /><textarea value={description} onChange={(event) => setDescription(event.target.value)} className={input} rows={4} /></Form>}</div>;
+import { getLocalStudyQueue, getLocalStudySetStats, studyCourseHref } from "@/services/school/localStudy";
+import type { ReviewRating } from "@/services/school/studyReview";
+
+type Mode = "add" | "bulk" | "edit-set" | "edit-card" | "study" | null;
+const field = "w-full rounded-xl border border-white/10 bg-black/15 px-3 py-2.5 text-sm text-white outline-none focus:border-sky-200/50";
+
+export default function StudySetPage({ params }: { params: Promise<{ setId: string }> }) {
+  const { setId } = use(params);
+  const router = useRouter();
+  const { local } = useSchool();
+  const [mode, setMode] = useState<Mode>(null);
+  const [front, setFront] = useState("");
+  const [back, setBack] = useState("");
+  const [bulk, setBulk] = useState("");
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [courseId, setCourseId] = useState("");
+  const [editingCard, setEditingCard] = useState<LocalStudyCard | null>(null);
+  const [sessionQueue, setSessionQueue] = useState<string[]>([]);
+  const [current, setCurrent] = useState(0);
+  const [revealed, setRevealed] = useState(false);
+  const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
+  const reviewGuard = useRef(false);
+
+  const set = (local.data.studySets ?? []).find((item) => item.id === setId);
+  const cards = (local.data.flashcards ?? []).filter((card) => card.setId === setId);
+  const course = set?.courseId ? local.data.courses.find((item) => item.id === set.courseId) : undefined;
+  const queue = getLocalStudyQueue(cards);
+  const currentCard = cards.find((card) => card.id === sessionQueue[current]);
+  const parsedBulk = parseBulkCards(bulk);
+
+  function openSetEditor() {
+    if (!set) return;
+    setTitle(set.title);
+    setDescription(set.description ?? "");
+    setCourseId(set.courseId ?? "");
+    setError("");
+    setMode("edit-set");
+  }
+
+  function openAddCard() {
+    setEditingCard(null);
+    setFront("");
+    setBack("");
+    setError("");
+    setMode("add");
+  }
+
+  function openEditCard(card: LocalStudyCard) {
+    setEditingCard(card);
+    setFront(card.front);
+    setBack(card.back);
+    setError("");
+    setMode("edit-card");
+  }
+
+  function saveSet() {
+    if (!set || !title.trim()) { setError("Enter a title for this study set."); return; }
+    const result = local.saveStudySet({ id: set.id, title, description, ...(courseId ? { courseId } : {}) });
+    if ("error" in result) { setError(typeof result.error === "string" ? result.error : "Study set could not be saved."); return; }
+    setMode(null);
+  }
+
+  function saveCard() {
+    if (!front.trim()) { setError("Enter a front for this card."); return; }
+    if (!back.trim()) { setError("Enter a back for this card."); return; }
+    const result = local.saveStudyCards([{ id: editingCard?.id ?? crypto.randomUUID(), setId, front, back, ...(editingCard?.notes ? { notes: editingCard.notes } : {}) }]);
+    if ("error" in result) { setError(typeof result.error === "string" ? result.error : "Flashcard could not be saved."); return; }
+    setMode(null);
+    setEditingCard(null);
+  }
+
+  function saveBulk() {
+    if (!parsedBulk.cards.length) { setError("Add at least one valid Question[TAB]Answer or Question | Answer row."); return; }
+    const result = local.saveStudyCards(parsedBulk.cards.map((card) => ({ id: crypto.randomUUID(), setId, ...card })));
+    if ("error" in result) { setError(typeof result.error === "string" ? result.error : "Flashcards could not be imported."); return; }
+    setError(parsedBulk.invalidRows.length ? `Imported ${parsedBulk.cards.length} valid cards; skipped ${parsedBulk.invalidRows.length} malformed row${parsedBulk.invalidRows.length === 1 ? "" : "s"}.` : "");
+    setBulk("");
+    setMode(null);
+  }
+
+  function deleteCard(card: LocalStudyCard) {
+    if (window.confirm(`Delete this flashcard?`)) local.removeStudyCard(card.id);
+  }
+
+  function deleteSet() {
+    if (!set || !window.confirm(`Delete “${set.title}” and its flashcards? Course resources will remain.`)) return;
+    local.removeStudySet(set.id);
+    router.push(course ? studyCourseHref(course.id) : "/school/study");
+  }
+
+  function startReview() {
+    setSessionQueue(queue.map((card) => card.id));
+    setCurrent(0);
+    setRevealed(false);
+    setError("");
+    setMode("study");
+  }
+
+  const review = useCallback((rating: ReviewRating) => {
+    const cardId = sessionQueue[current];
+    if (!cardId || reviewGuard.current) return;
+    reviewGuard.current = true;
+    setSaving(true);
+    const result = local.reviewStudyCard(cardId, rating);
+    if ("error" in result) setError(typeof result.error === "string" ? result.error : "Review could not be saved.");
+    else {
+      setRevealed(false);
+      setCurrent((value) => value + 1);
+    }
+    setSaving(false);
+    queueMicrotask(() => { reviewGuard.current = false; });
+  }, [current, local, sessionQueue]);
+
+  useEffect(() => {
+    if (mode !== "study") return;
+    const handler = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement;
+      if (["INPUT", "TEXTAREA", "SELECT", "BUTTON"].includes(target.tagName) || target.isContentEditable) return;
+      if (event.code === "Space" && currentCard && !revealed) { event.preventDefault(); setRevealed(true); }
+      if (revealed && ["1", "2", "3", "4"].includes(event.key)) void review(((["again", "hard", "good", "easy"] as ReviewRating[])[Number(event.key) - 1]));
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [mode, currentCard, current, revealed, sessionQueue, saving, review]);
+
+  if (!local.ready) return <p role="status" className="py-16 text-sm text-white/50">Loading local Study data…</p>;
+  if (!set) return <div className="rounded-2xl border border-white/10 bg-white/5 p-6 text-white/60"><p>Study set not found in local School data.</p><Link href="/school/study" className="mt-4 inline-block text-sky-100/80">← Back to Study</Link></div>;
+
+  const dialogTitle = mode === "edit-set" ? "Edit Study Set" : mode === "edit-card" ? "Edit Flashcard" : mode === "bulk" ? "Bulk Add Flashcards" : "Add Flashcard";
+  return <div className="mx-auto max-w-4xl space-y-5">
+    <Link href={course ? studyCourseHref(course.id) : "/school/study"} className="text-sm text-white/45 hover:text-white">← {course ? `${course.code ?? course.name} Study` : "Study"}</Link>
+    <header className="rounded-[1.35rem] border border-white/[0.09] bg-[#101c35]/75 p-5">
+      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start"><div><p className="text-xs uppercase tracking-wider text-sky-200/55">{course ? <Link href={`/school/courses/${encodeURIComponent(course.id)}`} className="hover:text-white">{course.code ? `${course.code} · ` : ""}{course.name}</Link> : set.courseId ? "Course unavailable" : "General study set"}</p><h1 className="mt-2 text-3xl font-black text-white">{set.title}</h1>{set.description && <p className="mt-2 text-sm text-white/55">{set.description}</p>}</div><div className="flex flex-wrap gap-2"><button type="button" onClick={startReview} disabled={!queue.length} className="rounded-xl bg-sky-200/15 px-3 py-2 text-sm font-semibold text-sky-50 disabled:opacity-40">Review {queue.length ? `(${queue.length})` : ""}</button><button type="button" onClick={openAddCard} className="rounded-xl border border-white/10 px-3 py-2 text-sm text-white/70">Add Card</button><button type="button" onClick={() => { setBulk(""); setError(""); setMode("bulk"); }} className="rounded-xl border border-white/10 px-3 py-2 text-sm text-white/70">Bulk Add</button><button type="button" onClick={openSetEditor} className="rounded-xl border border-white/10 px-3 py-2 text-sm text-white/70">Edit Set</button><button type="button" onClick={deleteSet} className="rounded-xl border border-rose-200/20 px-3 py-2 text-sm text-rose-100/75">Delete Set</button></div></div>
+      <div className="mt-5 grid grid-cols-3 gap-3"><Stat label="Cards" value={cards.length} /><Stat label="New" value={cards.filter((card) => !card.lastReviewedAt).length} /><Stat label="Due" value={getLocalStudySetStats(set.id, cards).due} /></div>
+    </header>
+
+    {error && <p className="text-sm text-amber-100/80" role="status">{error}</p>}
+    {mode === "study" && <section className="rounded-[1.35rem] border border-sky-200/15 bg-sky-200/[0.06] p-4 sm:p-6">{currentCard ? <><div className="flex flex-wrap items-center justify-between gap-2 text-xs text-white/45"><span>Card {current + 1} of {sessionQueue.length}</span><span>Space to reveal · 1–4 to rate</span></div><div className="mt-6 min-h-56 rounded-2xl border border-white/10 bg-black/15 p-4 sm:mt-8 sm:p-6"><p className="text-[10px] uppercase tracking-[0.2em] text-sky-200/60">Front</p><p className="mt-4 whitespace-pre-wrap break-words text-xl leading-8 text-white">{currentCard.front}</p>{revealed && <><p className="mt-8 border-t border-white/10 pt-6 text-[10px] uppercase tracking-[0.2em] text-emerald-200/60">Back</p><p className="mt-4 whitespace-pre-wrap break-words text-lg leading-8 text-white/80">{currentCard.back}</p></>}</div>{!revealed ? <button type="button" onClick={() => setRevealed(true)} className="mt-5 w-full rounded-xl bg-white px-4 py-3 font-semibold text-slate-950">Reveal Answer</button> : <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4">{(["again", "hard", "good", "easy"] as ReviewRating[]).map((rating, index) => <button type="button" key={rating} disabled={saving} onClick={() => review(rating)} className="rounded-xl border border-white/10 px-2 py-3 text-sm capitalize text-white/75 hover:bg-white/[0.06]">{index + 1} · {rating}</button>)}</div>}</> : <div><h2 className="text-xl font-semibold text-white">Session complete</h2><p className="mt-2 text-sm text-white/55">You reviewed {sessionQueue.length} card{sessionQueue.length === 1 ? "" : "s"}. Your progress is saved locally.</p><button type="button" onClick={() => setMode(null)} className="mt-5 rounded-xl border border-white/10 px-3 py-2 text-sm text-white/70">Back to cards</button></div>}</section>}
+
+    {mode !== "study" && <section className="rounded-[1.35rem] border border-white/[0.09] bg-[#101c35]/75 p-4 sm:p-5"><div className="flex flex-wrap items-end justify-between gap-3"><div><p className="text-[10px] uppercase tracking-[0.2em] text-sky-200/55">Flashcards</p><h2 className="mt-1 text-xl font-semibold text-white">Your cards</h2></div>{!cards.length && <p className="text-sm text-white/45">No cards yet. Add one or import a tab-separated list.</p>}</div>{cards.map((card) => <article key={card.id} className="mt-3 rounded-xl border border-white/[0.07] p-4"><p className="whitespace-pre-wrap break-words text-sm text-white/85">{card.front}</p><p className="mt-2 whitespace-pre-wrap break-words text-sm text-white/55">{card.back}</p><div className="mt-3 flex flex-wrap items-center justify-between gap-2"><p className="text-xs text-white/35">{card.reviewCount} reviews{card.lastReviewedAt ? ` · next ${card.nextReviewAt?.toLocaleString() ?? "not scheduled"}` : " · new"}</p><div className="flex gap-2"><button type="button" onClick={() => openEditCard(card)} className="rounded-lg border border-white/10 px-3 py-1.5 text-xs text-white/65">Edit</button><button type="button" onClick={() => deleteCard(card)} className="rounded-lg border border-rose-200/15 px-3 py-1.5 text-xs text-rose-100/75">Delete</button></div></div></article>)}</section>}
+
+    {mode && mode !== "study" && <StudyDialog title={dialogTitle} onClose={() => { setMode(null); setError(""); }} footer={<><button type="button" onClick={() => { setMode(null); setError(""); }} className="rounded-xl border border-white/10 px-3 py-2 text-sm text-white/65">Cancel</button><button type="button" disabled={mode === "bulk" && parsedBulk.cards.length === 0} onClick={() => mode === "edit-set" ? saveSet() : mode === "bulk" ? saveBulk() : saveCard()} className="rounded-xl bg-white px-3 py-2 text-sm font-semibold text-slate-950 disabled:opacity-40">{mode === "bulk" ? "Import Valid Cards" : mode === "edit-set" ? "Save Set" : mode === "edit-card" ? "Save Card" : "Add Card"}</button></>}>
+      {mode === "edit-set" ? <div className="grid gap-3"><label className="text-sm text-white/65">Title<input autoFocus value={title} onChange={(event) => setTitle(event.target.value)} className={field} /></label><label className="text-sm text-white/65">Course<select value={courseId} onChange={(event) => setCourseId(event.target.value)} className={field}><option value="">General / No Course</option>{local.data.courses.map((item) => <option key={item.id} value={item.id}>{item.code ? `${item.code} · ` : ""}{item.name}</option>)}</select></label><label className="text-sm text-white/65">Description<textarea value={description} onChange={(event) => setDescription(event.target.value)} className={field} rows={3} /></label></div> : mode === "bulk" ? <div className="grid gap-3"><p className="text-xs leading-5 text-white/50">One card per line: Question[TAB]Answer or Question | Answer. Valid: {parsedBulk.cards.length}; malformed: {parsedBulk.invalidRows.length}.</p>{parsedBulk.invalidRows.length > 0 && <ul className="max-h-24 overflow-y-auto text-xs text-amber-100/75">{parsedBulk.invalidRows.map((row) => <li key={`${row.line}-${row.value}`}>Line {row.line}: {row.value}</li>)}</ul>}<label className="text-sm text-white/65">Cards<textarea autoFocus value={bulk} onChange={(event) => setBulk(event.target.value)} placeholder={'Question\tAnswer\nAnother question | Answer'} className={field} rows={5} /></label></div> : <div className="grid gap-3"><label className="text-sm text-white/65">Front<textarea autoFocus value={front} onChange={(event) => setFront(event.target.value)} className={field} rows={3} /></label><label className="text-sm text-white/65">Back<textarea value={back} onChange={(event) => setBack(event.target.value)} className={field} rows={3} /></label></div>}{error && <p className="mt-3 text-sm text-rose-200" role="alert">{error}</p>}
+    </StudyDialog>}
+  </div>;
 }
+
 function Stat({ label, value }: { label: string; value: number }) { return <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-3"><p className="text-[10px] uppercase tracking-wider text-white/40">{label}</p><p className="mt-1 text-xl font-bold text-white">{value}</p></div>; }
-function Form({ title, children, onClose, onSave }: { title: string; children: React.ReactNode; onClose: () => void; onSave: () => void }) { return <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-4"><section className="w-full max-w-lg rounded-2xl border border-white/10 bg-[#101c35] p-5"><h2 className="text-xl font-semibold text-white">{title}</h2><div className="mt-5 grid gap-3">{children}</div><div className="mt-5 flex justify-end gap-2"><button type="button" onClick={onClose} className="rounded-xl border border-white/10 px-3 py-2 text-sm text-white/65">Cancel</button><button type="button" onClick={onSave} className="rounded-xl bg-white px-3 py-2 text-sm font-semibold text-slate-950">Save</button></div></section></div>; }
