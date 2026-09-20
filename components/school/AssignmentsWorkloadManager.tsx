@@ -10,6 +10,7 @@ import { localAssignmentToPlanning } from "@/services/school/semesterConsumers";
 import { dedupeSchoolAssignments } from "@/services/school/assignmentIdentity";
 import { assignmentWorkloadLabel, buildAssignmentWorkload, type AssignmentWorkloadSource, type AssignmentWorkloadStatus } from "@/services/school/assignmentWorkload";
 import { assignmentDetailHref } from "@/services/school/assignmentDetail";
+import { canonicalCourseFilterSelection } from "@/services/school/courseExperience";
 import { isAssignmentActiveForPlanning, safeSchoolDate } from "@/services/school/planning";
 import { useSchool } from "./context/SchoolDataContext";
 import { AssignmentForm } from "./SchoolCrudViews";
@@ -36,9 +37,9 @@ function toLocalPlanning(items: Assignment[], courses: Course[]) {
   return items.map((item) => localAssignmentToPlanning(item, item.courseId ? courseMap.get(item.courseId) : undefined));
 }
 
-export function AssignmentsWorkloadManager() {
+export function AssignmentsWorkloadManager({ requestedCourseId }: { requestedCourseId?: string } = {}) {
   const { snapshot, local, loading } = useSchool();
-  const [courseFilter, setCourseFilter] = useState("");
+  const [manualCourseSelection, setManualCourseSelection] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<AssignmentWorkloadStatus>("active");
   const [sourceFilter, setSourceFilter] = useState<AssignmentWorkloadSource>("all");
   const [search, setSearch] = useState("");
@@ -47,8 +48,10 @@ export function AssignmentsWorkloadManager() {
   const now = new Date();
   const courses = local.data.courses;
   const catalog = buildSchoolCourseCatalog(courses, local.data.terms, snapshot?.canvasCourses ?? []);
+  const courseFilter = canonicalCourseFilterSelection(requestedCourseId, catalog, local.ready && !loading, manualCourseSelection);
+  const invalidCourseRequest = Boolean(requestedCourseId && local.ready && !loading && courseFilter === "all" && manualCourseSelection === null);
   const allAssignments = dedupeSchoolAssignments([...toLocalPlanning(local.data.assignments, courses), ...(snapshot?.planningAssignments ?? [])]);
-  const workload = buildAssignmentWorkload({ assignments: allAssignments, catalog, courses, filters: { courseId: courseFilter || undefined, status: statusFilter, source: sourceFilter, search }, now });
+  const workload = buildAssignmentWorkload({ assignments: allAssignments, catalog, courses, filters: { courseId: courseFilter === "all" ? undefined : courseFilter, status: statusFilter, source: sourceFilter, search }, now });
   const localById = new Map(local.data.assignments.map((item) => [`manual:${item.id}`, item]));
   const activeCount = allAssignments.filter((item) => !done(item)).length;
 
@@ -61,11 +64,13 @@ export function AssignmentsWorkloadManager() {
     <section className="grid gap-3 sm:grid-cols-3"><Summary label="Needs attention" value={workload.summary.needsAttention} tone="text-rose-200" /><Summary label="Due soon" value={workload.summary.dueSoon} tone="text-amber-100" /><Summary label="Later / undated" value={workload.summary.laterUndated} tone="text-sky-100" /></section>
 
     <section className={`${panel} grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-4`}>
-      <label className="text-xs uppercase tracking-wider text-white/45">Course<select value={courseFilter} onChange={(event) => setCourseFilter(event.target.value)} className="mt-1 block w-full rounded-xl border border-white/10 bg-[#101c35] px-3 py-2 text-sm normal-case tracking-normal text-white/80"><option value="">All courses</option>{catalog.map((identity) => <option key={identity.id} value={identity.id}>{identity.code ? `${identity.code} · ` : ""}{identity.name}</option>)}</select></label>
+      <label className="text-xs uppercase tracking-wider text-white/45">Course<select value={courseFilter === "all" ? "all" : courseFilter} onChange={(event) => setManualCourseSelection(event.target.value)} className="mt-1 block w-full rounded-xl border border-white/10 bg-[#101c35] px-3 py-2 text-sm normal-case tracking-normal text-white/80"><option value="all">All courses</option>{catalog.map((identity) => <option key={identity.id} value={identity.id}>{identity.code ? `${identity.code} · ` : ""}{identity.name}</option>)}</select></label>
       <label className="text-xs uppercase tracking-wider text-white/45">Status<select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as AssignmentWorkloadStatus)} className="mt-1 block w-full rounded-xl border border-white/10 bg-[#101c35] px-3 py-2 text-sm normal-case tracking-normal text-white/80"><option value="active">Active</option><option value="overdue">Overdue</option><option value="due-soon">Due soon</option><option value="completed">Completed</option><option value="all">All</option></select></label>
       <label className="text-xs uppercase tracking-wider text-white/45">Source<select value={sourceFilter} onChange={(event) => setSourceFilter(event.target.value as AssignmentWorkloadSource)} className="mt-1 block w-full rounded-xl border border-white/10 bg-[#101c35] px-3 py-2 text-sm normal-case tracking-normal text-white/80"><option value="all">All sources</option><option value="cosmic">Cosmic / manual</option><option value="provider">Provider</option></select></label>
       <label className="text-xs uppercase tracking-wider text-white/45">Search assignments<span className="relative mt-1 block"><Search className="absolute left-3 top-2.5 size-4 text-white/30" /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Title or course" className="w-full rounded-xl border border-white/10 bg-[#101c35] py-2 pl-9 pr-3 text-sm normal-case tracking-normal text-white/80 placeholder:text-white/30" /></span></label>
     </section>
+
+    {invalidCourseRequest && <p role="status" className="text-sm text-amber-100/75">That course is not in the current School catalog. Showing all assignments.</p>}
 
     {loading ? <div className={`${panel} p-8 text-center text-sm text-white/45`}>Loading assignments…</div> : <div className="space-y-5">
       {groupOrder.map((group) => { const items = workload.groups[group]; if (!items.length) return null; return <section key={group}>

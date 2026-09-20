@@ -41,9 +41,13 @@ export function resolveCalendarCourseFilter(requestedCourseId: string | null | u
   return catalog.some((identity) => identity.id === requestedCourseId) ? requestedCourseId : "all";
 }
 
-export function calendarCourseFilterSelection(requestedCourseId: string | null | undefined, catalog: SchoolCourseIdentity[], dataReady: boolean, manualSelection?: string | null): string {
+export function canonicalCourseFilterSelection(requestedCourseId: string | null | undefined, catalog: SchoolCourseIdentity[], dataReady: boolean, manualSelection?: string | null): string {
   if (manualSelection !== undefined && manualSelection !== null) return manualSelection;
   return dataReady ? resolveCalendarCourseFilter(requestedCourseId, catalog) : "all";
+}
+
+export function calendarCourseFilterSelection(requestedCourseId: string | null | undefined, catalog: SchoolCourseIdentity[], dataReady: boolean, manualSelection?: string | null): string {
+  return canonicalCourseFilterSelection(requestedCourseId, catalog, dataReady, manualSelection);
 }
 
 export function providerCourseLabel(identity: SchoolCourseIdentity, provider?: SchoolCanvasCourse): string {

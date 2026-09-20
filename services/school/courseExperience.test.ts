@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { getSchoolSetupState, assignmentBelongsToCourse, calendarCourseFilterSelection, resolveCalendarCourseFilter, timelineEntryBelongsToCourse } from "./courseExperience";
+import { getSchoolSetupState, assignmentBelongsToCourse, calendarCourseFilterSelection, canonicalCourseFilterSelection, resolveCalendarCourseFilter, timelineEntryBelongsToCourse } from "./courseExperience";
 import type { Course } from "@/core/contracts/School";
 import { buildSchoolCourseCatalog, type SchoolCourseIdentity } from "./courseIdentity";
 
@@ -62,4 +62,14 @@ test("calendar manual selector values remain independent after URL resolution", 
   assert.equal(calendarCourseFilterSelection(identity.id, [identity], false, "all"), "all");
   assert.equal(calendarCourseFilterSelection(identity.id, [identity], true, "all"), "all");
   assert.equal(calendarCourseFilterSelection(identity.id, [identity], true, "other-course"), "other-course");
+});
+
+test("canonical course selection supports assignments, waits for hydration, and respects manual changes", () => {
+  assert.equal(canonicalCourseFilterSelection(null, [identity], true), "all");
+  assert.equal(canonicalCourseFilterSelection(identity.id, [identity], false), "all");
+  assert.equal(canonicalCourseFilterSelection(identity.id, [identity], true), identity.id);
+  assert.equal(canonicalCourseFilterSelection("canvas:canvas-1", [{ ...identity, id: "canvas:canvas-1", localCourseId: undefined }], true), "canvas:canvas-1");
+  assert.equal(canonicalCourseFilterSelection("missing", [identity], true), "all");
+  assert.equal(canonicalCourseFilterSelection("ambiguous", [{ ...identity, id: "other-id", matchStatus: "ambiguous" }], true), "all");
+  assert.equal(canonicalCourseFilterSelection(identity.id, [identity], true, "all"), "all");
 });

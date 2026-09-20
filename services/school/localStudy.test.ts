@@ -130,6 +130,9 @@ test("course filter, course set list, resource filter, and Course → Study link
   const sets = [set, { ...set, id: "other-set", courseId: otherCourse.id }, { ...set, id: "general-set", courseId: undefined }];
   assert.deepEqual(getLocalStudySetsForCourse(sets, course.id).map((item) => item.id), [set.id]);
   assert.equal(resolveLocalCourseFilter(course.id, [course, otherCourse]).course?.id, course.id);
+  const addResourceCourse = resolveLocalCourseFilter(course.id, [course, otherCourse]).course;
+  assert.equal(addResourceCourse?.id, course.id);
+  assert.equal(resolveLocalCourseFilter(course.id, [course, { ...course }]).course, undefined);
   assert.equal(resolveLocalCourseFilter("missing", [course, otherCourse]).invalid, true);
   const resources: SchoolResource[] = [{ id: "r1", title: "AS resource", category: "course", courseId: course.id }, { id: "r2", title: "Other resource", category: "course", courseId: otherCourse.id }, { id: "r3", title: "General", category: "academic" }];
   assert.deepEqual(filterLocalResources(resources, course.id).map((item) => item.id), ["r1"]);

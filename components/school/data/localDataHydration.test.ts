@@ -100,3 +100,27 @@ test("local term and goal date fields share the same hydration boundary", () => 
   assert.ok(hydrated.terms[0].endDate instanceof Date);
   assert.ok(hydrated.goals[0].dueAt instanceof Date);
 });
+
+test("legacy School snapshots without notes hydrate safely to an empty note list", () => {
+  const legacy = { ...localData([]), studySets: undefined, flashcards: undefined };
+  const hydrated = normalizeLocalSchoolData(JSON.parse(JSON.stringify(legacy)));
+  assert.deepEqual(hydrated.notes, []);
+  assert.equal(hydrated.version, 1);
+});
+
+test("local notes serialize and hydrate with dates and only exact existing course associations", () => {
+  const createdAt = new Date("2026-09-18T15:00:00.000Z");
+  const classDate = new Date("2026-09-17T18:00:00.000Z");
+  const snapshot = { ...localData([]), courses: [course], notes: [{ id: "note-1", title: "Class notes", content: "Review heritage values", courseId: course.id, topics: ["heritage"], classDate, createdAt, updatedAt: createdAt }] };
+  const serialized = JSON.stringify(snapshot);
+  const hydrated = normalizeLocalSchoolData(JSON.parse(serialized));
+  assert.equal(hydrated.notes?.length, 1);
+  assert.equal(hydrated.notes?.[0]?.courseId, course.id);
+  assert.ok(hydrated.notes?.[0]?.createdAt instanceof Date);
+  assert.ok(hydrated.notes?.[0]?.classDate instanceof Date);
+  assert.equal(hydrated.notes?.[0]?.createdAt.toISOString(), createdAt.toISOString());
+  const unmatched = normalizeLocalSchoolData({ ...snapshot, notes: [{ ...snapshot.notes[0], courseId: "missing-course" }] });
+  assert.equal(unmatched.notes?.[0]?.courseId, undefined);
+  const ambiguous = normalizeLocalSchoolData({ ...snapshot, courses: [course, { ...course }], notes: snapshot.notes });
+  assert.equal(ambiguous.notes?.[0]?.courseId, undefined);
+});

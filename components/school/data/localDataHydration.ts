@@ -24,6 +24,17 @@ export interface LocalStudyCard {
   updatedAt: Date;
 }
 
+export interface LocalSchoolNote {
+  id: string;
+  title: string;
+  content: string;
+  courseId?: string;
+  topics: string[];
+  classDate?: Date;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export interface LocalSchoolDataShape {
   version: 1;
   terms: SchoolTerm[];
@@ -34,9 +45,10 @@ export interface LocalSchoolDataShape {
   resources: SchoolResource[];
   studySets?: LocalStudySet[];
   flashcards?: LocalStudyCard[];
+  notes?: LocalSchoolNote[];
 }
 
-export const emptyLocalSchoolData: LocalSchoolDataShape = { version: 1, terms: [], courses: [], assignments: [], grades: [], goals: [], resources: [], studySets: [], flashcards: [] };
+export const emptyLocalSchoolData: LocalSchoolDataShape = { version: 1, terms: [], courses: [], assignments: [], grades: [], goals: [], resources: [], studySets: [], flashcards: [], notes: [] };
 
 function isRecord(value: unknown): value is Record<string, unknown> { return typeof value === "object" && value !== null && !Array.isArray(value); }
 function hasId(value: unknown): value is Record<string, unknown> & { id: string } { return isRecord(value) && typeof value.id === "string"; }
@@ -95,6 +107,30 @@ function normalizeFlashcards(value: unknown, sets: LocalStudySet[]): LocalStudyC
   });
 }
 
+function normalizeLocalNotes(value: unknown, courses: Course[]): LocalSchoolNote[] {
+  if (!Array.isArray(value)) return [];
+  const courseCounts = new Map<string, number>();
+  courses.forEach((course) => courseCounts.set(course.id, (courseCounts.get(course.id) ?? 0) + 1));
+  const unique = new Map<string, LocalSchoolNote>();
+  for (const item of value) {
+    if (!hasId(item) || typeof item.title !== "string" || !item.title.trim() || typeof item.content !== "string" || !item.content.trim()) continue;
+    const createdAt = safeSchoolDate(item.createdAt) ?? new Date(0);
+    const requestedCourseId = typeof item.courseId === "string" && item.courseId ? item.courseId : undefined;
+    const note: LocalSchoolNote = {
+      id: item.id,
+      title: item.title.trim().slice(0, 500),
+      content: item.content.trim().slice(0, 50_000),
+      ...(requestedCourseId && courseCounts.get(requestedCourseId) === 1 ? { courseId: requestedCourseId } : {}),
+      topics: Array.isArray(item.topics) ? [...new Set(item.topics.filter((topic): topic is string => typeof topic === "string" && Boolean(topic.trim())).map((topic) => topic.trim().slice(0, 120)))].slice(0, 30) : [],
+      ...(safeSchoolDate(item.classDate) ? { classDate: safeSchoolDate(item.classDate) } : {}),
+      createdAt,
+      updatedAt: safeSchoolDate(item.updatedAt) ?? createdAt,
+    };
+    if (note.title && note.content) unique.set(note.id, note);
+  }
+  return [...unique.values()];
+}
+
 /** Revive JSON date values at the local School storage/sync boundary. Invalid optional dates stay unknown. */
 export function normalizeLocalSchoolData(value: unknown): LocalSchoolDataShape {
   if (!isRecord(value) || value.version !== 1) return emptyLocalSchoolData;
@@ -106,5 +142,6 @@ export function normalizeLocalSchoolData(value: unknown): LocalSchoolDataShape {
   const resources = Array.isArray(value.resources) ? value.resources.filter(hasId) as unknown as SchoolResource[] : [];
   const studySets = normalizeStudySets(value.studySets);
   const flashcards = normalizeFlashcards(value.flashcards, studySets);
-  return { version: 1, terms, courses, assignments, grades, goals, resources, studySets, flashcards };
+  const notes = normalizeLocalNotes(value.notes, courses);
+  return { version: 1, terms, courses, assignments, grades, goals, resources, studySets, flashcards, notes };
 }

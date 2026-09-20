@@ -4,8 +4,9 @@ import { useCallback, useEffect, useState } from "react";
 import type { AcademicGoal, Assignment, Course, Grade, SchoolResource, SchoolTerm } from "@/core/contracts/School";
 import { createScopedStorageKey, migrateLegacyStorage, readScopedOrLegacy, useCosmicScope } from "@/services/storage/scope";
 import { useCloudSnapshotSync } from "@/services/sync/useCloudSnapshotSync";
-import { emptyLocalSchoolData, normalizeLocalSchoolData, type LocalSchoolDataShape } from "./localDataHydration";
+import { emptyLocalSchoolData, normalizeLocalSchoolData, type LocalSchoolDataShape, type LocalSchoolNote } from "./localDataHydration";
 import { deleteLocalResource, deleteLocalStudyCard, deleteLocalStudySet, reviewLocalStudyCard, saveLocalResource, saveLocalStudyCards, saveLocalStudySet, type StudyCardInput } from "@/services/school/localStudy";
+import { deleteLocalSchoolNote, saveLocalSchoolNote } from "@/services/school/localNotes";
 import type { ReviewRating } from "@/services/school/studyReview";
 
 export const SCHOOL_STORAGE_KEY = "cosmic.school.local-data";
@@ -26,7 +27,8 @@ function isLocalSchoolData(value: unknown): value is LocalSchoolData {
     && Array.isArray(value.assignments) && value.assignments.every(hasId)
     && Array.isArray(value.grades) && value.grades.every(isGrade)
     && Array.isArray(value.goals) && value.goals.every(hasId)
-    && Array.isArray(value.resources) && value.resources.every(hasId);
+    && Array.isArray(value.resources) && value.resources.every(hasId)
+    && (value.notes === undefined || Array.isArray(value.notes) && value.notes.every(hasId));
 }
 
 export function readSchoolSnapshot(scopeId?: string): LocalSchoolData {
@@ -95,7 +97,7 @@ export function useLocalSchoolRepository(options: { enabled?: boolean } = {}) {
   const removeCourse = useCallback((id: string) => update((current) => ({ ...current, courses: current.courses.filter((course) => course.id !== id), assignments: current.assignments.filter((assignment) => assignment.courseId !== id), grades: current.grades.filter((grade) => grade.courseId !== id), resources: current.resources.filter((resource) => resource.courseId !== id) })), [update]);
 
   return {
-    data, ready, sync,
+    data, ready, sync, scope,
     addTerm: (term: SchoolTerm) => update((current) => ({ ...current, terms: [...current.terms.map((item) => ({ ...item, active: term.active ? false : item.active })), term] })),
     saveTerm: (term: SchoolTerm) => update((current) => ({ ...current, terms: [...current.terms.filter((item) => item.id !== term.id).map((item) => ({ ...item, active: term.active ? false : item.active })), term] })),
     removeTerm: (id: string) => update((current) => {
@@ -113,6 +115,13 @@ export function useLocalSchoolRepository(options: { enabled?: boolean } = {}) {
     removeGoal: (id: string) => update((current) => ({ ...current, goals: current.goals.filter((item) => item.id !== id) })),
     saveResource: (resource: SchoolResource) => update((current) => saveLocalResource(current, resource)),
     removeResource: (id: string) => update((current) => deleteLocalResource(current, id)),
+    saveNote: (note: LocalSchoolNote) => {
+      const result = saveLocalSchoolNote(data, note);
+      if ("error" in result) return result;
+      update((current) => saveLocalSchoolNote(current, note).data);
+      return { note: result.note };
+    },
+    removeNote: (id: string) => update((current) => deleteLocalSchoolNote(current, id)),
     saveStudySet: (input: Parameters<typeof saveLocalStudySet>[1]) => {
       const result = saveLocalStudySet(data, input);
       if ("error" in result) return result;
