@@ -7,6 +7,7 @@ import SchoolBreadcrumbs from "./layout/SchoolBreadcrumbs";
 import { AssignmentsView, CoursesView, GoalsView, GradesView, ResourcesView, ScheduleView } from "./SchoolCrudViews";
 import { fieldClass, primaryClass, SchoolConfirm } from "./SchoolModal";
 import SourcesView from "./SourcesView";
+import { canUseAccountCanvasControls } from "@/services/school/trustPresentation";
 
 type Section = "Courses" | "Assignments" | "Grades" | "Schedule" | "Goals" | "Resources" | "Sources" | "AFROTC" | "Settings";
 
@@ -18,6 +19,12 @@ export default function SchoolSection({ section, requestedCourseId, requestedRes
 
 function parseLocalDate(value: string) { const [year, month, day] = value.split("-").map(Number); return [year, month, day].every(Number.isInteger) ? new Date(year, month - 1, day) : null; }
 function CanvasConnection() {
+  const { local } = useSchool();
+  if (!canUseAccountCanvasControls(local.scope.kind)) return <div className="rounded-2xl border border-sky-200/10 bg-sky-200/[0.04] p-5"><h2 className="font-semibold text-white">Canvas Calendar</h2><p className="mt-2 text-sm text-white/55">Canvas connection isn’t available in local-only mode.</p></div>;
+  return <CanvasAccountConnection />;
+}
+
+function CanvasAccountConnection() {
   const [feedUrl, setFeedUrl] = useState(""); const [status, setStatus] = useState("not_connected"); const [message, setMessage] = useState(""); const [busy, setBusy] = useState(false);
   const [lastSynced, setLastSynced] = useState<string | null>(null); const [lastResult, setLastResult] = useState<{ eventsSeen?: number; created?: number; updated?: number; unmatched?: number } | null>(null);
   useEffect(() => { void fetch("/api/school/canvas", { cache: "no-store" }).then(async (response) => { if (!response.ok) throw new Error(); const data = await response.json() as { status?: string; lastSyncedAt?: string | null; lastCalendarSync?: typeof lastResult }; setStatus(data.status ?? "not_connected"); setLastSynced(data.lastSyncedAt ?? null); setLastResult(data.lastCalendarSync ?? null); }).catch(() => setMessage("Canvas status is unavailable.")); }, []);
