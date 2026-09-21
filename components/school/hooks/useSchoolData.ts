@@ -13,7 +13,7 @@ import { buildSchoolSnapshot, hydrateSchoolSnapshot } from "@/services/school/do
 import type { SchoolSnapshot } from "@/services/school/domain";
 import type { RecommendationNarration } from "@/services/school/planning/recommendationNarrator";
 import { resolveSchoolPlanningAssignments } from "@/services/school/courseResolution";
-import { shouldLoadAccountBackedSchoolData } from "@/services/school/pagePresentation";
+import { shouldLoadAccountBackedSchoolData } from "@/services/school/dataLoadPolicy";
 
 interface UseSchoolDataOptions { enabled?: boolean }
 

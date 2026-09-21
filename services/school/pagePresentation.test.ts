@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { requireSchoolPagePresentation, shouldLoadAccountBackedSchoolData } from "./pagePresentation";
+import { requireSchoolPagePresentation } from "./pagePresentation";
 
 const mutableEnv = process.env as Record<string, string | undefined>;
 
@@ -57,11 +57,4 @@ test("expired session cookie returns to the personal-local presentation", async 
     async () => { throw new Response("Authentication required.", { status: 401 }); },
   );
   assert.equal(presentation, "personal-local");
-});
-
-test("personal School scopes do not request account-backed snapshots", () => {
-  for (const scopeKind of ["personal", "local", "device", "dev"]) {
-    assert.equal(shouldLoadAccountBackedSchoolData(scopeKind), false, scopeKind);
-  }
-  assert.equal(shouldLoadAccountBackedSchoolData("account"), true);
 });

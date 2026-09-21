@@ -3,10 +3,6 @@ import { requireSchoolAccessContext } from "./access";
 
 export type SchoolPagePresentation = "personal-local" | "account";
 
-export function shouldLoadAccountBackedSchoolData(scopeKind: string): boolean {
-  return scopeKind === "account";
-}
-
 /**
  * Page-shell presentation is separate from server data authorization. An
  * anonymous visitor gets the browser-local School UI without account lookup;
