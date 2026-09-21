@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getCurrentCosmicAccount } from "@/services/auth/server";
 
 import { authReturnUrl } from "@/services/auth/returnUrl";
-import { isPersonalOsUiRoute } from "@/services/auth/proxyPolicy";
+import { isPersonalOsUiRoute, isPersonalSchoolUiRoute } from "@/services/auth/proxyPolicy";
 import { resolvePrivateRequestContext } from "@/services/auth/privateContext";
 
 const PUBLIC_API_ROUTES = new Set([
@@ -67,6 +67,12 @@ export async function proxy(request: NextRequest) {
   }
 
   if (isApi && PUBLIC_API_ROUTES.has(pathname)) {
+    return NextResponse.next();
+  }
+
+  // Personal School is browser-local. Keep this exception page-only: every
+  // /api/** request continues through the normal API authorization boundary.
+  if (!isApi && isPersonalSchoolUiRoute(pathname)) {
     return NextResponse.next();
   }
 

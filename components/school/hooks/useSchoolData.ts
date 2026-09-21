@@ -13,11 +13,13 @@ import { buildSchoolSnapshot, hydrateSchoolSnapshot } from "@/services/school/do
 import type { SchoolSnapshot } from "@/services/school/domain";
 import type { RecommendationNarration } from "@/services/school/planning/recommendationNarrator";
 import { resolveSchoolPlanningAssignments } from "@/services/school/courseResolution";
+import { shouldLoadAccountBackedSchoolData } from "@/services/school/pagePresentation";
 
 interface UseSchoolDataOptions { enabled?: boolean }
 
 export function useSchoolData({ enabled = true }: UseSchoolDataOptions = {}) {
   const local = useLocalSchoolRepository({ enabled });
+  const accountBacked = shouldLoadAccountBackedSchoolData(local.scope.kind);
   const [data, setData] = useState<SchoolDashboardData | null>(null);
   const [snapshot, setSnapshot] = useState<SchoolSnapshot | null>(null);
   const [recommendationNarration, setRecommendationNarration] = useState<RecommendationNarration | null>(null);
@@ -27,7 +29,7 @@ export function useSchoolData({ enabled = true }: UseSchoolDataOptions = {}) {
   const [error, setError] = useState<string>();
 
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled || !accountBacked) return;
     async function load() {
       try {
         setLoading(true);
@@ -64,9 +66,9 @@ export function useSchoolData({ enabled = true }: UseSchoolDataOptions = {}) {
     const refresh = () => void load();
     window.addEventListener("cosmic:school-refresh", refresh);
     return () => window.removeEventListener("cosmic:school-refresh", refresh);
-  }, [enabled]);
+  }, [accountBacked, enabled]);
 
-  const baseSnapshot = useMemo(() => !enabled ? null : snapshot ?? (data ? buildSchoolSnapshot(data) : null), [data, enabled, snapshot]);
+  const baseSnapshot = useMemo(() => !enabled || !accountBacked ? null : snapshot ?? (data ? buildSchoolSnapshot(data) : null), [accountBacked, data, enabled, snapshot]);
   const normalizedSnapshot = useMemo(() => {
     if (!baseSnapshot) return null;
     return {
@@ -85,17 +87,17 @@ export function useSchoolData({ enabled = true }: UseSchoolDataOptions = {}) {
     }, [data, enabled, normalizedSnapshot]);
 
   return {
-    data: enabled ? data : null,
+    data: enabled && accountBacked ? data : null,
 
     intelligence,
 
     snapshot: normalizedSnapshot,
 
-    loading: enabled ? loading : false,
+    loading: enabled && accountBacked ? loading : false,
 
-    error: enabled ? error : undefined,
+    error: enabled && accountBacked ? error : undefined,
 
-    recommendationNarration: enabled ? recommendationNarration : null,
+    recommendationNarration: enabled && accountBacked ? recommendationNarration : null,
 
     local,
   };

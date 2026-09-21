@@ -15,6 +15,9 @@ function resolveLocal(base) {
 
 export async function resolve(specifier, context, nextResolve) {
   if (specifier === "server-only") return { shortCircuit: true, url: "data:text/javascript,export default undefined;" };
+  if (specifier === "next/server") {
+    return { shortCircuit: true, url: pathToFileURL(path.join(root, "node_modules/next/server.js")).href };
+  }
   let base;
   if (specifier.startsWith("@/")) base = path.join(root, specifier.slice(2));
   else if (specifier.startsWith(".")) base = fileURLToPath(new URL(specifier, context.parentURL));
