@@ -1,7 +1,9 @@
 import type { CalendarDateRange } from "@/engines/calendar";
 import type { CalendarEvent } from "@/core/contracts";
 import { getCurrentCosmicSession, kioskBootId } from "@/services/auth/server";
+import { personalCalendarAccessContext } from "@/services/calendar/access";
 import { getCalendarEngineForRequest } from "@/services/calendar/accountProvider";
+import { getPersonalCalendarContext } from "@/services/calendar/personalProvider";
 import { buildKioskCalendarSnapshot, mergeCalendarEvents, sportsEventsForRange } from "@/services/calendar/sportsCalendar";
 import { getSportsSnapshot } from "@/services/sports/snapshot";
 import { getAccountPreferences } from "@/services/settings/accountPreferences";

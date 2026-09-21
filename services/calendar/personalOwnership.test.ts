@@ -1,11 +1,15 @@
 import assert from "node:assert/strict";
+import { mkdtemp, rm } from "node:fs/promises";
 import { readFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import test from "node:test";
 
 import { PERSONAL_PRINCIPAL, resolvePrivateRequestContext } from "@/services/auth/privateContext";
 import { PERSONAL_OWNER, resolveDurableOwner } from "@/services/ownership/owner";
 import { OUTLOOK_MAIL_SCOPES } from "@/services/mail/outlook";
 import { personalCalendarAccessContext } from "./access";
+import { GET as getCalendar } from "../../app/api/calendar/route";
 
 const source = (path: string) => readFileSync(new URL(path, import.meta.url), "utf8");
 const mutableEnv = process.env as Record<string, string | undefined>;
@@ -136,6 +140,34 @@ test("personal Calendar route does not fall back to an account session", () => {
   assert.match(routeSource, /personalCalendarAccessContext/);
   assert.match(routeSource, /getPersonalCalendarContext/);
   assert.equal(routeSource.includes("getCurrentCosmicAccount"), false);
+});
+
+test("Calendar GET uses local personal context while keeping anonymous production requests unauthorized", async () => {
+  const originalNodeEnv = mutableEnv.NODE_ENV;
+  const originalEncryptionKey = process.env.COSMIC_CREDENTIAL_ENCRYPTION_KEY;
+  const originalCwd = process.cwd();
+  const isolatedCwd = await mkdtemp(join(tmpdir(), "cosmic-calendar-route-test-"));
+  try {
+    mutableEnv.NODE_ENV = "development";
+    process.env.COSMIC_CREDENTIAL_ENCRYPTION_KEY = Buffer.alloc(32, 23).toString("base64");
+    process.chdir(isolatedCwd);
+
+    const personalResponse = await getCalendar(new Request("http://localhost:3000/api/calendar"));
+    assert.equal(personalResponse.status, 200);
+    assert.equal((await personalResponse.json() as { personalStatus?: string }).personalStatus, "not-connected");
+
+    mutableEnv.NODE_ENV = "production";
+    const anonymousResponse = await getCalendar(new Request("https://cosmicpudge.shop/api/calendar"));
+    assert.equal(anonymousResponse.status, 401);
+    assert.equal((await anonymousResponse.json() as { error?: string }).error, "Authentication required for private calendar access.");
+  } finally {
+    process.chdir(originalCwd);
+    if (originalNodeEnv === undefined) delete mutableEnv.NODE_ENV;
+    else mutableEnv.NODE_ENV = originalNodeEnv;
+    if (originalEncryptionKey === undefined) delete process.env.COSMIC_CREDENTIAL_ENCRYPTION_KEY;
+    else process.env.COSMIC_CREDENTIAL_ENCRYPTION_KEY = originalEncryptionKey;
+    await rm(isolatedCwd, { recursive: true, force: true });
+  }
 });
 
 test("personal Calendar provider credentials are never exposed to Glasses", () => {
