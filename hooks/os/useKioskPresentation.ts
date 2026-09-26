@@ -5,7 +5,7 @@ import { useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useSettingsData } from "@/components/apps/settings/SettingsProvider";
 import { useKioskPresentationStore } from "@/stores/kioskPresentationStore";
-import { resolveKioskIdleTimeout, shouldWakeDesktopKiosk } from "./kioskPresentationLifecycle";
+import { isKioskExitControlTarget, resolveKioskIdleTimeout, shouldWakeDesktopKiosk } from "./kioskPresentationLifecycle";
 
 const POINTER_MOVE_THROTTLE_MS = 1_000;
 function resolveIdleTimeout(configuredTimeout: number) {
@@ -60,7 +60,7 @@ export default function useKioskPresentationLifecycle() {
       timer = window.setTimeout(enterIdleKiosk, timeout);
     };
     const wake = (event: Event) => {
-      const isExitControl = Boolean((event.target as Element | null)?.closest("[data-kiosk-exit]"));
+      const isExitControl = isKioskExitControlTarget(event.target);
       const state = useKioskPresentationStore.getState();
       if (!state.active) {
         resetTimer();

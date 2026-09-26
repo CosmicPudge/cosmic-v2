@@ -1,3 +1,8 @@
+export function isKioskExitControlTarget(target: EventTarget | null): boolean {
+  const closest = (target as { closest?: unknown } | null)?.closest;
+  return typeof closest === "function" && Boolean(closest.call(target, "[data-kiosk-exit]"));
+}
+
 export function resolveKioskIdleTimeout(configuredTimeout: number, requestedTimeout: number | null, development: boolean) {
   if (!development) return configuredTimeout;
   return requestedTimeout !== null && Number.isFinite(requestedTimeout) && requestedTimeout >= 250
