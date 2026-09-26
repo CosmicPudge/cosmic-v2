@@ -12,12 +12,12 @@ export default function SectionCard({
   children,
 }: SectionCardProps) {
   return (
-    <div className="rounded-xl bg-white/5 p-5">
-      <h2 className="mb-4 text-lg font-semibold">
+    <section className="cosmic-panel p-5">
+      <h2 className="mb-4 text-base font-semibold tracking-tight sm:text-lg">
         {title}
       </h2>
 
       {children}
-    </div>
+    </section>
   );
 }

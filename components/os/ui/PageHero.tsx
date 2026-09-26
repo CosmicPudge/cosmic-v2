@@ -18,20 +18,18 @@ export default function PageHero({
   return (
     <section
       className="
-        mb-10
+        cosmic-panel
+        mb-8
         flex
         items-center
         justify-between
-        rounded-3xl
-        border
-        border-white/10
-        bg-white/5
-        backdrop-blur-xl
-        px-8
-        py-7
+        px-5
+        py-6
+        sm:px-8
+        sm:py-7
       "
     >
-      <div className="flex items-center gap-6">
+      <div className="flex min-w-0 items-center gap-4 sm:gap-6">
         {icon && (
           <div className="text-5xl">
             {icon}
@@ -39,7 +37,7 @@ export default function PageHero({
         )}
 
         <div>
-          <h1 className="text-4xl font-bold tracking-tight">
+          <h1 className="text-2xl font-bold tracking-tight sm:text-4xl">
             {title}
           </h1>
 
@@ -52,7 +50,7 @@ export default function PageHero({
       </div>
 
       {rightContent && (
-        <div>
+        <div className="shrink-0">
           {rightContent}
         </div>
       )}

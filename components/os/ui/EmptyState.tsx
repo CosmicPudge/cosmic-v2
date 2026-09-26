@@ -17,12 +17,12 @@ export default function EmptyState({
   onAction,
 }: EmptyStateProps) {
   return (
-    <GlassPanel className="flex flex-col items-center justify-center py-20 text-center">
-      <h2 className="text-3xl font-bold">
+    <GlassPanel className="cosmic-panel flex flex-col items-center justify-center px-5 py-16 text-center sm:px-8">
+      <h2 className="text-xl font-semibold tracking-tight sm:text-2xl">
         {title}
       </h2>
 
-      <p className="mt-4 max-w-md text-white/60">
+      <p className="mt-3 max-w-md text-sm leading-6 text-white/60">
         {description}
       </p>
 
