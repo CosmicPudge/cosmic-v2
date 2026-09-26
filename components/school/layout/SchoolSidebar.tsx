@@ -53,11 +53,11 @@ export function SchoolSidebar() {
             <span className="text-sm font-semibold tracking-tight text-white">Cosmic School</span>
           </Link>
           <div className="flex items-center gap-2">
-            <Link href="/os" className="inline-flex items-center gap-1.5 rounded-xl border border-sky-100/15 bg-sky-200/10 px-3 py-2 text-xs font-medium text-sky-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-200/80">
+            <Link href="/os" className="cosmic-button cosmic-button-secondary h-9 px-3 text-xs">
               <ArrowLeft className="size-3.5" aria-hidden="true" />
               Cosmic OS
             </Link>
-            <Link href="/school/settings" aria-label="School Settings" className="rounded-xl border border-white/10 p-2.5 text-white/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-200/80">
+            <Link href="/school/settings" aria-label="School Settings" className="cosmic-icon-button cosmic-icon-button-sm text-white/60">
               <Settings className="size-4" aria-hidden="true" />
             </Link>
           </div>
@@ -93,15 +93,15 @@ export function SchoolSidebar() {
 
       <div className="mt-auto border-t border-white/10 pt-5">
         <SyncStatus />
-        <Link href="/os" className="mt-3 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-sky-100/75 transition hover:bg-sky-200/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-200/80">
+        <Link href="/os" className="cosmic-school-nav-link mt-3 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium">
           <ArrowLeft className="size-4" aria-hidden="true" />
           Back to Cosmic OS
         </Link>
-        <Link href="/school/settings" className="mt-2 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-white/55 transition hover:bg-white/[0.06] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-200/80">
+        <Link href="/school/settings" className="cosmic-school-nav-link mt-2 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm">
           <Settings className="size-4" aria-hidden="true" />
           Settings
         </Link>
-        <Link href="/settings" className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-white/55 transition hover:bg-white/[0.06] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-200/80">
+        <Link href="/settings" className="cosmic-school-nav-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm">
           <Bell className="size-4" aria-hidden="true" />
           Notifications
         </Link>
@@ -115,7 +115,7 @@ export default SchoolSidebar;
 
 function MobileLink({ href, label, pathname }: { href: string; label: string; pathname: string }) {
   const active = isSchoolNavigationActive(pathname, href);
-  return <Link href={href} aria-current={active ? "page" : undefined} className={`shrink-0 rounded-xl border px-3 py-2 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-200/80 ${active ? "border-white/15 bg-white/10 text-white" : "border-white/10 text-white/55"}`}>{label}</Link>;
+  return <Link href={href} aria-current={active ? "page" : undefined} className={`cosmic-school-mobile-link shrink-0 rounded-xl border px-3 py-2 text-xs ${active ? "cosmic-school-nav-active" : ""}`}>{label}</Link>;
 }
 
 function MobileGroup({ title, items, pathname }: { title: string; items: readonly { href: string; label: string }[]; pathname: string }) {
@@ -126,6 +126,6 @@ function NavigationGroup({ title, items, pathname }: { title: string; items: rea
   return <section><h2 className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/30">{title}</h2><div className="space-y-1">{items.map(({ href, label }) => {
     const Icon = icons[href];
     const active = isSchoolNavigationActive(pathname, href);
-    return <Link key={href} href={href} aria-current={active ? "page" : undefined} className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-200/80 ${active ? "bg-white/10 font-medium text-white shadow-sm" : "text-white/55 hover:bg-white/[0.06] hover:text-white"}`}><Icon className="size-4" aria-hidden="true" />{label}</Link>;
+    return <Link key={href} href={href} aria-current={active ? "page" : undefined} className={`cosmic-school-nav-link flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm ${active ? "cosmic-school-nav-active font-medium" : ""}`}><Icon className="size-4" aria-hidden="true" />{label}</Link>;
   })}</div></section>;
 }

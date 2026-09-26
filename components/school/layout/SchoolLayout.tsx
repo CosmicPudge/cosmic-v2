@@ -7,7 +7,7 @@ interface SchoolLayoutProps {
 }
 
 export function SchoolLayout({ children }: SchoolLayoutProps) {
-  return <SchoolEnvironment><main className="relative min-h-screen overflow-hidden text-white">
+  return <SchoolEnvironment><main data-cosmic-app="school" className="relative min-h-screen overflow-hidden text-white">
       <div className="relative z-10 mx-auto flex min-h-screen max-w-[1800px] flex-col lg:flex-row">
         <SchoolSidebar />
         <div className="min-w-0 flex-1 px-4 py-6 sm:px-7 lg:px-10 lg:py-9">

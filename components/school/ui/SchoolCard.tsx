@@ -70,7 +70,7 @@ export default function SchoolCard({
       <GlassPanel
         hover={hover}
         className={clsx(
-          "relative overflow-hidden p-6 lg:p-7"
+          "cosmic-panel relative overflow-hidden p-6 lg:p-7"
         )}
       >
         {/* Accent Glow */}

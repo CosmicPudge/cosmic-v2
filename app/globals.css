@@ -1404,3 +1404,9 @@ a[href]:active { transform: scale(0.99); }
 .cosmic-panel { border: 1px solid rgba(130,167,255,.16); border-radius: var(--cosmic-card-radius); background: linear-gradient(145deg, rgba(9,20,48,.78), rgba(2,8,25,.72)); box-shadow: 0 18px 52px rgba(0,0,0,.2), inset 0 1px 0 rgba(255,255,255,.045); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
 .cosmic-panel-interactive { transition: border-color 180ms ease, background-color 180ms ease, transform 180ms ease, box-shadow 180ms ease; }
 .cosmic-panel-interactive:hover { border-color: rgba(165,243,252,.28); background: linear-gradient(145deg, rgba(12,28,60,.84), rgba(3,10,30,.78)); transform: translateY(-1px); }
+.cosmic-school-nav-link { color: rgba(255,255,255,.55); transition: background-color 180ms ease, color 180ms ease, border-color 180ms ease; }
+.cosmic-school-nav-link:hover { background: rgba(165,243,252,.08); color: white; }
+.cosmic-school-nav-link:focus-visible, .cosmic-school-mobile-link:focus-visible { outline: 2px solid var(--cosmic-focus); outline-offset: 2px; }
+.cosmic-school-nav-active { border-color: rgba(165,243,252,.24) !important; background: rgba(165,243,252,.1) !important; color: #ecfeff !important; }
+.cosmic-school-mobile-link { color: rgba(255,255,255,.55); transition: background-color 180ms ease, color 180ms ease, border-color 180ms ease; }
+.cosmic-school-mobile-link:hover { border-color: rgba(165,243,252,.25); background: rgba(165,243,252,.08); color: white; }
