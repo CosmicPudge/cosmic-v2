@@ -128,9 +128,9 @@ html, body { width: 100%; min-height: 100%; background: #030511; }
 }
 .cosmic-top-navigation { flex: 0 0 auto; }
 .cosmic-top-navigation > div { min-height: 3.5rem; }
-@media (max-width: 700px) { .cosmic-top-navigation > div { min-height: 0; } .cosmic-top-navigation [aria-label="Cosmic applications"] { display: none; } }
-@media (min-width: 701px) and (max-width: 1199px) { .cosmic-top-navigation > div > [aria-label="Cosmic applications"] { display: none; } }
+@media (max-width: 700px) { .cosmic-top-navigation > div { min-height: 0; } }
 .cosmic-top-navigation, .cosmic-top-navigation > div { min-width: 0; width: 100%; }
+.cosmic-top-all-apps { flex: 1 1 auto; }
 
 .cosmic-kicker {
   font-size: 10px;
@@ -139,6 +139,29 @@ html, body { width: 100%; min-height: 100%; background: #030511; }
   text-transform: uppercase;
   color: rgba(186, 230, 253, .55);
 }
+
+.cosmic-site-shell {
+  --cosmic-app-accent: #a5f3fc;
+  --cosmic-app-glow: rgba(34, 211, 238, .16);
+  background: radial-gradient(circle at 12% 4%, var(--cosmic-app-glow), transparent 31%), radial-gradient(circle at 86% 18%, rgba(124, 58, 237, .13), transparent 28%), linear-gradient(145deg, #020512 0%, #030719 56%, #050817 100%);
+}
+.cosmic-site-shell[data-cosmic-app="weather"] { --cosmic-app-accent: #bae6fd; --cosmic-app-glow: rgba(14, 165, 233, .2); }
+.cosmic-site-shell[data-cosmic-app="sports"] { --cosmic-app-accent: #fde68a; --cosmic-app-glow: rgba(245, 158, 11, .16); }
+.cosmic-site-shell[data-cosmic-app="garage"] { --cosmic-app-accent: #fdba74; --cosmic-app-glow: rgba(234, 88, 12, .15); }
+.cosmic-site-shell[data-cosmic-app="calendar"] { --cosmic-app-accent: #c4b5fd; --cosmic-app-glow: rgba(99, 102, 241, .18); }
+.cosmic-site-shell[data-cosmic-app="assistant"] { --cosmic-app-accent: #a5f3fc; --cosmic-app-glow: rgba(6, 182, 212, .2); }
+.cosmic-site-shell[data-cosmic-app="school"] { --cosmic-app-accent: #bbf7d0; --cosmic-app-glow: rgba(16, 185, 129, .17); }
+.cosmic-site-shell[data-cosmic-app="music"] { --cosmic-app-accent: #f5d0fe; --cosmic-app-glow: rgba(192, 38, 211, .17); }
+.cosmic-site-shell[data-cosmic-app="notes"] { --cosmic-app-accent: #fde68a; --cosmic-app-glow: rgba(217, 119, 6, .15); }
+.cosmic-site-shell[data-cosmic-app="search"] { --cosmic-app-accent: #c4b5fd; --cosmic-app-glow: rgba(124, 58, 237, .2); }
+.cosmic-site-shell[data-cosmic-app="outlook"] { --cosmic-app-accent: #bfdbfe; --cosmic-app-glow: rgba(37, 99, 235, .18); }
+.cosmic-site-shell[data-cosmic-app="system"] { --cosmic-app-accent: #cbd5e1; --cosmic-app-glow: rgba(100, 116, 139, .16); }
+.cosmic-site-shell .cosmic-kicker { color: color-mix(in srgb, var(--cosmic-app-accent) 64%, transparent); }
+.cosmic-inline-link { color: color-mix(in srgb, var(--cosmic-app-accent) 66%, white 10%); }
+.cosmic-inline-link:hover { color: var(--cosmic-app-accent); }
+.cosmic-page-content { min-height: 0; border-radius: clamp(1rem, 1.8vw, 1.5rem); padding: clamp(.85rem, 1.8vw, 1.75rem); }
+.cosmic-site-shell .cosmic-sidebar, .cosmic-site-shell .cosmic-content-surface { border-color: color-mix(in srgb, var(--cosmic-app-accent) 22%, rgba(130, 167, 255, .16)); }
+.cosmic-site-shell .cosmic-sidebar [aria-current="page"] { border-color: color-mix(in srgb, var(--cosmic-app-accent) 48%, transparent); background: color-mix(in srgb, var(--cosmic-app-accent) 14%, transparent); }
 
 .cosmic-icon-shell {
   position: relative;
@@ -1345,3 +1368,39 @@ button:disabled:hover { filter: none; }
 button:focus-visible, a[href]:focus-visible { outline: 2px solid rgba(165, 243, 252, 0.8); outline-offset: 2px; }
 a[href] { cursor: pointer; transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease, filter 180ms ease, opacity 180ms ease, transform 120ms ease; }
 a[href]:active { transform: scale(0.99); }
+
+/* Cosmic control language: shared across OS, modules, School, and device setup. */
+:root {
+  --cosmic-control-radius: .85rem;
+  --cosmic-card-radius: 1.35rem;
+  --cosmic-control-height: 2.75rem;
+  --cosmic-focus: rgba(165, 243, 252, .86);
+}
+.cosmic-button { display: inline-flex; min-height: var(--cosmic-control-height); align-items: center; justify-content: center; gap: .5rem; border: 1px solid transparent; border-radius: var(--cosmic-control-radius); font-weight: 650; line-height: 1; transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease, filter 180ms ease, transform 120ms ease; }
+.cosmic-button:focus-visible, .cosmic-icon-button:focus-visible { outline: 2px solid var(--cosmic-focus); outline-offset: 2px; }
+.cosmic-button-primary { border-color: rgba(165, 243, 252, .28); background: linear-gradient(135deg, rgba(103, 232, 249, .18), rgba(139, 92, 246, .2)); color: #ecfeff; box-shadow: 0 8px 24px rgba(34, 211, 238, .08), inset 0 1px 0 rgba(255,255,255,.08); }
+.cosmic-button-primary:hover { border-color: rgba(165, 243, 252, .5); background: linear-gradient(135deg, rgba(103, 232, 249, .26), rgba(139, 92, 246, .28)); }
+.cosmic-button-secondary { border-color: rgba(255,255,255,.14); background: rgba(255,255,255,.055); color: rgba(255,255,255,.82); }
+.cosmic-button-secondary:hover { border-color: rgba(255,255,255,.28); background: rgba(255,255,255,.1); color: white; }
+.cosmic-button-ghost { background: transparent; color: rgba(255,255,255,.68); }
+.cosmic-button-ghost:hover { background: rgba(255,255,255,.07); color: white; }
+.cosmic-button-danger { border-color: rgba(253, 164, 175, .24); background: rgba(244, 63, 94, .1); color: #fecdd3; }
+.cosmic-button-danger:hover { border-color: rgba(253, 164, 175, .44); background: rgba(244, 63, 94, .18); }
+.cosmic-icon-button { display: inline-grid; place-items: center; border: 1px solid rgba(255,255,255,.12); border-radius: var(--cosmic-control-radius); background: rgba(255,255,255,.045); color: rgba(255,255,255,.7); transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease, transform 120ms ease; }
+.cosmic-icon-button:hover { border-color: rgba(165,243,252,.32); background: rgba(165,243,252,.1); color: white; }
+.cosmic-icon-button-sm { width: 2rem; height: 2rem; }
+.cosmic-icon-button-md { width: 2.75rem; height: 2.75rem; }
+.cosmic-icon-button-lg { width: 3.25rem; height: 3.25rem; }
+.cosmic-icon-button-accent { border-color: rgba(165,243,252,.28); color: #cffafe; }
+.cosmic-icon-button-danger { border-color: rgba(253,164,175,.24); color: #fecdd3; }
+.cosmic-status-badge { display: inline-flex; min-height: 1.75rem; align-items: center; gap: .45rem; border: 1px solid transparent; border-radius: 999px; padding: .3rem .65rem; font-size: .72rem; font-weight: 650; letter-spacing: .02em; }
+.cosmic-status-dot { width: .42rem; height: .42rem; flex: 0 0 auto; border-radius: 999px; background: currentColor; box-shadow: 0 0 10px currentColor; }
+.cosmic-status-green { border-color: rgba(74,222,128,.28); background: rgba(34,197,94,.1); color: #bbf7d0; }
+.cosmic-status-yellow { border-color: rgba(253,224,71,.28); background: rgba(234,179,8,.1); color: #fef08a; }
+.cosmic-status-blue { border-color: rgba(125,211,252,.28); background: rgba(14,165,233,.1); color: #bae6fd; }
+.cosmic-status-orange { border-color: rgba(253,186,116,.28); background: rgba(234,88,12,.1); color: #fed7aa; }
+.cosmic-status-red { border-color: rgba(253,164,175,.28); background: rgba(244,63,94,.1); color: #fecdd3; }
+.cosmic-status-gray { border-color: rgba(203,213,225,.18); background: rgba(148,163,184,.08); color: #cbd5e1; }
+.cosmic-panel { border: 1px solid rgba(130,167,255,.16); border-radius: var(--cosmic-card-radius); background: linear-gradient(145deg, rgba(9,20,48,.78), rgba(2,8,25,.72)); box-shadow: 0 18px 52px rgba(0,0,0,.2), inset 0 1px 0 rgba(255,255,255,.045); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
+.cosmic-panel-interactive { transition: border-color 180ms ease, background-color 180ms ease, transform 180ms ease, box-shadow 180ms ease; }
+.cosmic-panel-interactive:hover { border-color: rgba(165,243,252,.28); background: linear-gradient(145deg, rgba(12,28,60,.84), rgba(3,10,30,.78)); transform: translateY(-1px); }

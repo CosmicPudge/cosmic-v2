@@ -7,7 +7,7 @@ interface ButtonProps
   extends ButtonHTMLAttributes<HTMLButtonElement> {
   children: ReactNode;
 
-  variant?: "primary" | "secondary" | "ghost";
+  variant?: "primary" | "secondary" | "ghost" | "danger";
 
   size?: "sm" | "md" | "lg";
 
@@ -15,20 +15,22 @@ interface ButtonProps
 }
 
 const sizeClasses = {
-  sm: "px-3 py-2 text-sm",
-  md: "px-4 py-2.5 text-sm",
-  lg: "px-6 py-3 text-base",
+  sm: "min-h-9 px-3 text-xs",
+  md: "min-h-11 px-4 text-sm",
+  lg: "min-h-12 px-6 text-base",
 };
 
 const variantClasses = {
   primary:
-    "bg-blue-500 text-white hover:bg-blue-400",
+    "cosmic-button-primary",
 
   secondary:
-    "bg-white/10 text-white border border-white/10 hover:bg-white/15",
+    "cosmic-button-secondary",
 
   ghost:
-    "bg-transparent text-white hover:bg-white/10",
+    "cosmic-button-ghost",
+  danger:
+    "cosmic-button-danger",
 };
 
 export default function Button({
@@ -42,15 +44,10 @@ export default function Button({
   return (
     <button
       className={clsx(
-        "rounded-2xl",
-        "font-medium",
-        "transition-all",
-        "duration-200",
+        "cosmic-button",
         "cursor-pointer",
-        "active:scale-95",
         "disabled:opacity-50",
         "disabled:cursor-not-allowed",
-        "disabled:hover:brightness-100",
 
         sizeClasses[size],
         variantClasses[variant],

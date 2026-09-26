@@ -23,22 +23,17 @@ export default function CosmicCard({
     <div
       className={clsx(
 
+        "cosmic-panel",
         "overflow-hidden",
-
-        "rounded-3xl",
-
-        "border border-white/10",
 
         glass &&
 
         "bg-white/[0.06] backdrop-blur-2xl",
 
-        "shadow-xl",
-
         "transition-all duration-300",
 
         interactive &&
-          "hover:scale-[1.015] hover:bg-white/[0.08]",
+          "cosmic-panel-interactive",
 
         className
       )}

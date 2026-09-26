@@ -26,7 +26,7 @@ export default function AppHeader({
   href="/os"
   onMouseEnter={() => prefetch("/os")}
   onFocus={() => prefetch("/os")}
-className="mb-3 inline-flex items-center gap-2 text-xs uppercase tracking-[0.14em] text-white/45 transition hover:text-cyan-100"
+className="cosmic-inline-link mb-3 inline-flex items-center gap-2 text-xs uppercase tracking-[0.14em] transition"
 >
   <ArrowLeft size={18} />
   Dashboard
@@ -38,7 +38,7 @@ className="mb-3 inline-flex items-center gap-2 text-xs uppercase tracking-[0.14e
         </h1>
 
         {subtitle && (
-          <p className="mt-3 max-w-2xl text-sm uppercase tracking-[0.18em] text-violet-200/70 sm:text-base">
+          <p className="mt-3 max-w-2xl text-sm uppercase tracking-[0.18em] text-white/55 sm:text-base">
             {subtitle}
           </p>
         )}
