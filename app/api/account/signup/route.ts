@@ -1,5 +1,6 @@
 import { createAccount, createSession } from "@/services/auth/service";
 import { sessionCookie } from "@/services/auth/localStore";
+import { authErrorResponse } from "@/services/auth/http";
 
 export async function POST(request: Request) {
   try {
@@ -7,5 +8,5 @@ export async function POST(request: Request) {
     const account = await createAccount({ email: body.email ?? "", password: body.password ?? "", displayName: body.displayName });
     const session = await createSession(account.id, request.headers.get("user-agent") ?? undefined);
     return Response.json({ account, expiresAt: session.expiresAt }, { headers: { "Set-Cookie": sessionCookie(session.token, session.expiresAt) } });
-  } catch (error) { return Response.json({ error: error instanceof Error ? error.message : "Account creation failed." }, { status: 400 }); }
+  } catch (error) { return authErrorResponse(error, "Account creation failed.", 400); }
 }
