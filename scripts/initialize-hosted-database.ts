@@ -179,6 +179,14 @@ function ownershipFlags(environment = process.env): OwnershipFlags {
   };
 }
 
+export function createHostedPoolOptions(databaseUrl: string) {
+  return {
+    connectionString: databaseUrl,
+    max: 1,
+    ssl: { rejectUnauthorized: false },
+  };
+}
+
 function printFailure(stage: string, reasons: string[]): never {
   console.error(`${stage} FAILED`);
   for (const reason of reasons) console.error(`- ${reason}`);
@@ -190,7 +198,7 @@ export async function main(): Promise<void> {
   const databaseUrl = process.env.DATABASE_URL?.trim();
   if (!databaseUrl) printFailure("INITIALIZATION", ["DATABASE_URL is required; no connection was opened"]);
 
-  const pool = new Pool({ connectionString: databaseUrl, max: 1 });
+  const pool = new Pool(createHostedPoolOptions(databaseUrl));
   try {
     const inventory = await readMigrationInventory();
     const flags = ownershipFlags();

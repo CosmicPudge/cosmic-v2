@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 // @ts-expect-error Node's strip-types test runner resolves the source extension directly.
-import { evaluatePostcheck, evaluatePrecheck, schoolTables, type MigrationInventory } from "./initialize-hosted-database.ts";
+import { createHostedPoolOptions, evaluatePostcheck, evaluatePrecheck, schoolTables, type MigrationInventory } from "./initialize-hosted-database.ts";
 
 const freshSnapshot = {
   databaseName: "postgres",
@@ -33,6 +33,13 @@ const initializedSnapshot = {
 
 const inventory: MigrationInventory = { sqlCount: 50, journalCount: 50, missing: [], extra: [], duplicates: [] };
 const flags = { schemaReady: undefined, state: undefined };
+
+test("hosted Pool configuration enables Supabase SSL without changing the URL source", () => {
+  const options = createHostedPoolOptions("postgres://redacted.example/cosmic");
+  assert.equal(options.connectionString, "postgres://redacted.example/cosmic");
+  assert.equal(options.ssl.rejectUnauthorized, false);
+  assert.equal(options.max, 1);
+});
 
 test("expected fresh state permits initialization", () => {
   assert.deepEqual(evaluatePrecheck(freshSnapshot, inventory, flags), { ok: true });
