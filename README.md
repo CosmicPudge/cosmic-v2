@@ -18,16 +18,27 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 ## Durable account development
 
-Phase J1 uses PostgreSQL through Neon-compatible Drizzle tooling when `DATABASE_URL` is configured:
+Phase J1 uses PostgreSQL through Drizzle when `DATABASE_URL` is configured. The
+canonical connection variable is `DATABASE_URL`; `DATABASE_DRIVER` defaults to
+`neon` for the existing Neon serverless path and can be set to `postgres` for a
+standard PostgreSQL provider such as Supabase:
 
 ```bash
 cp .env.example .env.local
-# set DATABASE_URL to a local or Neon PostgreSQL connection string
+# set DATABASE_URL to a local or hosted PostgreSQL connection string
+# set DATABASE_DRIVER=postgres for standard PostgreSQL providers
 npm run db:migrate
 npm run dev
 ```
 
-Use `npm run db:generate` after schema changes. In local development without `DATABASE_URL`, account authentication uses the file-backed `.cosmic/auth-store.json` fallback. Production refuses that fallback and requires `DATABASE_URL`. Never commit `.env.local`, database credentials, password hashes, or session data.
+The application keeps one module-scoped pool per serverless instance, reusing it
+across requests and hot reloads. For migrations, use the provider's direct or
+non-pooled PostgreSQL URL when one is available; runtime traffic may use the
+provider's serverless pooler URL. Use `npm run db:generate` after schema changes.
+In local development without `DATABASE_URL`, account authentication uses the
+file-backed `.cosmic/auth-store.json` fallback. Production refuses that fallback
+and requires `DATABASE_URL`. Never commit `.env.local`, database credentials,
+password hashes, or session data.
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 

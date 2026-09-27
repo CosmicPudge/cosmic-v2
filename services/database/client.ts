@@ -6,13 +6,15 @@ import { drizzle as drizzleNeon } from "drizzle-orm/neon-serverless";
 import { drizzle as drizzlePostgres } from "drizzle-orm/node-postgres";
 import * as schema from "./schema";
 import { classifyMetricError, recordDatabaseMetric } from "@/services/observability/metrics";
+import { resolveDatabaseConfiguration } from "./runtime";
 
 export type CosmicDatabase = ReturnType<typeof createDatabase>;
 
 function createDatabase() {
-  const url = process.env.DATABASE_URL;
-  if (!url) throw new Error("DATABASE_URL is required for PostgreSQL mode.");
-  if (process.env.NODE_ENV === "test" || process.env.COSMIC_TEST_MODE === "1") return drizzlePostgres(instrumentPool(new PostgresPool({ connectionString: url })), { schema });
+  const { driver, url } = resolveDatabaseConfiguration();
+  if (driver === "postgres" || process.env.NODE_ENV === "test" || process.env.COSMIC_TEST_MODE === "1") {
+    return drizzlePostgres(instrumentPool(new PostgresPool({ connectionString: url })), { schema });
+  }
   return drizzleNeon(instrumentPool(new NeonPool({ connectionString: url })), { schema });
 }
 
