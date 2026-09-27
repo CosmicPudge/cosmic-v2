@@ -292,40 +292,47 @@
     {
       "idx": 41,
       "version": "7",
+      "when": 1788350500000,
+      "tag": "0042_transcript_first_voice_notes",
+      "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
       "when": 1788351000000,
       "tag": "0043_school_apple_voice_memo_source_type",
       "breakpoints": true
     },
     {
-      "idx": 42,
+      "idx": 43,
       "version": "7",
       "when": 1788352000000,
       "tag": "0044_school_audio_transcript_schema_reconciliation",
       "breakpoints": true
     },
     {
-      "idx": 43,
+      "idx": 44,
       "version": "7",
       "when": 1788438300000,
       "tag": "0045_school_schema_drift_reconciliation",
       "breakpoints": true
     },
     {
-      "idx": 44,
+      "idx": 45,
       "version": "7",
       "when": 1788438400000,
       "tag": "0046_school_study_knowledge",
       "breakpoints": true
     },
     {
-      "idx": 45,
+      "idx": 46,
       "version": "7",
       "when": 1788440000000,
       "tag": "0047_password_reset_tokens",
       "breakpoints": true
     },
     {
-      "idx": 46,
+      "idx": 47,
       "version": "7",
       "when": 1788667000000,
       "tag": "0048_add_web_push_delivery",
