@@ -11,6 +11,7 @@
     "sync:phone-glasses": "node scripts/sync-phone-glasses.mjs",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
+    "db:initialize-hosted": "node --experimental-strip-types scripts/initialize-hosted-database.ts",
     "db:bootstrap-admin": "node scripts/bootstrap-admin.mjs",
     "test:school": "node scripts/test-school.mjs",
     "test:phone-glasses": "node --test scripts/phone-glasses-mount.test.mjs",
