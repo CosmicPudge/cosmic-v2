@@ -1,4 +1,14 @@
 export type DatabaseDriver = "neon" | "postgres";
+export type DatabaseRuntimeDriver = "postgres" | "neon" | "missing" | "invalid";
+export type DatabaseProvider = "supabase" | "neon" | "other" | "unknown";
+export type DatabaseConnectionMode = "direct" | "session-pooler" | "transaction-pooler" | "unknown";
+
+export type DatabaseRuntimeClassification = {
+  driver: DatabaseRuntimeDriver;
+  provider: DatabaseProvider;
+  connectionMode: DatabaseConnectionMode;
+  urlPresent: boolean;
+};
 
 type DatabaseEnvironment = {
   [key: string]: string | undefined;
@@ -16,4 +26,36 @@ export function resolveDatabaseConfiguration(environment: DatabaseEnvironment = 
   const url = environment.DATABASE_URL?.trim();
   if (!url) throw new Error("DATABASE_URL is required for PostgreSQL mode.");
   return { driver: resolveDatabaseDriver(environment.DATABASE_DRIVER), url };
+}
+
+function classifyDatabaseUrl(value: string): Pick<DatabaseRuntimeClassification, "provider" | "connectionMode"> {
+  try {
+    const url = new URL(value);
+    const hostname = url.hostname.toLowerCase();
+    const isSupabase = hostname.endsWith(".supabase.co") || hostname.endsWith(".pooler.supabase.com");
+    if (isSupabase) {
+      if (hostname.endsWith(".pooler.supabase.com")) {
+        if (url.port === "6543") return { provider: "supabase", connectionMode: "transaction-pooler" };
+        if (url.port === "5432" || url.port === "") return { provider: "supabase", connectionMode: "session-pooler" };
+        return { provider: "supabase", connectionMode: "unknown" };
+      }
+      return { provider: "supabase", connectionMode: hostname.startsWith("db.") ? "direct" : "unknown" };
+    }
+    if (hostname.endsWith(".neon.tech")) return { provider: "neon", connectionMode: "unknown" };
+    return { provider: "other", connectionMode: "unknown" };
+  } catch {
+    return { provider: "unknown", connectionMode: "unknown" };
+  }
+}
+
+export function classifyDatabaseRuntime(environment: DatabaseEnvironment = process.env): DatabaseRuntimeClassification {
+  const rawDriver = environment.DATABASE_DRIVER?.trim();
+  const driver: DatabaseRuntimeDriver = rawDriver === undefined || rawDriver === ""
+    ? "missing"
+    : rawDriver === "postgres" || rawDriver === "neon"
+      ? rawDriver
+      : "invalid";
+  const url = environment.DATABASE_URL?.trim();
+  const urlClassification = url ? classifyDatabaseUrl(url) : { provider: "unknown" as const, connectionMode: "unknown" as const };
+  return { driver, ...urlClassification, urlPresent: Boolean(url) };
 }
