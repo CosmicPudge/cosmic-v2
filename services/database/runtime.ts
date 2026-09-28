@@ -16,6 +16,18 @@ export type DatabaseFailure = {
   code: string;
 };
 
+export function createPostgresPoolOptions(connectionString: string) {
+  const { provider } = classifyDatabaseUrl(connectionString);
+  return provider === "supabase"
+    ? {
+      connectionString,
+      // Supabase's hosted PostgreSQL endpoints require TLS, while their
+      // certificate chain is not available to the deployment runtime.
+      ssl: { rejectUnauthorized: false },
+    }
+    : { connectionString };
+}
+
 type DatabaseEnvironment = {
   [key: string]: string | undefined;
   DATABASE_DRIVER?: string;
@@ -47,6 +59,7 @@ function classifyDatabaseUrl(value: string): Pick<DatabaseRuntimeClassification,
         if (url.port === "5432" || url.port === "") return { provider: "supabase", connectionMode: "session-pooler" };
         return { provider: "supabase", connectionMode: "unknown" };
       }
+      if (hostname.startsWith("db.") && url.port === "6543") return { provider: "supabase", connectionMode: "transaction-pooler" };
       return { provider: "supabase", connectionMode: hostname.startsWith("db.") ? "direct" : "unknown" };
     }
     if (hostname.endsWith(".neon.tech")) return { provider: "neon", connectionMode: "unknown" };

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 // @ts-expect-error Node's strip-types test runner requires the explicit extension.
-import { canRunDatabaseDiagnostic, classifyDatabaseFailure, classifyDatabaseRuntime, checkDatabaseStatus } from "./runtime.ts";
+import { canRunDatabaseDiagnostic, classifyDatabaseFailure, classifyDatabaseRuntime, checkDatabaseStatus, createPostgresPoolOptions } from "./runtime.ts";
 
 test("classifies a Supabase direct PostgreSQL runtime without exposing URL details", () => {
   const result = classifyDatabaseRuntime({
@@ -17,6 +17,17 @@ test("classifies a Supabase direct PostgreSQL runtime without exposing URL detai
 test("classifies Supabase session and transaction poolers safely", () => {
   assert.deepEqual(classifyDatabaseRuntime({ DATABASE_DRIVER: "postgres", DATABASE_URL: "postgresql://u:p@aws-0-us-east-1.pooler.supabase.com:5432/postgres" }), { driver: "postgres", provider: "supabase", connectionMode: "session-pooler", urlPresent: true });
   assert.deepEqual(classifyDatabaseRuntime({ DATABASE_DRIVER: "postgres", DATABASE_URL: "postgresql://u:p@aws-0-us-east-1.pooler.supabase.com:6543/postgres" }), { driver: "postgres", provider: "supabase", connectionMode: "transaction-pooler", urlPresent: true });
+});
+
+test("classifies the dedicated Supabase transaction pooler", () => {
+  assert.deepEqual(classifyDatabaseRuntime({ DATABASE_DRIVER: "postgres", DATABASE_URL: "postgresql://u:p@db.cosmic-preview.supabase.co:6543/postgres" }), { driver: "postgres", provider: "supabase", connectionMode: "transaction-pooler", urlPresent: true });
+});
+
+test("uses the proven TLS compatibility option only for Supabase", () => {
+  const supabase = createPostgresPoolOptions("postgresql://user:password@db.cosmic-preview.supabase.co:5432/postgres");
+  assert.deepEqual(supabase.ssl, { rejectUnauthorized: false });
+  const neon = createPostgresPoolOptions("postgresql://user:password@ep-example.us-east-2.aws.neon.tech/neondb");
+  assert.equal("ssl" in neon, false);
 });
 
 test("classifies Neon and missing drivers", () => {

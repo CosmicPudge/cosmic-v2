@@ -6,7 +6,7 @@ import { drizzle as drizzleNeon } from "drizzle-orm/neon-serverless";
 import { drizzle as drizzlePostgres } from "drizzle-orm/node-postgres";
 import * as schema from "./schema";
 import { classifyMetricError, recordDatabaseMetric } from "@/services/observability/metrics";
-import { checkDatabaseStatus, classifyDatabaseRuntime, resolveDatabaseConfiguration } from "./runtime";
+import { checkDatabaseStatus, classifyDatabaseRuntime, createPostgresPoolOptions, resolveDatabaseConfiguration } from "./runtime";
 
 export type CosmicDatabase = ReturnType<typeof createDatabase>;
 
@@ -15,7 +15,7 @@ function createDatabase() {
   const diagnostic = classifyDatabaseRuntime({ DATABASE_DRIVER: process.env.DATABASE_DRIVER, DATABASE_URL: url });
   console.info(`[COSMIC DB] driver=${diagnostic.driver} provider=${diagnostic.provider} mode=${diagnostic.connectionMode} urlPresent=${diagnostic.urlPresent}`);
   if (driver === "postgres" || process.env.NODE_ENV === "test" || process.env.COSMIC_TEST_MODE === "1") {
-    return drizzlePostgres(instrumentPool(new PostgresPool({ connectionString: url })), { schema });
+    return drizzlePostgres(instrumentPool(new PostgresPool(createPostgresPoolOptions(url))), { schema });
   }
   return drizzleNeon(instrumentPool(new NeonPool({ connectionString: url })), { schema });
 }
