@@ -2,12 +2,18 @@ export type DatabaseDriver = "neon" | "postgres";
 export type DatabaseRuntimeDriver = "postgres" | "neon" | "missing" | "invalid";
 export type DatabaseProvider = "supabase" | "neon" | "other" | "unknown";
 export type DatabaseConnectionMode = "direct" | "session-pooler" | "transaction-pooler" | "unknown";
+export type DatabaseFailureCategory = "dns" | "tls" | "authentication" | "connection_refused" | "timeout" | "postgres" | "configuration" | "unknown";
 
 export type DatabaseRuntimeClassification = {
   driver: DatabaseRuntimeDriver;
   provider: DatabaseProvider;
   connectionMode: DatabaseConnectionMode;
   urlPresent: boolean;
+};
+
+export type DatabaseFailure = {
+  category: DatabaseFailureCategory;
+  code: string;
 };
 
 type DatabaseEnvironment = {
@@ -68,15 +74,27 @@ export function canRunDatabaseDiagnostic(environment: DatabaseEnvironment = proc
     : environment.NODE_ENV !== "production";
 }
 
+export function classifyDatabaseFailure(error: unknown): DatabaseFailure {
+  const rawCode = error && typeof error === "object" && "code" in error && typeof error.code === "string" ? error.code.toUpperCase() : "";
+  if (["ENOTFOUND", "EAI_AGAIN", "EAI_FAIL", "EAI_NONAME"].includes(rawCode)) return { category: "dns", code: "DNS_RESOLUTION_FAILED" };
+  if (["DEPTH_ZERO_SELF_SIGNED_CERT", "UNABLE_TO_VERIFY_LEAF_SIGNATURE", "CERT_HAS_EXPIRED", "ERR_TLS_CERT_ALTNAME_INVALID"].includes(rawCode) || rawCode.startsWith("ERR_SSL")) return { category: "tls", code: "TLS_NEGOTIATION_FAILED" };
+  if (rawCode === "ECONNREFUSED") return { category: "connection_refused", code: "CONNECTION_REFUSED" };
+  if (["ETIMEDOUT", "ESOCKETTIMEDOUT"].includes(rawCode)) return { category: "timeout", code: "CONNECTION_TIMEOUT" };
+  if (/^28[A-Z0-9]{3}$/.test(rawCode)) return { category: "authentication", code: "POSTGRES_AUTHENTICATION_FAILED" };
+  if (["EINVAL", "ERR_INVALID_URL"].includes(rawCode)) return { category: "configuration", code: "DATABASE_CONFIGURATION_INVALID" };
+  if (/^[0-9A-Z]{5}$/.test(rawCode)) return { category: "postgres", code: "POSTGRES_CONNECTION_FAILED" };
+  return { category: "unknown", code: "DATABASE_CONNECTION_FAILED" };
+}
+
 export async function checkDatabaseStatus(input: {
   configured: boolean;
   check: () => Promise<unknown>;
-}): Promise<{ configured: boolean; connected: boolean }> {
+}): Promise<{ configured: boolean; connected: boolean; failure?: DatabaseFailure }> {
   if (!input.configured) return { configured: false, connected: false };
   try {
     await input.check();
     return { configured: true, connected: true };
-  } catch {
-    return { configured: true, connected: false };
+  } catch (error) {
+    return { configured: true, connected: false, failure: classifyDatabaseFailure(error) };
   }
 }

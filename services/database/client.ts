@@ -59,5 +59,7 @@ export function getDatabase(): CosmicDatabase {
 }
 
 export async function checkDatabase() {
-  return checkDatabaseStatus({ configured: isDatabaseConfigured(), check: () => getDatabase().execute("select 1") });
+  const runtime = classifyDatabaseRuntime();
+  const status = await checkDatabaseStatus({ configured: isDatabaseConfigured(), check: () => getDatabase().execute("select 1") });
+  return { ...status, provider: runtime.provider, mode: runtime.connectionMode };
 }

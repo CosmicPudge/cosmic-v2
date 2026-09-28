@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 // @ts-expect-error Node's strip-types test runner requires the explicit extension.
-import { canRunDatabaseDiagnostic, classifyDatabaseRuntime, checkDatabaseStatus } from "./runtime.ts";
+import { canRunDatabaseDiagnostic, classifyDatabaseFailure, classifyDatabaseRuntime, checkDatabaseStatus } from "./runtime.ts";
 
 test("classifies a Supabase direct PostgreSQL runtime without exposing URL details", () => {
   const result = classifyDatabaseRuntime({
@@ -39,14 +39,25 @@ test("allows the existing diagnostic only outside Production", () => {
   assert.equal(canRunDatabaseDiagnostic({ NODE_ENV: "production" }), false);
 });
 
-test("performs exactly one read-only connectivity check and sanitizes failure", async () => {
-  let calls = 0;
-  const success = await checkDatabaseStatus({ configured: true, check: async () => { calls += 1; return "SELECT 1"; } });
-  assert.deepEqual(success, { configured: true, connected: true });
-  assert.equal(calls, 1);
+test("classifies structured failures without inspecting messages", () => {
+  assert.deepEqual(classifyDatabaseFailure({ code: "ENOTFOUND", message: "postgres://user:password@private.supabase.co" }), { category: "dns", code: "DNS_RESOLUTION_FAILED" });
+  assert.deepEqual(classifyDatabaseFailure({ code: "CERT_HAS_EXPIRED", message: "private certificate and password" }), { category: "tls", code: "TLS_NEGOTIATION_FAILED" });
+  assert.deepEqual(classifyDatabaseFailure({ code: "28P01", message: "password authentication failed" }), { category: "authentication", code: "POSTGRES_AUTHENTICATION_FAILED" });
+  assert.deepEqual(classifyDatabaseFailure({ code: "ECONNREFUSED" }), { category: "connection_refused", code: "CONNECTION_REFUSED" });
+  assert.deepEqual(classifyDatabaseFailure({ code: "ETIMEDOUT" }), { category: "timeout", code: "CONNECTION_TIMEOUT" });
+  assert.deepEqual(classifyDatabaseFailure({ code: "08006" }), { category: "postgres", code: "POSTGRES_CONNECTION_FAILED" });
+  assert.deepEqual(classifyDatabaseFailure(new Error("postgres://user:password@private.supabase.co/project")), { category: "unknown", code: "DATABASE_CONNECTION_FAILED" });
+});
 
-  const failure = await checkDatabaseStatus({ configured: true, check: async () => { throw new Error("postgres://user:password@private.supabase.co/project"); } });
-  assert.deepEqual(failure, { configured: true, connected: false });
+test("performs exactly one read-only connectivity check and sanitizes failure", async () => {
+  const queries: string[] = [];
+  const success = await checkDatabaseStatus({ configured: true, check: async () => { queries.push("SELECT 1"); return undefined; } });
+  assert.deepEqual(success, { configured: true, connected: true });
+  assert.deepEqual(queries, ["SELECT 1"]);
+
+  const failure = await checkDatabaseStatus({ configured: true, check: async () => { throw Object.assign(new Error("postgres://user:password@private.supabase.co/project"), { code: "ETIMEDOUT" }); } });
+  assert.deepEqual(failure, { configured: true, connected: false, failure: { category: "timeout", code: "CONNECTION_TIMEOUT" } });
+  assert.equal(JSON.stringify(failure).includes("postgres"), false);
   assert.equal(JSON.stringify(failure).includes("password"), false);
   assert.equal(JSON.stringify(failure).includes("supabase"), false);
 });
