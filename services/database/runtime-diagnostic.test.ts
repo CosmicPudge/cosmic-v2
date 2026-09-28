@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 // @ts-expect-error Node's strip-types test runner requires the explicit extension.
-import { classifyDatabaseRuntime } from "./runtime.ts";
+import { canRunDatabaseDiagnostic, classifyDatabaseRuntime, checkDatabaseStatus } from "./runtime.ts";
 
 test("classifies a Supabase direct PostgreSQL runtime without exposing URL details", () => {
   const result = classifyDatabaseRuntime({
@@ -31,4 +31,22 @@ test("reports invalid or absent database configuration without echoing secrets",
   assert.deepEqual(absent, { driver: "missing", provider: "unknown", connectionMode: "unknown", urlPresent: false });
   assert.equal(JSON.stringify(invalid).includes("password"), false);
   assert.equal(JSON.stringify(invalid).includes("not a URL"), false);
+});
+
+test("allows the existing diagnostic only outside Production", () => {
+  assert.equal(canRunDatabaseDiagnostic({ VERCEL_ENV: "preview", NODE_ENV: "production" }), true);
+  assert.equal(canRunDatabaseDiagnostic({ VERCEL_ENV: "production", NODE_ENV: "production" }), false);
+  assert.equal(canRunDatabaseDiagnostic({ NODE_ENV: "production" }), false);
+});
+
+test("performs exactly one read-only connectivity check and sanitizes failure", async () => {
+  let calls = 0;
+  const success = await checkDatabaseStatus({ configured: true, check: async () => { calls += 1; return "SELECT 1"; } });
+  assert.deepEqual(success, { configured: true, connected: true });
+  assert.equal(calls, 1);
+
+  const failure = await checkDatabaseStatus({ configured: true, check: async () => { throw new Error("postgres://user:password@private.supabase.co/project"); } });
+  assert.deepEqual(failure, { configured: true, connected: false });
+  assert.equal(JSON.stringify(failure).includes("password"), false);
+  assert.equal(JSON.stringify(failure).includes("supabase"), false);
 });

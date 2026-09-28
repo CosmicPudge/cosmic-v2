@@ -3,6 +3,7 @@ import { checkDatabase } from "@/services/database/client";
 import { getAuthRepositoryMode } from "@/services/auth/repository";
 import { isAdminAccount } from "@/services/admin/auth";
 import { expiredSessionCookie } from "@/services/auth/localStore";
+import { canRunDatabaseDiagnostic } from "@/services/database/runtime";
 
 export async function GET(request: Request) {
   try {
@@ -10,7 +11,7 @@ export async function GET(request: Request) {
     const kioskRequest = searchParams.get("cosmic-kiosk") === "1";
     const bootId = kioskRequest ? searchParams.get("cosmic-boot") ?? "" : undefined;
     const session = await getSession(request, bootId);
-    const diagnostics = searchParams.get("diagnostics") === "1";
+    const diagnostics = searchParams.get("diagnostics") === "1" && canRunDatabaseDiagnostic();
     const headers = new Headers({ "Cache-Control": "no-store" });
     if (kioskRequest && !session) headers.set("Set-Cookie", expiredSessionCookie());
     if (process.env.NODE_ENV !== "production") console.info(`[pair] HTTP GET /api/account/session status=200 authenticated=${Boolean(session)} sessionType=${session?.sessionType ?? "none"}`);

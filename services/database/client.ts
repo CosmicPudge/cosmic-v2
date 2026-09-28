@@ -6,7 +6,7 @@ import { drizzle as drizzleNeon } from "drizzle-orm/neon-serverless";
 import { drizzle as drizzlePostgres } from "drizzle-orm/node-postgres";
 import * as schema from "./schema";
 import { classifyMetricError, recordDatabaseMetric } from "@/services/observability/metrics";
-import { classifyDatabaseRuntime, resolveDatabaseConfiguration } from "./runtime";
+import { checkDatabaseStatus, classifyDatabaseRuntime, resolveDatabaseConfiguration } from "./runtime";
 
 export type CosmicDatabase = ReturnType<typeof createDatabase>;
 
@@ -59,11 +59,5 @@ export function getDatabase(): CosmicDatabase {
 }
 
 export async function checkDatabase() {
-  if (!isDatabaseConfigured()) return { configured: false, connected: false };
-  try {
-    await getDatabase().execute("select 1");
-    return { configured: true, connected: true };
-  } catch {
-    return { configured: true, connected: false };
-  }
+  return checkDatabaseStatus({ configured: isDatabaseConfigured(), check: () => getDatabase().execute("select 1") });
 }

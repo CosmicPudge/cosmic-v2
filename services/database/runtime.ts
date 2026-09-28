@@ -14,6 +14,8 @@ type DatabaseEnvironment = {
   [key: string]: string | undefined;
   DATABASE_DRIVER?: string;
   DATABASE_URL?: string;
+  NODE_ENV?: string;
+  VERCEL_ENV?: string;
 };
 
 export function resolveDatabaseDriver(value = process.env.DATABASE_DRIVER): DatabaseDriver {
@@ -58,4 +60,23 @@ export function classifyDatabaseRuntime(environment: DatabaseEnvironment = proce
   const url = environment.DATABASE_URL?.trim();
   const urlClassification = url ? classifyDatabaseUrl(url) : { provider: "unknown" as const, connectionMode: "unknown" as const };
   return { driver, ...urlClassification, urlPresent: Boolean(url) };
+}
+
+export function canRunDatabaseDiagnostic(environment: DatabaseEnvironment = process.env): boolean {
+  return environment.VERCEL_ENV !== undefined
+    ? environment.VERCEL_ENV !== "production"
+    : environment.NODE_ENV !== "production";
+}
+
+export async function checkDatabaseStatus(input: {
+  configured: boolean;
+  check: () => Promise<unknown>;
+}): Promise<{ configured: boolean; connected: boolean }> {
+  if (!input.configured) return { configured: false, connected: false };
+  try {
+    await input.check();
+    return { configured: true, connected: true };
+  } catch {
+    return { configured: true, connected: false };
+  }
 }
