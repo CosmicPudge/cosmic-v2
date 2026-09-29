@@ -5,7 +5,6 @@ import { fileURLToPath } from "node:url";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { Pool } from "pg";
-import { createPostgresPoolOptions } from "../services/database/runtime.ts";
 
 const migrationFolder = "./drizzle";
 const migrationFolderPath = resolve(process.cwd(), migrationFolder);
@@ -182,8 +181,9 @@ function ownershipFlags(environment = process.env): OwnershipFlags {
 
 export function createHostedPoolOptions(databaseUrl: string) {
   return {
-    ...createPostgresPoolOptions(databaseUrl),
+    connectionString: databaseUrl,
     max: 1,
+    ssl: { rejectUnauthorized: false },
   };
 }
 

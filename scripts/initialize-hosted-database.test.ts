@@ -37,6 +37,7 @@ const flags = { schemaReady: undefined, state: undefined };
 test("hosted Pool configuration enables Supabase SSL without changing the URL source", () => {
   const options = createHostedPoolOptions("postgres://user:password@db.redacted.supabase.co:5432/cosmic");
   assert.equal(options.connectionString, "postgres://user:password@db.redacted.supabase.co:5432/cosmic");
+  assert.ok(options.ssl);
   assert.equal(options.ssl.rejectUnauthorized, false);
   assert.equal(options.max, 1);
 });
