@@ -69,6 +69,7 @@ export interface SchoolActionItem {
   dueAt?: string;
   dueText?: string;
   status: "open" | "completed" | "needs_review";
+  confidence?: number;
   factIds: string[];
   provenance: SchoolProvenance[];
 }

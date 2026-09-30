@@ -48,6 +48,14 @@ test("timeline ordering and conflicts have stable IDs", () => {
   assert.deepEqual(detectSchoolTimelineConflicts(entries), [{ id: "school-conflict:overlap:a:b", firstId: "a", secondId: "b", description: "First overlaps Second." }]);
 });
 
+test("deadline points conflict with a scheduled event that contains the due time", () => {
+  const conflicts = detectSchoolTimelineConflicts([
+    { id: "class", title: "Chemistry", start: date("2026-08-30T10:00:00Z"), end: date("2026-08-30T11:00:00Z"), kind: "class", sourceType: "school" },
+    { id: "deadline", title: "Reading Response", start: date("2026-08-30T10:30:00Z"), kind: "deadline", sourceType: "school-source" },
+  ]);
+  assert.deepEqual(conflicts, [{ id: "school-conflict:overlap:class:deadline", firstId: "class", secondId: "deadline", description: "Chemistry overlaps Reading Response." }]);
+});
+
 test("hydration rejects malformed records and restores date fields", () => {
   const result = hydrateSchoolPlanningAssignments([JSON.parse(JSON.stringify(assignment({ dueAt: date("2026-09-01T18:00:00Z") }))), { id: "bad" }]);
   assert.equal(result.length, 1);

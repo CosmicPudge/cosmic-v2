@@ -20,6 +20,22 @@ function parseTime(value: string) {
   return `${String(hour).padStart(2, "0")}:${clock[2]}`;
 }
 
+function parseExplicitDueDate(value: string, source: SchoolSource): Date | undefined {
+  const iso = /^(20\d{2})-(\d{2})-(\d{2})$/.exec(value.trim());
+  if (iso) {
+    const date = new Date(Date.UTC(Number(iso[1]), Number(iso[2]) - 1, Number(iso[3])));
+    return Number.isNaN(date.getTime()) ? undefined : date;
+  }
+  const named = /^(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2})(?:,?\s+(20\d{2}))?$/i.exec(value.trim());
+  if (!named) return undefined;
+  const month = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"].indexOf(named[1].toLowerCase());
+  const sourceDate = source.sourceDate ?? source.importedAt;
+  const year = Number(named[3] ?? sourceDate.slice(0, 4));
+  if (month < 0 || !Number.isInteger(year)) return undefined;
+  const date = new Date(Date.UTC(year, month, Number(named[2])));
+  return date.getUTCMonth() === month && date.getUTCDate() === Number(named[2]) ? date : undefined;
+}
+
 function parseDocumentEvent(source: SchoolSource, text: string, line: string, index: number): DocumentEvent | null {
   const match = /\b(LLAB|PT|orientation|exam|meeting|briefing|training)\b/i.exec(line);
   if (!match) return null;
@@ -60,11 +76,14 @@ export function extractDocumentIntelligence(source: SchoolSource, text: string):
     if (event) events.push(event);
     const action = /^(?:action|to do|todo|required)\s*:\s*(.+)$/i.exec(line);
     if (action) actionItems.push({ id: `${source.id}:action:${actionItems.length + 1}`, accountId: source.accountId, title: action[1].trim(), status: "needs_review", factIds: [], provenance: [provenance(source, text, line)] });
-    const deadline = /^(.+?)\s+is\s+due\s+(20\d{2}-\d{2}-\d{2})(?:\s+at\s+(\d{1,2}:\d{2}\s*(?:AM|PM)?))?\.?$/i.exec(line);
+    const deadline = /^(.+?)\s+is\s+due\s+((?:20\d{2}-\d{2}-\d{2})|(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2}(?:,?\s+20\d{2})?)(?:\s+at\s+(\d{1,2}:\d{2}\s*(?:AM|PM)?))?\.?$/i.exec(line);
     if (deadline) {
       const time = deadline[3] ? parseTime(deadline[3]) ?? "23:59" : "23:59";
-      const dueAt = new Date(`${deadline[2]}T${time}:00Z`);
-      actionItems.push({ id: `${source.id}:assignment:${actionItems.length + 1}`, accountId: source.accountId, title: deadline[1].trim(), dueAt: dueAt.toISOString(), status: "needs_review", factIds: [], provenance: [provenance(source, text, line)] });
+      const day = parseExplicitDueDate(deadline[2], source);
+      const dueAt = day ? new Date(`${day.toISOString().slice(0, 10)}T${time}:00Z`) : undefined;
+      const title = deadline[1].trim();
+      const specific = !/\b(several|multiple|various|all|any)\b/i.test(title);
+      if (specific && dueAt && !Number.isNaN(dueAt.getTime())) actionItems.push({ id: `${source.id}:assignment:${actionItems.length + 1}`, accountId: source.accountId, title, dueAt: dueAt.toISOString(), status: "needs_review", confidence: 1, factIds: [], provenance: [provenance(source, text, line)] });
     }
   }
   if (/\b(?:TBD|TBA|not specified)\b/i.test(text)) warnings.push("Source contains an unspecified value; no value was inferred.");

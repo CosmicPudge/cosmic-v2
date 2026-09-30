@@ -32,14 +32,19 @@ function dayKey(date: Date, timeZone: string) {
   return new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" }).format(date);
 }
 
+function addLocalDays(key: string, days: number, timeZone: string) {
+  const [year, month, day] = key.split("-").map(Number);
+  const utc = new Date(Date.UTC(year, month - 1, day + days));
+  return new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" }).format(utc);
+}
+
 function validDate(date: Date | undefined): date is Date {
   return date instanceof Date && !Number.isNaN(date.getTime());
 }
 
 export function groupSchoolAssignments(assignments: SchoolPlanningAssignment[], now = new Date(), timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone) {
   const today = dayKey(now, timeZone);
-  const tomorrowDate = new Date(now); tomorrowDate.setDate(tomorrowDate.getDate() + 1);
-  const tomorrow = dayKey(tomorrowDate, timeZone);
+  const tomorrow = addLocalDays(today, 1, "UTC");
   const weekEnd = new Date(now); weekEnd.setDate(weekEnd.getDate() + 7);
   const groups = { overdue: [], today: [], tomorrow: [], thisWeek: [], later: [], completed: [], undated: [] } as Record<string, SchoolPlanningAssignment[]>;
   for (const assignment of assignments) {
@@ -74,7 +79,14 @@ export function detectSchoolTimelineConflicts(entries: SchoolTimelineEntry[]) {
   const conflicts: Array<{ id: string; firstId: string; secondId: string; description: string }> = [];
   for (let index = 0; index < entries.length; index += 1) for (let next = index + 1; next < entries.length; next += 1) {
     const first = entries[index]; const second = entries[next];
-    if (first.end && second.end && first.start < second.end && second.start < first.end) {
+    const overlaps = first.end && second.end
+      ? first.start < second.end && second.start < first.end
+      : first.end
+        ? second.start >= first.start && second.start <= first.end
+        : second.end
+          ? first.start >= second.start && first.start <= second.end
+          : false;
+    if (overlaps) {
       const ids = [first.id, second.id].sort();
       conflicts.push({ id: `school-conflict:overlap:${ids.join(":")}`, firstId: ids[0], secondId: ids[1], description: `${first.title} overlaps ${second.title}.` });
     }
