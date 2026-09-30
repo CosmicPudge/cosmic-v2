@@ -1,4 +1,5 @@
 import type { SchoolPlanningAssignment } from "@/core/contracts/SchoolPlanning";
+import { normalizeSchoolAssignmentIntelligence } from "./assignmentIntelligence";
 
 export function safeSchoolDate(value: unknown): Date | undefined {
   if (value instanceof Date) return Number.isNaN(value.getTime()) ? undefined : value;
@@ -22,8 +23,9 @@ export function hydrateSchoolPlanningAssignments(value: unknown): SchoolPlanning
     if (typeof raw.id !== "string" || typeof raw.accountId !== "string" || typeof raw.title !== "string" || typeof raw.sourceType !== "string") continue;
     const createdAt = safeSchoolDate(raw.createdAt); const updatedAt = safeSchoolDate(raw.updatedAt); if (!createdAt || !updatedAt) continue;
     const dueAt = safeSchoolDate(raw.dueAt); const availableAt = safeSchoolDate(raw.availableAt); const lockAt = safeSchoolDate(raw.lockAt); const lastSyncedAt = safeSchoolDate(raw.lastSyncedAt); const sourceUpdatedAt = safeSchoolDate(raw.sourceUpdatedAt);
-    const { dueAt: _rawDueAt, availableAt: _rawAvailableAt, lockAt: _rawLockAt, lastSyncedAt: _rawLastSyncedAt, sourceUpdatedAt: _rawSourceUpdatedAt, ...base } = raw;
-    parsed.push({ ...(base as unknown as SchoolPlanningAssignment), createdAt, updatedAt, ...(dueAt ? { dueAt } : {}), ...(availableAt ? { availableAt } : {}), ...(lockAt ? { lockAt } : {}), ...(lastSyncedAt ? { lastSyncedAt } : {}), ...(sourceUpdatedAt ? { sourceUpdatedAt } : {}) });
+    const base = Object.fromEntries(Object.entries(raw).filter(([key]) => !["dueAt", "availableAt", "lockAt", "lastSyncedAt", "sourceUpdatedAt", "intelligence"].includes(key)));
+    const intelligence = normalizeSchoolAssignmentIntelligence(raw.intelligence);
+    parsed.push({ ...(base as unknown as SchoolPlanningAssignment), ...(intelligence ? { intelligence } : {}), createdAt, updatedAt, ...(dueAt ? { dueAt } : {}), ...(availableAt ? { availableAt } : {}), ...(lockAt ? { lockAt } : {}), ...(lastSyncedAt ? { lastSyncedAt } : {}), ...(sourceUpdatedAt ? { sourceUpdatedAt } : {}) });
   }
   return parsed;
 }

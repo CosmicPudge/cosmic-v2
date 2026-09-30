@@ -54,6 +54,14 @@ test("hydration rejects malformed records and restores date fields", () => {
   assert.equal(result[0]?.dueAt?.toISOString(), "2026-09-01T18:00:00.000Z");
 });
 
+test("planning hydration preserves valid intelligence and drops malformed intelligence", () => {
+  const valid = JSON.parse(JSON.stringify(assignment({ intelligence: { summary: "Read carefully", requirements: [{ text: "Read Chapter 4", kind: "material" }], deliverables: [], suggestedSteps: [], studyTopics: [], ambiguities: [], warnings: [] } })));
+  const invalid = JSON.parse(JSON.stringify(assignment({ id: "invalid-intelligence", intelligence: "not-an-object" })));
+  const result = hydrateSchoolPlanningAssignments([valid, invalid]);
+  assert.equal(result[0]?.intelligence?.summary, "Read carefully");
+  assert.equal(result[1]?.intelligence, undefined);
+});
+
 test("groups invalid due dates as undated instead of formatting them", () => {
   const groups = groupSchoolAssignments([assignment({ id: "invalid", dueAt: new Date("invalid") })], date("2026-08-30T16:00:00Z"), "America/Denver");
   assert.deepEqual(groups.undated.map((item) => item.id), ["invalid"]);

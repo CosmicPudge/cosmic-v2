@@ -1,3 +1,5 @@
+import type { SchoolAssignmentIntelligence } from "./SchoolPlanning";
+
 export interface SchoolTerm {
   id: string;
   name: string;
@@ -33,6 +35,7 @@ export interface Assignment {
   courseId?: string;
   title: string;
   description?: string;
+  intelligence?: SchoolAssignmentIntelligence;
   dueAt?: Date;
   pointsPossible?: number;
   pointsEarned?: number;

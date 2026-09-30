@@ -13,7 +13,7 @@ export interface ProjectedCourseMeeting {
 
 export function localAssignmentToPlanning(item: Assignment, course?: Course): SchoolPlanningAssignment {
   const stamp = new Date(0);
-  return { id: `manual:${item.id}`, accountId: "local", title: item.title, ...(item.description ? { description: item.description } : {}), ...(item.courseId ? { courseId: item.courseId, courseName: course?.name } : {}), sourceType: "manual", ...(item.dueAt ? { dueAt: item.dueAt } : {}), completionStatus: item.status === "completed" ? "completed" : "upcoming", planningStatus: item.status === "completed" ? "done" : "not_started", priority: item.priority === "high" ? "high" : item.priority === "low" ? "low" : "normal", createdAt: stamp, updatedAt: stamp };
+  return { id: `manual:${item.id}`, accountId: "local", title: item.title, ...(item.description ? { description: item.description } : {}), ...(item.intelligence ? { intelligence: item.intelligence } : {}), ...(item.courseId ? { courseId: item.courseId, courseName: course?.name } : {}), sourceType: "manual", ...(item.dueAt ? { dueAt: item.dueAt } : {}), completionStatus: item.status === "completed" ? "completed" : "upcoming", planningStatus: item.status === "completed" ? "done" : "not_started", priority: item.priority === "high" ? "high" : item.priority === "low" ? "low" : "normal", createdAt: stamp, updatedAt: stamp };
 }
 
 function asDate(value: Date | string | undefined): Date | undefined {

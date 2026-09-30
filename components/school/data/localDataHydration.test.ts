@@ -83,6 +83,21 @@ test("provider planning assignments are revived by the existing snapshot hydrati
   assert.equal(buildTodayAcademicView({ courses: [], assignments: hydrated, events: [], now }).dueTodayAssignments[0].title, "Canvas quiz");
 });
 
+test("manual assignment intelligence survives local serialization and hydration", () => {
+  const source = localData([localAssignment({ intelligence: { requirements: [{ id: "r1", text: "Read Chapter 4", kind: "material" }], deliverables: [], suggestedSteps: [{ id: "s1", text: "Take notes", order: 0 }], studyTopics: ["stoichiometry"], ambiguities: [], warnings: [], source: "manual" } })]);
+  const hydrated = normalizeLocalSchoolData(JSON.parse(JSON.stringify(source)));
+  assert.equal(hydrated.assignments[0]?.intelligence?.requirements[0]?.text, "Read Chapter 4");
+  assert.equal(hydrated.assignments[0]?.intelligence?.suggestedSteps[0]?.text, "Take notes");
+  const planning = localAssignmentToPlanning(hydrated.assignments[0]!, course);
+  assert.equal(planning.intelligence?.studyTopics[0], "stoichiometry");
+});
+
+test("legacy assignments without intelligence remain unchanged", () => {
+  const hydrated = normalizeLocalSchoolData(JSON.parse(JSON.stringify(localData([localAssignment()]))));
+  assert.equal(hydrated.assignments[0]?.intelligence, undefined);
+  assert.equal(localAssignmentToPlanning(hydrated.assignments[0]!, course).intelligence, undefined);
+});
+
 test("mixed local and provider projections keep the local item and dedupe provider copies", () => {
   const providerBase: SchoolPlanningAssignment = { id: "provider-api", accountId: "account-1", title: "Canvas reading", courseId: "818707", sourceType: "canvas-api", externalId: "42", canvasUrl: "https://canvas.invalid/courses/818707/assignments/42", dueAt: new Date(2026, 8, 20, 12), completionStatus: "upcoming", planningStatus: "not_started", priority: "normal", createdAt: now, updatedAt: now };
   const calendarCopy: SchoolPlanningAssignment = { ...providerBase, id: "provider-calendar", sourceType: "canvas-calendar" };
