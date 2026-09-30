@@ -78,7 +78,7 @@ test("missing and invalid provider configuration fail without an external fallba
     const missing = await interpretSchoolAssignment(assignment(), { enabledForTests: true });
     assert.equal(missing.ok, false);
     if (!missing.ok) assert.equal(missing.error.code, "NO_PROVIDER");
-    env.SCHOOL_AI_PROVIDER = "gemini";
+    env.SCHOOL_AI_PROVIDER = "unknown-provider";
     const invalid = await interpretSchoolAssignment(assignment(), { enabledForTests: true });
     assert.equal(invalid.ok, false);
     if (!invalid.ok) assert.equal(invalid.error.code, "NO_PROVIDER");
