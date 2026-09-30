@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 // @ts-expect-error Node's strip-types runner resolves the source extension directly.
-import { normalizeSchoolAssignmentIntelligence } from "./assignmentIntelligence.ts";
+import { normalizeSchoolAssignmentIntelligence, normalizeSchoolAssignmentIntelligenceStrict } from "./assignmentIntelligence.ts";
 
 test("normalizes a complete provider-neutral assignment intelligence object", () => {
   const result = normalizeSchoolAssignmentIntelligence({
@@ -59,4 +59,13 @@ test("filters malformed items and normalizes unsafe bounds", () => {
 test("rejects non-object intelligence values without throwing", () => {
   assert.equal(normalizeSchoolAssignmentIntelligence(null), undefined);
   assert.equal(normalizeSchoolAssignmentIntelligence("not intelligence"), undefined);
+});
+
+test("strict provider boundary rejects missing arrays, duplicate IDs, and unsafe bounds", () => {
+  const base = { requirements: [], deliverables: [], suggestedSteps: [], studyTopics: [], ambiguities: [], warnings: [] };
+  assert.equal(normalizeSchoolAssignmentIntelligenceStrict({ ...base, requirements: [{ id: "same", text: "One", kind: "task" }], deliverables: [{ id: "same", text: "Two" }] }), undefined);
+  assert.equal(normalizeSchoolAssignmentIntelligenceStrict({ ...base, requirements: [{ text: "One", kind: "invalid" }] }), undefined);
+  assert.equal(normalizeSchoolAssignmentIntelligenceStrict({ ...base, confidence: 1.1 }), undefined);
+  assert.equal(normalizeSchoolAssignmentIntelligenceStrict({ ...base, estimatedMinutes: -1 }), undefined);
+  assert.equal(normalizeSchoolAssignmentIntelligenceStrict({ requirements: [] }), undefined);
 });

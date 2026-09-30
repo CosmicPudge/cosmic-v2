@@ -72,4 +72,36 @@ export function normalizeSchoolAssignmentIntelligence(value: unknown): SchoolAss
   return { ...(summary ? { summary } : {}), requirements, deliverables, ...(estimatedMinutes !== undefined ? { estimatedMinutes } : {}), ...(effortCategories.includes(value.effortCategory as SchoolAssignmentEffortCategory) ? { effortCategory: value.effortCategory as SchoolAssignmentEffortCategory } : {}), suggestedSteps, studyTopics, ambiguities, warnings, ...(confidence(value.confidence) !== undefined ? { confidence: confidence(value.confidence) } : {}), ...(generatedAt ? { generatedAt } : {}), ...(parsedSource ? { source: parsedSource } : {}) };
 }
 
+/** Strict boundary for untrusted provider output. Hydration remains permissive; providers do not. */
+export function normalizeSchoolAssignmentIntelligenceStrict(value: unknown): SchoolAssignmentIntelligence | undefined {
+  if (!record(value)) return undefined;
+  const requiredArrays = ["requirements", "deliverables", "suggestedSteps", "studyTopics", "ambiguities", "warnings"] as const;
+  if (requiredArrays.some((key) => !Array.isArray(value[key]))) return undefined;
+  const arrays = requiredArrays.map((key) => value[key] as unknown[]);
+  if (arrays.some((items) => items.length > MAX_ITEMS)) return undefined;
+  const ids = new Set<string>();
+  const boundedText = (input: unknown, max = MAX_TEXT) => typeof input === "string" && input.trim().length > 0 && input.length <= max;
+  const checkId = (input: unknown) => {
+    if (input === undefined) return true;
+    if (!boundedText(input, 120) || ids.has(input as string)) return false;
+    ids.add(input as string);
+    return true;
+  };
+  const checkDiagnostic = (item: unknown) => record(item) && boundedText(item.text) && checkId(item.id) && severities.includes(item.severity as SchoolAssignmentDiagnosticSeverity) && (item.category === undefined || boundedText(item.category, 120));
+  const validRequirements = arrays[0].every((item) => record(item) && boundedText(item.text) && checkId(item.id) && requirementKinds.includes(item.kind as SchoolAssignmentRequirementKind) && (item.completed === undefined || typeof item.completed === "boolean") && (item.evidence === undefined || boundedText(item.evidence)));
+  const validDeliverables = arrays[1].every((item) => record(item) && boundedText(item.text) && checkId(item.id) && (item.format === undefined || boundedText(item.format, 300)) && (item.evidence === undefined || boundedText(item.evidence)));
+  const validSteps = arrays[2].every((item) => record(item) && boundedText(item.text) && checkId(item.id) && typeof item.order === "number" && Number.isSafeInteger(item.order) && item.order >= 0 && (item.estimatedMinutes === undefined || boundedMinutes(item.estimatedMinutes) !== undefined));
+  const validTopics = arrays[3].every((item) => boundedText(item, MAX_TOPIC));
+  const validAmbiguities = arrays[4].every(checkDiagnostic);
+  const validWarnings = arrays[5].every(checkDiagnostic);
+  if (!validRequirements || !validDeliverables || !validSteps || !validTopics || !validAmbiguities || !validWarnings) return undefined;
+  if (value.summary !== undefined && !boundedText(value.summary)) return undefined;
+  if (value.estimatedMinutes !== undefined && value.estimatedMinutes !== null && boundedMinutes(value.estimatedMinutes) === undefined) return undefined;
+  if (value.effortCategory !== undefined && !effortCategories.includes(value.effortCategory as SchoolAssignmentEffortCategory)) return undefined;
+  if (value.confidence !== undefined && (typeof value.confidence !== "number" || !Number.isFinite(value.confidence) || value.confidence < 0 || value.confidence > 1)) return undefined;
+  if (value.generatedAt !== undefined && (typeof value.generatedAt !== "string" || value.generatedAt.length > 80 || Number.isNaN(Date.parse(value.generatedAt)))) return undefined;
+  if (value.source !== undefined && !sources.includes(value.source as typeof sources[number])) return undefined;
+  return normalizeSchoolAssignmentIntelligence(value);
+}
+
 export function isSchoolAssignmentIntelligence(value: unknown): value is SchoolAssignmentIntelligence { return normalizeSchoolAssignmentIntelligence(value) !== undefined; }
