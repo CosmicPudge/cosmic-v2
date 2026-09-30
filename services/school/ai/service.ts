@@ -1,5 +1,5 @@
 import "server-only";
-import type { SchoolAssignmentInterpretationInput } from "@/core/contracts/SchoolAI";
+import { toSchoolAssignmentInterpretationInput } from "@/core/contracts/SchoolAI";
 import type { SchoolPlanningAssignment } from "@/core/contracts/SchoolPlanning";
 import { SCHOOL_AI_ENABLED } from "@/services/school/capabilities";
 import { normalizeSchoolAssignmentIntelligenceStrict } from "@/services/school/assignmentIntelligence";
@@ -8,26 +8,7 @@ import { sanitizeSchoolAIError, SchoolAIError, type SchoolAIResult } from "./err
 import type { SchoolAIProvider } from "./provider";
 
 function isRecord(value: unknown): value is Record<string, unknown> { return typeof value === "object" && value !== null && !Array.isArray(value); }
-function safeText(value: string | undefined, max: number) { return value?.trim().slice(0, max) || undefined; }
-
-export function toSchoolAssignmentInterpretationInput(assignment: SchoolPlanningAssignment): SchoolAssignmentInterpretationInput {
-  const canvas = assignment.providerMetadata?.canvas;
-  const gradingType = safeText(canvas?.gradingType, 120);
-  const submissionTypes = canvas?.submissionTypes?.slice(0, 20).flatMap((value) => { const item = safeText(value, 120); return item ? [item] : []; });
-  return {
-    title: safeText(assignment.title, 500) ?? "Untitled assignment",
-    ...(safeText(assignment.description, 12_000) ? { description: safeText(assignment.description, 12_000) } : {}),
-    ...(safeText(assignment.courseId, 120) ? { courseId: safeText(assignment.courseId, 120) } : {}),
-    ...(safeText(assignment.courseName, 300) ? { courseName: safeText(assignment.courseName, 300) } : {}),
-    ...(assignment.dueAt ? { dueAt: assignment.dueAt.toISOString() } : {}),
-    ...(assignment.availableAt ? { availableAt: assignment.availableAt.toISOString() } : {}),
-    ...(assignment.lockAt ? { lockAt: assignment.lockAt.toISOString() } : {}),
-    ...(assignment.pointsPossible !== undefined ? { pointsPossible: assignment.pointsPossible } : {}),
-    ...(gradingType ? { gradingType } : {}),
-    ...(submissionTypes ? { submissionTypes } : {}),
-    sourceType: assignment.sourceType,
-  };
-}
+export { toSchoolAssignmentInterpretationInput } from "@/core/contracts/SchoolAI";
 
 export async function interpretSchoolAssignment(assignment: SchoolPlanningAssignment, options: { provider?: SchoolAIProvider; timeoutMs?: number; enabledForTests?: boolean } = {}): Promise<SchoolAIResult<NonNullable<SchoolPlanningAssignment["intelligence"]>>> {
   const enabled = SCHOOL_AI_ENABLED || (process.env.NODE_ENV === "test" && options.enabledForTests === true);
