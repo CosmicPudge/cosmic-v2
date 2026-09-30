@@ -1,20 +1,23 @@
 import "server-only";
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, inArray } from "drizzle-orm";
 import { getDatabase } from "@/services/database/client";
 import { schoolAssignments } from "@/services/database/schema";
 import type { SchoolPlanningAssignment } from "@/core/contracts/SchoolPlanning";
 import { prepareSchoolOwnerWrite } from "./ownershipTransition";
+import { canvasAssignmentIdentity, dedupeCanvasAssignmentRows } from "./providers/canvas/identity";
 
 export type SchoolAssignmentRow = typeof schoolAssignments.$inferSelect;
 
 function toAssignment(row: SchoolAssignmentRow): SchoolPlanningAssignment {
+  const provenance = row.provenance as SchoolPlanningAssignment["provenance"];
+  const providerMetadata = provenance?.find((item) => item.providerMetadata)?.providerMetadata;
   return {
     id: row.id, accountId: row.userId, title: row.title,
     ...(row.description ? { description: row.description } : {}), ...(row.courseId ? { courseId: row.courseId } : {}), ...(row.courseName ? { courseName: row.courseName } : {}),
     sourceType: row.sourceType as SchoolPlanningAssignment["sourceType"], ...(row.sourceId ? { sourceId: row.sourceId } : {}), ...(row.externalId ? { externalId: row.externalId } : {}),
     ...(row.dueAt ? { dueAt: row.dueAt } : {}), ...(row.availableAt ? { availableAt: row.availableAt } : {}), ...(row.lockAt ? { lockAt: row.lockAt } : {}),
     completionStatus: row.completionStatus as SchoolPlanningAssignment["completionStatus"], planningStatus: row.planningStatus as SchoolPlanningAssignment["planningStatus"], priority: row.priority as SchoolPlanningAssignment["priority"],
-    ...(row.estimatedMinutes !== null ? { estimatedMinutes: row.estimatedMinutes } : {}), ...(row.pointsPossible !== null ? { pointsPossible: row.pointsPossible } : {}), ...(row.published !== null ? { published: row.published } : {}), ...(row.canvasUrl ? { canvasUrl: row.canvasUrl } : {}), ...(row.personalNotes ? { personalNotes: row.personalNotes } : {}), ...(row.provenance ? { provenance: row.provenance as SchoolPlanningAssignment["provenance"] } : {}),
+    ...(row.estimatedMinutes !== null ? { estimatedMinutes: row.estimatedMinutes } : {}), ...(row.pointsPossible !== null ? { pointsPossible: row.pointsPossible } : {}), ...(row.published !== null ? { published: row.published } : {}), ...(row.canvasUrl ? { canvasUrl: row.canvasUrl } : {}), ...(row.personalNotes ? { personalNotes: row.personalNotes } : {}), ...(row.provenance ? { provenance } : {}), ...(providerMetadata ? { providerMetadata } : {}),
     createdAt: row.createdAt, updatedAt: row.updatedAt, ...(row.lastSyncedAt ? { lastSyncedAt: row.lastSyncedAt } : {}), ...(row.sourceUpdatedAt ? { sourceUpdatedAt: row.sourceUpdatedAt } : {}),
   };
 }
@@ -48,11 +51,43 @@ export async function deleteSchoolAssignment(accountId: string, id: string) {
 
 /** Provider refreshes update only provider-owned columns; planning fields are intentionally omitted. */
 export async function upsertCanvasAssignments(assignments: Array<typeof schoolAssignments.$inferInsert>) {
-  if (!assignments.length) return [];
-  const values = await Promise.all(assignments.map((assignment) => prepareSchoolOwnerWrite(assignment, assignment.userId)));
-  const rows = await Promise.all(values.map((assignment) => getDatabase().insert(schoolAssignments).values(assignment).onConflictDoUpdate({
-    target: [schoolAssignments.userId, schoolAssignments.sourceType, schoolAssignments.sourceId, schoolAssignments.externalId],
-    set: { title: assignment.title, description: assignment.description, courseId: assignment.courseId, courseName: assignment.courseName, dueAt: assignment.dueAt, availableAt: assignment.availableAt, lockAt: assignment.lockAt, completionStatus: assignment.completionStatus, pointsPossible: assignment.pointsPossible, published: assignment.published, canvasUrl: assignment.canvasUrl, sourceUpdatedAt: assignment.sourceUpdatedAt, lastSyncedAt: assignment.lastSyncedAt, updatedAt: new Date() },
-  }).returning()));
-  return rows.flatMap((result) => result[0] ? [toAssignment(result[0])] : []);
+  return (await upsertCanvasAssignmentsWithResult(assignments)).assignments;
+}
+
+export interface CanvasAssignmentUpsertResult {
+  assignments: SchoolPlanningAssignment[];
+  created: number;
+  updated: number;
+  skipped: number;
+  failed: number;
+}
+
+/**
+ * Idempotent Canvas import. The conflict key is the provider identity, never
+ * title or due date. Duplicate rows in one response are skipped before the
+ * database write so a malformed provider response cannot inflate the result.
+ */
+export async function upsertCanvasAssignmentsWithResult(assignments: Array<typeof schoolAssignments.$inferInsert>): Promise<CanvasAssignmentUpsertResult> {
+  if (!assignments.length) return { assignments: [], created: 0, updated: 0, skipped: 0, failed: 0 };
+  const values = dedupeCanvasAssignmentRows(assignments); const skipped = assignments.length - values.length;
+  const sourceType = values[0].sourceType;
+  const existing = await getDatabase().select({ userId: schoolAssignments.userId, sourceType: schoolAssignments.sourceType, sourceId: schoolAssignments.sourceId, externalId: schoolAssignments.externalId }).from(schoolAssignments).where(and(eq(schoolAssignments.userId, values[0].userId), eq(schoolAssignments.sourceType, sourceType), inArray(schoolAssignments.externalId, values.map((item) => item.externalId).filter((item): item is string => Boolean(item)))));
+  const existingKeys = new Set(existing.map((item) => canvasAssignmentIdentity(item)));
+  const imported: SchoolPlanningAssignment[] = []; let created = 0; let updated = 0; let failed = 0;
+  for (const assignment of values) {
+    try {
+      const prepared = await prepareSchoolOwnerWrite(assignment, assignment.userId);
+      const row = (await getDatabase().insert(schoolAssignments).values(prepared).onConflictDoUpdate({
+        target: [schoolAssignments.userId, schoolAssignments.sourceType, schoolAssignments.sourceId, schoolAssignments.externalId],
+        set: { title: prepared.title, description: prepared.description ?? null, courseId: prepared.courseId ?? null, courseName: prepared.courseName ?? null, dueAt: prepared.dueAt ?? null, availableAt: prepared.availableAt ?? null, lockAt: prepared.lockAt ?? null, completionStatus: prepared.completionStatus, pointsPossible: prepared.pointsPossible ?? null, published: prepared.published ?? null, canvasUrl: prepared.canvasUrl ?? null, provenance: prepared.provenance ?? null, sourceUpdatedAt: prepared.sourceUpdatedAt ?? null, lastSyncedAt: prepared.lastSyncedAt ?? null, updatedAt: new Date() },
+      }).returning())[0];
+      if (!row) { failed += 1; continue; }
+      imported.push(toAssignment(row));
+      const key = canvasAssignmentIdentity(assignment);
+      if (existingKeys.has(key)) updated += 1; else { created += 1; existingKeys.add(key); }
+    } catch {
+      failed += 1;
+    }
+  }
+  return { assignments: imported, created, updated, skipped, failed };
 }

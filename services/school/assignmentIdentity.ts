@@ -12,7 +12,7 @@ export function dedupeSchoolAssignments(items: SchoolPlanningAssignment[]) {
     if (!current) { merged.set(key, item); continue; }
     const preferred = current.sourceType === "canvas-api" ? current : item.sourceType === "canvas-api" ? item : current;
     const completionStatus = isAssignmentActiveForPlanning(current) ? item.completionStatus : current.completionStatus;
-    merged.set(key, { ...preferred, title: item.sourceType === "canvas-api" ? item.title : preferred.title, ...(item.description ? { description: item.description } : {}), ...(item.dueAt ? { dueAt: item.dueAt } : {}), ...(item.canvasUrl ? { canvasUrl: item.canvasUrl } : {}), completionStatus, provenance: [...(current.provenance ?? []), ...(item.provenance ?? [])] });
+    merged.set(key, { ...preferred, title: item.sourceType === "canvas-api" ? item.title : preferred.title, ...(item.description ? { description: item.description } : {}), ...(item.dueAt ? { dueAt: item.dueAt } : {}), ...(item.canvasUrl ? { canvasUrl: item.canvasUrl } : {}), ...(item.providerMetadata ? { providerMetadata: item.providerMetadata } : {}), completionStatus, provenance: [...(current.provenance ?? []), ...(item.provenance ?? [])] });
   }
   return [...merged.values()];
 }

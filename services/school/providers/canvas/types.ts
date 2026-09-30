@@ -35,6 +35,13 @@ export interface CanvasAssignment {
   published?: boolean;
   html_url?: string;
   updated_at?: string | null;
+  grading_type?: string | null;
+  submission_types?: string[] | null;
+  assignment_group_id?: number | null;
+  quiz_id?: number | null;
+  discussion_topic?: { id?: number; html_url?: string } | null;
+  allowed_attempts?: number | null;
+  workflow_state?: string | null;
   submission?: CanvasSubmission | null;
 }
 

@@ -20,7 +20,10 @@ export class CanvasAcademicProvider {
     for (const course of courses) {
       const page = await canvasPaginated<CanvasAssignment>(this.baseUrl, this.token, `courses/${encodeURIComponent(course.id)}/assignments`, new URLSearchParams([["include[]", "submission"], ["per_page", "100"]]), 20, this.fetchImpl);
       truncated ||= page.truncated;
-      assignments.push(...page.items.map((item) => normalizeCanvasAssignment(accountId, item)).filter((item): item is SchoolPlanningAssignment => Boolean(item)));
+      assignments.push(...page.items.flatMap((item) => {
+        const normalized = normalizeCanvasAssignment(accountId, item);
+        return normalized ? [{ ...normalized, courseName: course.name }] : [];
+      }));
     }
     return { user, courses, assignments, truncated };
   }

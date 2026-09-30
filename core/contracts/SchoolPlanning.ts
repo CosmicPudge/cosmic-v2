@@ -3,12 +3,38 @@ export type SchoolAssignmentCompletion = "upcoming" | "due_soon" | "overdue" | "
 export type SchoolPlanningStatus = "not_started" | "planned" | "in_progress" | "done";
 export type SchoolPlanningPriority = "low" | "normal" | "high" | "critical";
 
+export interface SchoolCanvasAssignmentMetadata {
+  assignmentId: string;
+  courseId: string;
+  descriptionHtml?: string;
+  gradingType?: string;
+  submissionTypes?: string[];
+  assignmentGroupId?: string;
+  quizId?: string;
+  discussionTopicId?: string;
+  discussionTopicUrl?: string;
+  allowedAttempts?: number;
+  workflowState?: string;
+  submission?: {
+    workflowState?: string;
+    submittedAt?: string;
+    late?: boolean;
+    missing?: boolean;
+    score?: number;
+  };
+}
+
+export interface SchoolAssignmentProviderMetadata {
+  canvas?: SchoolCanvasAssignmentMetadata;
+}
+
 export interface SchoolAssignmentProvenance {
   sourceId?: string;
   sourceType: SchoolAssignmentSource;
   externalId?: string;
   evidence?: string;
   extractor?: "deterministic" | "ai";
+  providerMetadata?: SchoolAssignmentProviderMetadata;
 }
 
 export interface SchoolPlanningAssignment {
@@ -17,6 +43,8 @@ export interface SchoolPlanningAssignment {
   title: string;
   rawTitle?: string;
   description?: string;
+  /** Provider-preserved metadata carried through the existing provenance JSON. */
+  providerMetadata?: SchoolAssignmentProviderMetadata;
   courseId?: string;
   courseName?: string;
   sourceType: SchoolAssignmentSource;
