@@ -47,6 +47,13 @@ function isGlassesApi(pathname: string) {
   return pathname === "/api/glasses" || pathname.startsWith("/api/glasses/");
 }
 
+function isDeveloperKioskRequest(request: NextRequest) {
+  if (process.env.COSMIC_DEV_KIOSK_ENABLED !== "true") return false;
+  const host = request.nextUrl.hostname.toLowerCase();
+  const configuredHost = (process.env.COSMIC_KIOSK_HOSTNAME ?? "dev.cosmicpudge.shop").toLowerCase();
+  return host === configuredHost || (process.env.NODE_ENV !== "production" && ["localhost", "127.0.0.1"].includes(host));
+}
+
 export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
@@ -65,6 +72,10 @@ export async function proxy(request: NextRequest) {
   }
 
   if (isApi && PUBLIC_API_ROUTES.has(pathname)) {
+    return NextResponse.next();
+  }
+
+  if ((pathname === "/api/kiosk/data" || pathname === "/api/sports" || pathname === "/api/music") && isDeveloperKioskRequest(request)) {
     return NextResponse.next();
   }
 

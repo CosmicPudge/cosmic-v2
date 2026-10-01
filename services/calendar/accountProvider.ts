@@ -12,6 +12,13 @@ import type { CalendarSubscription } from "./subscriptions";
 
 export interface CalendarCredentialPayload { username: string; password: string; serverUrl: string; defaultCalendarName?: string; }
 
+const ENGINE_CACHE_TTL_MS = 5 * 60 * 1000;
+type CalendarEngineResult = Awaited<ReturnType<typeof createCalendarEngine>>;
+const engineCache = new Map<string, {
+  promise: Promise<CalendarEngineResult>;
+  expiresAt: number;
+}>();
+
 async function getAccountSubscriptions(userId: string): Promise<CalendarSubscription[]> {
   const connections = (await listProviderConnections(userId)).filter(
     (item) => item.provider === "calendar" && item.providerType === "subscription" && item.status === "connected",
@@ -43,6 +50,32 @@ export async function getAccountCalendarContext(userId: string, connectionId?: s
 }
 
 export async function getCalendarEngineForRequest(userId?: string, connectionId?: string) {
+  const cacheKey = `${userId ?? "anonymous"}:${connectionId ?? "all"}`;
+  const cached = engineCache.get(cacheKey);
+  if (cached && Date.now() < cached.expiresAt) return cached.promise;
+
+  const promise = createCalendarEngine(userId, connectionId);
+  engineCache.set(cacheKey, {
+    promise,
+    expiresAt: Date.now() + ENGINE_CACHE_TTL_MS,
+  });
+
+  try {
+    const result = await promise;
+    if (
+      result === null &&
+      engineCache.get(cacheKey)?.promise === promise
+    ) {
+      engineCache.delete(cacheKey);
+    }
+    return result;
+  } catch (error) {
+    if (engineCache.get(cacheKey)?.promise === promise) engineCache.delete(cacheKey);
+    throw error;
+  }
+}
+
+async function createCalendarEngine(userId?: string, connectionId?: string) {
   const context = userId ? await getAccountCalendarContext(userId, connectionId) : null;
   let provider: CalendarProvider | null | undefined = context?.provider;
   if (!provider && userId) {

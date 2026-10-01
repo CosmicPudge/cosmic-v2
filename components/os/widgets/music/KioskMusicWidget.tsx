@@ -91,7 +91,7 @@ function ArtworkPortrait({ artworkUrl, label }: { artworkUrl: string; label: str
 
 function StatusState({ state, provider }: { state: Exclude<KioskMusicState, "track">; provider: string }) {
   const title = state === "podcast-detected" ? "Podcast playback detected" : state === "playback-detected" ? "Playback detected" : state === "error" ? "Music temporarily unavailable" : state === "idle" ? "Nothing is playing" : "No music service connected";
-  const detail = state === "podcast-detected" ? `${provider} is active; episode details are not available yet.` : state === "playback-detected" ? `${provider} is active, but track details are not available yet.` : state === "error" ? "Cosmic will retry automatically." : state === "idle" ? "Start playing something on Spotify." : "Connect a music service from Cosmic Account Settings.";
+  const detail = state === "podcast-detected" ? `${provider} is active; episode details are not available yet.` : state === "playback-detected" ? `${provider} is active, but track details are not available yet.` : state === "error" ? "Cosmic will reconnect automatically." : state === "idle" ? "Start playing something on Spotify." : "Connect a music service from Cosmic Account Settings.";
   return <div className="kiosk-music-status-state">{provider === "Spotify" ? <img className="kiosk-music-provider-logo" src="/kiosk/brands/spotify.svg" alt="Spotify" draggable={false} /> : <div className="kiosk-music-mark">♫</div>}<p className="kiosk-music-status">{provider}</p><h1>{title}</h1><p>{detail}</p></div>;
 }
 

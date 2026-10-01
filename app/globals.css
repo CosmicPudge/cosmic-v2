@@ -1345,3 +1345,28 @@ button:disabled:hover { filter: none; }
 button:focus-visible, a[href]:focus-visible { outline: 2px solid rgba(165, 243, 252, 0.8); outline-offset: 2px; }
 a[href] { cursor: pointer; transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease, filter 180ms ease, opacity 180ms ease, transform 120ms ease; }
 a[href]:active { transform: scale(0.99); }
+html[data-cosmic-kiosk="true"], html[data-cosmic-kiosk="true"] body, body[data-cosmic-kiosk="true"] { cursor: none; }
+html[data-cosmic-kiosk="true"] button, html[data-cosmic-kiosk="true"] a, html[data-cosmic-kiosk="true"] [role="button"] { cursor: none; }
+
+.kiosk-scene-identity { display: flex; align-items: center; gap: .45rem; color: rgba(224,231,255,.7); font-size: clamp(.56rem, .95vw, .74rem); font-weight: 700; letter-spacing: .18em; text-transform: uppercase; }
+.kiosk-scene-identity-overlay { position: absolute; top: clamp(1rem, 3vw, 3rem); left: clamp(1rem, 3vw, 3rem); z-index: 2; }
+.kiosk-scene-identity-inline { position: relative; z-index: 10; margin-bottom: clamp(.75rem, 1.6vw, 1.25rem); }
+.kiosk-scene-identity-brand { color: rgba(224,231,255,.78); }
+.kiosk-scene-identity-separator { color: rgba(196,181,253,.42); }
+.kiosk-scene-identity-label { color: rgba(165,243,252,.64); }
+.kiosk-scene-identity .cosmic-icon-shell { flex: 0 0 auto; opacity: .86; }
+
+.kiosk-sports-transition-layer { position: absolute; inset: 0; will-change: transform, opacity; }
+.kiosk-sports-transition-normal { z-index: 1; }
+.kiosk-sports-transition-sports { z-index: 2; pointer-events: none; opacity: 0; transform: translateX(8%); }
+.kiosk-sports-transition-normal-entering { animation: kiosk-sports-normal-exit 700ms cubic-bezier(.22,.61,.36,1) both; }
+.kiosk-sports-transition-normal-active { opacity: 0; transform: translateX(-6%); }
+.kiosk-sports-transition-normal-exiting { animation: kiosk-sports-normal-enter 700ms cubic-bezier(.22,.61,.36,1) both; }
+.kiosk-sports-transition-sports-entering { animation: kiosk-sports-enter 700ms cubic-bezier(.22,.61,.36,1) both; }
+.kiosk-sports-transition-sports-active { opacity: 1; transform: translateX(0); }
+.kiosk-sports-transition-sports-exiting { animation: kiosk-sports-exit 700ms cubic-bezier(.22,.61,.36,1) both; }
+@keyframes kiosk-sports-normal-exit { from { opacity: 1; transform: translateX(0); } to { opacity: 0; transform: translateX(-6%); } }
+@keyframes kiosk-sports-normal-enter { from { opacity: 0; transform: translateX(-6%); } to { opacity: 1; transform: translateX(0); } }
+@keyframes kiosk-sports-enter { from { opacity: 0; transform: translateX(8%); } to { opacity: 1; transform: translateX(0); } }
+@keyframes kiosk-sports-exit { from { opacity: 1; transform: translateX(0); } to { opacity: 0; transform: translateX(-8%); } }
+.kiosk-shell[data-reduced-motion="true"] .kiosk-sports-transition-layer { animation-duration: 160ms !important; }

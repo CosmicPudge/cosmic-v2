@@ -3,6 +3,7 @@
 import type { CalendarEvent, CalendarSnapshot } from "@/core/contracts";
 import { useClockTick } from "@/hooks/os/useClock";
 import { Widget } from "@/components/os/ui/widget";
+import KioskSceneIdentity from "../shared/KioskSceneIdentity";
 
 interface Props {
   calendar: CalendarSnapshot | null;
@@ -28,19 +29,20 @@ export default function KioskCalendarScene({ calendar, loading, error }: Props) 
   return (
     <Widget accent="calendar" className="kiosk-calendar-widget" contentPadding={false} sceneVariant="cinematic" imageUrl="/kiosk/scenes/calendar/calendar-cosmic-workspace.png" imagePosition="center center" imageOpacity={1} imageBlur={0}>
       <div className="kiosk-calendar-scene relative flex h-full min-h-0 flex-col overflow-hidden px-5 pb-4 pt-6 text-white sm:px-10 sm:pb-7 sm:pt-8">
+        <KioskSceneIdentity sceneLabel="CALENDAR" variant="inline" />
         <div className="relative z-10 flex items-start justify-between gap-4">
           <div>
             <p className="text-[clamp(.7rem,1.25vw,.9rem)] font-semibold uppercase tracking-[.26em] text-cyan-100/75">Calendar</p>
             <p className="mt-1 text-[clamp(1.1rem,2.5vw,1.8rem)] font-medium tracking-tight text-white/95">{formatDate(displayDate, { weekday: "long" }, timeZone) ?? "Today"}</p>
             <p className="text-[clamp(.75rem,1.5vw,1.05rem)] uppercase tracking-[.2em] text-white/60">{formatDate(displayDate, { month: "long", day: "numeric" }, timeZone) ?? ""}</p>
           </div>
-          {error && calendar ? <p className="pt-1 text-[.58rem] uppercase tracking-[.16em] text-amber-100/70">Updating</p> : calendar?.accountCalendarError ? <p className="pt-1 text-[.58rem] uppercase tracking-[.16em] text-amber-100/70">Account calendar retrying</p> : calendar?.sportsCalendarError ? <p className="pt-1 text-[.58rem] uppercase tracking-[.16em] text-amber-100/70">Sports retrying</p> : null}
+          {error && calendar ? <p className="pt-1 text-[.58rem] uppercase tracking-[.16em] text-amber-100/70">Last update may be delayed</p> : calendar?.accountCalendarError || calendar?.sportsCalendarError ? <p className="pt-1 text-[.58rem] uppercase tracking-[.16em] text-amber-100/70">Reconnecting</p> : null}
         </div>
 
         {loading && !calendar ? (
           <div className="relative z-10 flex flex-1 items-center justify-center text-sm text-white/65">Loading calendar…</div>
         ) : error && !calendar ? (
-          <div className="relative z-10 flex flex-1 items-center justify-center text-center text-sm text-white/70">Calendar temporarily unavailable<br /><span className="text-xs text-white/45">Cosmic will retry automatically.</span></div>
+          <div className="relative z-10 flex flex-1 items-center justify-center text-center text-sm text-white/70">Calendar temporarily unavailable<br /><span className="text-xs text-white/45">Cosmic will reconnect automatically.</span></div>
         ) : !calendar || (shownEvents.length === 0 && allDayEvents.length === 0 && !nextEvent) ? (
           <div className="relative z-10 flex flex-1 items-center justify-center text-center"><div><p className="text-xl font-light text-white/90">YOUR DAY IS CLEAR</p><p className="mt-1 text-sm text-white/55">Nothing scheduled.</p>{calendar?.accountCalendarConnected === false ? <p className="mt-2 text-xs text-white/40">Account Calendar not connected.</p> : null}</div></div>
         ) : (

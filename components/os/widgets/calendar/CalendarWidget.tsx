@@ -15,6 +15,8 @@ import KioskCalendarScene from "./KioskCalendarScene";
 import useCalendar from "@/hooks/os/useCalendar";
 import { useDashboardWidgetReadiness } from "@/components/dashboard/readiness/DashboardReadiness";
 import { dashboardImage } from "@/components/dashboard/images/dashboardImageManifest";
+import { useDeveloperKioskData } from "@/hooks/os/useDeveloperKioskData";
+import type { CalendarEventCategory } from "@/core/contracts";
 
 export default function CalendarWidget() {
   const { size, presentation } = useWidgetContext();
@@ -22,11 +24,20 @@ export default function CalendarWidget() {
     calendar,
     loading,
     error,
-  } = useCalendar();
+  } = useCalendar({ enabled: typeof window === "undefined" || window.location.pathname !== "/kiosk" });
+  const developer = useDeveloperKioskData();
+  const developerCalendar = developer.data ? {
+    today: developer.data.calendar.events.map(hydrateDeveloperEvent),
+    upcoming: developer.data.calendar.events.map(hydrateDeveloperEvent),
+    nextEvent: developer.data.calendar.events[0] ? hydrateDeveloperEvent(developer.data.calendar.events[0]) : undefined,
+    timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    accountCalendarConnected: developer.data.calendar.connected,
+  } : null;
+  const visibleCalendar = developer.data ? developerCalendar : calendar;
   useDashboardWidgetReadiness("calendar", loading ? "loading" : error && !calendar ? "degraded" : "ready");
 
   if (presentation === "kiosk") {
-    return <KioskCalendarScene calendar={calendar} loading={loading} error={error} />;
+    return <KioskCalendarScene calendar={visibleCalendar} loading={developer.data ? developer.loading : loading} error={developer.data ? developer.error : error} />;
   }
 
   return (
@@ -77,4 +88,8 @@ export default function CalendarWidget() {
       </WidgetFooter>
     </Widget>
   );
+}
+
+function hydrateDeveloperEvent(event: { id: string; title: string; start: string; end: string; allDay: boolean; location?: string; calendar?: string; category?: CalendarEventCategory }) {
+  return { ...event, start: new Date(event.start), end: new Date(event.end), travelRequired: false, completed: false, ...(event.calendar ? { calendarName: event.calendar } : {}) };
 }
