@@ -2,9 +2,9 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { resolveKioskSwipeDirection, shouldResetKioskRotationAfterSwipe } from "./kioskSlideshowInteraction.ts";
-import { isLockedStandaloneKioskPath, shouldExitLockedStandaloneKioskOnInteraction } from "./standaloneKioskPolicy.ts";
-import { KIOSK_SLIDE_DURATION_MS } from "./kioskConfig.ts";
+import { resolveKioskSwipeDirection, shouldResetKioskRotationAfterSwipe } from "./kioskSlideshowInteraction.js";
+import { isLockedStandaloneKioskPath, shouldExitLockedStandaloneKioskOnInteraction } from "./standaloneKioskPolicy.js";
+import { KIOSK_SLIDE_DURATION_MS } from "./kioskConfig.js";
 
 const standaloneSource = readFileSync(resolve(process.cwd(), "components/os/kiosk/StandaloneDesktopKiosk.tsx"), "utf8");
 
