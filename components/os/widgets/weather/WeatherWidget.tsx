@@ -17,6 +17,8 @@ import WeatherFooter from "./WeatherFooter";
 import WeatherIcon from "@/components/icons/weather/WeatherIcon";
 import mapWeatherCondition from "@/components/icons/weather/mapWeatherCondition";
 import { resolveWeatherKioskScene } from "./weatherScene";
+import KioskSceneIdentity from "../shared/KioskSceneIdentity";
+import { useDeveloperKioskData } from "@/hooks/os/useDeveloperKioskData";
 
 export default function WeatherWidget() {
   const { size, presentation } = useWidgetContext();
@@ -25,14 +27,16 @@ export default function WeatherWidget() {
     loading,
     error,
   } = useWeather();
+  const developer = useDeveloperKioskData();
+  const kioskWeather = developer.data?.weather ?? weather;
   useDashboardWidgetReadiness("weather", loading ? "loading" : error && !weather ? "degraded" : "ready");
   const developmentWeatherOverride = process.env.NODE_ENV !== "production" && presentation === "kiosk" && typeof window !== "undefined"
     ? new URLSearchParams(window.location.search).get("simulate-weather")
     : null;
-  const scene = resolveWeatherKioskScene(weather, developmentWeatherOverride);
+  const scene = resolveWeatherKioskScene(kioskWeather, developmentWeatherOverride);
 
   if (presentation === "kiosk") {
-    return <KioskWeatherScene weather={weather} loading={loading} error={error} scene={scene} />;
+    return <KioskWeatherScene weather={kioskWeather} loading={developer.loading || loading} error={developer.error ?? error} scene={scene} locationLabel={developer.data?.location?.label} />;
   }
 
   return (
@@ -71,7 +75,7 @@ export default function WeatherWidget() {
   );
 }
 
-function KioskWeatherScene({ weather, loading, error, scene }: { weather: WeatherData | null; loading: boolean; error: string | null; scene: ReturnType<typeof resolveWeatherKioskScene> }) {
+function KioskWeatherScene({ weather, loading, error, scene, locationLabel }: { weather: WeatherData | null; loading: boolean; error: string | null; scene: ReturnType<typeof resolveWeatherKioskScene>; locationLabel?: string }) {
   const isDay = scene.id.endsWith("day") || (weather !== null && weather.daylightProgress > 0 && weather.daylightProgress < 100);
   const forecast = weather?.hourlyForecast.slice(0, 5) ?? [];
 
@@ -89,11 +93,12 @@ function KioskWeatherScene({ weather, loading, error, scene }: { weather: Weathe
       imageBlur={0}
     >
       <div className="kiosk-weather-scene relative flex h-full min-h-0 flex-col overflow-hidden px-6 pb-5 pt-7 text-white sm:px-12 sm:pb-8 sm:pt-10">
+        <KioskSceneIdentity sceneLabel="WEATHER" variant="inline" />
         <div className="relative z-10 flex items-start justify-between gap-4">
           <div className="min-w-0">
-            <p className="truncate text-[clamp(.85rem,1.8vw,1.25rem)] font-semibold uppercase tracking-[.18em] text-white/90">{weather?.city ?? "Current conditions"}</p>
+            <p className="truncate text-[clamp(.85rem,1.8vw,1.25rem)] font-semibold uppercase tracking-[.18em] text-white/90">{weather?.city ?? locationLabel ?? "Current conditions"}</p>
             <p className="mt-1 truncate text-[clamp(.68rem,1.25vw,.9rem)] uppercase tracking-[.24em] text-white/65">{weather?.condition ?? (loading ? "Loading conditions" : "Weather unavailable")}</p>
-            {error && weather && <p className="mt-1 text-[.58rem] uppercase tracking-[.18em] text-amber-100/65">Updating when connection returns</p>}
+            {error && weather && <p className="mt-1 text-[.58rem] uppercase tracking-[.18em] text-amber-100/65">Last update may be delayed</p>}
           </div>
           {weather && <WeatherIcon condition={mapWeatherCondition(weather.condition)} isDay={isDay} size={56} />}
         </div>
@@ -128,7 +133,7 @@ function KioskWeatherScene({ weather, loading, error, scene }: { weather: Weathe
               ))}
             </div>
           ) : (
-            <p className="text-center text-[.62rem] uppercase tracking-[.18em] text-white/45">{error ? "Retrying current conditions" : "Forecast will appear when available"}</p>
+            <p className="text-center text-[.62rem] uppercase tracking-[.18em] text-white/45">{error ? "Reconnecting" : "Forecast will appear when available"}</p>
           )}
         </div>
       </div>

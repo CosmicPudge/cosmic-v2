@@ -14,10 +14,12 @@ import SchoolCurrent from "./SchoolCurrent";
 import SchoolAssignments from "./SchoolAssignments";
 import SchoolSchedule from "./SchoolSchedule";
 import SchoolFooter from "./SchoolFooter";
+import { useDeveloperKioskData } from "@/hooks/os/useDeveloperKioskData";
 
 export default function SchoolWidget() {
   const { size, presentation } = useWidgetContext();
   const { data, loading, error, local } = useSchoolData();
+  const developer = useDeveloperKioskData();
   const activeTerm = local.data.terms.find((term) => term.active);
   const activeCourses = local.data.courses.filter((course) => !activeTerm || course.termId === activeTerm.id);
   const activeCourseIds = new Set(activeCourses.map((course) => course.id));
@@ -36,7 +38,16 @@ export default function SchoolWidget() {
   const upcomingClasses = data?.classes
     .filter((schoolClass) => schoolClass.start > now)
     .sort((first, second) => first.start.getTime() - second.start.getTime()) ?? [];
-  if (presentation === "kiosk") return <KioskSceneFrame scene="school" eyebrow="COSMIC • SCHOOL" title={localSchedule.currentClass?.course.name ?? localSchedule.nextClass?.course.name ?? nextClass?.name ?? "No class scheduled."} subtitle={localSchedule.currentClass ? "In progress" : nextClass ? `Next class · ${nextClass.start.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}` : "Academic schedule"}><div className="kiosk-native-scene-details">{dueAssignments[0] && <span>Due · {dueAssignments[0].title}</span>}</div></KioskSceneFrame>;
+  const schoolHasSource = Boolean(data || hasLocalData);
+  const schoolTitle = localSchedule.currentClass?.course.name ?? localSchedule.nextClass?.course.name ?? nextClass?.name ?? (error && !hasLocalData ? "School data unavailable." : schoolHasSource ? "Schedule is clear." : "No schedule connected.");
+  const schoolSubtitle = localSchedule.currentClass ? "In progress" : nextClass ? `Next class · ${nextClass.start.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}` : error && !hasLocalData ? "Cosmic will reconnect automatically." : schoolHasSource ? "No upcoming classes" : "Connect a school source to show your schedule";
+  if (presentation === "kiosk") {
+    if (developer.data) {
+      const assignment = developer.data.school.assignments[0];
+      return <KioskSceneFrame scene="school" eyebrow="COSMIC • SCHOOL" title={assignment?.title ?? (developer.data.school.connected ? "No upcoming assignments" : "School data unavailable")} subtitle={assignment ? `${assignment.course ?? "Assignment"} · Due ${new Date(assignment.due).toLocaleString([], { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}` : developer.data.school.error ?? "Canvas is not configured for this kiosk."}><div className="kiosk-native-scene-details">{developer.data.school.overdueCount > 0 ? <span>{developer.data.school.overdueCount} overdue</span> : <span>{developer.data.school.assignments.length} upcoming assignments</span>}</div></KioskSceneFrame>;
+    }
+    return <KioskSceneFrame scene="school" eyebrow="COSMIC • SCHOOL" title={schoolTitle} subtitle={schoolSubtitle}><div className="kiosk-native-scene-details">{dueAssignments[0] ? <span>Due · {dueAssignments[0].title}</span> : schoolHasSource ? <span>No assignments due soon</span> : null}</div></KioskSceneFrame>;
+  }
   return (
     <Widget
       accent="school"

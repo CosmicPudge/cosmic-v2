@@ -101,9 +101,10 @@ async function requestCalendarSnapshot(scopeId: string): Promise<CalendarSnapsho
 
 interface UseCalendarOptions {
   refreshMs?: number;
+  enabled?: boolean;
 }
 
-export default function useCalendar({ refreshMs = DEFAULT_REFRESH_INTERVAL_MS }: UseCalendarOptions = {}) {
+export default function useCalendar({ refreshMs = DEFAULT_REFRESH_INTERVAL_MS, enabled = true }: UseCalendarOptions = {}) {
   const scope = useCosmicScope();
   const entitlements = usePersonalCapabilities();
   const school = useSchoolData({ enabled: entitlements.features["school.basic"] });
@@ -119,6 +120,7 @@ export default function useCalendar({ refreshMs = DEFAULT_REFRESH_INTERVAL_MS }:
   useEffect(() => {
     let cancelled = false;
 
+    if (!enabled) return () => undefined;
     async function loadCalendar(
       showLoading = false
     ) {
@@ -158,9 +160,10 @@ export default function useCalendar({ refreshMs = DEFAULT_REFRESH_INTERVAL_MS }:
     return () => {
       cancelled = true;
     };
-  }, [school.snapshot, scope.id]);
+  }, [enabled, school.snapshot, scope.id]);
 
   const refresh = useCallback(async () => {
+    if (!enabled) return;
     try {
       let snapshot = await requestCalendarSnapshot(scope.id);
       if (school.snapshot) snapshot = mergeSchoolCalendarSnapshot(snapshot, school.snapshot);
@@ -169,7 +172,7 @@ export default function useCalendar({ refreshMs = DEFAULT_REFRESH_INTERVAL_MS }:
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unknown calendar error");
     }
-  }, [school.snapshot, scope.id]);
+  }, [enabled, school.snapshot, scope.id]);
 
   useVisiblePolling(refresh, refreshMs, { immediate: false });
 

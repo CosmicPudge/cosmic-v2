@@ -3,14 +3,17 @@ import { getSportsSnapshot } from "@/services/sports/snapshot";
 import { kioskBootId, requireAuthenticatedSession } from "@/services/auth/server";
 import { getAccountPreferences } from "@/services/settings/accountPreferences";
 import { referencePreferences } from "@/services/settings/preferences";
+import { isDatabaseConfigured } from "@/services/database/client";
+import { isDeveloperKioskRequest } from "@/services/kiosk/developerKiosk";
 
 function isSportKind(value: string): value is SportKind {
   return value === "mlb" || value === "nfl" || value === "nba" || value === "mls" || value === "f1" || value === "nascar" || value === "college-football";
 }
 
 export async function GET(request: Request) {
-  const account = (await requireAuthenticatedSession(request, { allowDevice: true, bootId: kioskBootId(request) })).account;
-  const preferences = process.env.DATABASE_URL ? await getAccountPreferences(account.id) : referencePreferences;
+  const developerKiosk = isDeveloperKioskRequest(request);
+  const account = developerKiosk ? null : (await requireAuthenticatedSession(request, { allowDevice: true, bootId: kioskBootId(request) })).account;
+  const preferences = account && isDatabaseConfigured() ? await getAccountPreferences(account.id) : referencePreferences;
   const requestedSport = new URL(request.url).searchParams.get("sport");
   if (!requestedSport) {
     return Response.json(await getSportsSnapshot(new Date(), preferences));

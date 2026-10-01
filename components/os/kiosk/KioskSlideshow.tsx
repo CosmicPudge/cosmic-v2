@@ -20,6 +20,7 @@ import type {
 import KioskSlide from "./KioskSlide";
 import { useKioskAmbientFrame } from "./KioskAmbientFrame";
 import KioskSportsOverride from "./KioskSportsOverride";
+import KioskSceneFrame from "@/components/os/widgets/shared/KioskSceneFrame";
 
 import {
   selectKioskLiveEvent,
@@ -143,29 +144,39 @@ function createTestEvent(
   }
 }
 
+type SportsPresentationState = {
+  event: SportsEvent;
+  phase: "entering" | "active" | "exiting";
+};
+
 export default function KioskSlideshow() {
+  const searchParams = useSearchParams();
+  const sponsorDemo = process.env.NODE_ENV !== "production" && searchParams.get("kioskDemo") === "sponsor";
+  return sponsorDemo ? <KioskSponsorDemo /> : <KioskNormalSlideshow />;
+}
+
+function KioskNormalSlideshow() {
   const searchParams = useSearchParams();
   const { setPersistentClockHidden } = useKioskAmbientFrame();
   const { data: entitlements } = useEntitlements();
+  const standaloneDeveloperKiosk = typeof window !== "undefined" && window.location.pathname === "/kiosk";
 
   const { data: sportsData } = useSports({
     refreshMs: (snapshot) => snapshot?.live.length ? 10_000 : 60_000,
   });
 
   const widgets = useMemo(() => {
+    const developerOrder = ["clock", "weather", "calendar", "school", "sports", "music", "notifications", "system"];
     return dashboardWidgets
-      .filter((widget) => (widget.id !== "school" || entitlements.features["school.basic"]) &&
+      .filter((widget) => (standaloneDeveloperKiosk ? developerOrder.includes(widget.id) : (widget.id !== "school" || entitlements.features["school.basic"])) &&
         WIDGET_REGISTRY.some(
           (entry) =>
             entry.id === widget.id &&
             entry.enabled,
         ),
       )
-      .sort(
-        (a, b) =>
-          a.priority - b.priority,
-      );
-  }, [entitlements.features]);
+      .sort((a, b) => standaloneDeveloperKiosk ? developerOrder.indexOf(a.id) - developerOrder.indexOf(b.id) : a.priority - b.priority);
+  }, [entitlements.features, standaloneDeveloperKiosk]);
 
   const testSportParam = searchParams.get("simulate-sport") ?? searchParams.get("kiosk-sport-test");
 
@@ -242,6 +253,9 @@ export default function KioskSlideshow() {
   const [manualPaused, setManualPaused] = useState(false);
   const [holdMusicWhilePlaying, setHoldMusicWhilePlaying] = useState(false);
   const [musicSources, setMusicSources] = useState<Record<string, boolean>>({});
+  // Presentation-only phases keep a sports eligibility refresh from hard-swapping the scene tree.
+  const [sportsPresentation, setSportsPresentation] = useState<SportsPresentationState | null>(null);
+  const sportsPresentationTransitionRef = useRef<number | null>(null);
   const appliedCommandRevisionRef = useRef(0);
   const bootId = searchParams.get("cosmic-boot")?.trim() ?? "";
   const setMusicPlaying = useCallback((source: string, playing: boolean) => {
@@ -263,7 +277,7 @@ export default function KioskSlideshow() {
   const currentWidget = widgets[safeCurrentIndex];
 
   const goToRelativeSlide = useCallback((direction: 1 | -1, resetTimer: boolean) => {
-    if (liveEvent || widgets.length <= 1 || transitionLockRef.current) return false;
+    if (liveEvent || sportsPresentation || widgets.length <= 1 || transitionLockRef.current) return false;
 
     transitionLockRef.current = true;
     setCurrentIndex((current) => {
@@ -281,7 +295,56 @@ export default function KioskSlideshow() {
       transitionTimeoutRef.current = null;
     }, KIOSK_TRANSITION_DURATION_MS);
     return true;
-  }, [liveEvent, widgets.length]);
+  }, [liveEvent, sportsPresentation, widgets.length]);
+
+  useEffect(() => {
+    const syncTimeout = window.setTimeout(() => {
+      if (liveEvent) {
+        setSportsPresentation((current) => {
+          if (!current) return { event: liveEvent, phase: "entering" };
+          if (current.phase === "exiting") return { event: liveEvent, phase: "entering" };
+          return current.event.id === liveEvent.id
+            ? current
+            : { event: liveEvent, phase: current.phase };
+        });
+      } else {
+        setSportsPresentation((current) => {
+          if (!current || current.phase === "exiting") return current;
+          return { ...current, phase: "exiting" };
+        });
+      }
+    }, 0);
+
+    return () => window.clearTimeout(syncTimeout);
+  }, [liveEvent]);
+
+  useEffect(() => {
+    if (!sportsPresentation) return;
+
+    if (sportsPresentationTransitionRef.current !== null) {
+      window.clearTimeout(sportsPresentationTransitionRef.current);
+      sportsPresentationTransitionRef.current = null;
+    }
+
+    if (sportsPresentation.phase === "entering") {
+      sportsPresentationTransitionRef.current = window.setTimeout(() => {
+        setSportsPresentation((current) => current?.phase === "entering" ? { ...current, phase: "active" } : current);
+        sportsPresentationTransitionRef.current = null;
+      }, KIOSK_TRANSITION_DURATION_MS);
+    } else if (sportsPresentation.phase === "exiting") {
+      sportsPresentationTransitionRef.current = window.setTimeout(() => {
+        setSportsPresentation(null);
+        sportsPresentationTransitionRef.current = null;
+      }, KIOSK_TRANSITION_DURATION_MS);
+    }
+
+    return () => {
+      if (sportsPresentationTransitionRef.current !== null) {
+        window.clearTimeout(sportsPresentationTransitionRef.current);
+        sportsPresentationTransitionRef.current = null;
+      }
+    };
+  }, [sportsPresentation]);
 
   useEffect(() => {
     if (liveEvent || paused) {
@@ -317,6 +380,8 @@ export default function KioskSlideshow() {
   useEffect(() => () => {
     if (transitionTimeoutRef.current !== null) window.clearTimeout(transitionTimeoutRef.current);
     transitionTimeoutRef.current = null;
+    if (sportsPresentationTransitionRef.current !== null) window.clearTimeout(sportsPresentationTransitionRef.current);
+    sportsPresentationTransitionRef.current = null;
     transitionLockRef.current = false;
   }, []);
 
@@ -359,7 +424,7 @@ export default function KioskSlideshow() {
   }, [bootId, goToRelativeSlide]);
 
   const handlePointerDown = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
-    if (liveEvent || widgets.length <= 1 || (event.pointerType === "mouse" && event.button !== 0)) return;
+    if (liveEvent || sportsPresentation || widgets.length <= 1 || (event.pointerType === "mouse" && event.button !== 0)) return;
     gestureRef.current = {
       pointerId: event.pointerId,
       startX: event.clientX,
@@ -368,7 +433,7 @@ export default function KioskSlideshow() {
       lastY: event.clientY,
     };
     event.currentTarget.setPointerCapture(event.pointerId);
-  }, [liveEvent, widgets.length]);
+  }, [liveEvent, sportsPresentation, widgets.length]);
 
   const handlePointerMove = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
     const gesture = gestureRef.current;
@@ -391,17 +456,9 @@ export default function KioskSlideshow() {
   }, [goToRelativeSlide]);
 
   useEffect(() => {
-    setPersistentClockHidden(!liveEvent && currentWidget?.id === "clock");
+    setPersistentClockHidden(!liveEvent && !sportsPresentation && currentWidget?.id === "clock");
     return () => setPersistentClockHidden(false);
-  }, [currentWidget?.id, liveEvent, setPersistentClockHidden]);
-
-  if (liveEvent) {
-    return (
-      <KioskSportsOverride
-        event={liveEvent}
-      />
-    );
-  }
+  }, [currentWidget?.id, liveEvent, setPersistentClockHidden, sportsPresentation]);
 
   if (widgets.length === 0) {
     return (
@@ -446,25 +503,140 @@ export default function KioskSlideshow() {
       style={{ touchAction: "pan-y" }}
       aria-label="Cosmic kiosk slideshow"
     >
-      {previousWidget ? (
-        <KioskSlide
-          key={`previous-${previousWidget.id}-${safePreviousIndex}`}
-          widget={previousWidget}
-          active={false}
-          exiting
-        />
-      ) : null}
+      <div className={`kiosk-sports-transition-layer kiosk-sports-transition-normal ${sportsPresentation ? `kiosk-sports-transition-normal-${sportsPresentation.phase}` : ""}`}>
+        {previousWidget ? (
+          <KioskSlide
+            key={`previous-${previousWidget.id}-${safePreviousIndex}`}
+            widget={previousWidget}
+            active={false}
+            exiting
+          />
+        ) : null}
 
-      <KioskSlide
-        key={`current-${currentWidget.id}-${currentIndex}`}
-        widget={currentWidget}
-        active
-        exiting={false}
-      />
+        <KioskSlide
+          key={`current-${currentWidget.id}-${currentIndex}`}
+          widget={currentWidget}
+          active
+          exiting={false}
+        />
+      </div>
+
+      {sportsPresentation ? (
+        <div className={`kiosk-sports-transition-layer kiosk-sports-transition-sports kiosk-sports-transition-sports-${sportsPresentation.phase}`} aria-hidden={sportsPresentation.phase !== "active"}>
+          <KioskSportsOverride event={sportsPresentation.event} />
+        </div>
+      ) : null}
 
       <span className="sr-only" aria-live="polite">Current kiosk scene: {currentWidget.id}</span>
       {paused ? <span className="pointer-events-none absolute right-5 top-5 z-30 rounded-full border border-white/15 bg-black/35 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-white/65 backdrop-blur-sm">Paused</span> : null}
     </div>
     </KioskSlideshowProvider>
   );
+}
+
+type DemoStep =
+  | { id: "clock" | "weather" | "calendar" | "notifications" | "music" | "system"; duration: number }
+  | { id: "sports" | "resilience"; duration: number };
+
+const SPONSOR_DEMO_STEPS: DemoStep[] = [
+  { id: "clock", duration: 10_000 },
+  { id: "weather", duration: 10_000 },
+  { id: "calendar", duration: 10_000 },
+  { id: "notifications", duration: 10_000 },
+  { id: "music", duration: 10_000 },
+  { id: "sports", duration: 10_000 },
+  { id: "system", duration: 10_000 },
+  { id: "resilience", duration: 6_000 },
+  { id: "clock", duration: 10_000 },
+];
+
+function KioskSponsorDemo() {
+  const searchParams = useSearchParams();
+  const { setPersistentClockHidden } = useKioskAmbientFrame();
+  const loop = searchParams.get("loop") === "1";
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [previousIndex, setPreviousIndex] = useState<number | null>(null);
+  const [paused, setPaused] = useState(false);
+  const [completed, setCompleted] = useState(false);
+  const transitionTimeoutRef = useRef<number | null>(null);
+  const steps = SPONSOR_DEMO_STEPS;
+  const currentStep = steps[currentIndex];
+  const previousStep = previousIndex === null ? null : steps[previousIndex];
+  const widgets = useMemo(() => dashboardWidgets.filter((widget) => ["clock", "weather", "calendar", "notifications", "music", "system"].includes(widget.id) && WIDGET_REGISTRY.some((entry) => entry.id === widget.id && entry.enabled)), []);
+  const widgetById = useMemo(() => new Map(widgets.map((widget) => [widget.id, widget])), [widgets]);
+
+  const advance = useCallback(() => {
+    if (paused || completed || transitionTimeoutRef.current !== null) return;
+    const nextIndex = currentIndex + 1;
+    if (nextIndex >= steps.length) {
+      if (loop) {
+        setPreviousIndex(currentIndex);
+        setCurrentIndex(0);
+        transitionTimeoutRef.current = window.setTimeout(() => {
+          setPreviousIndex(null);
+          transitionTimeoutRef.current = null;
+        }, KIOSK_TRANSITION_DURATION_MS);
+      } else {
+        setCompleted(true);
+      }
+      return;
+    }
+    setPreviousIndex(currentIndex);
+    setCurrentIndex(nextIndex);
+    transitionTimeoutRef.current = window.setTimeout(() => {
+      setPreviousIndex(null);
+      transitionTimeoutRef.current = null;
+    }, KIOSK_TRANSITION_DURATION_MS);
+  }, [completed, currentIndex, loop, paused, steps.length]);
+
+  useEffect(() => {
+    if (paused || completed) return;
+    const timer = window.setTimeout(advance, currentStep.duration);
+    return () => window.clearTimeout(timer);
+  }, [advance, completed, currentStep.duration, paused]);
+
+  useEffect(() => () => {
+    if (transitionTimeoutRef.current !== null) window.clearTimeout(transitionTimeoutRef.current);
+  }, []);
+
+  useEffect(() => {
+    setPersistentClockHidden(currentStep.id !== "clock");
+    return () => setPersistentClockHidden(false);
+  }, [currentStep.id, setPersistentClockHidden]);
+
+  const currentWidget = widgetById.get(currentStep.id);
+  const previousWidget = previousStep ? widgetById.get(previousStep.id) : undefined;
+  const control = {
+    currentSlide: currentStep.id,
+    paused,
+    pauseReason: paused ? "manual" as const : null,
+    pause: () => setPaused(true),
+    resume: () => { setPaused(false); setCompleted(false); },
+    togglePause: () => setPaused((value) => !value),
+    setMusicPlaying: () => undefined,
+  };
+
+  return (
+    <KioskSlideshowProvider value={control}>
+      <div className="kiosk-slideshow absolute inset-0 h-[100dvh] w-[100dvw] overflow-hidden" aria-label="Cosmic sponsor presentation">
+        {previousWidget ? <KioskSlide key={`demo-previous-${previousWidget.id}-${previousIndex}`} widget={previousWidget} active={false} exiting /> : null}
+        {currentWidget ? <KioskSlide key={`demo-current-${currentWidget.id}-${currentIndex}`} widget={currentWidget} active exiting={false} /> : null}
+        {previousStep?.id === "sports" ? <div className="kiosk-sports-transition-layer kiosk-sports-transition-sports kiosk-sports-transition-sports-exiting"><KioskSportsOverride event={createTestEvent("nfl")} /></div> : null}
+        {currentStep.id === "sports" ? <div className="kiosk-sports-transition-layer kiosk-sports-transition-sports kiosk-sports-transition-sports-entering"><KioskSportsOverride event={createTestEvent("nfl")} /></div> : null}
+        {previousStep?.id === "resilience" ? <div className="kiosk-demo-transition-layer kiosk-demo-transition-exit"><KioskDemoResilienceScene initiallyRecovered /></div> : null}
+        {currentStep.id === "resilience" ? <div className="kiosk-demo-transition-layer kiosk-demo-transition-enter"><KioskDemoResilienceScene /></div> : null}
+        {completed ? <span className="sr-only" aria-live="polite">Sponsor presentation complete</span> : null}
+      </div>
+    </KioskSlideshowProvider>
+  );
+}
+
+function KioskDemoResilienceScene({ initiallyRecovered = false }: { initiallyRecovered?: boolean }) {
+  const [recovered, setRecovered] = useState(initiallyRecovered);
+  useEffect(() => {
+    if (initiallyRecovered) return;
+    const timer = window.setTimeout(() => setRecovered(true), 2_500);
+    return () => window.clearTimeout(timer);
+  }, [initiallyRecovered]);
+  return <KioskSceneFrame scene="system" eyebrow="COSMIC • SYSTEM" title={recovered ? "Recovered" : "Reconnecting"} subtitle={recovered ? "Display status is current again." : "Cosmic will reconnect automatically."}><div className="kiosk-native-scene-details"><span>{recovered ? "Connection restored" : "Refreshing display state"}</span></div></KioskSceneFrame>;
 }
