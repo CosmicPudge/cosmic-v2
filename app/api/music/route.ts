@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { accountSnapshotWithDiagnostics, personalSnapshotWithDiagnostics } from "@/services/music/spotify";
+import { accountSnapshotWithDiagnostics, developerKioskSnapshotWithDiagnostics, personalSnapshotWithDiagnostics } from "@/services/music/spotify";
 import { musicPlaybackDiagnostics } from "@/services/music/musicDiagnostics";
 import { kioskBootId, requireAuthenticatedSession } from "@/services/auth/server";
 import { isDatabaseConfigured } from "@/services/database/client";
@@ -18,7 +18,7 @@ export async function GET(request: Request) {
   if (isDeveloperKioskRequest(request)) {
     const accountId = process.env.COSMIC_KIOSK_ACCOUNT_ID?.trim();
     if (!accountId) return NextResponse.json({ provider: "spotify", connected: false, capabilities: {}, playback: { playing: false, positionMs: 0, updatedAt: "" }, error: "Developer music account is not configured." }, { headers: { "Cache-Control": "no-store" } });
-    const result = await accountSnapshotWithDiagnostics(accountId);
+    const result = await developerKioskSnapshotWithDiagnostics(accountId);
     return NextResponse.json(result.snapshot, { headers: { "Cache-Control": "private, no-store, no-cache, must-revalidate, max-age=0" } });
   }
   const session = await requireAuthenticatedSession(request, { allowDevice: true, bootId: kioskBootId(request) });

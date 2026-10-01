@@ -8,6 +8,7 @@ import { SubscriptionCalendarProvider } from "./subscriptionCalendarProvider";
 import { TestCalendarProvider } from "./testCalendarProvider";
 import { getCalendarSubscriptions } from "./subscriptionConfig";
 import { getProviderCredentials, listProviderConnections } from "@/services/providers/store";
+import { isDatabaseConfigured } from "@/services/database/client";
 import type { CalendarSubscription } from "./subscriptions";
 
 export interface CalendarCredentialPayload { username: string; password: string; serverUrl: string; defaultCalendarName?: string; }
@@ -75,19 +76,44 @@ export async function getCalendarEngineForRequest(userId?: string, connectionId?
   }
 }
 
-async function createCalendarEngine(userId?: string, connectionId?: string) {
-  const context = userId ? await getAccountCalendarContext(userId, connectionId) : null;
+/**
+ * Dedicated developer kiosk access may use the server's configured Apple
+ * Calendar credentials when the kiosk account has no stored calendar
+ * connection. Normal account and personal calendar paths do not use this
+ * fallback.
+ */
+export async function getDeveloperKioskCalendarEngine(userId?: string) {
+  return createCalendarEngine(userId, undefined, true);
+}
+
+async function createCalendarEngine(userId?: string, connectionId?: string, allowDeveloperKioskFallback = false) {
+  const databaseAvailable = isDatabaseConfigured();
+  const context = userId && databaseAvailable ? await getAccountCalendarContext(userId, connectionId) : null;
   let provider: CalendarProvider | null | undefined = context?.provider;
-  if (!provider && userId) {
+  if (!provider && userId && databaseAvailable) {
     const subscriptions = [...getCalendarSubscriptions(), ...(await getAccountSubscriptions(userId))];
     if (subscriptions.length) provider = new SubscriptionCalendarProvider(subscriptions);
   }
-  if (!provider) provider = process.env.NODE_ENV === "production" ? null : await getDevelopmentProvider();
+  if (!provider) {
+    provider = allowDeveloperKioskFallback
+      ? await getDeveloperKioskProvider(userId)
+      : process.env.NODE_ENV === "production" ? null : await getDevelopmentProvider();
+  }
   if (!provider) return null;
   const engine = new CalendarEngine();
   engine.setProvider(provider);
   await engine.initialize();
   return { engine, context };
+}
+
+async function getDeveloperKioskProvider(userId?: string): Promise<CalendarProvider | null> {
+  const appleConfigured = Boolean(process.env.APPLE_CALENDAR_USERNAME && process.env.APPLE_CALENDAR_PASSWORD);
+  const providers: CalendarProvider[] = [];
+  if (appleConfigured) providers.push(new AppleCalendarProvider({ ownerKey: `developer-kiosk:${userId ?? "default"}` }));
+  const subscriptions = [...getCalendarSubscriptions(), ...(userId && isDatabaseConfigured() ? await getAccountSubscriptions(userId) : [])];
+  if (subscriptions.length) providers.push(new SubscriptionCalendarProvider(subscriptions));
+  if (!providers.length) return null;
+  return providers.length === 1 ? providers[0] : new CombinedCalendarProvider(providers);
 }
 
 async function getDevelopmentProvider(): Promise<CalendarProvider> {

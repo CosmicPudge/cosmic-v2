@@ -1,8 +1,8 @@
 import "server-only";
 
 import { getEnvironment } from "@/engines/environment";
-import { getCalendarEngineForRequest } from "@/services/calendar/accountProvider";
-import { getSchoolDataForAccount } from "@/services/school/server";
+import { getDeveloperKioskCalendarEngine } from "@/services/calendar/accountProvider";
+import { getDeveloperKioskSchoolData } from "@/services/school/server";
 import type { CalendarEvent } from "@/core/contracts";
 
 const DEFAULT_HOST = "dev.cosmicpudge.shop";
@@ -66,7 +66,7 @@ export async function getDeveloperKioskData() {
   }
 
   try {
-    const engine = (await getCalendarEngineForRequest(process.env.COSMIC_KIOSK_ACCOUNT_ID))?.engine;
+    const engine = (await getDeveloperKioskCalendarEngine(process.env.COSMIC_KIOSK_ACCOUNT_ID))?.engine;
     if (engine) {
       const events = await engine.getEvents({ start: now, end });
       result.calendar = { connected: true, events: events.slice(0, MAX_EVENTS).map((event) => boundedEvent(event)) };
@@ -76,7 +76,7 @@ export async function getDeveloperKioskData() {
   const accountId = process.env.COSMIC_KIOSK_ACCOUNT_ID?.trim();
   if (accountId) {
     try {
-      const school = await getSchoolDataForAccount(accountId);
+      const school = await getDeveloperKioskSchoolData(accountId);
       const assignments = school.snapshot.planningAssignments ?? [];
       const upcoming = assignments.filter((item) => item.dueAt && item.completionStatus !== "completed").sort((a, b) => a.dueAt!.getTime() - b.dueAt!.getTime());
       result.school = {

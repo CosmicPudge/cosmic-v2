@@ -34,11 +34,13 @@ export default function NotificationsWidget() {
 function KioskNotificationsScene({ notifications, loading }: { notifications: CosmicNotification[]; loading: boolean }) {
   const primary = notifications[0];
   const secondary = notifications.slice(1, 3);
+  const attention = notifications.some((notification) => !notification.read && notification.importance === "urgent") ? "urgent" : notifications.some((notification) => !notification.read && notification.importance === "important") ? "important" : notifications.length ? "active" : "clear";
   return (
     <Widget accent="notifications" className="kiosk-notifications-widget" contentPadding={false} hover={false} imageOpacity={0} imageBlur={0}>
-      <div className="kiosk-notifications-scene">
+      <div className="kiosk-notifications-scene" data-notification-state={attention}>
         <div className="kiosk-notifications-atmosphere" aria-hidden="true" />
         <div className="kiosk-notifications-orbit" aria-hidden="true" />
+        <div className="kiosk-notifications-data-lines" aria-hidden="true"><span /><span /><span /></div>
         <div className="kiosk-notifications-content">
           <div className="kiosk-notifications-heading">
             <span className="kiosk-notifications-live-dot" aria-hidden="true" />

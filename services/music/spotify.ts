@@ -236,6 +236,26 @@ export async function accountSnapshotWithDiagnostics(userId: string) {
   return result;
 }
 
+/**
+ * Dedicated developer kiosk music is still selected by account ID. In the
+ * local dev environment, the same owner may have its encrypted Spotify
+ * credential in the personal store rather than the database connection store.
+ * That compatibility fallback is kiosk-only and never changes normal account
+ * or personal route behavior.
+ */
+export async function developerKioskSnapshotWithDiagnostics(accountId: string) {
+  let accountResult: Awaited<ReturnType<typeof accountSnapshotWithDiagnostics>>;
+  try {
+    accountResult = await accountSnapshotWithDiagnostics(accountId);
+  } catch (error) {
+    if (process.env.COSMIC_AUTH_MODE?.trim() === "local" && accountId === process.env.COSMIC_OWNER_USER_ID?.trim()) return personalSnapshotWithDiagnostics();
+    throw error;
+  }
+  if (accountResult.snapshot.connected || process.env.COSMIC_AUTH_MODE?.trim() !== "local" || accountId !== process.env.COSMIC_OWNER_USER_ID?.trim()) return accountResult;
+  const personalResult = await personalSnapshotWithDiagnostics();
+  return personalResult.snapshot.connected ? personalResult : accountResult;
+}
+
 export async function personalSnapshotWithDiagnostics() {
   if (!configured()) return { snapshot: disconnected("Spotify is not configured on this server.") };
   try {

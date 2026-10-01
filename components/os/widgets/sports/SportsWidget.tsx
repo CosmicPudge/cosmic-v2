@@ -27,7 +27,7 @@ export default function SportsWidget() {
   const upcoming = data ? prioritizeFollowedEvents(data.upcoming, settings.preferences) : [];
   const standings = data ? Object.values(data.standings).flat() : [];
   useDashboardWidgetReadiness("sports", loading && !data ? "loading" : error && !data ? "degraded" : "ready");
-  if (presentation === "kiosk") return <KioskSceneFrame scene="sports" eyebrow="COSMIC • SPORTS" title={liveOrFeatured?.title ?? (loading ? "Scanning events." : "No live event.")} subtitle={liveOrFeatured ? `${liveOrFeatured.statusDetail ?? liveOrFeatured.status} · ${liveOrFeatured.sport.toUpperCase()}` : "Upcoming games will appear here."} />;
+  if (presentation === "kiosk") return <KioskSceneFrame scene="sports" backgroundState={liveOrFeatured?.status ?? (loading ? "scanning" : "steady")} backgroundVariant={liveOrFeatured?.sport ?? "default"} eyebrow="COSMIC • SPORTS" title={liveOrFeatured?.title ?? (loading ? "Scanning events." : "No live event.")} subtitle={liveOrFeatured ? `${liveOrFeatured.statusDetail ?? liveOrFeatured.status} · ${liveOrFeatured.sport.toUpperCase()}` : "Upcoming games will appear here."} />;
 
   return (
     <Widget

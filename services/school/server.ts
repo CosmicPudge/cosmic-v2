@@ -18,6 +18,7 @@ import { requirementCategory, resolveRequirementDate } from "./requirements";
 import { applyCoursePlanOverrides, buildCoursePlans } from "./coursePlan";
 import { listCoursePlanOverrides } from "./coursePlanOverrideRepository";
 import { canonicalCanvasCalendarId, dedupeSchoolAssignments } from "./assignmentIdentity";
+import { CanvasAcademicProvider } from "./providers/canvas/provider";
 
 const providerAccountId = "canvas-personal-calendar";
 async function safeCoursePlanOverrides(accountId: string) { try { return await listCoursePlanOverrides(accountId); } catch { return []; } }
@@ -125,4 +126,34 @@ export async function getSchoolDataForAccount(accountId: string): Promise<School
 
 export async function getSchoolSnapshotForAccount(accountId: string): Promise<SchoolSnapshot> {
   return (await getSchoolDataForAccount(accountId)).snapshot;
+}
+
+/**
+ * The dedicated developer kiosk may read the existing encrypted Canvas REST
+ * connection live when the legacy calendar-feed path has no data. This is a
+ * read-only kiosk boundary; normal School consumers keep their current path.
+ */
+export async function getDeveloperKioskSchoolData(accountId: string): Promise<SchoolServerData> {
+  const existing = await getSchoolDataForAccount(accountId);
+  if (existing.snapshot.sourceStatus?.canvas === "healthy" || (existing.snapshot.planningAssignments?.length ?? 0) > 0) return existing;
+
+  const connection = (await listProviderConnections(accountId)).find((item) => item.provider === "canvas" && item.providerType === "rest" && item.status === "connected" && !item.reconnectRequired);
+  if (!connection) return existing;
+  const credentials = await getProviderCredentials<{ baseUrl?: unknown; token?: unknown }>(accountId, connection.id);
+  if (typeof credentials?.baseUrl !== "string" || typeof credentials.token !== "string") return existing;
+
+  try {
+    const result = await new CanvasAcademicProvider(credentials.baseUrl, credentials.token).sync(accountId);
+    return {
+      ...existing,
+      snapshot: {
+        ...existing.snapshot,
+        planningAssignments: [...(existing.snapshot.planningAssignments ?? []), ...result.assignments],
+        canvasCourses: result.courses.map(({ startAt, endAt, ...course }) => ({ ...course, ...(startAt ? { startAt: startAt.toISOString() } : {}), ...(endAt ? { endAt: endAt.toISOString() } : {}) })),
+        sourceStatus: { canvas: "healthy", lastSyncedAt: connection.lastSuccessfulRefreshAt?.toISOString() ?? null },
+      },
+    };
+  } catch {
+    return { ...existing, error: "Canvas data is temporarily unavailable." };
+  }
 }

@@ -19,7 +19,8 @@ export default function SystemWidget() {
         ? "Install available"
         : "Ready";
 
-  if (presentation === "kiosk") return <KioskSceneFrame scene="system" eyebrow="COSMIC • SYSTEM" title={snapshot.network.online ? "ONLINE" : "OFFLINE"} subtitle={`${snapshot.device.deviceClass} · ${snapshot.display.profile}`}><div className="kiosk-native-scene-details"><span>{priority}</span><span>{snapshot.install.mode}</span></div></KioskSceneFrame>;
+  const backgroundState = snapshot.network.online ? snapshot.power.effective === "reduced" ? "reduced" : "healthy" : "offline";
+  if (presentation === "kiosk") return <KioskSceneFrame scene="system" backgroundState={backgroundState} eyebrow="COSMIC • SYSTEM" title={snapshot.network.online ? "ONLINE" : "OFFLINE"} subtitle={`${snapshot.device.deviceClass} · ${snapshot.display.profile}`}><div className="kiosk-native-scene-details"><span>{priority}</span><span>{snapshot.install.mode}</span></div></KioskSceneFrame>;
   return <Widget accent="system">
     <WidgetHeader title="System" subtitle={size === "small" ? undefined : `${snapshot.device.deviceClass} · ${snapshot.display.profile}`} action={<Link href="/system" aria-label="Open System" className="rounded-xl p-2 text-white/45 transition hover:bg-white/8 hover:text-white focus-visible:outline-2 focus-visible:outline-cyan-200"><ArrowUpRight size={17} /></Link>} />
     <WidgetBody className={size === "small" ? "gap-2" : "gap-3"}>
