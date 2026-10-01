@@ -33,6 +33,7 @@ import {
 import { KioskSlideshowProvider } from "./KioskSlideshowContext";
 import type { KioskSlideshowPauseReason } from "@/core/contracts/Kiosk";
 import { useEntitlements } from "@/hooks/os/useEntitlements";
+import { resolveKioskSwipeDirection, shouldResetKioskRotationAfterSwipe } from "./kioskSlideshowInteraction";
 
 const TEST_SPORTS: SportKind[] = [
   "nfl",
@@ -287,7 +288,7 @@ function KioskNormalSlideshow() {
       if (process.env.NODE_ENV !== "production") console.info(`[kiosk-swipe] ${direction === 1 ? "left next" : "right previous"}`);
       return to;
     });
-    if (resetTimer) setTimerEpoch((epoch) => epoch + 1);
+    if (resetTimer && shouldResetKioskRotationAfterSwipe()) setTimerEpoch((epoch) => epoch + 1);
     if (transitionTimeoutRef.current !== null) window.clearTimeout(transitionTimeoutRef.current);
     transitionTimeoutRef.current = window.setTimeout(() => {
       setPreviousIndex(null);
@@ -451,8 +452,9 @@ function KioskNormalSlideshow() {
     const deltaX = gesture.lastX - gesture.startX;
     const deltaY = gesture.lastY - gesture.startY;
     const threshold = Math.max(50, window.innerWidth * 0.05);
-    if (Math.abs(deltaX) <= Math.abs(deltaY) || Math.abs(deltaX) < threshold) return;
-    goToRelativeSlide(deltaX < 0 ? 1 : -1, true);
+    const direction = resolveKioskSwipeDirection(deltaX, deltaY, threshold);
+    if (direction === null) return;
+    goToRelativeSlide(direction, true);
   }, [goToRelativeSlide]);
 
   useEffect(() => {
