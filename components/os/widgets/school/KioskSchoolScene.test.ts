@@ -15,3 +15,9 @@ test("connected School always renders the structured content layer", () => {
 test("School uses the shared time-scene stacking wrapper", () => {
   assert.doesNotMatch(source, /className="kiosk-time-scene-main"/);
 });
+
+test("School keeps one identity header and separates the Up Next item from lists", () => {
+  assert.equal((source.match(/sceneLabel="COSMIC • SCHOOL"/g) ?? []).length, 1);
+  assert.match(source, /excludeId=\{next\?\.id\}/);
+  assert.match(source, /formatKioskSchoolAssignment/);
+});
