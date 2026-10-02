@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useId, useMemo, useState, type CSSProperties } from "react";
+import { useEffect, useId, useState, type CSSProperties } from "react";
 
-import type { MusicArtist, MusicTrack, PlaybackMediaType } from "@/core/contracts/Music";
+import type { MusicTrack, PlaybackMediaType } from "@/core/contracts/Music";
 import { useKioskSlideshowControl } from "@/components/os/kiosk/KioskSlideshowContext";
 import { useWidgetContext } from "@/components/os/ui/widget/WidgetContext";
 import Widget from "@/components/os/ui/widget/Widget";
@@ -61,18 +61,14 @@ export default function KioskMusicWidget({ music }: { music: ReturnType<typeof u
 
 function PlayingState({ music, track, provider }: { music: ReturnType<typeof useMusic>; track: MusicTrack; provider: string }) {
   const progress = useTrackProgress(music.playback?.positionMs ?? 0, music.playback?.durationMs ?? track.durationMs, music.playback?.playing ?? false, track.id);
-  const artists = useMemo<MusicArtist[]>(() => (track.artistProfiles?.length ? track.artistProfiles : track.artists.map((name) => ({ name }))).slice(0, 3), [track.artistProfiles, track.artists]);
-  const primaryArtist = artists[0];
   const type = mediaType(track);
-  const spokenType = type === "podcast" || type === "audiobook";
   const titleLabel = type === "podcast" ? "EPISODE" : type === "audiobook" ? "AUDIOBOOK" : "NOW PLAYING";
   const subtitle = type === "podcast" ? track.subtitle : track.artists.join(", ");
   const tertiary = type === "podcast" ? track.tertiaryText : type === "audiobook" ? track.subtitle : track.tertiaryText ?? track.album;
 
   return <div className="kiosk-music-playing">
     <div className="kiosk-music-artist-section">
-      {!spokenType && primaryArtist ? <ArtistPortrait artist={primaryArtist} /> : track.artworkUrl ? <ArtworkPortrait artworkUrl={track.artworkUrl} label={type === "podcast" ? "Podcast artwork" : "Audiobook artwork"} /> : <div className="kiosk-music-artist-placeholder">♫</div>}
-      {!spokenType && artists.length > 1 ? <div className="kiosk-music-supporting-artists">{artists.slice(1).map((artist, index) => <ArtistPortrait key={`${artist.id ?? artist.name}-${index}`} artist={artist} small />)}</div> : null}
+      {track.artworkUrl ? <ArtworkPortrait artworkUrl={track.artworkUrl} label={type === "podcast" ? "Podcast artwork" : type === "audiobook" ? "Audiobook artwork" : "Album artwork"} /> : <div className="kiosk-music-artist-placeholder">♫</div>}
     </div>
     <div className="kiosk-music-details">
       <p className="kiosk-music-status"><span className="kiosk-music-status-badge">{provider} <span aria-hidden="true">•</span> {titleLabel}</span><span className="kiosk-music-play-state">{music.playback?.playing ? "PLAYING" : "PAUSED"}</span></p>
@@ -93,11 +89,6 @@ function StatusState({ state, provider }: { state: Exclude<KioskMusicState, "tra
   const title = state === "podcast-detected" ? "Podcast playback detected" : state === "playback-detected" ? "Playback detected" : state === "error" ? "Music temporarily unavailable" : state === "idle" ? "Nothing is playing" : "No music service connected";
   const detail = state === "podcast-detected" ? `${provider} is active; episode details are not available yet.` : state === "playback-detected" ? `${provider} is active, but track details are not available yet.` : state === "error" ? "Cosmic will reconnect automatically." : state === "idle" ? "Start playing something on Spotify." : "Connect a music service from Cosmic Account Settings.";
   return <div className="kiosk-music-status-state">{provider === "Spotify" ? <img className="kiosk-music-provider-logo" src="/kiosk/brands/spotify.svg" alt="Spotify" draggable={false} /> : <div className="kiosk-music-mark">♫</div>}<p className="kiosk-music-status">{provider}</p><h1>{title}</h1><p>{detail}</p></div>;
-}
-
-function ArtistPortrait({ artist, small = false }: { artist: MusicArtist; small?: boolean }) {
-  const initials = artist.name.split(/\s+/).map((part) => part[0]).filter(Boolean).slice(0, 2).join("").toUpperCase();
-  return <div className={small ? "kiosk-music-artist-portrait kiosk-music-artist-portrait-small" : "kiosk-music-artist-portrait"}>{artist.imageUrl ? <img src={artist.imageUrl} alt={`${artist.name} profile`} draggable={false} onError={(event) => { event.currentTarget.style.display = "none"; }} /> : <span>{initials}</span>}</div>;
 }
 
 function ProgressBar({ progress, duration }: { progress: number; duration: number }) {

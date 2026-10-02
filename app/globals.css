@@ -349,7 +349,9 @@ html, body { width: 100%; min-height: 100%; background: #030511; }
 .kiosk-notifications-item-meta { display: flex; justify-content: space-between; gap: .75rem; color: rgba(196,181,253,.8); font-size: clamp(.52rem, .85vw, .68rem); font-weight: 700; letter-spacing: .16em; text-transform: uppercase; }
 .kiosk-notifications-icon { display: grid; place-items: center; width: clamp(5rem, 12vw, 7rem); height: clamp(5rem, 12vw, 7rem); border: 1px solid rgba(167,139,250,.25); border-radius: 1.75rem; background: rgba(21,17,51,.48); box-shadow: 0 18px 50px rgba(0,0,0,.28), 0 0 46px rgba(99,102,241,.12); }
 .kiosk-notifications-eyebrow { margin: clamp(1rem, 2vw, 1.5rem) 0 0; color: rgba(196,181,253,.78); font-size: clamp(.6rem, 1vw, .78rem); font-weight: 700; letter-spacing: .24em; text-transform: uppercase; }
-.kiosk-notifications-empty h1 { margin: .5rem 0 0; color: rgba(248,250,252,.96); font-size: clamp(2.2rem, 6vw, 5rem); font-weight: 650; letter-spacing: -.04em; line-height: .95; text-shadow: 0 2px 14px rgba(0,0,0,.65); }
+.kiosk-notifications-empty h1 { margin: .5rem 0 0; color: rgba(255,255,255,.99); font-size: clamp(2.6rem, 7vw, 5.6rem); font-weight: 700; letter-spacing: -.04em; line-height: .95; text-shadow: 0 3px 18px rgba(0,0,0,.7); }
+.kiosk-notifications-scene[data-notification-state="clear"] { background: #0d1430; }
+.kiosk-notifications-scene[data-notification-state="clear"] .kiosk-scene-background-shade { background: linear-gradient(90deg, rgba(20,20,58,.38), rgba(11,15,42,.12) 62%, rgba(8,10,28,.3)); }
 .kiosk-notifications-description { max-width: 30rem; margin: .9rem 0 0; color: rgba(226,232,240,.65); font-size: clamp(.78rem, 1.45vw, 1.05rem); line-height: 1.5; }
 .kiosk-notifications-footer { align-self: center; color: rgba(165,180,252,.42); font-size: clamp(.52rem, .8vw, .66rem); letter-spacing: .2em; text-transform: uppercase; }
 
@@ -408,6 +410,12 @@ html, body { width: 100%; min-height: 100%; background: #030511; }
 .kiosk-time-scene-muted, .kiosk-time-scene-empty { margin-top: .6rem; color: rgba(226,232,240,.56); font-size: .78rem; }
 .kiosk-time-scene-empty-state { position: relative; z-index: 1; display: grid; flex: 1; place-content: center; text-align: center; color: rgba(248,250,252,.9); font-size: 1.35rem; text-transform: uppercase; }
 .kiosk-time-scene-empty-state span { margin-top: .4rem; color: rgba(226,232,240,.56); font-size: .78rem; text-transform: none; }
+.kiosk-calendar-scene .kiosk-time-scene-grid { gap: clamp(.8rem, 1.8vw, 1.8rem); }
+.kiosk-calendar-scene .kiosk-time-scene-label, .kiosk-calendar-scene .kiosk-time-scene-day-label { font-size: clamp(.68rem, 1vw, .9rem); }
+.kiosk-calendar-scene .kiosk-time-scene-row { gap: 1rem; padding: .68rem .85rem; border-color: rgba(186,230,253,.28); background: rgba(2,6,23,.52); }
+.kiosk-calendar-scene .kiosk-time-scene-row-title { font-size: clamp(.82rem, 1.2vw, 1.02rem); color: rgba(255,255,255,.96); }
+.kiosk-calendar-scene .kiosk-time-scene-row-meta { font-size: clamp(.68rem, .95vw, .82rem); color: rgba(226,232,240,.72); }
+.kiosk-calendar-scene .kiosk-time-scene-row-time { font-size: clamp(.68rem, .95vw, .84rem); color: rgba(165,243,252,.94); }
 .kiosk-system-status-layout { display: flex; align-items: center; gap: clamp(2rem, 8vw, 8rem); margin-top: clamp(1.5rem, 4vw, 3.5rem); }
 .kiosk-system-status-grid { display: grid; grid-template-columns: repeat(3, minmax(7rem, 1fr)); gap: .7rem; max-width: 32rem; }
 .kiosk-system-status-grid > div { min-width: 0; border-left: 1px solid rgba(103,232,249,.42); padding: .3rem .8rem; }
@@ -424,11 +432,11 @@ html, body { width: 100%; min-height: 100%; background: #030511; }
   .kiosk-time-scene-grid { grid-template-columns: 1fr; overflow: auto; }
   .kiosk-time-scene-hero { min-height: 10rem; }
 }
-.kiosk-sports-matchup { display: flex; max-width: min(64rem, 82vw); flex-direction: column; gap: .08em; font-size: clamp(2.15rem, 6.8vw, 6.8rem); line-height: .9; letter-spacing: -.055em; }
+.kiosk-sports-matchup { display: flex; max-width: min(64rem, 82vw); flex-direction: column; gap: .18em; font-size: clamp(1.9rem, 5.8vw, 5.6rem); line-height: .94; letter-spacing: -.045em; }
 .kiosk-sports-matchup > span:first-child { color: rgba(248,250,252,.9); }
 .kiosk-sports-matchup > span:last-child { color: #f5d38a; }
-.kiosk-sports-at { margin: .22em 0 .16em; color: rgba(165,243,252,.7); font-size: .24em; font-weight: 750; letter-spacing: .24em; line-height: 1; text-transform: uppercase; }
-.kiosk-sports-meta { display: inline-flex; flex-wrap: wrap; align-items: center; gap: .5rem; color: rgba(226,232,240,.86); font-size: clamp(.72rem, 1.3vw, 1rem); font-weight: 650; letter-spacing: .14em; text-transform: uppercase; }
+.kiosk-sports-at { margin: .36em 0 .28em; color: rgba(186,230,253,.88); font-size: .24em; font-weight: 750; letter-spacing: .3em; line-height: 1; text-transform: uppercase; }
+.kiosk-sports-meta { display: inline-flex; flex-wrap: wrap; align-items: center; gap: .65rem; color: rgba(248,250,252,.94); font-size: clamp(.78rem, 1.4vw, 1.08rem); font-weight: 650; letter-spacing: .12em; text-shadow: 0 2px 10px rgba(0,0,0,.72); text-transform: uppercase; }
 
 @media (orientation: landscape) and (max-height: 560px) {
   .kiosk-notifications-content { padding: .75rem 1rem; }
@@ -1068,9 +1076,9 @@ html[data-cosmic-reduced-effects="true"] *::after {
 .kiosk-music-status { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin: 0; color: var(--kiosk-music-accent); font-size: clamp(.58rem, 1vw, .78rem); font-weight: 700; letter-spacing: .16em; text-transform: uppercase; text-shadow: 0 2px 8px rgba(0,0,0,.78); }
 .kiosk-music-status-badge { display: inline-flex; align-items: center; gap: .35rem; padding: .3rem .55rem; border: 1px solid color-mix(in srgb, var(--kiosk-music-accent) 42%, rgba(255,255,255,.2)); border-radius: 999px; background: rgba(2,6,23,.56); backdrop-filter: blur(8px); }
 .kiosk-music-play-state { color: rgba(255,255,255,.78); }
-.kiosk-music-details h1, .kiosk-music-status-state h1 { margin: clamp(.7rem, 1.5vw, 1.25rem) 0 0; color: rgba(255,255,255,.98); font-size: clamp(1.65rem, 4.8vw, 5rem); font-weight: 650; line-height: .98; letter-spacing: -.035em; overflow-wrap: anywhere; text-shadow: 0 2px 12px rgba(0,0,0,.88); }
-.kiosk-music-artists { min-width: 0; margin: clamp(.8rem, 1.8vw, 1.35rem) 0 0; color: rgba(255,255,255,.94); font-size: clamp(.95rem, 2.1vw, 1.55rem); line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-shadow: 0 2px 8px rgba(0,0,0,.78); }
-.kiosk-music-album { margin: .55rem 0 0; color: rgba(255,255,255,.72); font-size: clamp(.7rem, 1.25vw, 1rem); letter-spacing: .14em; text-transform: uppercase; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-shadow: 0 2px 7px rgba(0,0,0,.8); }
+.kiosk-music-details h1, .kiosk-music-status-state h1 { display: -webkit-box; max-width: 38rem; margin: clamp(.7rem, 1.5vw, 1.25rem) 0 0; color: rgba(255,255,255,.98); font-size: clamp(1.65rem, 4.8vw, 5rem); font-weight: 650; line-height: 1.02; letter-spacing: -.035em; overflow: hidden; overflow-wrap: anywhere; text-shadow: 0 2px 12px rgba(0,0,0,.88); -webkit-box-orient: vertical; -webkit-line-clamp: 3; }
+.kiosk-music-artists { min-width: 0; margin: clamp(.8rem, 1.8vw, 1.35rem) 0 0; color: rgba(255,255,255,.94); font-size: clamp(.95rem, 2.1vw, 1.55rem); line-height: 1.2; overflow-wrap: anywhere; text-shadow: 0 2px 8px rgba(0,0,0,.78); }
+.kiosk-music-album { margin: .55rem 0 0; color: rgba(255,255,255,.78); font-size: clamp(.7rem, 1.25vw, 1rem); letter-spacing: .14em; overflow-wrap: anywhere; text-transform: uppercase; text-shadow: 0 2px 7px rgba(0,0,0,.8); }
 .kiosk-music-progress { max-width: 34rem; margin-top: clamp(1.25rem, 3vw, 2.5rem); }
 .kiosk-music-progress-track { width: 100%; height: .3rem; overflow: hidden; border-radius: 99px; background: rgba(255,255,255,.2); }
 .kiosk-music-progress-track span { display: block; height: 100%; border-radius: inherit; background: var(--kiosk-music-accent); }
