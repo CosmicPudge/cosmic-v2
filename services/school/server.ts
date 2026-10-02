@@ -20,6 +20,7 @@ import { listCoursePlanOverrides } from "./coursePlanOverrideRepository";
 import { canonicalCanvasCalendarId, dedupeSchoolAssignments } from "./assignmentIdentity";
 import { CanvasAcademicProvider, canvasErrorStatus } from "./providers/canvas/provider";
 import { fetchKioskCanvasIcal } from "@/services/kiosk/icalFallback";
+import { resolveDeveloperKioskSchoolSources } from "./developerKioskSourceResolution";
 
 const providerAccountId = "canvas-personal-calendar";
 async function safeCoursePlanOverrides(accountId: string) { try { return await listCoursePlanOverrides(accountId); } catch { return []; } }
@@ -93,6 +94,10 @@ export interface SchoolServerData {
   error?: string;
   errorCategory?: "configuration-error" | "authentication-error" | "provider-error" | "parse-error";
   kioskSource?: "account-provider" | "kiosk-canvas-ical";
+  accountProviderSucceeded?: boolean;
+  canvasIcalConfigured?: boolean;
+  canvasIcalAttempted?: boolean;
+  canvasIcalSucceeded?: boolean;
 }
 
 /** Server-side School boundary. Consumers receive normalized data only. */
@@ -137,43 +142,37 @@ export async function getSchoolSnapshotForAccount(accountId: string): Promise<Sc
  * read-only kiosk boundary; normal School consumers keep their current path.
  */
 export async function getDeveloperKioskSchoolData(accountId: string): Promise<SchoolServerData> {
-  const connection = (await listProviderConnections(accountId)).find((item) => item.provider === "canvas" && item.providerType === "rest" && item.status === "connected" && !item.reconnectRequired);
-  const existing = await getSchoolDataForAccount(accountId);
-  if (existing.snapshot.sourceStatus?.canvas === "healthy" || (existing.snapshot.planningAssignments?.length ?? 0) > 0) return { ...existing, kioskSource: "account-provider" };
-
-  let providerResult = existing;
-  if (connection) {
-    const credentials = await getProviderCredentials<{ baseUrl?: unknown; token?: unknown }>(accountId, connection.id);
-    if (typeof credentials?.baseUrl === "string" && typeof credentials.token === "string") {
+  const feedUrl = process.env.COSMIC_KIOSK_CANVAS_ICAL_URL?.trim();
+  let providerResult: SchoolServerData | undefined;
+  const resolution = await resolveDeveloperKioskSchoolSources({
+    canvasIcalConfigured: Boolean(feedUrl),
+    accountProvider: async () => {
+      let existing: SchoolServerData;
+      try { existing = await getSchoolDataForAccount(accountId); }
+      catch { existing = { data: buildDashboard([]), snapshot: { courses: [], assignments: [], events: [], actionItems: [], facts: [], notes: [], topics: [], requirements: [], importantFacts: [], sources: [], updatedAt: new Date().toISOString(), sourceStatus: { canvas: "error" }, sourceIntelligence: emptySchoolSourceIntelligence() }, error: "Canvas data is temporarily unavailable.", errorCategory: "provider-error" }; }
+      providerResult = existing.error && !existing.errorCategory ? { ...existing, errorCategory: "provider-error" } : existing;
+      const connection = (await listProviderConnections(accountId)).find((item) => item.provider === "canvas" && item.providerType === "rest" && item.status === "connected" && !item.reconnectRequired);
+      if (existing.snapshot.sourceStatus?.canvas === "healthy" && !existing.error) return { ...existing, kioskSource: "account-provider" };
+      if (!connection) return providerResult;
       try {
+        const credentials = await getProviderCredentials<{ baseUrl?: unknown; token?: unknown }>(accountId, connection.id);
+        if (typeof credentials?.baseUrl !== "string" || typeof credentials.token !== "string") return providerResult = { ...providerResult, error: "Canvas credentials are unavailable.", errorCategory: "configuration-error" };
         const result = await new CanvasAcademicProvider(credentials.baseUrl, credentials.token).sync(accountId);
-        return {
-          ...existing,
-          kioskSource: "account-provider",
-          snapshot: {
-            ...existing.snapshot,
-            planningAssignments: [...(existing.snapshot.planningAssignments ?? []), ...result.assignments],
-            canvasCourses: result.courses.map(({ startAt, endAt, ...course }) => ({ ...course, ...(startAt ? { startAt: startAt.toISOString() } : {}), ...(endAt ? { endAt: endAt.toISOString() } : {}) })),
-            sourceStatus: { canvas: "healthy", lastSyncedAt: connection.lastSuccessfulRefreshAt?.toISOString() ?? null },
-          },
-        };
+        return providerResult = { ...existing, kioskSource: "account-provider", snapshot: { ...existing.snapshot, planningAssignments: [...(existing.snapshot.planningAssignments ?? []), ...result.assignments], canvasCourses: result.courses.map(({ startAt, endAt, ...course }) => ({ ...course, ...(startAt ? { startAt: startAt.toISOString() } : {}), ...(endAt ? { endAt: endAt.toISOString() } : {}) })), sourceStatus: { canvas: "healthy", lastSyncedAt: connection.lastSuccessfulRefreshAt?.toISOString() ?? null } } };
       } catch (error) {
         const status = canvasErrorStatus(error);
-        providerResult = { ...existing, error: "Canvas data is temporarily unavailable.", errorCategory: status === "invalid_token" || status === "forbidden" ? "authentication-error" : "provider-error" };
+        return providerResult = { ...providerResult, error: "Canvas data is temporarily unavailable.", errorCategory: status === "invalid_token" || status === "forbidden" ? "authentication-error" : "provider-error" };
       }
-    } else {
-      providerResult = { ...existing, error: "Canvas credentials are unavailable.", errorCategory: "configuration-error" };
-    }
-  }
-
-  const feedUrl = process.env.COSMIC_KIOSK_CANVAS_ICAL_URL?.trim();
-  if (!feedUrl) return providerResult;
-  try {
-    const fallback = await fetchKioskCanvasIcal(feedUrl);
-    if (fallback.parsedEvents === 0) return { ...providerResult, error: "Canvas calendar feed contained no events.", errorCategory: "parse-error", kioskSource: "kiosk-canvas-ical" };
-    const snapshot = withPlanning(accountId, { ...providerResult.snapshot, sourceStatus: { canvas: "healthy", lastSyncedAt: new Date().toISOString() } }, fallback.data, [], []);
-    return { ...providerResult, data: fallback.data, snapshot, error: undefined, errorCategory: undefined, kioskSource: "kiosk-canvas-ical" };
-  } catch (error) {
-    return { ...providerResult, error: "Canvas calendar feed is temporarily unavailable.", errorCategory: error instanceof SyntaxError ? "parse-error" : "provider-error", kioskSource: "kiosk-canvas-ical" };
-  }
+    },
+    accountProviderUsable: (value) => value.snapshot.sourceStatus?.canvas === "healthy" && !value.error,
+    canvasIcalProvider: async () => {
+      if (!feedUrl) throw new Error("Canvas iCal is not configured.");
+      const fallback = await fetchKioskCanvasIcal(feedUrl);
+      if (fallback.parsedEvents === 0) throw new SyntaxError("Canvas calendar feed contained no events.");
+      const base = providerResult ?? { data: buildDashboard([]), snapshot: { courses: [], assignments: [], events: [], actionItems: [], facts: [], notes: [], topics: [], requirements: [], importantFacts: [], sources: [], updatedAt: new Date().toISOString(), sourceStatus: { canvas: "error" }, sourceIntelligence: emptySchoolSourceIntelligence() } };
+      return { ...base, data: fallback.data, snapshot: withPlanning(accountId, { ...base.snapshot, sourceStatus: { canvas: "healthy", lastSyncedAt: new Date().toISOString() } }, fallback.data, [], []), error: undefined, errorCategory: undefined, kioskSource: "kiosk-canvas-ical" };
+    },
+  });
+  const value = resolution.value ?? providerResult ?? { data: buildDashboard([]), snapshot: { courses: [], assignments: [], events: [], actionItems: [], facts: [], notes: [], topics: [], requirements: [], importantFacts: [], sources: [], updatedAt: new Date().toISOString(), sourceStatus: { canvas: "error" }, sourceIntelligence: emptySchoolSourceIntelligence() }, error: "Canvas data is temporarily unavailable.", errorCategory: "provider-error" };
+  return { ...value, kioskSource: resolution.source, accountProviderSucceeded: resolution.accountProviderSucceeded, canvasIcalConfigured: resolution.canvasIcalConfigured, canvasIcalAttempted: resolution.canvasIcalAttempted, canvasIcalSucceeded: resolution.canvasIcalSucceeded };
 }

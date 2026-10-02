@@ -17,6 +17,10 @@ export type KioskProviderDiagnostic = {
   source?: "account-provider" | "kiosk-ical" | "kiosk-canvas-ical";
   feedCount?: number;
   connectionType?: string;
+  accountProviderSucceeded?: boolean;
+  canvasIcalConfigured?: boolean;
+  canvasIcalAttempted?: boolean;
+  canvasIcalSucceeded?: boolean;
 };
 
 function providerErrorCategory(error: unknown): KioskProviderDiagnostic["category"] {
@@ -111,14 +115,14 @@ export async function getDeveloperKioskData() {
       const overdueCount = upcoming.filter((item) => item.dueAt! < now).length;
       const urgentHours = Math.max(1, Number(process.env.COSMIC_KIOSK_SCHOOL_URGENT_HOURS ?? 24));
       const nextDue = upcoming[0]?.dueAt;
-      const connected = school.snapshot.sourceStatus?.canvas !== "not_connected";
+      const connected = !school.error && school.snapshot.sourceStatus?.canvas === "healthy";
       result.school = {
         connected,
         assignments: upcoming.slice(0, MAX_ASSIGNMENTS).map((item) => ({ id: item.id.slice(0, 160), title: item.title.slice(0, 240), due: item.dueAt!.toISOString(), ...(item.courseName ? { course: item.courseName.slice(0, 120) } : {}), completed: item.completionStatus === "completed" })),
         overdueCount,
         sceneState: overdueCount > 0 ? "overdue" : nextDue && nextDue.getTime() - now.getTime() <= urgentHours * 60 * 60 * 1000 ? "urgent" : nextDue ? "upcoming" : "clear",
         ...(school.error ? { error: "School data temporarily unavailable." } : {}),
-        diagnostics: { category: school.errorCategory ?? (connected ? "connected" : "provider-not-found"), configured: true, accountMatched: true, source: school.kioskSource ?? "account-provider", ...(connected ? { connectionType: "canvas-rest-or-calendar" } : {}) },
+        diagnostics: { category: school.errorCategory ?? (connected ? "connected" : "provider-not-found"), configured: true, accountMatched: true, source: school.kioskSource ?? "account-provider", ...(connected ? { connectionType: "canvas-rest-or-calendar" } : {}), accountProviderSucceeded: school.accountProviderSucceeded ?? false, canvasIcalConfigured: school.canvasIcalConfigured ?? false, canvasIcalAttempted: school.canvasIcalAttempted ?? false, canvasIcalSucceeded: school.canvasIcalSucceeded ?? false },
       };
     } catch (error) { result.school = { assignments: [], overdueCount: 0, sceneState: "unavailable", connected: false, error: "School data temporarily unavailable.", diagnostics: { category: providerErrorCategory(error), configured: true, accountMatched: true, source: "account-provider" } }; }
   }
