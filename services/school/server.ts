@@ -134,13 +134,12 @@ export async function getSchoolSnapshotForAccount(accountId: string): Promise<Sc
  * read-only kiosk boundary; normal School consumers keep their current path.
  */
 export async function getDeveloperKioskSchoolData(accountId: string): Promise<SchoolServerData> {
+  const connection = (await listProviderConnections(accountId)).find((item) => item.provider === "canvas" && item.providerType === "rest" && item.status === "connected" && !item.reconnectRequired);
   const existing = await getSchoolDataForAccount(accountId);
   if (existing.snapshot.sourceStatus?.canvas === "healthy" || (existing.snapshot.planningAssignments?.length ?? 0) > 0) return existing;
-
-  const connection = (await listProviderConnections(accountId)).find((item) => item.provider === "canvas" && item.providerType === "rest" && item.status === "connected" && !item.reconnectRequired);
   if (!connection) return existing;
   const credentials = await getProviderCredentials<{ baseUrl?: unknown; token?: unknown }>(accountId, connection.id);
-  if (typeof credentials?.baseUrl !== "string" || typeof credentials.token !== "string") return existing;
+  if (typeof credentials?.baseUrl !== "string" || typeof credentials.token !== "string") return { ...existing, error: "Canvas credentials are unavailable." };
 
   try {
     const result = await new CanvasAcademicProvider(credentials.baseUrl, credentials.token).sync(accountId);

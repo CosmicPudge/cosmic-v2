@@ -248,10 +248,10 @@ export async function developerKioskSnapshotWithDiagnostics(accountId: string) {
   try {
     accountResult = await accountSnapshotWithDiagnostics(accountId);
   } catch (error) {
-    if (process.env.COSMIC_AUTH_MODE?.trim() === "local" && accountId === process.env.COSMIC_OWNER_USER_ID?.trim()) return personalSnapshotWithDiagnostics();
+    if (accountId === process.env.COSMIC_OWNER_USER_ID?.trim()) return personalSnapshotWithDiagnostics();
     throw error;
   }
-  if (accountResult.snapshot.connected || process.env.COSMIC_AUTH_MODE?.trim() !== "local" || accountId !== process.env.COSMIC_OWNER_USER_ID?.trim()) return accountResult;
+  if (accountResult.snapshot.connected || accountId !== process.env.COSMIC_OWNER_USER_ID?.trim()) return accountResult;
   const personalResult = await personalSnapshotWithDiagnostics();
   return personalResult.snapshot.connected ? personalResult : accountResult;
 }
