@@ -4,6 +4,7 @@ import { getEnvironment } from "@/engines/environment";
 import { getDeveloperKioskCalendarEngine } from "@/services/calendar/accountProvider";
 import { fetchKioskCalendarIcalFeeds } from "@/services/kiosk/icalFallback";
 import { getDeveloperKioskSchoolData } from "@/services/school/server";
+import { isAssignmentActiveForPlanning } from "@/services/school/planning";
 import type { CalendarEvent } from "@/core/contracts";
 
 const DEFAULT_HOST = "dev.cosmicpudge.shop";
@@ -111,7 +112,7 @@ export async function getDeveloperKioskData() {
     try {
       const school = await getDeveloperKioskSchoolData(accountId);
       const schoolUsesIcal = school.kioskSource === "kiosk-canvas-ical";
-      const assignments = (school.snapshot.planningAssignments ?? []).filter((item) => !schoolUsesIcal || (item.dueAt && item.dueAt >= now));
+      const assignments = (school.snapshot.planningAssignments ?? []).filter((item) => isAssignmentActiveForPlanning(item) && (!schoolUsesIcal || (item.dueAt && item.dueAt >= now)));
       const upcoming = assignments.filter((item) => item.dueAt && item.completionStatus !== "completed").sort((a, b) => a.dueAt!.getTime() - b.dueAt!.getTime());
       const overdueCount = schoolUsesIcal ? 0 : upcoming.filter((item) => item.dueAt! < now).length;
       const urgentHours = Math.max(1, Number(process.env.COSMIC_KIOSK_SCHOOL_URGENT_HOURS ?? 24));

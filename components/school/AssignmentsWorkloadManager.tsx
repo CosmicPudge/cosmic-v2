@@ -15,13 +15,14 @@ import { isAssignmentActiveForPlanning, safeSchoolDate } from "@/services/school
 import { useSchool } from "./context/SchoolDataContext";
 import { AssignmentForm } from "./SchoolCrudViews";
 import { SchoolConfirm } from "./SchoolModal";
+import { readSchoolCompletionOverrides, setSchoolCompletionOverride } from "@/services/school/completionOverrides";
 
 const panel = "rounded-[1.35rem] border border-white/[0.09] bg-[#101c35]/75";
 type Group = "needsAttention" | "dueSoon" | "later" | "undated" | "completed";
 const groupLabels: Record<Group, string> = { needsAttention: "Needs Attention", dueSoon: "Due Soon", later: "Later", undated: "No Due Date", completed: "Completed" };
 const groupOrder: Group[] = ["needsAttention", "dueSoon", "later", "undated", "completed"];
 
-function done(item: SchoolPlanningAssignment) { return !isAssignmentActiveForPlanning(item); }
+function done(item: SchoolPlanningAssignment, overrides: Set<string>) { return !isAssignmentActiveForPlanning(item) || overrides.has(item.id); }
 function dueText(value: Date | string | undefined) {
   const date = safeSchoolDate(value);
   if (!date) return "No due date";
@@ -45,6 +46,7 @@ export function AssignmentsWorkloadManager({ requestedCourseId }: { requestedCou
   const [search, setSearch] = useState("");
   const [editing, setEditing] = useState<Assignment | null | undefined>();
   const [deleting, setDeleting] = useState<Assignment | null>(null);
+  const [completionOverrides, setCompletionOverrides] = useState<Set<string>>(() => readSchoolCompletionOverrides());
   const now = new Date();
   const courses = local.data.courses;
   const catalog = buildSchoolCourseCatalog(courses, local.data.terms, snapshot?.canvasCourses ?? []);
@@ -53,7 +55,7 @@ export function AssignmentsWorkloadManager({ requestedCourseId }: { requestedCou
   const allAssignments = dedupeSchoolAssignments([...toLocalPlanning(local.data.assignments, courses), ...(snapshot?.planningAssignments ?? [])]);
   const workload = buildAssignmentWorkload({ assignments: allAssignments, catalog, courses, filters: { courseId: courseFilter === "all" ? undefined : courseFilter, status: statusFilter, source: sourceFilter, search }, now });
   const localById = new Map(local.data.assignments.map((item) => [`manual:${item.id}`, item]));
-  const activeCount = allAssignments.filter((item) => !done(item)).length;
+  const activeCount = allAssignments.filter((item) => !done(item, completionOverrides)).length;
 
   return <div className="space-y-5">
     <header className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
@@ -80,8 +82,8 @@ export function AssignmentsWorkloadManager({ requestedCourseId }: { requestedCou
           const identity = workload.resolvedCourseById.get(item.id);
           const unresolvedCourse = !identity && (item.courseId || item.courseName);
           return <article key={item.id} className="flex flex-wrap items-center gap-3 border-b border-white/[0.07] px-4 py-3 last:border-0">
-            <button type="button" disabled={!localItem} aria-label={done(item) ? `Reopen ${item.title}` : `Mark ${item.title} complete`} title={localItem ? undefined : "Provider assignments are read-only"} onClick={() => localItem && local.saveAssignment({ ...localItem, status: done(item) ? "upcoming" : "completed" })} className={`grid size-8 shrink-0 place-items-center rounded-xl ${done(item) ? "bg-emerald-300/10 text-emerald-200" : "bg-white/[0.04] text-white/35"}`}><CheckCircle2 className="size-4" /></button>
-            <div className="min-w-0 flex-1 basis-40"><Link href={assignmentDetailHref(item.id)} className={`block truncate text-sm hover:text-white ${done(item) ? "text-white/45 line-through" : "text-white/85"}`}>{item.title}</Link><div className="mt-1 flex flex-wrap items-center gap-x-2 text-xs text-white/40"><span>{identity ? <Link href={`/school/courses/${encodeURIComponent(identity.id)}`} className="hover:text-sky-100">{identity.code ? `${identity.code} · ` : ""}{identity.name}</Link> : unresolvedCourse ? item.courseName ?? "Unmatched course" : "No course linked"}</span><span>· {sourceName(item)}</span><span>· {assignmentWorkloadLabel(item, now)}</span></div></div>
+            <button type="button" aria-label={done(item, completionOverrides) ? `Reopen ${item.title}` : `Mark ${item.title} complete`} onClick={() => { const next = !done(item, completionOverrides); if (localItem) local.saveAssignment({ ...localItem, status: next ? "completed" : "upcoming" }); else { setSchoolCompletionOverride(item.id, next); setCompletionOverrides(readSchoolCompletionOverrides()); } }} className={`grid size-8 shrink-0 place-items-center rounded-xl ${done(item, completionOverrides) ? "bg-emerald-300/10 text-emerald-200" : "bg-white/[0.04] text-white/35"}`}><CheckCircle2 className="size-4" /></button>
+            <div className="min-w-0 flex-1 basis-40"><Link href={assignmentDetailHref(item.id)} className={`block truncate text-sm hover:text-white ${done(item, completionOverrides) ? "text-white/45 line-through" : "text-white/85"}`}>{item.title}</Link><div className="mt-1 flex flex-wrap items-center gap-x-2 text-xs text-white/40"><span>{identity ? <Link href={`/school/courses/${encodeURIComponent(identity.id)}`} className="hover:text-sky-100">{identity.code ? `${identity.code} · ` : ""}{identity.name}</Link> : unresolvedCourse ? item.courseName ?? "Unmatched course" : "No course linked"}</span><span>· {sourceName(item)}</span><span>· {assignmentWorkloadLabel(item, now)}</span></div></div>
             <div className="text-xs text-white/50 sm:ml-auto sm:text-right">{dueText(item.dueAt)}{item.priority !== "normal" && <span className="mt-1 block capitalize text-white/35">{item.priority} priority</span>}</div>
             {localItem && <div className="flex gap-1"><button type="button" onClick={() => setEditing(localItem)} className="rounded-lg px-2 py-1 text-xs text-white/50 transition hover:bg-white/[0.06] hover:text-white">Edit</button><button type="button" onClick={() => setDeleting(localItem)} className="rounded-lg px-2 py-1 text-xs text-rose-200/75 transition hover:bg-rose-300/10">Delete</button></div>}
           </article>;

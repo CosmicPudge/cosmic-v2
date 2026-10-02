@@ -2,6 +2,7 @@
 
 import KioskSceneBackground from "../shared/KioskSceneBackground";
 import KioskSceneIdentity from "../shared/KioskSceneIdentity";
+import { formatKioskSchoolDue } from "@/services/kiosk/timeBuckets";
 
 type Assignment = { id: string; title: string; due: string; course?: string; completed: boolean };
 
@@ -30,6 +31,4 @@ function KioskAssignmentList({ label, items, empty }: { label: string; items: As
   return <section className="kiosk-time-scene-list" aria-label={label}><p className="kiosk-time-scene-label">{label}</p>{items.length ? <div className="kiosk-time-scene-rows">{items.slice(0, 5).map((item) => <div className="kiosk-time-scene-row" key={item.id}><div className="min-w-0"><p className="kiosk-time-scene-row-title">{item.title}</p><p className="kiosk-time-scene-row-meta">{item.course ?? "School assignment"}</p></div><span className="kiosk-time-scene-row-time">{formatDue(item.due)}</span></div>)}</div> : <p className="kiosk-time-scene-muted">{empty}</p>}</section>;
 }
 
-function formatDue(value: string) {
-  return new Date(value).toLocaleString([], { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
-}
+function formatDue(value: string) { return formatKioskSchoolDue(value); }

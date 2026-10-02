@@ -403,6 +403,8 @@ html, body { width: 100%; min-height: 100%; background: #030511; }
 .kiosk-time-scene-row-title { overflow: hidden; color: rgba(248,250,252,.9); font-size: clamp(.68rem, 1.05vw, .88rem); font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
 .kiosk-time-scene-row-meta { overflow: hidden; color: rgba(226,232,240,.52); font-size: clamp(.56rem, .8vw, .68rem); text-overflow: ellipsis; white-space: nowrap; }
 .kiosk-time-scene-row-time { flex: 0 0 auto; color: rgba(165,243,252,.76); font-size: clamp(.57rem, .85vw, .72rem); font-variant-numeric: tabular-nums; }
+.kiosk-time-scene-week-groups { min-height: 0; overflow: auto; padding-right: .2rem; }
+.kiosk-time-scene-day-label { margin-top: .55rem; color: rgba(226,232,240,.58); font-size: .58rem; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; }
 .kiosk-time-scene-muted, .kiosk-time-scene-empty { margin-top: .6rem; color: rgba(226,232,240,.56); font-size: .78rem; }
 .kiosk-time-scene-empty-state { position: relative; z-index: 1; display: grid; flex: 1; place-content: center; text-align: center; color: rgba(248,250,252,.9); font-size: 1.35rem; text-transform: uppercase; }
 .kiosk-time-scene-empty-state span { margin-top: .4rem; color: rgba(226,232,240,.56); font-size: .78rem; text-transform: none; }

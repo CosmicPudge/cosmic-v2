@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 
 import type { WeatherData } from "@/engines/environment";
 import type { CalendarEventCategory } from "@/core/contracts";
-import { buildKioskTimeBuckets } from "@/services/kiosk/timeBuckets";
+import { buildKioskTimeBuckets, filterKioskSchoolAssignments } from "@/services/kiosk/timeBuckets";
+import { readSchoolCompletionOverrides } from "@/services/school/completionOverrides";
 
 export interface DeveloperKioskData {
   location: { lat: number; lon: number; label: string } | null;
@@ -15,12 +16,14 @@ export interface DeveloperKioskData {
 
 function normalizeKioskData(value: DeveloperKioskData): DeveloperKioskData {
   const calendarBuckets = buildKioskTimeBuckets(value.calendar.events);
-  const schoolItems = value.school.assignments.map((item) => ({ ...item, start: item.due, end: new Date(new Date(item.due).getTime() + 24 * 60 * 60 * 1000).toISOString() }));
+  const overrides = readSchoolCompletionOverrides();
+  const schoolAssignments = filterKioskSchoolAssignments(value.school.assignments, overrides);
+  const schoolItems = schoolAssignments.map((item) => ({ ...item, start: item.due, end: new Date(new Date(item.due).getTime() + 24 * 60 * 60 * 1000).toISOString() }));
   const schoolBuckets = buildKioskTimeBuckets(schoolItems);
   return {
     ...value,
     calendar: { ...value.calendar, nextEvent: calendarBuckets.next, todayEvents: calendarBuckets.today, weekEvents: calendarBuckets.week },
-    school: { ...value.school, nextAssignment: schoolBuckets.next, dueToday: schoolBuckets.today, dueThisWeek: schoolBuckets.week },
+    school: { ...value.school, assignments: schoolAssignments, nextAssignment: schoolBuckets.next, dueToday: schoolBuckets.today, dueThisWeek: schoolBuckets.week, overdueCount: 0, sceneState: schoolBuckets.next ? "upcoming" : "clear" },
   };
 }
 
@@ -48,7 +51,9 @@ export function useDeveloperKioskData() {
     };
     void load();
     const timer = window.setInterval(() => { cached = null; void load(); }, 5 * 60_000);
-    return () => { active = false; window.clearInterval(timer); };
+    const completionChanged = () => { cached = null; void load(); };
+    window.addEventListener("cosmic:school-completion-changed", completionChanged);
+    return () => { active = false; window.clearInterval(timer); window.removeEventListener("cosmic:school-completion-changed", completionChanged); };
   }, [enabled]);
   return { data, loading, error };
 }
