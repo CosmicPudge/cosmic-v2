@@ -81,6 +81,10 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
+  if (pathname === "/api/dev/db-connection-diagnostics" && isDeveloperKioskRequest(request)) {
+    return NextResponse.next();
+  }
+
   // Personal School is browser-local. Keep this exception page-only: every
   // /api/** request continues through the normal API authorization boundary.
   if (!isApi && isPersonalSchoolUiRoute(pathname)) {
