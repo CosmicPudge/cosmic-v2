@@ -2,6 +2,7 @@ import "server-only";
 
 import { getEnvironment } from "@/engines/environment";
 import { getDeveloperKioskCalendarEngine } from "@/services/calendar/accountProvider";
+import { fetchKioskCalendarIcalFeeds } from "@/services/kiosk/icalFallback";
 import { getDeveloperKioskSchoolData } from "@/services/school/server";
 import type { CalendarEvent } from "@/core/contracts";
 
@@ -10,9 +11,11 @@ const MAX_EVENTS = 8;
 const MAX_ASSIGNMENTS = 8;
 
 export type KioskProviderDiagnostic = {
-  category: "connected" | "provider-not-found" | "account-not-found" | "provider-error" | "configuration-error" | "authentication-error" | "account-mismatch";
+  category: "connected" | "provider-not-found" | "account-not-found" | "provider-error" | "parse-error" | "configuration-error" | "authentication-error" | "account-mismatch";
   configured: boolean;
   accountMatched: boolean;
+  source?: "account-provider" | "kiosk-ical" | "kiosk-canvas-ical";
+  feedCount?: number;
   connectionType?: string;
 };
 
@@ -68,8 +71,8 @@ export async function getDeveloperKioskData() {
   } = {
     location,
     weather: null,
-    calendar: { events: [], connected: false, diagnostics: { category: "configuration-error", configured: false, accountMatched: false } },
-    school: { assignments: [], overdueCount: 0, sceneState: "unavailable", connected: false, diagnostics: { category: "account-not-found", configured: false, accountMatched: false } },
+    calendar: { events: [], connected: false, diagnostics: { category: "configuration-error", configured: false, accountMatched: false, source: "kiosk-ical", feedCount: 0 } },
+    school: { assignments: [], overdueCount: 0, sceneState: "unavailable", connected: false, diagnostics: { category: "account-not-found", configured: false, accountMatched: false, source: "kiosk-canvas-ical" } },
   };
 
   if (location) {
@@ -79,15 +82,25 @@ export async function getDeveloperKioskData() {
 
   try {
     const accountId = process.env.COSMIC_KIOSK_ACCOUNT_ID?.trim();
-    const engineResult = await getDeveloperKioskCalendarEngine(accountId);
+    let engineResult: Awaited<ReturnType<typeof getDeveloperKioskCalendarEngine>> = null;
+    try { engineResult = await getDeveloperKioskCalendarEngine(accountId); } catch { /* The kiosk iCal feeds are the bounded fallback. */ }
     const engine = engineResult?.engine;
-    if (engine) {
+    if (engine && engineResult) {
       const events = await engine.getEvents({ start: now, end });
-      result.calendar = { connected: true, events: events.slice(0, MAX_EVENTS).map((event) => boundedEvent(event)), diagnostics: { category: "connected", configured: true, accountMatched: Boolean(accountId), ...(engineResult.context?.connection?.providerType ? { connectionType: engineResult.context.connection.providerType } : {}) } };
+      result.calendar = { connected: true, events: events.slice(0, MAX_EVENTS).map((event) => boundedEvent(event)), diagnostics: { category: "connected", configured: true, accountMatched: Boolean(accountId), source: "account-provider", feedCount: 0, ...(engineResult.context?.connection?.providerType ? { connectionType: engineResult.context.connection.providerType } : {}) } };
     } else {
-      result.calendar = { connected: false, events: [], diagnostics: { category: accountId ? "provider-not-found" : "account-not-found", configured: Boolean(process.env.APPLE_CALENDAR_USERNAME && process.env.APPLE_CALENDAR_PASSWORD), accountMatched: Boolean(accountId) } };
+      throw new Error("Account calendar unavailable.");
     }
-  } catch (error) { result.calendar = { connected: false, events: [], error: "Calendar temporarily unavailable.", diagnostics: { category: providerErrorCategory(error), configured: true, accountMatched: Boolean(process.env.COSMIC_KIOSK_ACCOUNT_ID?.trim()) } }; }
+  } catch {
+    const urls = [process.env.COSMIC_KIOSK_ICAL_URL_1, process.env.COSMIC_KIOSK_ICAL_URL_2].map((value) => value?.trim()).filter((value): value is string => Boolean(value));
+    if (!urls.length) {
+      result.calendar = { connected: false, events: [], error: "Calendar is not configured.", diagnostics: { category: "configuration-error", configured: false, accountMatched: Boolean(process.env.COSMIC_KIOSK_ACCOUNT_ID?.trim()), source: "kiosk-ical", feedCount: 0 } };
+    } else {
+      const fallback = await fetchKioskCalendarIcalFeeds(urls);
+      const visibleEvents = fallback.events.filter((event) => event.end > now && event.start < end).slice(0, MAX_EVENTS).map((event) => boundedEvent(event));
+      result.calendar = { connected: fallback.feedCount > 0, events: visibleEvents, ...(fallback.feedCount ? {} : { error: "Calendar feeds are temporarily unavailable." }), diagnostics: { category: fallback.feedCount ? "connected" : fallback.category, configured: true, accountMatched: Boolean(process.env.COSMIC_KIOSK_ACCOUNT_ID?.trim()), source: "kiosk-ical", feedCount: fallback.feedCount } };
+    }
+  }
 
   const accountId = process.env.COSMIC_KIOSK_ACCOUNT_ID?.trim();
   if (accountId) {
@@ -105,9 +118,9 @@ export async function getDeveloperKioskData() {
         overdueCount,
         sceneState: overdueCount > 0 ? "overdue" : nextDue && nextDue.getTime() - now.getTime() <= urgentHours * 60 * 60 * 1000 ? "urgent" : nextDue ? "upcoming" : "clear",
         ...(school.error ? { error: "School data temporarily unavailable." } : {}),
-        diagnostics: { category: school.errorCategory ?? (connected ? "connected" : "provider-not-found"), configured: true, accountMatched: true, ...(connected ? { connectionType: "canvas-rest-or-calendar" } : {}) },
+        diagnostics: { category: school.errorCategory ?? (connected ? "connected" : "provider-not-found"), configured: true, accountMatched: true, source: school.kioskSource ?? "account-provider", ...(connected ? { connectionType: "canvas-rest-or-calendar" } : {}) },
       };
-    } catch (error) { result.school = { assignments: [], overdueCount: 0, sceneState: "unavailable", connected: false, error: "School data temporarily unavailable.", diagnostics: { category: providerErrorCategory(error), configured: true, accountMatched: true } }; }
+    } catch (error) { result.school = { assignments: [], overdueCount: 0, sceneState: "unavailable", connected: false, error: "School data temporarily unavailable.", diagnostics: { category: providerErrorCategory(error), configured: true, accountMatched: true, source: "account-provider" } }; }
   }
 
   return result;
