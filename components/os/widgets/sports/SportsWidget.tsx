@@ -17,17 +17,19 @@ import SportsScores from "./SportsScores";
 import SportsStandings from "./SportsStandings";
 import SportsFooter from "./SportsFooter";
 import { dashboardImage } from "@/components/dashboard/images/dashboardImageManifest";
+import { selectNflStadiumBackground } from "@/components/os/widgets/shared/kioskSceneBackgrounds";
 
 export default function SportsWidget() {
   const { size, presentation } = useWidgetContext();
   const { data, loading, error } = useSports();
   const { data: settings } = useSettingsRepository();
   const liveOrFeatured = data ? prioritizeFollowedEvents(data.live, settings.preferences)[0] ?? prioritizeFollowedEvents(data.featured, settings.preferences)[0] : undefined;
-  const sportsImage = liveOrFeatured?.sport.toLowerCase().includes("mlb") || liveOrFeatured?.sport.toLowerCase().includes("baseball") ? dashboardImage("sports-mlb") : liveOrFeatured?.sport.toLowerCase().includes("f1") || liveOrFeatured?.sport.toLowerCase().includes("formula") ? dashboardImage("sports-f1") : dashboardImage("sports");
   const upcoming = data ? prioritizeFollowedEvents(data.upcoming, settings.preferences) : [];
+  const kioskEvent = liveOrFeatured ?? upcoming[0];
+  const sportsImage = liveOrFeatured?.sport.toLowerCase().includes("mlb") || liveOrFeatured?.sport.toLowerCase().includes("baseball") ? dashboardImage("sports-mlb") : liveOrFeatured?.sport.toLowerCase().includes("f1") || liveOrFeatured?.sport.toLowerCase().includes("formula") ? dashboardImage("sports-f1") : dashboardImage("sports");
   const standings = data ? Object.values(data.standings).flat() : [];
   useDashboardWidgetReadiness("sports", loading && !data ? "loading" : error && !data ? "degraded" : "ready");
-  if (presentation === "kiosk") return <KioskSceneFrame scene="sports" backgroundState={liveOrFeatured?.status ?? (loading ? "scanning" : "steady")} backgroundVariant={liveOrFeatured?.sport ?? "default"} eyebrow="COSMIC • SPORTS" title={liveOrFeatured?.title ?? (loading ? "Scanning events." : "No live event.")} subtitle={liveOrFeatured ? `${liveOrFeatured.statusDetail ?? liveOrFeatured.status} · ${liveOrFeatured.sport.toUpperCase()}` : "Upcoming games will appear here."} />;
+  if (presentation === "kiosk") return <KioskSceneFrame scene="sports" backgroundState={kioskEvent?.status ?? (loading ? "scanning" : "steady")} backgroundVariant={kioskEvent?.sport ?? "default"} backgroundImage={kioskEvent?.sport === "nfl" ? selectNflStadiumBackground(kioskEvent.homeTeam) : undefined} eyebrow="COSMIC • SPORTS" title={kioskEvent?.title ?? (loading ? "Scanning events." : "No live event.")} subtitle={kioskEvent ? `${kioskEvent.statusDetail ?? kioskEvent.status} · ${kioskEvent.sport.toUpperCase()}` : "Upcoming games will appear here."} />;
 
   return (
     <Widget
