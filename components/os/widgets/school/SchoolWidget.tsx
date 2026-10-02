@@ -44,7 +44,7 @@ export default function SchoolWidget() {
   if (presentation === "kiosk") {
     if (developer.data) {
       const assignment = developer.data.school.assignments[0];
-      const backgroundState = developer.data.school.overdueCount > 0 ? "urgent" : assignment ? "upcoming" : developer.data.school.connected ? "clear" : "unavailable";
+      const backgroundState = developer.data.school.sceneState;
       return <KioskSceneFrame scene="school" backgroundState={backgroundState} eyebrow="COSMIC • SCHOOL" title={assignment?.title ?? (developer.data.school.connected ? "No upcoming assignments" : "School data unavailable")} subtitle={assignment ? `${assignment.course ?? "Assignment"} · Due ${new Date(assignment.due).toLocaleString([], { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}` : developer.data.school.error ?? "Canvas is not configured for this kiosk."}><div className="kiosk-native-scene-details">{developer.data.school.overdueCount > 0 ? <span>{developer.data.school.overdueCount} overdue</span> : <span>{developer.data.school.assignments.length} upcoming assignments</span>}</div></KioskSceneFrame>;
     }
     return <KioskSceneFrame scene="school" backgroundState={dueAssignments.length ? "upcoming" : schoolHasSource ? "clear" : "unavailable"} eyebrow="COSMIC • SCHOOL" title={schoolTitle} subtitle={schoolSubtitle}><div className="kiosk-native-scene-details">{dueAssignments[0] ? <span>Due · {dueAssignments[0].title}</span> : schoolHasSource ? <span>No assignments due soon</span> : null}</div></KioskSceneFrame>;

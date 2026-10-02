@@ -9,6 +9,7 @@ import { useWidgetContext } from "@/components/os/ui/widget/WidgetContext";
 import { CosmicIcon } from "@/components/cosmic-icons";
 import { useNotifications } from "@/hooks/os/useNotifications";
 import type { CosmicNotification } from "@/core/contracts/Notifications";
+import KioskSceneBackground from "@/components/os/widgets/shared/KioskSceneBackground";
 
 export default function NotificationsWidget() {
   const { presentation } = useWidgetContext();
@@ -38,9 +39,7 @@ function KioskNotificationsScene({ notifications, loading }: { notifications: Co
   return (
     <Widget accent="notifications" className="kiosk-notifications-widget" contentPadding={false} hover={false} imageOpacity={0} imageBlur={0}>
       <div className="kiosk-notifications-scene" data-notification-state={attention}>
-        <div className="kiosk-notifications-atmosphere" aria-hidden="true" />
-        <div className="kiosk-notifications-orbit" aria-hidden="true" />
-        <div className="kiosk-notifications-data-lines" aria-hidden="true"><span /><span /><span /></div>
+        <KioskSceneBackground family="notifications" state={attention} />
         <div className="kiosk-notifications-content">
           <div className="kiosk-notifications-heading">
             <span className="kiosk-notifications-live-dot" aria-hidden="true" />

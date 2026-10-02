@@ -52,12 +52,12 @@ export async function getDeveloperKioskData() {
     location: typeof location;
     weather: unknown | null;
     calendar: { events: ReturnType<typeof boundedEvent>[]; connected: boolean; error?: string };
-    school: { assignments: Array<{ id: string; title: string; due: string; course?: string; completed: boolean }>; overdueCount: number; connected: boolean; error?: string };
+    school: { assignments: Array<{ id: string; title: string; due: string; course?: string; completed: boolean }>; overdueCount: number; sceneState: "clear" | "upcoming" | "urgent" | "overdue" | "unavailable"; connected: boolean; error?: string };
   } = {
     location,
     weather: null,
     calendar: { events: [], connected: false },
-    school: { assignments: [], overdueCount: 0, connected: false },
+    school: { assignments: [], overdueCount: 0, sceneState: "unavailable", connected: false },
   };
 
   if (location) {
@@ -79,13 +79,17 @@ export async function getDeveloperKioskData() {
       const school = await getDeveloperKioskSchoolData(accountId);
       const assignments = school.snapshot.planningAssignments ?? [];
       const upcoming = assignments.filter((item) => item.dueAt && item.completionStatus !== "completed").sort((a, b) => a.dueAt!.getTime() - b.dueAt!.getTime());
+      const overdueCount = upcoming.filter((item) => item.dueAt! < now).length;
+      const urgentHours = Math.max(1, Number(process.env.COSMIC_KIOSK_SCHOOL_URGENT_HOURS ?? 24));
+      const nextDue = upcoming[0]?.dueAt;
       result.school = {
         connected: school.snapshot.sourceStatus?.canvas !== "not_connected",
         assignments: upcoming.slice(0, MAX_ASSIGNMENTS).map((item) => ({ id: item.id.slice(0, 160), title: item.title.slice(0, 240), due: item.dueAt!.toISOString(), ...(item.courseName ? { course: item.courseName.slice(0, 120) } : {}), completed: item.completionStatus === "completed" })),
-        overdueCount: upcoming.filter((item) => item.dueAt! < now).length,
+        overdueCount,
+        sceneState: overdueCount > 0 ? "overdue" : nextDue && nextDue.getTime() - now.getTime() <= urgentHours * 60 * 60 * 1000 ? "urgent" : nextDue ? "upcoming" : "clear",
         ...(school.error ? { error: "School data temporarily unavailable." } : {}),
       };
-    } catch { result.school = { assignments: [], overdueCount: 0, connected: false, error: "School data temporarily unavailable." }; }
+    } catch { result.school = { assignments: [], overdueCount: 0, sceneState: "unavailable", connected: false, error: "School data temporarily unavailable." }; }
   }
 
   return result;

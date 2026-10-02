@@ -9,7 +9,7 @@ export interface DeveloperKioskData {
   location: { lat: number; lon: number; label: string } | null;
   weather: WeatherData | null;
   calendar: { events: Array<{ id: string; title: string; start: string; end: string; allDay: boolean; location?: string; calendar?: string; category?: CalendarEventCategory }>; connected: boolean; error?: string };
-  school: { assignments: Array<{ id: string; title: string; due: string; course?: string; completed: boolean }>; overdueCount: number; connected: boolean; error?: string };
+  school: { assignments: Array<{ id: string; title: string; due: string; course?: string; completed: boolean }>; overdueCount: number; sceneState: "clear" | "upcoming" | "urgent" | "overdue" | "unavailable"; connected: boolean; error?: string };
 }
 
 let cached: DeveloperKioskData | null = null;
