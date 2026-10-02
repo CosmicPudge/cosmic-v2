@@ -39,6 +39,8 @@ const NFL_STADIUM_ASSETS: Record<string, string> = {
 };
 
 const GENERIC_NFL_STADIUM = "/dashboard/sports/stadium.webp";
+const GENERIC_MLB_STADIUM = "/dashboard/sports/baseball.webp";
+const GENERIC_MOTORSPORT = "/dashboard/sports/motorsport.webp";
 
 const SCENE_ASSETS: Record<KioskSceneFamily, Record<string, string>> = {
   school: {
@@ -77,4 +79,26 @@ export function selectKioskSceneBackground(family: KioskSceneFamily, state = "st
 export function selectNflStadiumBackground(homeTeam?: SportsTeam) {
   const identity = resolveSportsTeamIdentity("nfl", homeTeam);
   return identity ? NFL_STADIUM_ASSETS[identity.canonicalId] ?? NFL_STADIUM_ASSETS[identity.abbreviation.toLowerCase()] ?? GENERIC_NFL_STADIUM : GENERIC_NFL_STADIUM;
+}
+
+export function selectKioskSportsBackground(backgroundKey?: string) {
+  if (!backgroundKey) return undefined;
+  if (backgroundKey.startsWith("nfl-")) {
+    const abbreviation = backgroundKey.slice(4);
+    return NFL_STADIUM_ASSETS[abbreviation] ?? GENERIC_NFL_STADIUM;
+  }
+  const assets: Record<string, string> = {
+    "f1-monza": "/sports/tracks/f1/monza.svg",
+    "f1-austin": "/sports/tracks/f1/austin.svg",
+    "f1-marina-bay": "/sports/tracks/f1/marina-bay.svg",
+    "f1-malaysia": GENERIC_MOTORSPORT,
+    "f1-generic": GENERIC_MOTORSPORT,
+    "nascar-daytona": "/sports/tracks/nascar/daytona-tri-oval.svg",
+    "nascar-cota": "/sports/tracks/nascar/cota-nascar.svg",
+    "nascar-generic": GENERIC_MOTORSPORT,
+    "mlb-angels": GENERIC_MLB_STADIUM,
+    "mlb-yankees": GENERIC_MLB_STADIUM,
+    "mlb-generic": GENERIC_MLB_STADIUM,
+  };
+  return assets[backgroundKey] ?? GENERIC_MOTORSPORT;
 }

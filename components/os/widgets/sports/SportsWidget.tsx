@@ -18,6 +18,8 @@ import SportsStandings from "./SportsStandings";
 import SportsFooter from "./SportsFooter";
 import { dashboardImage } from "@/components/dashboard/images/dashboardImageManifest";
 import { selectNflStadiumBackground } from "@/components/os/widgets/shared/kioskSceneBackgrounds";
+import { selectKioskSportsBackground } from "@/components/os/widgets/shared/kioskSceneBackgrounds";
+import { selectKioskSportsEvent } from "@/services/sports/kioskSelection";
 
 export default function SportsWidget() {
   const { size, presentation } = useWidgetContext();
@@ -25,11 +27,12 @@ export default function SportsWidget() {
   const { data: settings } = useSettingsRepository();
   const liveOrFeatured = data ? prioritizeFollowedEvents(data.live, settings.preferences)[0] ?? prioritizeFollowedEvents(data.featured, settings.preferences)[0] : undefined;
   const upcoming = data ? prioritizeFollowedEvents(data.upcoming, settings.preferences) : [];
-  const kioskEvent = liveOrFeatured ?? upcoming[0];
+  const kioskSelection = data ? selectKioskSportsEvent([...data.live, ...data.upcoming, ...data.featured]) : undefined;
+  const kioskEvent = kioskSelection?.event ?? liveOrFeatured ?? upcoming[0];
   const sportsImage = liveOrFeatured?.sport.toLowerCase().includes("mlb") || liveOrFeatured?.sport.toLowerCase().includes("baseball") ? dashboardImage("sports-mlb") : liveOrFeatured?.sport.toLowerCase().includes("f1") || liveOrFeatured?.sport.toLowerCase().includes("formula") ? dashboardImage("sports-f1") : dashboardImage("sports");
   const standings = data ? Object.values(data.standings).flat() : [];
   useDashboardWidgetReadiness("sports", loading && !data ? "loading" : error && !data ? "degraded" : "ready");
-  if (presentation === "kiosk") return <KioskSceneFrame scene="sports" backgroundState={kioskEvent?.status ?? (loading ? "scanning" : "steady")} backgroundVariant={kioskEvent?.sport ?? "default"} backgroundImage={kioskEvent?.sport === "nfl" ? selectNflStadiumBackground(kioskEvent.homeTeam) : undefined} eyebrow="COSMIC • SPORTS" title={kioskEvent ? <span className="kiosk-sports-matchup"><span>{kioskEvent.awayTeam?.name ?? "Away"}</span><span className="kiosk-sports-at" aria-hidden="true">at</span><span>{kioskEvent.homeTeam?.name ?? "Home"}</span></span> : loading ? "Scanning events." : "No live event."} subtitle={kioskEvent ? <span className="kiosk-sports-meta">{(kioskEvent.statusDetail ?? kioskEvent.status).toUpperCase()} <span aria-hidden="true">·</span> {kioskEvent.sport.toUpperCase()}{kioskEvent.venue ? <><span aria-hidden="true">·</span> {kioskEvent.venue}</> : null}</span> : "Upcoming games will appear here."} />;
+  if (presentation === "kiosk") return <KioskSceneFrame scene="sports" backgroundState={kioskEvent?.status ?? (loading ? "scanning" : "steady")} backgroundVariant={kioskEvent?.sport ?? "default"} backgroundImage={kioskSelection ? selectKioskSportsBackground(kioskSelection.backgroundKey) : kioskEvent?.sport === "nfl" ? selectNflStadiumBackground(kioskEvent.homeTeam) : undefined} eyebrow="COSMIC • SPORTS" title={kioskSelection ? <span className="kiosk-sports-matchup"><small>{kioskSelection.sportLabel}</small><strong>{kioskEvent?.awayTeam && kioskEvent.homeTeam ? <><span>{kioskEvent.awayTeam.name}</span><span className="kiosk-sports-at" aria-hidden="true">at</span><span>{kioskEvent.homeTeam.name}</span></> : kioskSelection.title}</strong></span> : kioskEvent ? <span className="kiosk-sports-matchup"><strong>{kioskEvent.title}</strong></span> : loading ? "Scanning events." : "No live event."} subtitle={kioskSelection ? <span className="kiosk-sports-meta">{kioskSelection.live ? "LIVE" : kioskSelection.eventType} <span aria-hidden="true">·</span> {formatKioskEventTime(kioskSelection.startTime)}{kioskSelection.venueName ? <><span aria-hidden="true">·</span> {kioskSelection.venueName}</> : null}{kioskSelection.venueLocation ? <><span aria-hidden="true">·</span> {kioskSelection.venueLocation}</> : null}</span> : kioskEvent ? <span className="kiosk-sports-meta">{(kioskEvent.statusDetail ?? kioskEvent.status).toUpperCase()} <span aria-hidden="true">·</span> {kioskEvent.sport.toUpperCase()}{kioskEvent.venue ? <><span aria-hidden="true">·</span> {kioskEvent.venue}</> : null}</span> : "Upcoming games will appear here."} />;
 
   return (
     <Widget
@@ -57,4 +60,8 @@ export default function SportsWidget() {
       </WidgetFooter>
     </Widget>
   );
+}
+
+function formatKioskEventTime(value: Date) {
+  return value.toLocaleString([], { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 }
