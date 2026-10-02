@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { accountSnapshotWithDiagnostics, developerKioskSnapshotWithDiagnostics, personalSnapshotWithDiagnostics } from "@/services/music/spotify";
+import { accountSnapshotWithDiagnostics, configured as spotifyConfigured, developerKioskSnapshotWithDiagnostics, personalSnapshotWithDiagnostics } from "@/services/music/spotify";
 import { musicPlaybackDiagnostics } from "@/services/music/musicDiagnostics";
 import { kioskBootId, requireAuthenticatedSession } from "@/services/auth/server";
 import { isDatabaseConfigured } from "@/services/database/client";
@@ -17,13 +17,13 @@ export async function GET(request: Request) {
   }
   if (isDeveloperKioskRequest(request)) {
     const accountId = process.env.COSMIC_KIOSK_ACCOUNT_ID?.trim();
-    if (!accountId) return NextResponse.json({ provider: "spotify", connected: false, capabilities: {}, playback: { playing: false, positionMs: 0, updatedAt: "" }, error: "Developer music account is not configured.", diagnostics: { category: "configuration-error", providerFound: false, ownerMatch: false, tokenRecordFound: false } }, { headers: { "Cache-Control": "no-store" } });
+    if (!accountId) return NextResponse.json({ provider: "spotify", configured: spotifyConfigured(), connected: false, capabilities: {}, playback: { playing: false, positionMs: 0, updatedAt: "" }, error: "Developer music account is not configured.", diagnostics: { category: "configuration-error", providerFound: false, ownerMatch: false, tokenRecordFound: false } }, { headers: { "Cache-Control": "no-store" } });
     const result = await developerKioskSnapshotWithDiagnostics(accountId);
     return NextResponse.json({ ...result.snapshot, diagnostics: result.diagnostics }, { headers: { "Cache-Control": "private, no-store, no-cache, must-revalidate, max-age=0" } });
   }
   const session = await requireAuthenticatedSession(request, { allowDevice: true, bootId: kioskBootId(request) });
   musicLog(`session=${session.sessionType ?? "user"} ownerResolved=${Boolean(session.account.id)}`);
-  if (!isDatabaseConfigured()) return NextResponse.json({ provider: "spotify", connected: false, capabilities: {}, playback: { playing: false, positionMs: 0, updatedAt: "" }, error: "Account music storage is unavailable." }, { headers: { "Cache-Control": "no-store" } });
+  if (!isDatabaseConfigured()) return NextResponse.json({ provider: "spotify", configured: spotifyConfigured(), connected: false, capabilities: {}, playback: { playing: false, positionMs: 0, updatedAt: "" }, error: "Account music storage is unavailable." }, { headers: { "Cache-Control": "no-store" } });
   const result = await accountSnapshotWithDiagnostics(session.account.id);
   const snapshot = result.snapshot;
   musicLog(`spotifyConnection=${snapshot.connected || Boolean(snapshot.error && /temporarily|rate limited/i.test(snapshot.error))} playbackStatus=${snapshot.connected ? snapshot.playback.track ? 200 : 204 : "not-requested"}`);

@@ -93,9 +93,109 @@ test("personal Music reads and actions use the personal credential without accou
   try {
     process.chdir(directory);
     await storePersonalSpotifyToken({ access_token: "personal-access", scope: "user-modify-playback-state" });
-    assert.equal((await personalSnapshotWithDiagnostics()).snapshot.connected, true);
+    const snapshot = (await personalSnapshotWithDiagnostics()).snapshot;
+    assert.equal(snapshot.configured, true);
+    assert.equal(snapshot.connected, true);
     await personalAction("pause");
     assert.equal(requests.some((url) => url.includes("/me/player")), true);
+  } finally {
+    globalThis.fetch = previousFetch;
+    process.chdir(previousCwd);
+    if (previousKey === undefined) delete env.COSMIC_CREDENTIAL_ENCRYPTION_KEY; else env.COSMIC_CREDENTIAL_ENCRYPTION_KEY = previousKey;
+    if (previous.id === undefined) delete env.SPOTIFY_CLIENT_ID; else env.SPOTIFY_CLIENT_ID = previous.id;
+    if (previous.secret === undefined) delete env.SPOTIFY_CLIENT_SECRET; else env.SPOTIFY_CLIENT_SECRET = previous.secret;
+    if (previous.redirect === undefined) delete env.SPOTIFY_REDIRECT_URI; else env.SPOTIFY_REDIRECT_URI = previous.redirect;
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test("Spotify snapshots report missing application credentials separately", async () => {
+  const previous = { id: env.SPOTIFY_CLIENT_ID, secret: env.SPOTIFY_CLIENT_SECRET, redirect: env.SPOTIFY_REDIRECT_URI };
+  delete env.SPOTIFY_CLIENT_ID;
+  delete env.SPOTIFY_CLIENT_SECRET;
+  delete env.SPOTIFY_REDIRECT_URI;
+  try {
+    const snapshot = (await personalSnapshotWithDiagnostics()).snapshot;
+    assert.equal(snapshot.configured, false);
+    assert.equal(snapshot.connected, false);
+  } finally {
+    if (previous.id === undefined) delete env.SPOTIFY_CLIENT_ID; else env.SPOTIFY_CLIENT_ID = previous.id;
+    if (previous.secret === undefined) delete env.SPOTIFY_CLIENT_SECRET; else env.SPOTIFY_CLIENT_SECRET = previous.secret;
+    if (previous.redirect === undefined) delete env.SPOTIFY_REDIRECT_URI; else env.SPOTIFY_REDIRECT_URI = previous.redirect;
+  }
+});
+
+test("Spotify snapshots report configured credentials when the provider is absent", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "cosmic-spotify-unconnected-"));
+  const previousCwd = process.cwd();
+  const previousKey = env.COSMIC_CREDENTIAL_ENCRYPTION_KEY;
+  const previous = { id: env.SPOTIFY_CLIENT_ID, secret: env.SPOTIFY_CLIENT_SECRET, redirect: env.SPOTIFY_REDIRECT_URI };
+  env.COSMIC_CREDENTIAL_ENCRYPTION_KEY = key;
+  env.SPOTIFY_CLIENT_ID = "client-test";
+  env.SPOTIFY_CLIENT_SECRET = "secret-test";
+  env.SPOTIFY_REDIRECT_URI = "http://localhost:3000/api/auth/spotify/callback";
+  try {
+    process.chdir(directory);
+    const snapshot = (await personalSnapshotWithDiagnostics()).snapshot;
+    assert.equal(snapshot.configured, true);
+    assert.equal(snapshot.connected, false);
+  } finally {
+    process.chdir(previousCwd);
+    if (previousKey === undefined) delete env.COSMIC_CREDENTIAL_ENCRYPTION_KEY; else env.COSMIC_CREDENTIAL_ENCRYPTION_KEY = previousKey;
+    if (previous.id === undefined) delete env.SPOTIFY_CLIENT_ID; else env.SPOTIFY_CLIENT_ID = previous.id;
+    if (previous.secret === undefined) delete env.SPOTIFY_CLIENT_SECRET; else env.SPOTIFY_CLIENT_SECRET = previous.secret;
+    if (previous.redirect === undefined) delete env.SPOTIFY_REDIRECT_URI; else env.SPOTIFY_REDIRECT_URI = previous.redirect;
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test("connected Spotify snapshots report configured and idle state", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "cosmic-spotify-idle-"));
+  const previousCwd = process.cwd();
+  const previousKey = env.COSMIC_CREDENTIAL_ENCRYPTION_KEY;
+  const previous = { id: env.SPOTIFY_CLIENT_ID, secret: env.SPOTIFY_CLIENT_SECRET, redirect: env.SPOTIFY_REDIRECT_URI };
+  const previousFetch = globalThis.fetch;
+  env.COSMIC_CREDENTIAL_ENCRYPTION_KEY = key;
+  env.SPOTIFY_CLIENT_ID = "client-test";
+  env.SPOTIFY_CLIENT_SECRET = "secret-test";
+  env.SPOTIFY_REDIRECT_URI = "http://localhost:3000/api/auth/spotify/callback";
+  globalThis.fetch = async () => new Response(null, { status: 204 });
+  try {
+    process.chdir(directory);
+    await storePersonalSpotifyToken({ access_token: "personal-access" });
+    const snapshot = (await personalSnapshotWithDiagnostics()).snapshot;
+    assert.equal(snapshot.configured, true);
+    assert.equal(snapshot.connected, true);
+    assert.equal(snapshot.playback.track, undefined);
+  } finally {
+    globalThis.fetch = previousFetch;
+    process.chdir(previousCwd);
+    if (previousKey === undefined) delete env.COSMIC_CREDENTIAL_ENCRYPTION_KEY; else env.COSMIC_CREDENTIAL_ENCRYPTION_KEY = previousKey;
+    if (previous.id === undefined) delete env.SPOTIFY_CLIENT_ID; else env.SPOTIFY_CLIENT_ID = previous.id;
+    if (previous.secret === undefined) delete env.SPOTIFY_CLIENT_SECRET; else env.SPOTIFY_CLIENT_SECRET = previous.secret;
+    if (previous.redirect === undefined) delete env.SPOTIFY_REDIRECT_URI; else env.SPOTIFY_REDIRECT_URI = previous.redirect;
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test("connected Spotify snapshots report configured and active playback state", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "cosmic-spotify-active-"));
+  const previousCwd = process.cwd();
+  const previousKey = env.COSMIC_CREDENTIAL_ENCRYPTION_KEY;
+  const previous = { id: env.SPOTIFY_CLIENT_ID, secret: env.SPOTIFY_CLIENT_SECRET, redirect: env.SPOTIFY_REDIRECT_URI };
+  const previousFetch = globalThis.fetch;
+  env.COSMIC_CREDENTIAL_ENCRYPTION_KEY = key;
+  env.SPOTIFY_CLIENT_ID = "client-test";
+  env.SPOTIFY_CLIENT_SECRET = "secret-test";
+  env.SPOTIFY_REDIRECT_URI = "http://localhost:3000/api/auth/spotify/callback";
+  globalThis.fetch = async () => new Response(JSON.stringify({ is_playing: true, progress_ms: 100, currently_playing_type: "track", item: { id: "track-1", type: "track", name: "Track", duration_ms: 1000, artists: [{ name: "Artist" }], album: { name: "Album", images: [] } } }), { status: 200 });
+  try {
+    process.chdir(directory);
+    await storePersonalSpotifyToken({ access_token: "personal-access" });
+    const snapshot = (await personalSnapshotWithDiagnostics()).snapshot;
+    assert.equal(snapshot.configured, true);
+    assert.equal(snapshot.connected, true);
+    assert.equal(snapshot.playback.track?.id, "track-1");
   } finally {
     globalThis.fetch = previousFetch;
     process.chdir(previousCwd);

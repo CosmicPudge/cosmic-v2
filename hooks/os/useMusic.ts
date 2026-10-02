@@ -12,6 +12,10 @@ interface UseMusicOptions {
   enabled?: boolean;
 }
 
+export function isMusicConfigured(snapshot: MusicSnapshot | null) {
+  return snapshot?.configured === true;
+}
+
 export function useMusic({ refreshMs, enabled = true }: UseMusicOptions = {}) {
   const [snapshot, setSnapshot] = useState<MusicSnapshot | null>(null);
   const hasLoaded = useRef(false);
@@ -127,7 +131,7 @@ export function useMusic({ refreshMs, enabled = true }: UseMusicOptions = {}) {
     actionError,
     refresh,
     actionLoading,
-    configured: Boolean(snapshot?.provider),
+    configured: isMusicConfigured(snapshot),
     connected: snapshot?.connected ?? false,
     reconnectRequired: !snapshot?.connected && Boolean(providerError && /reconnect/i.test(providerError)),
     provider: snapshot?.provider,

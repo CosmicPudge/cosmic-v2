@@ -52,8 +52,8 @@ function selectSpotifyArtistImage(images?: Array<{ url: string; width?: number; 
   return (sized.length ? sized : usable).slice().sort((a, b) => Math.abs((a.width ?? 160) - 240) - Math.abs((b.width ?? 160) - 240))[0]?.url ?? null;
 }
 function emptyPlayback() { return { playing: false, positionMs: 0, updatedAt: "" }; }
-function disconnected(error: string): MusicSnapshot { return { connected: false, capabilities: disabledCaps, playback: emptyPlayback(), error }; }
-function temporaryFailure(error: string): MusicSnapshot { return { provider: "spotify", connected: true, capabilities: caps, playback: { ...emptyPlayback(), updatedAt: new Date().toISOString() }, error }; }
+function disconnected(error: string): MusicSnapshot { return { provider: "spotify", configured: configured(), connected: false, capabilities: disabledCaps, playback: emptyPlayback(), error }; }
+function temporaryFailure(error: string): MusicSnapshot { return { provider: "spotify", configured: true, connected: true, capabilities: caps, playback: { ...emptyPlayback(), updatedAt: new Date().toISOString() }, error }; }
 
 async function refreshToken(current: Token) {
   if (!current.refresh_token) throw new Error("Spotify authorization needs to reconnect.");
@@ -166,7 +166,7 @@ async function normalizePlayback(data: SpotifyPlaybackResponse, accessToken: str
   const track = normalized.playback.track;
   if (track && artistProfiles?.length) track.artistProfiles = artistProfiles;
   if (process.env.NODE_ENV !== "production") console.info(`[music-normalized] mediaType=${mediaType} itemPresent=${Boolean(data.item)} trackIdSuffix=${trackSuffix(data.item?.id)} titlePresent=${Boolean(data.item?.name)} artistCount=${artists.length} artworkPresent=${Boolean(track?.artworkUrl)}`);
-  return { provider: "spotify", connected: true, capabilities: caps, playback: normalized.playback };
+  return { provider: "spotify", configured: true, connected: true, capabilities: caps, playback: normalized.playback };
 }
 
 type SpotifySnapshotResult = { snapshot: MusicSnapshot; rawProvider?: ReturnType<typeof spotifyRawPlaybackDiagnostics> };
@@ -176,7 +176,7 @@ async function snapshotWithToken(current: Token, refreshAccessToken?: () => Prom
     const requestStartedAt = new Date().toISOString();
     const requestStartedMs = Date.now();
     const response = await fetch("https://api.spotify.com/v1/me/player", { cache: "no-store", headers: { Authorization: `Bearer ${current.access_token}` } });
-    if (response.status === 204) { if (process.env.NODE_ENV !== "production") console.info(`[spotify-playback] requestStartedAt=${requestStartedAt} durationMs=${Date.now() - requestStartedMs} status=204 itemPresent=false itemType=none trackIdSuffix=none progressMs=0 isPlaying=false`); return { snapshot: { provider: "spotify", connected: true, capabilities: caps, playback: { playing: false, positionMs: 0, updatedAt: new Date().toISOString() } } }; }
+    if (response.status === 204) { if (process.env.NODE_ENV !== "production") console.info(`[spotify-playback] requestStartedAt=${requestStartedAt} durationMs=${Date.now() - requestStartedMs} status=204 itemPresent=false itemType=none trackIdSuffix=none progressMs=0 isPlaying=false`); return { snapshot: { provider: "spotify", configured: true, connected: true, capabilities: caps, playback: { playing: false, positionMs: 0, updatedAt: new Date().toISOString() } } }; }
     if (response.status === 401) return { snapshot: disconnected("Spotify authorization needs to reconnect.") };
     if (response.status === 429) return { snapshot: temporaryFailure("Spotify is rate limited. Retrying automatically.") };
     if (response.status >= 500) return { snapshot: temporaryFailure("Spotify is temporarily unavailable. Retrying automatically.") };
