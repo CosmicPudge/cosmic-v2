@@ -11,12 +11,12 @@ export default function KioskSchoolScene({ school }: { school: { assignments: As
   return <section className="kiosk-native-scene kiosk-native-scene-school" data-kiosk-native-scene="school">
     <KioskSceneBackground family="school" state={school.sceneState} />
     <KioskSceneIdentity sceneLabel="COSMIC • SCHOOL" />
-    <div className="kiosk-time-scene-main">
+    <div className="kiosk-time-scene">
       <header className="kiosk-time-scene-heading"><div><p className="kiosk-time-scene-kicker">SCHOOL</p><p className="kiosk-time-scene-date">Academic workload</p></div>{school.error ? <p className="kiosk-time-scene-status">Updating</p> : null}</header>
       <div className="kiosk-time-scene-grid">
         <section className="kiosk-time-scene-hero" aria-label="Up next">
           <p className="kiosk-time-scene-label">Up next</p>
-          {next ? <><p className="kiosk-time-scene-hero-title">{next.title}</p><p className="kiosk-time-scene-hero-meta">{next.course ?? "School assignment"}</p><p className="kiosk-time-scene-hero-due">Due {formatDue(next.due)}</p></> : <p className="kiosk-time-scene-empty">{school.connected ? "No upcoming assignments" : school.error ?? "School data unavailable"}</p>}
+          {next ? <><p className="kiosk-time-scene-hero-title">{next.title}</p><p className="kiosk-time-scene-hero-meta">{next.course ?? "School assignment"}</p><p className="kiosk-time-scene-hero-due">Due {formatDue(next.due)}</p></> : <div className="kiosk-time-scene-empty">{school.connected ? <><p>You&apos;re caught up.</p><p className="kiosk-time-scene-muted">No upcoming assignments in the next 14 days.</p></> : <p>{school.error ?? "School data unavailable"}</p>}</div>}
         </section>
         <div className="kiosk-time-scene-lists">
           <KioskAssignmentList label="Due today" items={school.dueToday} empty="Nothing due today" />
