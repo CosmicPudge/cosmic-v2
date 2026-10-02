@@ -10,11 +10,16 @@ const MAX_EVENTS = 8;
 const MAX_ASSIGNMENTS = 8;
 
 export type KioskProviderDiagnostic = {
-  category: "connected" | "provider-not-found" | "account-not-found" | "provider-error" | "configuration-error";
+  category: "connected" | "provider-not-found" | "account-not-found" | "provider-error" | "configuration-error" | "authentication-error" | "account-mismatch";
   configured: boolean;
   accountMatched: boolean;
   connectionType?: string;
 };
+
+function providerErrorCategory(error: unknown): KioskProviderDiagnostic["category"] {
+  const message = error instanceof Error ? error.message : String(error ?? "");
+  return /401|403|unauthori[sz]ed|authentication|invalid credential|reconnect/i.test(message) ? "authentication-error" : "provider-error";
+}
 
 export function isDeveloperKioskEnabled(): boolean {
   return process.env.COSMIC_KIOSK_ENABLED === "true" || process.env.COSMIC_DEV_KIOSK_ENABLED === "true";
@@ -82,7 +87,7 @@ export async function getDeveloperKioskData() {
     } else {
       result.calendar = { connected: false, events: [], diagnostics: { category: accountId ? "provider-not-found" : "account-not-found", configured: Boolean(process.env.APPLE_CALENDAR_USERNAME && process.env.APPLE_CALENDAR_PASSWORD), accountMatched: Boolean(accountId) } };
     }
-  } catch { result.calendar = { connected: false, events: [], error: "Calendar temporarily unavailable.", diagnostics: { category: "provider-error", configured: true, accountMatched: Boolean(process.env.COSMIC_KIOSK_ACCOUNT_ID?.trim()) } }; }
+  } catch (error) { result.calendar = { connected: false, events: [], error: "Calendar temporarily unavailable.", diagnostics: { category: providerErrorCategory(error), configured: true, accountMatched: Boolean(process.env.COSMIC_KIOSK_ACCOUNT_ID?.trim()) } }; }
 
   const accountId = process.env.COSMIC_KIOSK_ACCOUNT_ID?.trim();
   if (accountId) {
@@ -100,9 +105,9 @@ export async function getDeveloperKioskData() {
         overdueCount,
         sceneState: overdueCount > 0 ? "overdue" : nextDue && nextDue.getTime() - now.getTime() <= urgentHours * 60 * 60 * 1000 ? "urgent" : nextDue ? "upcoming" : "clear",
         ...(school.error ? { error: "School data temporarily unavailable." } : {}),
-        diagnostics: { category: school.error ? "provider-error" : connected ? "connected" : "provider-not-found", configured: true, accountMatched: true, ...(connected ? { connectionType: "canvas-rest-or-calendar" } : {}) },
+        diagnostics: { category: school.errorCategory ?? (connected ? "connected" : "provider-not-found"), configured: true, accountMatched: true, ...(connected ? { connectionType: "canvas-rest-or-calendar" } : {}) },
       };
-    } catch { result.school = { assignments: [], overdueCount: 0, sceneState: "unavailable", connected: false, error: "School data temporarily unavailable.", diagnostics: { category: "provider-error", configured: true, accountMatched: true } }; }
+    } catch (error) { result.school = { assignments: [], overdueCount: 0, sceneState: "unavailable", connected: false, error: "School data temporarily unavailable.", diagnostics: { category: providerErrorCategory(error), configured: true, accountMatched: true } }; }
   }
 
   return result;

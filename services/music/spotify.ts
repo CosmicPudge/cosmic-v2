@@ -12,6 +12,12 @@ import type { ProviderAccessContext } from "@/services/providers/access";
 import { requireProviderCredentialOwner } from "@/services/providers/access";
 
 export type Token = { access_token: string; refresh_token?: string; expires_at?: number; scope?: string };
+export type KioskMusicDiagnostics = {
+  category: "connected" | "provider-not-found" | "configuration-error" | "authentication-error" | "provider-error";
+  providerFound: boolean;
+  ownerMatch: boolean;
+  tokenRecordFound: boolean;
+};
 const path = join(process.cwd(), ".cosmic", "spotify-token.json");
 const caps: MusicCapabilities = { canPlay: true, canPause: true, canSkipNext: true, canSkipPrevious: true, canSeek: true, canSetVolume: true, canReadQueue: true };
 const disabledCaps: MusicCapabilities = { canPlay: false, canPause: false, canSkipNext: false, canSkipPrevious: false, canSeek: false, canSetVolume: false, canReadQueue: false };
@@ -244,16 +250,39 @@ export async function accountSnapshotWithDiagnostics(userId: string) {
  * or personal route behavior.
  */
 export async function developerKioskSnapshotWithDiagnostics(accountId: string) {
-  let accountResult: Awaited<ReturnType<typeof accountSnapshotWithDiagnostics>>;
-  try {
-    accountResult = await accountSnapshotWithDiagnostics(accountId);
-  } catch (error) {
-    if (accountId === process.env.COSMIC_OWNER_USER_ID?.trim()) return personalSnapshotWithDiagnostics();
-    throw error;
+  if (!configured()) return { snapshot: disconnected("Spotify is not configured on this server."), diagnostics: { category: "configuration-error", providerFound: false, ownerMatch: accountId === process.env.COSMIC_OWNER_USER_ID?.trim(), tokenRecordFound: false } satisfies KioskMusicDiagnostics };
+
+  const ownerId = process.env.COSMIC_OWNER_USER_ID?.trim();
+  const candidates = [...new Set([accountId, ownerId].filter((value): value is string => Boolean(value)))];
+  let fallbackResult: Awaited<ReturnType<typeof accountSnapshotWithDiagnostics>> | null = null;
+  let fallbackDiagnostics: KioskMusicDiagnostics = { category: "provider-not-found", providerFound: false, ownerMatch: false, tokenRecordFound: false };
+
+  for (const candidate of candidates) {
+    const ownerMatch = candidate === ownerId;
+    try {
+      const connection = (await listProviderConnections(candidate)).find((item) => normalizeProviderId(item.provider) === "spotify");
+      const tokenRecordFound = Boolean(connection && await getProviderCredentials<Token>(candidate, connection.id));
+      const result = await accountSnapshotWithDiagnostics(candidate);
+      const diagnostics: KioskMusicDiagnostics = result.snapshot.connected
+        ? { category: "connected", providerFound: Boolean(connection), ownerMatch, tokenRecordFound }
+        : { category: /reconnect|authorization|invalid/i.test(result.snapshot.error ?? "") ? "authentication-error" : connection ? "provider-error" : "provider-not-found", providerFound: Boolean(connection), ownerMatch, tokenRecordFound };
+      if (result.snapshot.connected) return { ...result, diagnostics };
+      fallbackResult ??= result;
+      fallbackDiagnostics = diagnostics;
+    } catch {
+      fallbackResult ??= { snapshot: disconnected("Spotify playback is temporarily unavailable.") };
+      fallbackDiagnostics = { category: "provider-error", providerFound: false, ownerMatch, tokenRecordFound: false };
+    }
   }
-  if (accountResult.snapshot.connected || accountId !== process.env.COSMIC_OWNER_USER_ID?.trim()) return accountResult;
-  const personalResult = await personalSnapshotWithDiagnostics();
-  return personalResult.snapshot.connected ? personalResult : accountResult;
+
+  if (ownerId && accountId === ownerId) {
+    try {
+      const personalResult = await personalSnapshotWithDiagnostics();
+      if (personalResult.snapshot.connected) return { ...personalResult, diagnostics: { category: "connected", providerFound: true, ownerMatch: true, tokenRecordFound: true } satisfies KioskMusicDiagnostics };
+    } catch { /* The database-backed owner path remains authoritative. */ }
+  }
+
+  return { ...(fallbackResult ?? { snapshot: disconnected("Spotify is not connected to this Cosmic account.") }), diagnostics: fallbackDiagnostics };
 }
 
 export async function personalSnapshotWithDiagnostics() {

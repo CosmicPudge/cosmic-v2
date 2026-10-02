@@ -18,7 +18,7 @@ import { requirementCategory, resolveRequirementDate } from "./requirements";
 import { applyCoursePlanOverrides, buildCoursePlans } from "./coursePlan";
 import { listCoursePlanOverrides } from "./coursePlanOverrideRepository";
 import { canonicalCanvasCalendarId, dedupeSchoolAssignments } from "./assignmentIdentity";
-import { CanvasAcademicProvider } from "./providers/canvas/provider";
+import { CanvasAcademicProvider, canvasErrorStatus } from "./providers/canvas/provider";
 
 const providerAccountId = "canvas-personal-calendar";
 async function safeCoursePlanOverrides(accountId: string) { try { return await listCoursePlanOverrides(accountId); } catch { return []; } }
@@ -90,6 +90,7 @@ export interface SchoolServerData {
   data: SchoolDashboardData;
   snapshot: SchoolSnapshot;
   error?: string;
+  errorCategory?: "configuration-error" | "authentication-error" | "provider-error";
 }
 
 /** Server-side School boundary. Consumers receive normalized data only. */
@@ -139,7 +140,7 @@ export async function getDeveloperKioskSchoolData(accountId: string): Promise<Sc
   if (existing.snapshot.sourceStatus?.canvas === "healthy" || (existing.snapshot.planningAssignments?.length ?? 0) > 0) return existing;
   if (!connection) return existing;
   const credentials = await getProviderCredentials<{ baseUrl?: unknown; token?: unknown }>(accountId, connection.id);
-  if (typeof credentials?.baseUrl !== "string" || typeof credentials.token !== "string") return { ...existing, error: "Canvas credentials are unavailable." };
+  if (typeof credentials?.baseUrl !== "string" || typeof credentials.token !== "string") return { ...existing, error: "Canvas credentials are unavailable.", errorCategory: "configuration-error" };
 
   try {
     const result = await new CanvasAcademicProvider(credentials.baseUrl, credentials.token).sync(accountId);
@@ -152,7 +153,8 @@ export async function getDeveloperKioskSchoolData(accountId: string): Promise<Sc
         sourceStatus: { canvas: "healthy", lastSyncedAt: connection.lastSuccessfulRefreshAt?.toISOString() ?? null },
       },
     };
-  } catch {
-    return { ...existing, error: "Canvas data is temporarily unavailable." };
+  } catch (error) {
+    const status = canvasErrorStatus(error);
+    return { ...existing, error: "Canvas data is temporarily unavailable.", errorCategory: status === "invalid_token" || status === "forbidden" ? "authentication-error" : "provider-error" };
   }
 }
