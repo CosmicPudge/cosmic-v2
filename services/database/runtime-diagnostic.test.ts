@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 // @ts-expect-error Node's strip-types test runner requires the explicit extension.
-import { canRunDatabaseDiagnostic, classifyDatabaseFailure, classifyDatabaseRuntime, checkDatabaseStatus, createPostgresPoolOptions } from "./runtime.ts";
+import { canRunDatabaseDiagnostic, classifyDatabaseFailure, classifyDatabaseRuntime, checkDatabaseStatus, createPostgresPoolOptions, inspectDatabaseStructure } from "./runtime.ts";
 
 test("classifies a Supabase direct PostgreSQL runtime without exposing URL details", () => {
   const result = classifyDatabaseRuntime({
@@ -33,6 +33,16 @@ test("uses the proven TLS compatibility option only for Supabase", () => {
 test("classifies Neon and missing drivers", () => {
   assert.deepEqual(classifyDatabaseRuntime({ DATABASE_DRIVER: "neon", DATABASE_URL: "postgresql://u:p@ep-example.us-east-2.aws.neon.tech/neondb" }), { driver: "neon", provider: "neon", connectionMode: "unknown", urlPresent: true });
   assert.deepEqual(classifyDatabaseRuntime({ DATABASE_URL: "postgresql://u:p@db.example.test/postgres" }), { driver: "missing", provider: "other", connectionMode: "unknown", urlPresent: true });
+});
+
+test("inspects a Neon URL without exposing its values", () => {
+  const result = inspectDatabaseStructure({ DATABASE_DRIVER: "postgres", DATABASE_URL: "postgresql://u:p@ep-example.us-east-2.aws.neon.tech/neondb?sslmode=require" });
+  assert.deepEqual(result, { driverRecognized: true, scheme: "postgresql", providerDetected: "neon", modeDetected: "direct", urlObjectCreated: true, hasCredentials: true, hasHost: true, hasDatabasePath: true, hasSslmode: true, parseStage: "factory" });
+});
+
+test("identifies an invalid driver before URL parsing", () => {
+  const result = inspectDatabaseStructure({ DATABASE_DRIVER: "\"postgres\"", DATABASE_URL: "postgresql://u:p@ep-example.us-east-2.aws.neon.tech/neondb?sslmode=require" });
+  assert.deepEqual(result, { driverRecognized: false, scheme: "invalid", providerDetected: "unknown", modeDetected: "unknown", urlObjectCreated: false, hasCredentials: false, hasHost: false, hasDatabasePath: false, hasSslmode: false, parseStage: "driver" });
 });
 
 test("reports invalid or absent database configuration without echoing secrets", () => {

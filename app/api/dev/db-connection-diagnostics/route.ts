@@ -1,6 +1,6 @@
 import { getDatabase } from "@/services/database/client";
 import { classifyConnectionFailure, safeDatabaseClientName, safeDatabaseErrorCode } from "@/services/database/connectionDiagnostics";
-import { classifyDatabaseRuntime } from "@/services/database/runtime";
+import { classifyDatabaseRuntime, inspectDatabaseStructure } from "@/services/database/runtime";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -16,12 +16,14 @@ export async function GET(request: Request) {
   if (!isDeveloperDiagnosticRequest(request)) return Response.json({ error: "Not found" }, { status: 404 });
 
   const runtimeConfig = classifyDatabaseRuntime();
+  const structure = inspectDatabaseStructure();
   const base = {
     connected: false,
-    client: safeDatabaseClientName(process.env.DATABASE_DRIVER?.trim() || "neon"),
+    client: safeDatabaseClientName(runtimeConfig.driver),
     runtime: "node" as const,
     failureCategory: null as string | null,
     safeCode: null as string | null,
+    ...structure,
   };
 
   if (!runtimeConfig.urlPresent || runtimeConfig.driver === "invalid" || runtimeConfig.driver === "missing") {

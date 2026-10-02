@@ -11,6 +11,19 @@ export type DatabaseRuntimeClassification = {
   urlPresent: boolean;
 };
 
+export type DatabaseStructureDiagnostic = {
+  driverRecognized: boolean;
+  scheme: "postgresql" | "postgres" | "invalid";
+  providerDetected: "neon" | "unknown";
+  modeDetected: "direct" | "pooled" | "unknown";
+  urlObjectCreated: boolean;
+  hasCredentials: boolean;
+  hasHost: boolean;
+  hasDatabasePath: boolean;
+  hasSslmode: boolean;
+  parseStage: "driver" | "url" | "provider" | "mode" | "factory" | "unknown";
+};
+
 export type DatabaseFailure = {
   category: DatabaseFailureCategory;
   code: string;
@@ -67,6 +80,31 @@ function classifyDatabaseUrl(value: string): Pick<DatabaseRuntimeClassification,
   } catch {
     return { provider: "unknown", connectionMode: "unknown" };
   }
+}
+
+export function inspectDatabaseStructure(environment: DatabaseEnvironment = process.env): DatabaseStructureDiagnostic {
+  const rawDriver = environment.DATABASE_DRIVER?.trim();
+  const driverRecognized = rawDriver === undefined || rawDriver === "" || rawDriver === "postgres" || rawDriver === "neon";
+  if (!driverRecognized) return { driverRecognized: false, scheme: "invalid", providerDetected: "unknown", modeDetected: "unknown", urlObjectCreated: false, hasCredentials: false, hasHost: false, hasDatabasePath: false, hasSslmode: false, parseStage: "driver" };
+
+  const rawUrl = environment.DATABASE_URL?.trim();
+  if (!rawUrl) return { driverRecognized, scheme: "invalid", providerDetected: "unknown", modeDetected: "unknown", urlObjectCreated: false, hasCredentials: false, hasHost: false, hasDatabasePath: false, hasSslmode: false, parseStage: "url" };
+
+  let url: URL;
+  try {
+    url = new URL(rawUrl);
+  } catch {
+    return { driverRecognized, scheme: "invalid", providerDetected: "unknown", modeDetected: "unknown", urlObjectCreated: false, hasCredentials: false, hasHost: false, hasDatabasePath: false, hasSslmode: false, parseStage: "url" };
+  }
+
+  const scheme: DatabaseStructureDiagnostic["scheme"] = url.protocol === "postgresql:" ? "postgresql" : url.protocol === "postgres:" ? "postgres" : "invalid";
+  const shape = { driverRecognized, scheme, providerDetected: "unknown" as const, modeDetected: "unknown" as const, urlObjectCreated: true, hasCredentials: Boolean(url.username && url.password), hasHost: Boolean(url.hostname), hasDatabasePath: url.pathname.length > 1, hasSslmode: url.searchParams.has("sslmode") };
+  if (scheme === "invalid") return { ...shape, parseStage: "url" };
+
+  const hostname = url.hostname.toLowerCase();
+  const neon = hostname.endsWith(".neon.tech");
+  if (!neon) return { ...shape, parseStage: "provider" };
+  return { ...shape, providerDetected: "neon", modeDetected: "direct", parseStage: "factory" };
 }
 
 export function classifyDatabaseRuntime(environment: DatabaseEnvironment = process.env): DatabaseRuntimeClassification {
