@@ -27,9 +27,9 @@ export default function CalendarWidget() {
   } = useCalendar({ enabled: typeof window === "undefined" || window.location.pathname !== "/kiosk" });
   const developer = useDeveloperKioskData();
   const developerCalendar = developer.data ? {
-    today: developer.data.calendar.events.map(hydrateDeveloperEvent),
-    upcoming: developer.data.calendar.events.map(hydrateDeveloperEvent),
-    nextEvent: developer.data.calendar.events[0] ? hydrateDeveloperEvent(developer.data.calendar.events[0]) : undefined,
+    today: developer.data.calendar.todayEvents.map(hydrateDeveloperEvent),
+    upcoming: developer.data.calendar.weekEvents.map(hydrateDeveloperEvent),
+    nextEvent: developer.data.calendar.nextEvent ? hydrateDeveloperEvent(developer.data.calendar.nextEvent) : undefined,
     timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     accountCalendarConnected: developer.data.calendar.connected,
   } : null;

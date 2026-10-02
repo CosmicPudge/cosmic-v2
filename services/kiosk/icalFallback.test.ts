@@ -26,6 +26,19 @@ test("keeps one iCloud feed connected when the other fails", async () => {
   assert.equal(result.events.length, 1);
 });
 
+test("expands a recurring weekly class into the current window", async () => {
+  const recurring = calendar([["BEGIN:VEVENT", "UID:weekly-class", "DTSTART:20260928T150000Z", "DTEND:20260928T160000Z", "RRULE:FREQ=WEEKLY;BYDAY=MO", "SUMMARY:Leadership class", "END:VEVENT"].join("\r\n")]);
+  const result = await fetchKioskCalendarIcalFeeds(["https://calendar.invalid/classes"], async () => response(recurring));
+  assert.equal(result.feedCount, 1);
+  assert.equal(result.events.some((item) => item.title === "Leadership class"), true);
+});
+
+test("keeps all-day events in the merged result", async () => {
+  const allDay = calendar([["BEGIN:VEVENT", "UID:all-day", "DTSTART;VALUE=DATE:20261003", "DTEND;VALUE=DATE:20261004", "SUMMARY:Training day", "END:VEVENT"].join("\r\n")]);
+  const result = await fetchKioskCalendarIcalFeeds(["https://calendar.invalid/all-day"], async () => response(allDay));
+  assert.equal(result.events[0]?.allDay, true);
+});
+
 test("parses Canvas upcoming and overdue assignments", async () => {
   const ics = calendar([
     event("upcoming", "Read chapter assignment", "20300103T100000Z", "20300103T110000Z", "URL:https://canvas.example/courses/42/assignments/7"),

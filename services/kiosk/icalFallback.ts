@@ -19,34 +19,56 @@ export interface KioskCanvasIcalResult {
   parsedEvents: number;
 }
 
-function calendarEvent(component: ICAL.Component, calendarName: string): CalendarEvent {
-  const event = new ICAL.Event(component);
-  const start = event.startDate.toJSDate();
-  const end = event.endDate.toJSDate();
+export interface KioskIcalWindow {
+  start: Date;
+  end: Date;
+}
+
+function calendarEvent(event: ICAL.Event, calendarName: string, occurrence?: ReturnType<ICAL.Event["getOccurrenceDetails"]>): CalendarEvent {
+  const source = occurrence?.item ?? event;
+  const start = (occurrence?.startDate ?? event.startDate).toJSDate();
+  const end = (occurrence?.endDate ?? event.endDate).toJSDate();
   if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime())) throw new Error("Invalid iCal event date.");
-  const uid = event.uid || `${start.toISOString()}:${event.summary ?? "event"}`;
+  const uid = event.uid || `${start.toISOString()}:${source.summary ?? "event"}`;
+  const recurrenceId = occurrence?.recurrenceId?.toString();
   return {
-    id: uid,
+    id: recurrenceId ? `${uid}:${recurrenceId}` : uid,
     uid,
-    title: event.summary || "Untitled event",
-    ...(event.description ? { description: event.description } : {}),
+    title: source.summary || "Untitled event",
+    ...(source.description ? { description: source.description } : {}),
     start,
     end,
-    ...(event.location ? { location: event.location } : {}),
-    ...(event.startDate.isDate ? { allDay: true } : {}),
+    ...(source.location ? { location: source.location } : {}),
+    ...((occurrence?.startDate ?? event.startDate).isDate ? { allDay: true } : {}),
     calendarName,
     source: "subscription",
     category: "personal",
     priority: "normal",
     travelRequired: false,
     completed: false,
+    ...(recurrenceId ? { recurrenceId, isRecurring: true } : {}),
   };
 }
 
-export function parseKioskCalendarIcal(ics: string, calendarName: string): CalendarEvent[] {
+export function parseKioskCalendarIcal(ics: string, calendarName: string, window?: KioskIcalWindow): CalendarEvent[] {
   const calendar = new ICAL.Component(ICAL.parse(ics));
   return calendar.getAllSubcomponents("vevent").flatMap((component) => {
-    try { return [calendarEvent(component, calendarName)]; } catch { return []; }
+    try {
+      const event = new ICAL.Event(component);
+      if (!event.isRecurring() || !window) return [calendarEvent(event, calendarName)];
+      const occurrences: CalendarEvent[] = [];
+      const iterator = event.iterator(event.startDate);
+      for (let count = 0; count < 512; count += 1) {
+        const occurrence = iterator.next();
+        if (!occurrence) break;
+        const details = event.getOccurrenceDetails(occurrence);
+        const start = details.startDate.toJSDate();
+        const end = details.endDate.toJSDate();
+        if (start >= window.end) break;
+        if (end > window.start) occurrences.push(calendarEvent(event, calendarName, details));
+      }
+      return occurrences;
+    } catch { return []; }
   });
 }
 
@@ -57,10 +79,11 @@ async function fetchText(url: string, fetchImpl: typeof fetch) {
 }
 
 export async function fetchKioskCalendarIcalFeeds(urls: string[], fetchImpl: typeof fetch = fetch): Promise<KioskCalendarIcalResult> {
+  const window = { start: new Date(), end: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) };
   const results = await Promise.all(urls.map(async (url, index) => {
     let body: string;
     try { body = await fetchText(url, fetchImpl); } catch { return { events: [] as CalendarEvent[], category: "provider-error" as const }; }
-    try { return { events: parseKioskCalendarIcal(body, `Kiosk calendar ${index + 1}`), category: "connected" as const }; }
+    try { return { events: parseKioskCalendarIcal(body, `Kiosk calendar ${index + 1}`, window), category: "connected" as const }; }
     catch { return { events: [] as CalendarEvent[], category: "parse-error" as const }; }
   }));
   const successful = results.filter((result) => result.category === "connected");

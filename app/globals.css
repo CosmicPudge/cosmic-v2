@@ -384,6 +384,32 @@ html, body { width: 100%; min-height: 100%; background: #030511; }
 .kiosk-native-scene-subtitle { max-width: 38rem; margin-top: 1rem; overflow: hidden; color: rgba(226,232,240,.72); font-size: clamp(.8rem, 1.8vw, 1.35rem); line-height: 1.35; text-overflow: ellipsis; white-space: nowrap; }
 .kiosk-native-scene-details { display: flex; flex-wrap: wrap; gap: .6rem 1rem; margin-top: clamp(1.25rem, 3vw, 2.5rem); color: rgba(165,243,252,.78); font-size: clamp(.62rem, 1.1vw, .85rem); letter-spacing: .08em; text-transform: uppercase; }
 .kiosk-native-scene-details span { max-width: 24rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kiosk-time-scene { position: relative; display: flex; height: 100%; min-height: 0; flex-direction: column; overflow: hidden; padding: clamp(1.25rem, 3vw, 2.5rem) clamp(1.25rem, 4vw, 4rem) clamp(1rem, 2vw, 2rem); color: rgba(248,250,252,.96); }
+.kiosk-time-scene::after { position: absolute; inset: 0; z-index: 0; pointer-events: none; background: linear-gradient(90deg, rgba(2,6,23,.5), rgba(2,6,23,.2) 46%, rgba(2,6,23,.08)); content: ""; }
+.kiosk-time-scene > * { position: relative; z-index: 1; }
+.kiosk-time-scene-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
+.kiosk-time-scene-kicker, .kiosk-time-scene-label { color: rgba(165,243,252,.78); font-size: clamp(.58rem, .9vw, .76rem); font-weight: 700; letter-spacing: .24em; text-transform: uppercase; }
+.kiosk-time-scene-date { margin-top: .35rem; color: rgba(248,250,252,.9); font-size: clamp(1rem, 2vw, 1.5rem); letter-spacing: -.02em; }
+.kiosk-time-scene-status { color: rgba(253,230,138,.7); font-size: .62rem; letter-spacing: .16em; text-transform: uppercase; }
+.kiosk-time-scene-grid { display: grid; min-height: 0; flex: 1; grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); gap: clamp(1rem, 3vw, 3rem); margin-top: clamp(1rem, 2.5vw, 2rem); }
+.kiosk-time-scene-hero { display: flex; min-height: 0; flex-direction: column; justify-content: center; border-left: 2px solid rgba(103,232,249,.55); padding: clamp(1rem, 2.5vw, 2.25rem); background: linear-gradient(110deg, rgba(5,18,39,.58), rgba(5,18,39,.16)); }
+.kiosk-time-scene-hero-title { max-width: 30rem; margin-top: .75rem; color: rgba(255,255,255,.98); font-size: clamp(1.5rem, 3.5vw, 3.8rem); font-weight: 620; letter-spacing: -.045em; line-height: 1.02; text-wrap: balance; }
+.kiosk-time-scene-hero-meta { margin-top: .85rem; color: rgba(226,232,240,.7); font-size: clamp(.75rem, 1.2vw, 1rem); }
+.kiosk-time-scene-hero-due { margin-top: .35rem; color: rgba(165,243,252,.86); font-size: clamp(.72rem, 1.1vw, .95rem); font-variant-numeric: tabular-nums; }
+.kiosk-time-scene-lists { display: flex; min-height: 0; flex-direction: column; gap: clamp(.8rem, 1.8vw, 1.5rem); overflow: hidden; }
+.kiosk-time-scene-list { min-height: 0; overflow: hidden; }
+.kiosk-time-scene-rows { display: flex; min-height: 0; flex-direction: column; gap: .45rem; margin-top: .55rem; }
+.kiosk-time-scene-row { display: flex; min-width: 0; align-items: center; justify-content: space-between; gap: .8rem; border: 1px solid rgba(255,255,255,.13); border-radius: .7rem; padding: .55rem .75rem; background: rgba(2,6,23,.34); }
+.kiosk-time-scene-row-title { overflow: hidden; color: rgba(248,250,252,.9); font-size: clamp(.68rem, 1.05vw, .88rem); font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.kiosk-time-scene-row-meta { overflow: hidden; color: rgba(226,232,240,.52); font-size: clamp(.56rem, .8vw, .68rem); text-overflow: ellipsis; white-space: nowrap; }
+.kiosk-time-scene-row-time { flex: 0 0 auto; color: rgba(165,243,252,.76); font-size: clamp(.57rem, .85vw, .72rem); font-variant-numeric: tabular-nums; }
+.kiosk-time-scene-muted, .kiosk-time-scene-empty { margin-top: .6rem; color: rgba(226,232,240,.56); font-size: .78rem; }
+.kiosk-time-scene-empty-state { position: relative; z-index: 1; display: grid; flex: 1; place-content: center; text-align: center; color: rgba(248,250,252,.9); font-size: 1.35rem; text-transform: uppercase; }
+.kiosk-time-scene-empty-state span { margin-top: .4rem; color: rgba(226,232,240,.56); font-size: .78rem; text-transform: none; }
+@media (max-width: 700px) {
+  .kiosk-time-scene-grid { grid-template-columns: 1fr; overflow: auto; }
+  .kiosk-time-scene-hero { min-height: 10rem; }
+}
 .kiosk-sports-matchup { display: flex; max-width: min(64rem, 82vw); flex-direction: column; gap: .08em; font-size: clamp(2.15rem, 6.8vw, 6.8rem); line-height: .9; letter-spacing: -.055em; }
 .kiosk-sports-matchup > span:first-child { color: rgba(248,250,252,.9); }
 .kiosk-sports-matchup > span:last-child { color: #f5d38a; }
