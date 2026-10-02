@@ -42,6 +42,27 @@ const GENERIC_NFL_STADIUM = "/dashboard/sports/stadium.webp";
 const GENERIC_MLB_STADIUM = "/dashboard/sports/baseball.webp";
 const GENERIC_MOTORSPORT = "/dashboard/sports/motorsport.webp";
 
+const F1_CIRCUIT_ASSETS: Record<string, string> = {
+  "f1-monza": "/sports/tracks/f1/monza.svg",
+  "f1-austin": "/sports/tracks/f1/austin.svg",
+  "f1-marina-bay": "/sports/tracks/f1/marina-bay.svg",
+  "f1-malaysia": GENERIC_MOTORSPORT,
+  "f1-generic": GENERIC_MOTORSPORT,
+};
+
+const NASCAR_TRACK_ASSETS: Record<string, string> = {
+  "nascar-daytona": "/sports/tracks/nascar/daytona-tri-oval.svg",
+  "nascar-cota": "/sports/tracks/nascar/cota-nascar.svg",
+  "nascar-las-vegas": "/sports/tracks/nascar/las-vegas.svg",
+  "nascar-generic": GENERIC_MOTORSPORT,
+};
+
+const MLB_STADIUM_ASSETS: Record<string, string> = {
+  "mlb-angels": GENERIC_MLB_STADIUM,
+  "mlb-yankees": GENERIC_MLB_STADIUM,
+  "mlb-generic": GENERIC_MLB_STADIUM,
+};
+
 const SCENE_ASSETS: Record<KioskSceneFamily, Record<string, string>> = {
   school: {
     clear: "/dashboard/school/campus-study.webp",
@@ -87,18 +108,8 @@ export function selectKioskSportsBackground(backgroundKey?: string) {
     const abbreviation = backgroundKey.slice(4);
     return NFL_STADIUM_ASSETS[abbreviation] ?? GENERIC_NFL_STADIUM;
   }
-  const assets: Record<string, string> = {
-    "f1-monza": "/sports/tracks/f1/monza.svg",
-    "f1-austin": "/sports/tracks/f1/austin.svg",
-    "f1-marina-bay": "/sports/tracks/f1/marina-bay.svg",
-    "f1-malaysia": GENERIC_MOTORSPORT,
-    "f1-generic": GENERIC_MOTORSPORT,
-    "nascar-daytona": "/sports/tracks/nascar/daytona-tri-oval.svg",
-    "nascar-cota": "/sports/tracks/nascar/cota-nascar.svg",
-    "nascar-generic": GENERIC_MOTORSPORT,
-    "mlb-angels": GENERIC_MLB_STADIUM,
-    "mlb-yankees": GENERIC_MLB_STADIUM,
-    "mlb-generic": GENERIC_MLB_STADIUM,
-  };
-  return assets[backgroundKey] ?? GENERIC_MOTORSPORT;
+  if (backgroundKey.startsWith("mlb-")) return MLB_STADIUM_ASSETS[backgroundKey] ?? GENERIC_MLB_STADIUM;
+  if (backgroundKey.startsWith("f1-")) return F1_CIRCUIT_ASSETS[backgroundKey] ?? GENERIC_MOTORSPORT;
+  if (backgroundKey.startsWith("nascar-")) return NASCAR_TRACK_ASSETS[backgroundKey] ?? GENERIC_MOTORSPORT;
+  return GENERIC_MOTORSPORT;
 }

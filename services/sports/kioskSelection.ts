@@ -24,6 +24,21 @@ export interface KioskSportsEvent {
 
 const SPORT_LABELS: Record<KioskTrackedSport, string> = { nfl: "NFL", f1: "FORMULA 1", nascar: "NASCAR", mlb: "MLB" };
 const SESSION_IMPORTANCE: Record<string, number> = { practice1: 10, practice2: 20, practice3: 30, practice: 10, qualifying: 50, sprint: 70, race: 100 };
+const F1_CIRCUIT_BACKGROUND_KEYS: Array<{ key: string; aliases: string[] }> = [
+  { key: "f1-monza", aliases: ["monza", "italy"] },
+  { key: "f1-austin", aliases: ["austin", "cota", "united states"] },
+  { key: "f1-marina-bay", aliases: ["marina bay", "singapore"] },
+  { key: "f1-malaysia", aliases: ["malaysia", "sepang"] },
+];
+const NASCAR_TRACK_BACKGROUND_KEYS: Array<{ key: string; aliases: string[] }> = [
+  { key: "nascar-daytona", aliases: ["daytona"] },
+  { key: "nascar-cota", aliases: ["austin", "cota"] },
+  { key: "nascar-las-vegas", aliases: ["las vegas motor speedway", "las vegas", "vegas"] },
+];
+const MLB_STADIUM_BACKGROUND_KEYS: Array<{ key: string; aliases: string[] }> = [
+  { key: "mlb-angels", aliases: ["laa", "los angeles angels", "angels", "angel stadium"] },
+  { key: "mlb-yankees", aliases: ["nyy", "new york yankees", "yankees", "yankee stadium"] },
+];
 
 function normalized(value?: string) { return value?.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim() ?? ""; }
 
@@ -58,25 +73,22 @@ function eventType(event: SportsEvent, session: string) {
   return isPostseason(event) ? "POSTSEASON" : "GAME";
 }
 
+function matchBackgroundKey(text: string, mappings: Array<{ key: string; aliases: string[] }>) {
+  return mappings.find(({ aliases }) => aliases.some((alias) => text.includes(alias)))?.key;
+}
+
 function backgroundKey(event: SportsEvent): string {
   const venue = normalized(`${event.venue} ${event.metadata?.circuit} ${event.metadata?.track} ${event.metadata?.country} ${event.metadata?.location}`);
   if (event.sport === "nfl") return `nfl-${(resolveSportsTeamIdentity("nfl", event.homeTeam)?.abbreviation ?? event.homeTeam?.abbreviation ?? event.homeTeam?.id ?? "generic").toLowerCase()}`;
   if (event.sport === "f1") {
-    if (/monza|italy/.test(venue)) return "f1-monza";
-    if (/austin|cota|united states/.test(venue)) return "f1-austin";
-    if (/marina bay|singapore/.test(venue)) return "f1-marina-bay";
-    if (/malaysia|sepang/.test(venue)) return "f1-malaysia";
-    return "f1-generic";
+    return matchBackgroundKey(venue, F1_CIRCUIT_BACKGROUND_KEYS) ?? "f1-generic";
   }
   if (event.sport === "nascar") {
-    if (/daytona/.test(venue)) return "nascar-daytona";
-    if (/austin|cota/.test(venue)) return "nascar-cota";
-    return "nascar-generic";
+    return matchBackgroundKey(venue, NASCAR_TRACK_BACKGROUND_KEYS) ?? "nascar-generic";
   }
-  const teams = normalized(`${event.homeTeam?.name} ${event.awayTeam?.name} ${event.title}`);
-  if (/angels|los angeles angels/.test(teams)) return "mlb-angels";
-  if (/yankees|new york yankees/.test(teams)) return "mlb-yankees";
-  return "mlb-generic";
+  const homeTeam = normalized(`${event.homeTeam?.id} ${event.homeTeam?.abbreviation} ${event.homeTeam?.name}`);
+  const homeVenue = normalized(`${event.venue} ${event.metadata?.location}`);
+  return matchBackgroundKey(`${homeTeam} ${homeVenue}`, MLB_STADIUM_BACKGROUND_KEYS) ?? "mlb-generic";
 }
 
 export function normalizeKioskSportsEvent(event: SportsEvent): KioskSportsEvent | undefined {

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import type { SportsEvent } from "@/core/contracts/Sports";
 import { normalizeKioskSportsEvent, selectKioskSportsEvent } from "./kioskSelection";
+import { selectKioskSportsBackground } from "@/components/os/widgets/shared/kioskSceneBackgrounds";
 
 const now = new Date("2026-10-02T12:00:00Z");
 function event(id: string, sport: SportsEvent["sport"], start: string, extra: Partial<SportsEvent> = {}): SportsEvent {
@@ -27,7 +28,7 @@ test("Packers and Angels receive favorite priority when timing is equal", () => 
 });
 
 test("MLB postseason remains eligible when the Angels are inactive", () => {
-  const selected = selectKioskSportsEvent([event("alds", "mlb", "2026-10-02T14:00:00Z", { title: "ALDS Game 2: Yankees vs Orioles", metadata: { seasonType: "Postseason", competition: "ALDS" } })], now);
+  const selected = selectKioskSportsEvent([event("alds", "mlb", "2026-10-02T14:00:00Z", { title: "ALDS Game 2: Yankees vs Orioles", homeTeam: { name: "New York Yankees", abbreviation: "NYY" }, awayTeam: { name: "Baltimore Orioles" }, metadata: { seasonType: "Postseason", competition: "ALDS" } })], now);
   assert.equal(selected?.eventType, "POSTSEASON");
   assert.equal(selected?.backgroundKey, "mlb-yankees");
 });
@@ -47,4 +48,22 @@ test("venue-aware background keys cover each tracked sport", () => {
   assert.equal(normalizeKioskSportsEvent(event("f1", "f1", "2026-10-03T12:00:00Z", { venue: "Sepang International Circuit", metadata: { country: "Malaysia" } }))?.backgroundKey, "f1-malaysia");
   assert.equal(normalizeKioskSportsEvent(event("nascar", "nascar", "2026-10-03T12:00:00Z", { venue: "Daytona International Speedway" }))?.backgroundKey, "nascar-daytona");
   assert.equal(normalizeKioskSportsEvent(event("mlb", "mlb", "2026-10-03T12:00:00Z", { homeTeam: { name: "Los Angeles Angels" }, awayTeam: { name: "Seattle Mariners" } }))?.backgroundKey, "mlb-angels");
+});
+
+test("NASCAR Las Vegas resolves to its dedicated track key and asset", () => {
+  const normalized = normalizeKioskSportsEvent(event("vegas", "nascar", "2026-10-03T12:00:00Z", { venue: "Las Vegas Motor Speedway" }));
+  assert.equal(normalized?.backgroundKey, "nascar-las-vegas");
+  assert.equal(selectKioskSportsBackground(normalized?.backgroundKey), "/sports/tracks/nascar/las-vegas.svg");
+});
+
+test("MLB stadium mapping uses the home team, not an away favorite", () => {
+  assert.equal(normalizeKioskSportsEvent(event("yankees-home", "mlb", "2026-10-03T12:00:00Z", { homeTeam: { name: "New York Yankees", abbreviation: "NYY" }, awayTeam: { name: "Los Angeles Angels" } }))?.backgroundKey, "mlb-yankees");
+  assert.equal(normalizeKioskSportsEvent(event("yankees-away", "mlb", "2026-10-03T12:00:00Z", { title: "Yankees at Orioles", homeTeam: { name: "Baltimore Orioles" }, awayTeam: { name: "New York Yankees", abbreviation: "NYY" } }))?.backgroundKey, "mlb-generic");
+});
+
+test("unknown venues use the sport-specific generic fallback", () => {
+  assert.equal(selectKioskSportsBackground("nfl-unknown"), "/dashboard/sports/stadium.webp");
+  assert.equal(selectKioskSportsBackground("mlb-unknown"), "/dashboard/sports/baseball.webp");
+  assert.equal(selectKioskSportsBackground("f1-unknown"), "/dashboard/sports/motorsport.webp");
+  assert.equal(selectKioskSportsBackground("nascar-unknown"), "/dashboard/sports/motorsport.webp");
 });
