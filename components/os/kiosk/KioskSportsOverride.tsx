@@ -5,6 +5,9 @@ import type { SportsEvent } from "@/core/contracts/Sports";
 import type { BaseballLiveData, BaseballUniform } from "@/core/contracts/sports/Baseball";
 import { useSportsEvent } from "@/hooks/os/useSportsEvent";
 import { MLB_UNIFORM_THEMES } from "@/services/sports/providers/mlb/uniformThemes";
+import { normalizeKioskSportsEvent } from "@/services/sports/kioskSelection";
+import { selectKioskSportsBackground } from "@/components/os/widgets/shared/kioskSceneBackgrounds";
+import KioskSceneBackground from "@/components/os/widgets/shared/KioskSceneBackground";
 
 import KioskFootballView from "./sports/KioskFootballView";
 import KioskBaseballView from "./sports/KioskBaseballView";
@@ -16,34 +19,23 @@ export default function KioskSportsOverride({
 }: {
   event: SportsEvent;
 }) {
-  switch (event.sport) {
-    case "nfl":
-      return (
-        <KioskFootballView
-          event={event}
-        />
-      );
-
-    case "mlb":
-      return <KioskBaseballLiveView event={event} />;
-
-    case "f1":
-      return (
-        <KioskF1View
-          event={event}
-        />
-      );
-
-    case "nascar":
-      return (
-        <KioskNascarView
-          event={event}
-        />
-      );
-
-    default:
-      return null;
-  }
+  const content = (() => {
+    switch (event.sport) {
+      case "nfl":
+        return <KioskFootballView event={event} />;
+      case "mlb":
+        return <KioskBaseballLiveView event={event} />;
+      case "f1":
+        return <KioskF1View event={event} />;
+      case "nascar":
+        return <KioskNascarView event={event} />;
+      default:
+        return null;
+    }
+  })();
+  if (event.source !== "kiosk-test") return content;
+  const backgroundImage = selectKioskSportsBackground(normalizeKioskSportsEvent(event)?.backgroundKey);
+  return <div className="relative h-full w-full"><KioskSceneBackground family="sports" image={backgroundImage} /><div className="relative z-10 h-full w-full">{content}</div></div>;
 }
 
 function KioskBaseballLiveView({ event }: { event: SportsEvent }) {

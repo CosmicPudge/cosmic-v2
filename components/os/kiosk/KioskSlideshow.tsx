@@ -34,6 +34,7 @@ import { KioskSlideshowProvider } from "./KioskSlideshowContext";
 import type { KioskSlideshowPauseReason } from "@/core/contracts/Kiosk";
 import { useEntitlements } from "@/hooks/os/useEntitlements";
 import { resolveKioskSwipeDirection, shouldResetKioskRotationAfterSwipe } from "./kioskSlideshowInteraction";
+import { createKioskSportsTestEvent, parseKioskSportsTestOverride } from "./kioskSportsTestOverride";
 
 const TEST_SPORTS: SportKind[] = [
   "nfl",
@@ -161,6 +162,7 @@ function KioskNormalSlideshow() {
   const { setPersistentClockHidden } = useKioskAmbientFrame();
   const { data: entitlements } = useEntitlements();
   const standaloneDeveloperKiosk = typeof window !== "undefined" && window.location.pathname === "/kiosk";
+  const manualSportsOverride = useMemo(() => parseKioskSportsTestOverride(searchParams, typeof window !== "undefined" ? window.location.hostname : "", typeof window !== "undefined" ? window.location.pathname : "") , [searchParams]);
 
   const { data: sportsData } = useSports({
     refreshMs: (snapshot) => snapshot?.live.length ? 10_000 : 60_000,
@@ -213,6 +215,7 @@ function KioskNormalSlideshow() {
     ]);
 
   const liveEvent = useMemo(() => {
+    if (manualSportsOverride) return createKioskSportsTestEvent(manualSportsOverride);
     if (
       testModeAllowed &&
       testSportParam === "none"
@@ -232,6 +235,7 @@ function KioskNormalSlideshow() {
       sportsData.live,
     );
   }, [
+    manualSportsOverride,
     sportsData,
     testLiveEvent,
     testModeAllowed,
@@ -531,6 +535,7 @@ function KioskNormalSlideshow() {
 
       <span className="sr-only" aria-live="polite">Current kiosk scene: {currentWidget.id}</span>
       {paused ? <span className="pointer-events-none absolute right-5 top-5 z-30 rounded-full border border-white/15 bg-black/35 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-white/65 backdrop-blur-sm">Paused</span> : null}
+      {manualSportsOverride ? <span className="pointer-events-none absolute bottom-5 right-5 z-30 rounded-full border border-amber-200/30 bg-black/45 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-amber-100/85 backdrop-blur-sm">TEST OVERRIDE</span> : null}
     </div>
     </KioskSlideshowProvider>
   );
