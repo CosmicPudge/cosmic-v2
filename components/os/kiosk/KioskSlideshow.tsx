@@ -35,6 +35,7 @@ import type { KioskSlideshowPauseReason } from "@/core/contracts/Kiosk";
 import { useEntitlements } from "@/hooks/os/useEntitlements";
 import { resolveKioskSwipeDirection, shouldResetKioskRotationAfterSwipe } from "./kioskSlideshowInteraction";
 import { createKioskSportsTestEvent, parseKioskSportsTestOverride } from "./kioskSportsTestOverride";
+import { KIOSK_MUSIC_PLAYBACK_STALE_MS, shouldPauseKioskForMusic } from "./kioskMusicRotation";
 
 const TEST_SPORTS: SportKind[] = [
   "nfl",
@@ -257,19 +258,27 @@ function KioskNormalSlideshow() {
   const [timerEpoch, setTimerEpoch] = useState(0);
   const [manualPaused, setManualPaused] = useState(false);
   const [holdMusicWhilePlaying, setHoldMusicWhilePlaying] = useState(false);
-  const [musicSources, setMusicSources] = useState<Record<string, boolean>>({});
+  const [musicSources, setMusicSources] = useState<Record<string, { playing: boolean; lastSeenAt: number }>>({});
+  const musicSourceTimersRef = useRef<Record<string, number>>({});
   // Presentation-only phases keep a sports eligibility refresh from hard-swapping the scene tree.
   const [sportsPresentation, setSportsPresentation] = useState<SportsPresentationState | null>(null);
   const sportsPresentationTransitionRef = useRef<number | null>(null);
   const appliedCommandRevisionRef = useRef(0);
   const bootId = searchParams.get("cosmic-boot")?.trim() ?? "";
   const setMusicPlaying = useCallback((source: string, playing: boolean) => {
-    setMusicSources((current) => current[source] === playing ? current : { ...current, [source]: playing });
+    const lastSeenAt = Date.now();
+    const existingTimer = musicSourceTimersRef.current[source];
+    if (existingTimer !== undefined) window.clearTimeout(existingTimer);
+    if (playing) {
+      musicSourceTimersRef.current[source] = window.setTimeout(() => {
+        setMusicSources((current) => current[source]?.lastSeenAt === lastSeenAt ? { ...current, [source]: { playing: false, lastSeenAt } } : current);
+        delete musicSourceTimersRef.current[source];
+      }, KIOSK_MUSIC_PLAYBACK_STALE_MS);
+    } else {
+      delete musicSourceTimersRef.current[source];
+    }
+    setMusicSources((current) => current[source]?.playing === playing && current[source]?.lastSeenAt === lastSeenAt ? current : { ...current, [source]: { playing, lastSeenAt } });
   }, []);
-  const musicPlaying = Object.values(musicSources).some(Boolean);
-  const musicHold = holdMusicWhilePlaying && musicPlaying;
-  const paused = manualPaused || musicHold;
-  const pauseReason: KioskSlideshowPauseReason = manualPaused ? "manual" : musicHold ? "music-playing" : null;
   const pause = useCallback(() => { setManualPaused(true); }, []);
   const resume = useCallback(() => { setManualPaused(false); setTimerEpoch((epoch) => epoch + 1); }, []);
   const togglePause = useCallback(() => { setManualPaused((current) => !current); setTimerEpoch((epoch) => epoch + 1); }, []);
@@ -280,6 +289,12 @@ function KioskNormalSlideshow() {
     ? previousIndex
     : null;
   const currentWidget = widgets[safeCurrentIndex];
+  const musicPlayingSource = Object.values(musicSources).find((source) => source.playing);
+  const musicHold = standaloneDeveloperKiosk
+    ? shouldPauseKioskForMusic({ standalone: true, scene: currentWidget?.id, playing: Boolean(musicPlayingSource), lastSeenAt: musicPlayingSource?.lastSeenAt })
+    : holdMusicWhilePlaying && Boolean(musicPlayingSource);
+  const paused = manualPaused || musicHold;
+  const pauseReason: KioskSlideshowPauseReason = manualPaused ? "manual" : musicHold ? "music-playing" : null;
 
   const goToRelativeSlide = useCallback((direction: 1 | -1, resetTimer: boolean) => {
     if (liveEvent || sportsPresentation || widgets.length <= 1 || transitionLockRef.current) return false;
@@ -387,6 +402,8 @@ function KioskNormalSlideshow() {
     transitionTimeoutRef.current = null;
     if (sportsPresentationTransitionRef.current !== null) window.clearTimeout(sportsPresentationTransitionRef.current);
     sportsPresentationTransitionRef.current = null;
+    Object.values(musicSourceTimersRef.current).forEach((timer) => window.clearTimeout(timer));
+    musicSourceTimersRef.current = {};
     transitionLockRef.current = false;
   }, []);
 
