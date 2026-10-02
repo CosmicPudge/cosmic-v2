@@ -27,7 +27,7 @@ test("signin diagnostics are disabled without logging", () => {
 
 test("database schema errors are bounded without exposing error text", () => {
   const error = Object.assign(new Error("relation users does not exist"), { code: "42P01" });
-  assert.equal(classifySigninDatabaseError(error), "schema-error");
+  assert.equal(classifySigninDatabaseError(error), "table-missing");
   assert.equal(classifySigninDatabaseError(new Error("connection failed")), "database-error");
-  assert.equal(classifySigninDatabaseError(new Error("session insert failed"), "session-write-error"), "session-write-error");
+  assert.equal(classifySigninDatabaseError(new Error("session insert failed"), "session"), "session-write-error");
 });

@@ -26,7 +26,7 @@ export async function POST(request: Request) {
     try {
       session = await createSession(account.id, request.headers.get("user-agent") ?? undefined);
     } catch (error) {
-      category = classifySigninDatabaseError(error, "session-write-error");
+      category = classifySigninDatabaseError(error, "session");
       diagnostics?.("session-write-error", category);
       throw error;
     }

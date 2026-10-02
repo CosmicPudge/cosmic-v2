@@ -1,4 +1,6 @@
 import { isDatabaseConfigured } from "@/services/database/client";
+import { checkDatabase } from "@/services/database/client";
+import { checkAuthSchema } from "@/services/database/authSchemaDiagnostics";
 import { getSession } from "@/services/auth/service";
 import { parseSessionCookie } from "@/services/auth/localStore";
 import { isDeveloperKioskRequest } from "@/services/kiosk/developerKiosk";
@@ -30,15 +32,18 @@ export async function GET(request: Request) {
     dogfoodMode: process.env.COSMIC_DOGFOOD_MODE?.trim() === "1",
   };
 
-  if (!cookiePresent) return Response.json({ ...base, errorCategory: "no-cookie" satisfies ErrorCategory }, { headers: { "Cache-Control": "no-store" } });
-  if (mode === "unconfigured") return Response.json({ ...base, errorCategory: "auth-unconfigured" satisfies ErrorCategory }, { headers: { "Cache-Control": "no-store" } });
+  const database = mode === "database" ? await checkDatabase() : { configured: false, connected: false };
+  const authSchema = mode === "database" ? await checkAuthSchema() : null;
+
+  if (!cookiePresent) return Response.json({ ...base, database, authSchema, errorCategory: "no-cookie" satisfies ErrorCategory }, { headers: { "Cache-Control": "no-store" } });
+  if (mode === "unconfigured") return Response.json({ ...base, database, authSchema, errorCategory: "auth-unconfigured" satisfies ErrorCategory }, { headers: { "Cache-Control": "no-store" } });
 
   try {
     const session = await getSession(request);
-    if (!session) return Response.json({ ...base, sessionLookupSucceeded: true, errorCategory: "session-not-found" satisfies ErrorCategory }, { headers: { "Cache-Control": "no-store" } });
-    return Response.json({ ...base, sessionLookupSucceeded: true, accountFound: Boolean(session.account), errorCategory: null }, { headers: { "Cache-Control": "no-store" } });
+    if (!session) return Response.json({ ...base, database, authSchema, sessionLookupSucceeded: true, errorCategory: "session-not-found" satisfies ErrorCategory }, { headers: { "Cache-Control": "no-store" } });
+    return Response.json({ ...base, database, authSchema, sessionLookupSucceeded: true, accountFound: Boolean(session.account), errorCategory: null }, { headers: { "Cache-Control": "no-store" } });
   } catch {
     const category: ErrorCategory = mode === "database" ? "database-error" : "unknown";
-    return Response.json({ ...base, errorCategory: category }, { headers: { "Cache-Control": "no-store" } });
+    return Response.json({ ...base, database, authSchema, errorCategory: category }, { headers: { "Cache-Control": "no-store" } });
   }
 }

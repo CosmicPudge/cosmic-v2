@@ -21,7 +21,7 @@ export async function authenticateAccount(emailInput: string, password: string, 
   try {
     account = await getAuthRepository().findUserByEmail(normalizeEmail(emailInput));
   } catch (error) {
-    diagnostics?.("lookup-error", classifySigninDatabaseError(error));
+    diagnostics?.("lookup-error", classifySigninDatabaseError(error, "lookup"));
     throw error;
   }
   if (!account) {
