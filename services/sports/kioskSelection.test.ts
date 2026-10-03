@@ -55,7 +55,7 @@ test("Packers and Angels receive favorite priority when timing is equal", () => 
 test("MLB postseason remains eligible when the Angels are inactive", () => {
   const selected = selectKioskSportsEvent([event("alds", "mlb", "2026-10-02T14:00:00Z", { title: "ALDS Game 2: Yankees vs Orioles", homeTeam: { name: "New York Yankees", abbreviation: "NYY" }, awayTeam: { name: "Baltimore Orioles" }, metadata: { seasonType: "Postseason", competition: "ALDS" } })], now);
   assert.equal(selected?.eventType, "POSTSEASON");
-  assert.equal(selected?.backgroundKey, "mlb-yankees");
+  assert.equal(selected?.backgroundKey, "mlb-yankee-stadium");
 });
 
 test("F1 session importance ranks race over sprint, qualifying, and practice", () => {
@@ -72,7 +72,7 @@ test("venue-aware background keys cover each tracked sport", () => {
   assert.equal(normalizeKioskSportsEvent(event("nfl", "nfl", "2026-10-03T12:00:00Z", { homeTeam: { name: "Green Bay Packers", abbreviation: "GB" } }))?.backgroundKey, "nfl-gb");
   assert.equal(normalizeKioskSportsEvent(event("f1", "f1", "2026-10-03T12:00:00Z", { venue: "Sepang International Circuit", metadata: { country: "Malaysia" } }))?.backgroundKey, "f1-malaysia");
   assert.equal(normalizeKioskSportsEvent(event("nascar", "nascar", "2026-10-03T12:00:00Z", { venue: "Daytona International Speedway" }))?.backgroundKey, "nascar-daytona");
-  assert.equal(normalizeKioskSportsEvent(event("mlb", "mlb", "2026-10-03T12:00:00Z", { homeTeam: { name: "Los Angeles Angels" }, awayTeam: { name: "Seattle Mariners" } }))?.backgroundKey, "mlb-angels");
+  assert.equal(normalizeKioskSportsEvent(event("mlb", "mlb", "2026-10-03T12:00:00Z", { homeTeam: { name: "Los Angeles Angels" }, awayTeam: { name: "Seattle Mariners" } }))?.backgroundKey, "mlb-angel-stadium");
 });
 
 test("NASCAR Las Vegas resolves to its dedicated track key and asset", () => {
@@ -82,8 +82,8 @@ test("NASCAR Las Vegas resolves to its dedicated track key and asset", () => {
 });
 
 test("MLB stadium mapping uses the home team, not an away favorite", () => {
-  assert.equal(normalizeKioskSportsEvent(event("yankees-home", "mlb", "2026-10-03T12:00:00Z", { homeTeam: { name: "New York Yankees", abbreviation: "NYY" }, awayTeam: { name: "Los Angeles Angels" } }))?.backgroundKey, "mlb-yankees");
-  assert.equal(normalizeKioskSportsEvent(event("yankees-away", "mlb", "2026-10-03T12:00:00Z", { title: "Yankees at Orioles", homeTeam: { name: "Baltimore Orioles" }, awayTeam: { name: "New York Yankees", abbreviation: "NYY" } }))?.backgroundKey, "mlb-generic");
+  assert.equal(normalizeKioskSportsEvent(event("yankees-home", "mlb", "2026-10-03T12:00:00Z", { homeTeam: { name: "New York Yankees", abbreviation: "NYY" }, awayTeam: { name: "Los Angeles Angels" } }))?.backgroundKey, "mlb-yankee-stadium");
+  assert.equal(normalizeKioskSportsEvent(event("yankees-away", "mlb", "2026-10-03T12:00:00Z", { title: "Yankees at Orioles", homeTeam: { name: "Baltimore Orioles" }, awayTeam: { name: "New York Yankees", abbreviation: "NYY" } }))?.backgroundKey, "mlb-oriole-park-at-camden-yards");
 });
 
 test("unknown venues use the sport-specific generic fallback", () => {

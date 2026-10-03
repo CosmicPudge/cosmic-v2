@@ -1,0 +1,722 @@
+[
+  {
+    "team": "ATH",
+    "teamId": "133",
+    "venueId": "2529",
+    "canonicalName": "Sutter Health Park",
+    "city": "Sacramento",
+    "slug": "sutter-health-park",
+    "imagePath": "/kiosk/scenes/sports/mlb/sutter-health-park.webp",
+    "aliases": [
+      "Sutter Health Park",
+      "Athletics",
+      "Athletics"
+    ],
+    "status": "imported",
+    "source": {
+      "title": "File:Aerial view of Sutter Health Park in 2024.jpg",
+      "sourceUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/3d/Aerial_view_of_Sutter_Health_Park_in_2024.jpg/1920px-Aerial_view_of_Sutter_Health_Park_in_2024.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "descriptionUrl": "https://commons.wikimedia.org/wiki/File:Aerial_view_of_Sutter_Health_Park_in_2024.jpg",
+      "license": "CC BY 4.0",
+      "artist": "<a href=\"//commons.wikimedia.org/wiki/User:Quintinsoloviev\" class=\"mw-redirect\" title=\"User:Quintinsoloviev\">Quintin Soloviev</a>",
+      "width": 4480,
+      "height": 3568
+    }
+  },
+  {
+    "team": "PIT",
+    "teamId": "134",
+    "venueId": "31",
+    "canonicalName": "PNC Park",
+    "city": "Pittsburgh",
+    "slug": "pnc-park",
+    "imagePath": "/kiosk/scenes/sports/mlb/pnc-park.webp",
+    "aliases": [
+      "PNC Park",
+      "Pittsburgh Pirates",
+      "Pirates"
+    ],
+    "status": "imported",
+    "source": {
+      "title": "File:PNC Park, Home of Pittsburgh Pirates.jpg",
+      "sourceUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/1a/PNC_Park%2C_Home_of_Pittsburgh_Pirates.jpg/1920px-PNC_Park%2C_Home_of_Pittsburgh_Pirates.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "descriptionUrl": "https://commons.wikimedia.org/wiki/File:PNC_Park,_Home_of_Pittsburgh_Pirates.jpg",
+      "license": "CC BY 2.0",
+      "artist": "<a rel=\"nofollow\" class=\"external text\" href=\"https://www.flickr.com/people/daveynin\">daveynin</a> on <a rel=\"nofollow\" class=\"external text\" href=\"https://www.flickr.com\">Flickr</a>",
+      "width": 3456,
+      "height": 2304
+    }
+  },
+  {
+    "team": "SD",
+    "teamId": "135",
+    "venueId": "2680",
+    "canonicalName": "Petco Park",
+    "city": "San Diego",
+    "slug": "petco-park",
+    "imagePath": "/kiosk/scenes/sports/mlb/petco-park.webp",
+    "aliases": [
+      "Petco Park",
+      "San Diego Padres",
+      "Padres"
+    ],
+    "status": "imported",
+    "source": {
+      "title": "File:Petco Park, San Diego.jpg",
+      "sourceUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/74/Petco_Park%2C_San_Diego.jpg/1920px-Petco_Park%2C_San_Diego.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "descriptionUrl": "https://commons.wikimedia.org/wiki/File:Petco_Park,_San_Diego.jpg",
+      "license": "CC BY-SA 3.0",
+      "artist": "<a href=\"//commons.wikimedia.org/wiki/User:Bgag\" title=\"User:Bgag\">Bernard Gagnon</a>",
+      "width": 3383,
+      "height": 2221
+    }
+  },
+  {
+    "team": "SEA",
+    "teamId": "136",
+    "venueId": "680",
+    "canonicalName": "T-Mobile Park",
+    "city": "Seattle",
+    "slug": "t-mobile-park",
+    "imagePath": "/kiosk/scenes/sports/mlb/t-mobile-park.webp",
+    "aliases": [
+      "T-Mobile Park",
+      "Seattle Mariners",
+      "Mariners"
+    ],
+    "status": "imported",
+    "source": {
+      "title": "File:SafecoFieldTop.jpg",
+      "sourceUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/10/SafecoFieldTop.jpg/1920px-SafecoFieldTop.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "descriptionUrl": "https://commons.wikimedia.org/wiki/File:SafecoFieldTop.jpg",
+      "license": "CC BY-SA 3.0",
+      "artist": "MyName (<a href=\"//commons.wikimedia.org/wiki/User:Cacophony\" title=\"User:Cacophony\">Cacophony</a>)",
+      "width": 4368,
+      "height": 2912
+    }
+  },
+  {
+    "team": "SF",
+    "teamId": "137",
+    "venueId": "2395",
+    "canonicalName": "Oracle Park",
+    "city": "San Francisco",
+    "slug": "oracle-park",
+    "imagePath": "/kiosk/scenes/sports/mlb/oracle-park.webp",
+    "aliases": [
+      "Oracle Park",
+      "San Francisco Giants",
+      "Giants"
+    ],
+    "status": "imported",
+    "source": {
+      "title": "File:Oracle Park - August 2025 - Sarah Stierch - 06.jpg",
+      "sourceUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/ca/Oracle_Park_-_August_2025_-_Sarah_Stierch_-_06.jpg/1920px-Oracle_Park_-_August_2025_-_Sarah_Stierch_-_06.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "descriptionUrl": "https://commons.wikimedia.org/wiki/File:Oracle_Park_-_August_2025_-_Sarah_Stierch_-_06.jpg",
+      "license": "CC0",
+      "artist": "<a href=\"//commons.wikimedia.org/wiki/User:Missvain\" title=\"User:Missvain\">Missvain</a>",
+      "width": 3000,
+      "height": 2250
+    }
+  },
+  {
+    "team": "STL",
+    "teamId": "138",
+    "venueId": "2889",
+    "canonicalName": "Busch Stadium",
+    "city": "St. Louis",
+    "slug": "busch-stadium",
+    "imagePath": "/kiosk/scenes/sports/mlb/busch-stadium.webp",
+    "aliases": [
+      "Busch Stadium",
+      "St. Louis Cardinals",
+      "Cardinals"
+    ],
+    "status": "imported",
+    "source": {
+      "title": "File:Busch Stadium - Saint Louis, Missouri - March 31, 2014.jpg",
+      "sourceUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/17/Busch_Stadium_-_Saint_Louis%2C_Missouri_-_March_31%2C_2014.jpg/1920px-Busch_Stadium_-_Saint_Louis%2C_Missouri_-_March_31%2C_2014.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "descriptionUrl": "https://commons.wikimedia.org/wiki/File:Busch_Stadium_-_Saint_Louis,_Missouri_-_March_31,_2014.jpg",
+      "license": "CC BY 4.0",
+      "artist": "<a href=\"//commons.wikimedia.org/w/index.php?title=User:Lee_Ann_Ratledge&amp;action=edit&amp;redlink=1\" class=\"new\" title=\"User:Lee Ann Ratledge (page does not exist)\">Lee Ann Ratledge</a>",
+      "width": 3690,
+      "height": 2512
+    }
+  },
+  {
+    "team": "TB",
+    "teamId": "139",
+    "venueId": "12",
+    "canonicalName": "Tropicana Field",
+    "city": "St. Petersburg",
+    "slug": "tropicana-field",
+    "imagePath": "/kiosk/scenes/sports/mlb/tropicana-field.webp",
+    "aliases": [
+      "Tropicana Field",
+      "Tampa Bay Rays",
+      "Rays"
+    ],
+    "status": "imported",
+    "source": {
+      "title": "File:Tropicana Field roof damage.jpg",
+      "sourceUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/21/Tropicana_Field_roof_damage.jpg/1920px-Tropicana_Field_roof_damage.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "descriptionUrl": "https://commons.wikimedia.org/wiki/File:Tropicana_Field_roof_damage.jpg",
+      "license": "CC BY-SA 4.0",
+      "artist": "<a href=\"//commons.wikimedia.org/wiki/User:Adog\" title=\"User:Adog\">Adog</a>",
+      "width": 3520,
+      "height": 1986
+    }
+  },
+  {
+    "team": "TEX",
+    "teamId": "140",
+    "venueId": "5325",
+    "canonicalName": "Globe Life Field",
+    "city": "Arlington",
+    "slug": "globe-life-field",
+    "imagePath": "/kiosk/scenes/sports/mlb/globe-life-field.webp",
+    "aliases": [
+      "Globe Life Field",
+      "Texas Rangers",
+      "Rangers"
+    ],
+    "status": "imported",
+    "source": {
+      "title": "File:Arlington June 2020 5 (Globe Life Field).jpg",
+      "sourceUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/ef/Arlington_June_2020_5_%28Globe_Life_Field%29.jpg/1920px-Arlington_June_2020_5_%28Globe_Life_Field%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "descriptionUrl": "https://commons.wikimedia.org/wiki/File:Arlington_June_2020_5_(Globe_Life_Field).jpg",
+      "license": "CC BY-SA 4.0",
+      "artist": "<a href=\"//commons.wikimedia.org/wiki/User:Michael_Barera\" title=\"User:Michael Barera\">Michael Barera</a>",
+      "width": 6000,
+      "height": 4000
+    }
+  },
+  {
+    "team": "TOR",
+    "teamId": "141",
+    "venueId": "14",
+    "canonicalName": "Rogers Centre",
+    "city": "Toronto",
+    "slug": "rogers-centre",
+    "imagePath": "/kiosk/scenes/sports/mlb/rogers-centre.webp",
+    "aliases": [
+      "Rogers Centre",
+      "Toronto Blue Jays",
+      "Blue Jays"
+    ],
+    "status": "imported",
+    "source": {
+      "title": "File:ON - Rogers Centre Toronto.jpg",
+      "sourceUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/cc/ON_-_Rogers_Centre_Toronto.jpg/1920px-ON_-_Rogers_Centre_Toronto.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "descriptionUrl": "https://commons.wikimedia.org/wiki/File:ON_-_Rogers_Centre_Toronto.jpg",
+      "license": "CC BY-SA 3.0 de",
+      "artist": "<a href=\"//commons.wikimedia.org/wiki/User:Taxiarchos228\" title=\"User:Taxiarchos228\">Taxiarchos228</a>",
+      "width": 3548,
+      "height": 2312
+    }
+  },
+  {
+    "team": "MIN",
+    "teamId": "142",
+    "venueId": "3312",
+    "canonicalName": "Target Field",
+    "city": "Minneapolis",
+    "slug": "target-field",
+    "imagePath": "/kiosk/scenes/sports/mlb/target-field.webp",
+    "aliases": [
+      "Target Field",
+      "Minnesota Twins",
+      "Twins"
+    ],
+    "status": "imported",
+    "source": {
+      "title": "File:Rain Shower at Target Field, Minneapolis (27835652680).jpg",
+      "sourceUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/40/Rain_Shower_at_Target_Field%2C_Minneapolis_%2827835652680%29.jpg/1920px-Rain_Shower_at_Target_Field%2C_Minneapolis_%2827835652680%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "descriptionUrl": "https://commons.wikimedia.org/wiki/File:Rain_Shower_at_Target_Field,_Minneapolis_(27835652680).jpg",
+      "license": "CC BY-SA 2.0",
+      "artist": "<a rel=\"nofollow\" class=\"external text\" href=\"https://www.flickr.com/people/87296837@N00\">Tony Webster</a> from Minneapolis, Minnesota, United States",
+      "width": 5509,
+      "height": 3647
+    }
+  },
+  {
+    "team": "PHI",
+    "teamId": "143",
+    "venueId": "2681",
+    "canonicalName": "Citizens Bank Park",
+    "city": "Philadelphia",
+    "slug": "citizens-bank-park",
+    "imagePath": "/kiosk/scenes/sports/mlb/citizens-bank-park.webp",
+    "aliases": [
+      "Citizens Bank Park",
+      "Philadelphia Phillies",
+      "Phillies"
+    ],
+    "status": "imported",
+    "source": {
+      "title": "File:Citizens Bank Park panorama.jpg",
+      "sourceUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/7e/Citizens_Bank_Park_panorama.jpg/1920px-Citizens_Bank_Park_panorama.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "descriptionUrl": "https://commons.wikimedia.org/wiki/File:Citizens_Bank_Park_panorama.jpg",
+      "license": "CC BY-SA 4.0",
+      "artist": "<a href=\"//commons.wikimedia.org/wiki/User:PLBechly\" title=\"User:PLBechly\">PLBechly</a>",
+      "width": 8592,
+      "height": 2936
+    }
+  },
+  {
+    "team": "ATL",
+    "teamId": "144",
+    "venueId": "4705",
+    "canonicalName": "Truist Park",
+    "city": "Atlanta",
+    "slug": "truist-park",
+    "imagePath": "/kiosk/scenes/sports/mlb/truist-park.webp",
+    "aliases": [
+      "Truist Park",
+      "Atlanta Braves",
+      "Braves"
+    ],
+    "status": "imported",
+    "source": {
+      "title": "File:The Battery Atlanta high rises viewed from SunTrust Park, May 2017.jpg",
+      "sourceUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/28/The_Battery_Atlanta_high_rises_viewed_from_SunTrust_Park%2C_May_2017.jpg/1920px-The_Battery_Atlanta_high_rises_viewed_from_SunTrust_Park%2C_May_2017.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "descriptionUrl": "https://commons.wikimedia.org/wiki/File:The_Battery_Atlanta_high_rises_viewed_from_SunTrust_Park,_May_2017.jpg",
+      "license": "CC0",
+      "artist": "<a href=\"//commons.wikimedia.org/wiki/User:Thomson200\" title=\"User:Thomson200\">Thomson200</a>",
+      "width": 3456,
+      "height": 2304
+    }
+  },
+  {
+    "team": "CWS",
+    "teamId": "145",
+    "venueId": "4",
+    "canonicalName": "Rate Field",
+    "city": "Chicago",
+    "slug": "rate-field",
+    "imagePath": "/kiosk/scenes/sports/mlb/rate-field.webp",
+    "aliases": [
+      "Rate Field",
+      "Chicago White Sox",
+      "White Sox"
+    ],
+    "status": "imported",
+    "source": {
+      "title": "File:20130307 38 U S Cellular Field (8623466548).jpg",
+      "sourceUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/56/20130307_38_U_S_Cellular_Field_%288623466548%29.jpg/1920px-20130307_38_U_S_Cellular_Field_%288623466548%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "descriptionUrl": "https://commons.wikimedia.org/wiki/File:20130307_38_U_S_Cellular_Field_(8623466548).jpg",
+      "license": "CC BY 2.0",
+      "artist": "<a rel=\"nofollow\" class=\"external text\" href=\"https://www.flickr.com/people/32693718@N07\">David Wilson</a> from Oak Park, Illinois, USA",
+      "width": 2816,
+      "height": 2112
+    }
+  },
+  {
+    "team": "MIA",
+    "teamId": "146",
+    "venueId": "4169",
+    "canonicalName": "loanDepot park",
+    "city": "Miami",
+    "slug": "loandepot-park",
+    "imagePath": "/kiosk/scenes/sports/mlb/loandepot-park.webp",
+    "aliases": [
+      "loanDepot park",
+      "Miami Marlins",
+      "Marlins"
+    ],
+    "status": "imported",
+    "source": {
+      "title": "File:(1) Downtown Miami from LoanDepot Park, Miami, Florida.jpg",
+      "sourceUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/0d/%281%29_Downtown_Miami_from_LoanDepot_Park%2C_Miami%2C_Florida.jpg/1920px-%281%29_Downtown_Miami_from_LoanDepot_Park%2C_Miami%2C_Florida.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "descriptionUrl": "https://commons.wikimedia.org/wiki/File:(1)_Downtown_Miami_from_LoanDepot_Park,_Miami,_Florida.jpg",
+      "license": "CC BY-SA 2.0",
+      "artist": "<a rel=\"nofollow\" class=\"external text\" href=\"https://www.flickr.com/people/75683070@N00\">Ken Lund</a>",
+      "width": 5184,
+      "height": 3139
+    }
+  },
+  {
+    "team": "NYY",
+    "teamId": "147",
+    "venueId": "3313",
+    "canonicalName": "Yankee Stadium",
+    "city": "Bronx",
+    "slug": "yankee-stadium",
+    "imagePath": "/kiosk/scenes/sports/mlb/yankee-stadium.webp",
+    "aliases": [
+      "Yankee Stadium",
+      "New York Yankees",
+      "Yankees"
+    ],
+    "status": "imported",
+    "source": {
+      "title": "File:161st St Yankee Stadium td (2019-03-15) 05 - IRT.jpg",
+      "sourceUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/de/161st_St_Yankee_Stadium_td_%282019-03-15%29_05_-_IRT.jpg/1920px-161st_St_Yankee_Stadium_td_%282019-03-15%29_05_-_IRT.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "descriptionUrl": "https://commons.wikimedia.org/wiki/File:161st_St_Yankee_Stadium_td_(2019-03-15)_05_-_IRT.jpg",
+      "license": "CC BY-SA 4.0",
+      "artist": "<a href=\"//commons.wikimedia.org/wiki/User:Tdorante10\" title=\"User:Tdorante10\">Tdorante10</a>",
+      "width": 5472,
+      "height": 3648
+    }
+  },
+  {
+    "team": "MIL",
+    "teamId": "158",
+    "venueId": "32",
+    "canonicalName": "American Family Field",
+    "city": "Milwaukee",
+    "slug": "american-family-field",
+    "imagePath": "/kiosk/scenes/sports/mlb/american-family-field.webp",
+    "aliases": [
+      "American Family Field",
+      "Milwaukee Brewers",
+      "Brewers"
+    ],
+    "status": "imported",
+    "source": {
+      "title": "File:Cleveland Guardians vs. Milwaukee Brewers August 2024 01 (American Family Field).jpg",
+      "sourceUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/80/Cleveland_Guardians_vs._Milwaukee_Brewers_August_2024_01_%28American_Family_Field%29.jpg/1920px-Cleveland_Guardians_vs._Milwaukee_Brewers_August_2024_01_%28American_Family_Field%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "descriptionUrl": "https://commons.wikimedia.org/wiki/File:Cleveland_Guardians_vs._Milwaukee_Brewers_August_2024_01_(American_Family_Field).jpg",
+      "license": "CC BY-SA 4.0",
+      "artist": "<a href=\"//commons.wikimedia.org/wiki/User:Michael_Barera\" title=\"User:Michael Barera\">Michael Barera</a>",
+      "width": 6000,
+      "height": 4000
+    }
+  },
+  {
+    "team": "LAA",
+    "teamId": "108",
+    "venueId": "1",
+    "canonicalName": "Angel Stadium",
+    "city": "Anaheim",
+    "slug": "angel-stadium",
+    "imagePath": "/kiosk/scenes/sports/mlb/angel-stadium.webp",
+    "aliases": [
+      "Angel Stadium",
+      "Los Angeles Angels",
+      "Angels"
+    ],
+    "status": "imported",
+    "source": {
+      "title": "File:Anaheim Stadium 1991.jpg",
+      "sourceUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/63/Anaheim_Stadium_1991.jpg/1920px-Anaheim_Stadium_1991.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "descriptionUrl": "https://commons.wikimedia.org/wiki/File:Anaheim_Stadium_1991.jpg",
+      "license": "CC BY-SA 2.0",
+      "artist": "<a rel=\"nofollow\" class=\"external text\" href=\"https://www.flickr.com/people/43289453@N03\">Jerry Reuss</a>",
+      "width": 2400,
+      "height": 1600
+    }
+  },
+  {
+    "team": "AZ",
+    "teamId": "109",
+    "venueId": "15",
+    "canonicalName": "Chase Field",
+    "city": "Phoenix",
+    "slug": "chase-field",
+    "imagePath": "/kiosk/scenes/sports/mlb/chase-field.webp",
+    "aliases": [
+      "Chase Field",
+      "Arizona Diamondbacks",
+      "D-backs"
+    ],
+    "status": "imported",
+    "source": {
+      "title": "File:Chase Field-1.jpg",
+      "sourceUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/fc/Chase_Field-1.jpg/1920px-Chase_Field-1.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "descriptionUrl": "https://commons.wikimedia.org/wiki/File:Chase_Field-1.jpg",
+      "license": "CC BY-SA 3.0",
+      "artist": "<a href=\"//commons.wikimedia.org/w/index.php?title=User:Visitor7&amp;action=edit&amp;redlink=1\" class=\"new\" title=\"User:Visitor7 (page does not exist)\">Visitor7</a>",
+      "width": 5399,
+      "height": 3600
+    }
+  },
+  {
+    "team": "BAL",
+    "teamId": "110",
+    "venueId": "2",
+    "canonicalName": "Oriole Park at Camden Yards",
+    "city": "Baltimore",
+    "slug": "oriole-park-at-camden-yards",
+    "imagePath": "/kiosk/scenes/sports/mlb/oriole-park-at-camden-yards.webp",
+    "aliases": [
+      "Oriole Park at Camden Yards",
+      "Baltimore Orioles",
+      "Orioles"
+    ],
+    "status": "imported",
+    "source": {
+      "title": "File:Oriole Park at Camden Yards (17260075656).jpg",
+      "sourceUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b0/Oriole_Park_at_Camden_Yards_%2817260075656%29.jpg/1920px-Oriole_Park_at_Camden_Yards_%2817260075656%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "descriptionUrl": "https://commons.wikimedia.org/wiki/File:Oriole_Park_at_Camden_Yards_(17260075656).jpg",
+      "license": "CC BY-SA 2.0",
+      "artist": "<a rel=\"nofollow\" class=\"external text\" href=\"https://www.flickr.com/people/27003603@N00\">Keith Allison</a> from Hanover, MD, USA",
+      "width": 5184,
+      "height": 3456
+    }
+  },
+  {
+    "team": "BOS",
+    "teamId": "111",
+    "venueId": "3",
+    "canonicalName": "Fenway Park",
+    "city": "Boston",
+    "slug": "fenway-park",
+    "imagePath": "/kiosk/scenes/sports/mlb/fenway-park.webp",
+    "aliases": [
+      "Fenway Park",
+      "Boston Red Sox",
+      "Red Sox"
+    ],
+    "status": "imported",
+    "source": {
+      "title": "File:Center Field Displays Fenway Park Boston Red Sox August 24, 2009.jpg",
+      "sourceUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/93/Center_Field_Displays_Fenway_Park_Boston_Red_Sox_August_24%2C_2009.jpg/1920px-Center_Field_Displays_Fenway_Park_Boston_Red_Sox_August_24%2C_2009.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "descriptionUrl": "https://commons.wikimedia.org/wiki/File:Center_Field_Displays_Fenway_Park_Boston_Red_Sox_August_24,_2009.jpg",
+      "license": "CC BY-SA 4.0",
+      "artist": "<a href=\"//commons.wikimedia.org/wiki/User:EgorovaSvetlana\" title=\"User:EgorovaSvetlana\">EgorovaSvetlana</a>",
+      "width": 2560,
+      "height": 1920
+    }
+  },
+  {
+    "team": "CHC",
+    "teamId": "112",
+    "venueId": "17",
+    "canonicalName": "Wrigley Field",
+    "city": "Chicago",
+    "slug": "wrigley-field",
+    "imagePath": "/kiosk/scenes/sports/mlb/wrigley-field.webp",
+    "aliases": [
+      "Wrigley Field",
+      "Chicago Cubs",
+      "Cubs"
+    ],
+    "status": "imported",
+    "source": {
+      "title": "File:Wrigley Field, Chicago, Illinois (65902).jpg",
+      "sourceUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/61/Wrigley_Field%2C_Chicago%2C_Illinois_%2865902%29.jpg/1920px-Wrigley_Field%2C_Chicago%2C_Illinois_%2865902%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "descriptionUrl": "https://commons.wikimedia.org/wiki/File:Wrigley_Field,_Chicago,_Illinois_(65902).jpg",
+      "license": "Public domain",
+      "artist": "Tichnor Brothers, Publisher",
+      "width": 3386,
+      "height": 2176
+    }
+  },
+  {
+    "team": "CIN",
+    "teamId": "113",
+    "venueId": "2602",
+    "canonicalName": "Great American Ball Park",
+    "city": "Cincinnati",
+    "slug": "great-american-ball-park",
+    "imagePath": "/kiosk/scenes/sports/mlb/great-american-ball-park.webp",
+    "aliases": [
+      "Great American Ball Park",
+      "Cincinnati Reds",
+      "Reds"
+    ],
+    "status": "imported",
+    "source": {
+      "title": "File:Great American Ball Park April 2011.jpg",
+      "sourceUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a9/Great_American_Ball_Park_April_2011.jpg/1920px-Great_American_Ball_Park_April_2011.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "descriptionUrl": "https://commons.wikimedia.org/wiki/File:Great_American_Ball_Park_April_2011.jpg",
+      "license": "CC BY-SA 2.0",
+      "artist": "<a rel=\"nofollow\" class=\"external text\" href=\"https://www.flickr.com/people/9397412@N06\">Geoff Livingston</a> from DC, USA",
+      "width": 4229,
+      "height": 2809
+    }
+  },
+  {
+    "team": "CLE",
+    "teamId": "114",
+    "venueId": "5",
+    "canonicalName": "Progressive Field",
+    "city": "Cleveland",
+    "slug": "progressive-field",
+    "imagePath": "/kiosk/scenes/sports/mlb/progressive-field.webp",
+    "aliases": [
+      "Progressive Field",
+      "Cleveland Guardians",
+      "Guardians"
+    ],
+    "status": "imported",
+    "source": {
+      "title": "File:Progressive Field - Cleveland, OH.jpg",
+      "sourceUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/ec/Progressive_Field_-_Cleveland%2C_OH.jpg/1920px-Progressive_Field_-_Cleveland%2C_OH.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "descriptionUrl": "https://commons.wikimedia.org/wiki/File:Progressive_Field_-_Cleveland,_OH.jpg",
+      "license": "CC BY-SA 4.0",
+      "artist": "<a href=\"//commons.wikimedia.org/wiki/User:Jfvoll\" class=\"mw-redirect\" title=\"User:Jfvoll\">Jfvoll</a>",
+      "width": 4912,
+      "height": 3264
+    }
+  },
+  {
+    "team": "COL",
+    "teamId": "115",
+    "venueId": "19",
+    "canonicalName": "Coors Field",
+    "city": "Denver",
+    "slug": "coors-field",
+    "imagePath": "/kiosk/scenes/sports/mlb/coors-field.webp",
+    "aliases": [
+      "Coors Field",
+      "Colorado Rockies",
+      "Rockies"
+    ],
+    "status": "imported",
+    "source": {
+      "title": "File:4th of July Colorado Rockies - Arizona Diamondbacks game, Coors Field, Denver, 2009.jpg",
+      "sourceUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/13/4th_of_July_Colorado_Rockies_-_Arizona_Diamondbacks_game%2C_Coors_Field%2C_Denver%2C_2009.jpg/1920px-4th_of_July_Colorado_Rockies_-_Arizona_Diamondbacks_game%2C_Coors_Field%2C_Denver%2C_2009.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "descriptionUrl": "https://commons.wikimedia.org/wiki/File:4th_of_July_Colorado_Rockies_-_Arizona_Diamondbacks_game,_Coors_Field,_Denver,_2009.jpg",
+      "license": "CC0",
+      "artist": "<a href=\"//commons.wikimedia.org/wiki/User:DimiTalen\" title=\"User:DimiTalen\">DimiTalen</a>",
+      "width": 3008,
+      "height": 2000
+    }
+  },
+  {
+    "team": "DET",
+    "teamId": "116",
+    "venueId": "2394",
+    "canonicalName": "Comerica Park",
+    "city": "Detroit",
+    "slug": "comerica-park",
+    "imagePath": "/kiosk/scenes/sports/mlb/comerica-park.webp",
+    "aliases": [
+      "Comerica Park",
+      "Detroit Tigers",
+      "Tigers"
+    ],
+    "status": "imported",
+    "source": {
+      "title": "File:Comerica-Park-Detroit-MI-Panorama.jpg",
+      "sourceUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/19/Comerica-Park-Detroit-MI-Panorama.jpg/1920px-Comerica-Park-Detroit-MI-Panorama.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "descriptionUrl": "https://commons.wikimedia.org/wiki/File:Comerica-Park-Detroit-MI-Panorama.jpg",
+      "license": "CC BY 2.5",
+      "artist": null,
+      "width": 5409,
+      "height": 1476
+    }
+  },
+  {
+    "team": "HOU",
+    "teamId": "117",
+    "venueId": "2392",
+    "canonicalName": "Daikin Park",
+    "city": "Houston",
+    "slug": "daikin-park",
+    "imagePath": "/kiosk/scenes/sports/mlb/daikin-park.webp",
+    "aliases": [
+      "Daikin Park",
+      "Houston Astros",
+      "Astros"
+    ],
+    "status": "imported",
+    "source": {
+      "title": "File:Minute Maid Park and the Houston Skyline.jpg",
+      "sourceUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b3/Minute_Maid_Park_and_the_Houston_Skyline.jpg/1920px-Minute_Maid_Park_and_the_Houston_Skyline.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "descriptionUrl": "https://commons.wikimedia.org/wiki/File:Minute_Maid_Park_and_the_Houston_Skyline.jpg",
+      "license": "CC BY 2.0",
+      "artist": "<a rel=\"nofollow\" class=\"external text\" href=\"https://www.flickr.com/people/126731325@N08\">J Dimas</a>",
+      "width": 7360,
+      "height": 4912
+    }
+  },
+  {
+    "team": "KC",
+    "teamId": "118",
+    "venueId": "7",
+    "canonicalName": "Kauffman Stadium",
+    "city": "Kansas City",
+    "slug": "kauffman-stadium",
+    "imagePath": "/kiosk/scenes/sports/mlb/kauffman-stadium.webp",
+    "aliases": [
+      "Kauffman Stadium",
+      "Kansas City Royals",
+      "Royals"
+    ],
+    "status": "imported",
+    "source": {
+      "title": "File:Kauffman Stadium. Giants vs Royals.JPG",
+      "sourceUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/18/Kauffman_Stadium._Giants_vs_Royals.JPG/1920px-Kauffman_Stadium._Giants_vs_Royals.JPG?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "descriptionUrl": "https://commons.wikimedia.org/wiki/File:Kauffman_Stadium._Giants_vs_Royals.JPG",
+      "license": "CC BY-SA 4.0",
+      "artist": "<a href=\"//commons.wikimedia.org/w/index.php?title=User:Mr.Konerko&amp;action=edit&amp;redlink=1\" class=\"new\" title=\"User:Mr.Konerko (page does not exist)\">Mr.Konerko</a>",
+      "width": 7600,
+      "height": 2464
+    }
+  },
+  {
+    "team": "LAD",
+    "teamId": "119",
+    "venueId": "22",
+    "canonicalName": "UNIQLO Field at Dodger Stadium",
+    "city": "Los Angeles",
+    "slug": "dodger-stadium",
+    "imagePath": "/kiosk/scenes/sports/mlb/dodger-stadium.webp",
+    "aliases": [
+      "UNIQLO Field at Dodger Stadium",
+      "Los Angeles Dodgers",
+      "Dodgers"
+    ],
+    "status": "imported",
+    "source": {
+      "title": "File:Dodger Stadium and DTLA.jpg",
+      "sourceUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/90/Dodger_Stadium_and_DTLA.jpg/1920px-Dodger_Stadium_and_DTLA.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "descriptionUrl": "https://commons.wikimedia.org/wiki/File:Dodger_Stadium_and_DTLA.jpg",
+      "license": "CC BY-SA 4.0",
+      "artist": "<a rel=\"nofollow\" class=\"external text\" href=\"https://www.flickr.com/photos/144139024@N06/\">Cody Williams</a>",
+      "width": 5767,
+      "height": 3845
+    }
+  },
+  {
+    "team": "WSH",
+    "teamId": "120",
+    "venueId": "3309",
+    "canonicalName": "Nationals Park",
+    "city": "Washington",
+    "slug": "nationals-park",
+    "imagePath": "/kiosk/scenes/sports/mlb/nationals-park.webp",
+    "aliases": [
+      "Nationals Park",
+      "Washington Nationals",
+      "Nationals"
+    ],
+    "status": "imported",
+    "source": {
+      "title": "File:Joshua Tree National Park 2013.jpg",
+      "sourceUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/55/Joshua_Tree_National_Park_2013.jpg/1920px-Joshua_Tree_National_Park_2013.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "descriptionUrl": "https://commons.wikimedia.org/wiki/File:Joshua_Tree_National_Park_2013.jpg",
+      "license": "CC BY-SA 3.0",
+      "artist": "<a href=\"//commons.wikimedia.org/wiki/User:Tuxyso\" title=\"User:Tuxyso\">Tuxyso</a>",
+      "width": 4928,
+      "height": 3026
+    }
+  },
+  {
+    "team": "NYM",
+    "teamId": "121",
+    "venueId": "3289",
+    "canonicalName": "Citi Field",
+    "city": "Flushing",
+    "slug": "citi-field",
+    "imagePath": "/kiosk/scenes/sports/mlb/citi-field.webp",
+    "aliases": [
+      "Citi Field",
+      "New York Mets",
+      "Mets"
+    ],
+    "status": "imported",
+    "source": {
+      "title": "File:Citi Field 2010 Night Game.jpg",
+      "sourceUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/1d/Citi_Field_2010_Night_Game.jpg/1920px-Citi_Field_2010_Night_Game.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "descriptionUrl": "https://commons.wikimedia.org/wiki/File:Citi_Field_2010_Night_Game.jpg",
+      "license": "Public domain",
+      "artist": "Petty Officer 3rd Class Casey J. Ranel",
+      "width": 3000,
+      "height": 1996
+    }
+  }
+]

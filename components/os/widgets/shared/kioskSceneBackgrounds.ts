@@ -1,5 +1,6 @@
 import type { SportsTeam } from "@/core/contracts/Sports";
 import { resolveSportsTeamIdentity } from "@/services/sports/identity";
+import { MLB_VENUES } from "@/services/sports/venues/mlb";
 
 export type KioskSceneFamily = "school" | "sports" | "notifications" | "system";
 
@@ -75,11 +76,8 @@ const NASCAR_TRACK_ASSETS: Record<string, string> = {
   "nascar-generic": GENERIC_MOTORSPORT,
 };
 
-const MLB_STADIUM_ASSETS: Record<string, string> = {
-  "mlb-angels": GENERIC_MLB_STADIUM,
-  "mlb-yankees": GENERIC_MLB_STADIUM,
-  "mlb-generic": GENERIC_MLB_STADIUM,
-};
+const MLB_STADIUM_ASSETS: Record<string, string> = Object.fromEntries(MLB_VENUES.map((venue) => [`mlb-${venue.slug}`, venue.imagePath])) as Record<string, string>;
+MLB_STADIUM_ASSETS["mlb-generic"] = GENERIC_MLB_STADIUM;
 
 const SCENE_ASSETS: Record<KioskSceneFamily, Record<string, string>> = {
   school: {

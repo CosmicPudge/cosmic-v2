@@ -17,7 +17,7 @@ test("venue overrides select MLB stadiums, F1 circuits, and NASCAR tracks", () =
   const mlb = parseKioskSportsTestOverride(new URLSearchParams("sport=mlb&venue=nyy"), devHost, "/kiosk");
   const f1 = parseKioskSportsTestOverride(new URLSearchParams("sport=f1&venue=malaysia&session=practice2"), devHost, "/kiosk");
   const nascar = parseKioskSportsTestOverride(new URLSearchParams("sport=nascar&venue=las-vegas&session=race"), devHost, "/kiosk");
-  assert.equal(normalizeKioskSportsEvent(createKioskSportsTestEvent(mlb!))?.backgroundKey, "mlb-yankees");
+  assert.equal(normalizeKioskSportsEvent(createKioskSportsTestEvent(mlb!))?.backgroundKey, "mlb-yankee-stadium");
   assert.equal(normalizeKioskSportsEvent(createKioskSportsTestEvent(f1!))?.backgroundKey, "f1-malaysia");
   assert.equal(normalizeKioskSportsEvent(createKioskSportsTestEvent(nascar!))?.backgroundKey, "nascar-las-vegas");
   assert.equal(createKioskSportsTestEvent(f1!).metadata?.sessionType, "Practice 2");

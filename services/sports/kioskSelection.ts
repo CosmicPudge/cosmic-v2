@@ -75,10 +75,6 @@ const NASCAR_TRACK_BACKGROUND_KEYS: Array<{ key: string; aliases: string[] }> = 
   { key: "nascar-cota", aliases: ["austin", "cota"] },
   { key: "nascar-las-vegas", aliases: ["las vegas motor speedway", "las vegas", "vegas"] },
 ];
-const MLB_STADIUM_BACKGROUND_KEYS: Array<{ key: string; aliases: string[] }> = [
-  { key: "mlb-angels", aliases: ["laa", "los angeles angels", "angels", "angel stadium"] },
-  { key: "mlb-yankees", aliases: ["nyy", "new york yankees", "yankees", "yankee stadium"] },
-];
 
 function normalized(value?: string) { return value?.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim() ?? ""; }
 
@@ -136,7 +132,7 @@ function backgroundKey(event: SportsEvent): string {
     return matchBackgroundKey(venue, NASCAR_TRACK_BACKGROUND_KEYS) ?? "nascar-generic";
   }
   const mlbVenue = resolveMlbVenue({ venueId: (event.metadata as { venueId?: string } | undefined)?.venueId, homeTeamId: event.homeTeam?.id, homeTeamAbbreviation: event.homeTeam?.abbreviation, homeTeamName: event.homeTeam?.name, venue: event.venue });
-  if (mlbVenue) return MLB_STADIUM_BACKGROUND_KEYS.find(({ aliases }) => aliases.some((alias) => mlbVenue.aliases.includes(alias) || normalized(mlbVenue.canonicalName).includes(normalized(alias))))?.key ?? "mlb-generic";
+  if (mlbVenue) return `mlb-${mlbVenue.slug}`;
   return "mlb-generic";
 }
 
