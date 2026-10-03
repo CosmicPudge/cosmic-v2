@@ -41,10 +41,28 @@ export interface KioskSportsSelectionCandidate {
 const SPORT_LABELS: Record<KioskTrackedSport, string> = { nfl: "NFL", f1: "FORMULA 1", nascar: "NASCAR", mlb: "MLB" };
 const SESSION_IMPORTANCE: Record<string, number> = { practice1: 10, practice2: 20, practice3: 30, practice: 10, qualifying: 50, sprint: 70, race: 100 };
 const F1_CIRCUIT_BACKGROUND_KEYS: Array<{ key: string; aliases: string[] }> = [
-  { key: "f1-monza", aliases: ["monza", "italy"] },
-  { key: "f1-austin", aliases: ["austin", "cota", "united states"] },
-  { key: "f1-marina-bay", aliases: ["marina bay", "singapore"] },
-  { key: "f1-malaysia", aliases: ["malaysia", "sepang"] },
+  { key: "f1-australia", aliases: ["albert park", "melbourne", "australia", "albert_park"] },
+  { key: "f1-china", aliases: ["shanghai", "china"] },
+  { key: "f1-japan", aliases: ["suzuka", "japan"] },
+  { key: "f1-miami", aliases: ["miami"] },
+  { key: "f1-canada", aliases: ["gilles villeneuve", "montreal", "canada", "villeneuve"] },
+  { key: "f1-monaco", aliases: ["monaco"] },
+  { key: "f1-barcelona", aliases: ["barcelona", "catalunya"] },
+  { key: "f1-austria", aliases: ["red bull ring", "spielberg", "austria", "red_bull_ring"] },
+  { key: "f1-silverstone", aliases: ["silverstone"] },
+  { key: "f1-spa", aliases: ["spa francorchamps", "spa francorchamps", "belgium", "spa"] },
+  { key: "f1-hungary", aliases: ["hungaroring", "budapest", "hungary"] },
+  { key: "f1-monza", aliases: ["autodromo nazionale monza", "monza"] },
+  { key: "f1-madrid", aliases: ["madrid"] },
+  { key: "f1-baku", aliases: ["baku", "azerbaijan"] },
+  { key: "f1-malaysia", aliases: ["sepang international circuit", "sepang", "malaysia"] },
+  { key: "f1-singapore", aliases: ["marina bay street circuit", "marina bay", "singapore", "marina_bay"] },
+  { key: "f1-austin", aliases: ["circuit of the americas", "cota", "austin", "americas"] },
+  { key: "f1-mexico", aliases: ["autodromo hermanos rodriguez", "hermanos rodriguez", "mexico city", "mexico", "rodriguez"] },
+  { key: "f1-brazil", aliases: ["autodromo jose carlos pace", "jose carlos pace", "interlagos", "sao paulo", "brazil"] },
+  { key: "f1-las-vegas", aliases: ["las vegas strip circuit", "las vegas", "vegas", "las_vegas"] },
+  { key: "f1-qatar", aliases: ["lusail international circuit", "lusail", "qatar", "losail"] },
+  { key: "f1-abu-dhabi", aliases: ["yas marina circuit", "yas marina", "abu dhabi", "yas_marina"] },
 ];
 const NASCAR_TRACK_BACKGROUND_KEYS: Array<{ key: string; aliases: string[] }> = [
   { key: "nascar-daytona", aliases: ["daytona"] },

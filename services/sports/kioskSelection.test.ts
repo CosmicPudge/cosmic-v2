@@ -92,3 +92,34 @@ test("unknown venues use the sport-specific generic fallback", () => {
   assert.equal(selectKioskSportsBackground("f1-unknown"), "/dashboard/sports/motorsport.webp");
   assert.equal(selectKioskSportsBackground("nascar-unknown"), "/dashboard/sports/motorsport.webp");
 });
+
+test("F1 circuit aliases resolve to the imported venue backgrounds", () => {
+  const cases = [
+    ["Sepang International Circuit", "Malaysia", "f1-malaysia", "/kiosk/scenes/sports/f1/f1-malaysia.webp"],
+    ["Autodromo Nazionale Monza", "Italy", "f1-monza", "/kiosk/scenes/sports/f1/f1-monza.webp"],
+    ["Circuit of the Americas", "United States", "f1-austin", "/kiosk/scenes/sports/f1/f1-austin.webp"],
+    ["COTA", "United States", "f1-austin", "/kiosk/scenes/sports/f1/f1-austin.webp"],
+    ["Interlagos", "Brazil", "f1-brazil", "/kiosk/scenes/sports/f1/f1-brazil.webp"],
+    ["Lusail International Circuit", "Qatar", "f1-qatar", "/kiosk/scenes/sports/f1/f1-qatar.webp"],
+    ["Yas Marina Circuit", "United Arab Emirates", "f1-abu-dhabi", "/kiosk/scenes/sports/f1/f1-abu-dhabi.webp"],
+  ] as const;
+  for (const [venue, country, key, asset] of cases) {
+    const normalized = normalizeKioskSportsEvent(event(key, "f1", "2026-10-03T12:00:00Z", { venue, metadata: { country } }));
+    assert.equal(normalized?.backgroundKey, key);
+    assert.equal(selectKioskSportsBackground(normalized?.backgroundKey), asset);
+  }
+});
+
+test("F1 session types preserve the same venue background", () => {
+  for (const session of ["Practice 1", "Practice 2", "Practice 3", "Qualifying", "Sprint", "Race"]) {
+    const normalized = normalizeKioskSportsEvent(event(`malaysia-${session}`, "f1", "2026-10-03T12:00:00Z", { title: `Malaysian Grand Prix · ${session}`, venue: "Sepang International Circuit", metadata: { country: "Malaysia", sessionType: session } }));
+    assert.equal(normalized?.backgroundKey, "f1-malaysia");
+    assert.equal(selectKioskSportsBackground(normalized?.backgroundKey), "/kiosk/scenes/sports/f1/f1-malaysia.webp");
+  }
+});
+
+test("unknown F1 venues use the generic motorsport fallback", () => {
+  const normalized = normalizeKioskSportsEvent(event("unknown-f1", "f1", "2026-10-03T12:00:00Z", { venue: "Unknown International Circuit", metadata: { country: "Unknown" } }));
+  assert.equal(normalized?.backgroundKey, "f1-generic");
+  assert.equal(selectKioskSportsBackground(normalized?.backgroundKey), "/dashboard/sports/motorsport.webp");
+});

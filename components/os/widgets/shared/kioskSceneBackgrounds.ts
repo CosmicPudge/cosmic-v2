@@ -43,10 +43,28 @@ const GENERIC_MLB_STADIUM = "/dashboard/sports/baseball.webp";
 const GENERIC_MOTORSPORT = "/dashboard/sports/motorsport.webp";
 
 const F1_CIRCUIT_ASSETS: Record<string, string> = {
-  "f1-monza": "/sports/tracks/f1/monza.svg",
-  "f1-austin": "/sports/tracks/f1/austin.svg",
-  "f1-marina-bay": "/sports/tracks/f1/marina-bay.svg",
-  "f1-malaysia": GENERIC_MOTORSPORT,
+  "f1-australia": "/kiosk/scenes/sports/f1/f1-australia.webp",
+  "f1-china": "/kiosk/scenes/sports/f1/f1-china.webp",
+  "f1-japan": "/kiosk/scenes/sports/f1/f1-japan.webp",
+  "f1-miami": "/kiosk/scenes/sports/f1/f1-miami.webp",
+  "f1-canada": "/kiosk/scenes/sports/f1/f1-canada.webp",
+  "f1-monaco": "/kiosk/scenes/sports/f1/f1-monaco.webp",
+  "f1-barcelona": "/kiosk/scenes/sports/f1/f1-barcelona.webp",
+  "f1-austria": "/kiosk/scenes/sports/f1/f1-austria.webp",
+  "f1-silverstone": "/kiosk/scenes/sports/f1/f1-silverstone.webp",
+  "f1-spa": "/kiosk/scenes/sports/f1/f1-spa.webp",
+  "f1-hungary": "/kiosk/scenes/sports/f1/f1-hungary.webp",
+  "f1-monza": "/kiosk/scenes/sports/f1/f1-monza.webp",
+  "f1-madrid": "/kiosk/scenes/sports/f1/f1-madrid.webp",
+  "f1-baku": "/kiosk/scenes/sports/f1/f1-baku.webp",
+  "f1-malaysia": "/kiosk/scenes/sports/f1/f1-malaysia.webp",
+  "f1-singapore": "/kiosk/scenes/sports/f1/f1-singapore.webp",
+  "f1-austin": "/kiosk/scenes/sports/f1/f1-austin.webp",
+  "f1-mexico": "/kiosk/scenes/sports/f1/f1-mexico.webp",
+  "f1-brazil": "/kiosk/scenes/sports/f1/f1-brazil.webp",
+  "f1-las-vegas": "/kiosk/scenes/sports/f1/f1-las-vegas.webp",
+  "f1-qatar": "/kiosk/scenes/sports/f1/f1-qatar.webp",
+  "f1-abu-dhabi": "/kiosk/scenes/sports/f1/f1-abu-dhabi.webp",
   "f1-generic": GENERIC_MOTORSPORT,
 };
 
