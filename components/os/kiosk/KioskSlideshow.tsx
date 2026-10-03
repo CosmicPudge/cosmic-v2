@@ -20,8 +20,6 @@ import type {
 import KioskSlide from "./KioskSlide";
 import { useKioskAmbientFrame } from "./KioskAmbientFrame";
 import KioskSportsOverride from "./KioskSportsOverride";
-import KioskSportsAlert from "./KioskSportsAlert";
-import KioskEventAlert from "./KioskEventAlert";
 import KioskSceneFrame from "@/components/os/widgets/shared/KioskSceneFrame";
 
 import {
@@ -30,14 +28,11 @@ import {
 } from "./kioskConfig";
 import { KioskSlideshowProvider } from "./KioskSlideshowContext";
 import type { KioskSlideshowPauseReason } from "@/core/contracts/Kiosk";
-import type { KioskEventAlertRequest, KioskMusicController } from "./KioskSlideshowContext";
-import { shouldResumeMusicAfterAlert } from "./kioskEventAlertControl";
 import { useEntitlements } from "@/hooks/os/useEntitlements";
 import { resolveKioskSwipeDirection, shouldResetKioskRotationAfterSwipe } from "./kioskSlideshowInteraction";
 import { createKioskSportsTestEvent, parseKioskSportsTestOverride } from "./kioskSportsTestOverride";
 import { KIOSK_MUSIC_PLAYBACK_STALE_MS, shouldPauseKioskForMusic } from "./kioskMusicRotation";
 import { normalizeKioskSportsEvent, selectKioskSportsEvent } from "@/services/sports/kioskSelection";
-import { KIOSK_SPORTS_ALERT_DURATION_MS, selectKioskPreEventAlert } from "./kioskAttention";
 
 const TEST_SPORTS: SportKind[] = [
   "nfl",
@@ -151,8 +146,7 @@ function createTestEvent(
 
 type SportsPresentationState = {
   event: SportsEvent;
-  kind: "live" | "alert";
-  thresholdMinutes?: number;
+  kind: "live";
   phase: "entering" | "active" | "exiting";
 };
 
@@ -245,24 +239,8 @@ function KioskNormalSlideshow() {
     testSportParam,
   ]);
 
-  const sportsEvents = useMemo(() => sportsData ? [...sportsData.live, ...sportsData.upcoming, ...sportsData.featured] : [], [sportsData]);
   const [dismissedLiveEventId, setDismissedLiveEventId] = useState<string | null>(null);
-  const [firedAlertKeys, setFiredAlertKeys] = useState<string[]>([]);
-  const [musicControllers, setMusicControllers] = useState<Record<string, KioskMusicController>>({});
-  const [eventAlert, setEventAlert] = useState<{ alert: KioskEventAlertRequest; musicSource?: string; wasPlayingBeforeAlert: boolean; pausedByCosmic: boolean; playbackChangedDuringAlert: boolean } | null>(null);
   const liveEvent = sportsSelection && sportsSelection.live && sportsSelection.event.id !== dismissedLiveEventId ? sportsSelection.event : null;
-  const preEventAlert = useMemo(() => {
-    if (liveEvent || manualSportsOverride || (testModeAllowed && testSportParam)) return null;
-    return selectKioskPreEventAlert(sportsEvents, new Date(), new Set(firedAlertKeys));
-  }, [firedAlertKeys, liveEvent, manualSportsOverride, sportsEvents, testModeAllowed, testSportParam]);
-  const requestEventAlert = useCallback((alert: KioskEventAlertRequest) => {
-    if (liveEvent) return;
-    setEventAlert((current) => {
-      if (current) return current;
-      const entry = Object.entries(musicControllers).find(([, controller]) => controller.playing);
-      return { alert, musicSource: entry?.[0], wasPlayingBeforeAlert: Boolean(entry), pausedByCosmic: false, playbackChangedDuringAlert: false };
-    });
-  }, [liveEvent, musicControllers]);
 
   const [currentIndex, setCurrentIndex] =
     useState(0);
@@ -284,8 +262,6 @@ function KioskNormalSlideshow() {
   // Presentation-only phases keep a sports eligibility refresh from hard-swapping the scene tree.
   const [sportsPresentation, setSportsPresentation] = useState<SportsPresentationState | null>(null);
   const sportsPresentationTransitionRef = useRef<number | null>(null);
-  const eventAlertPauseAttemptRef = useRef<string | null>(null);
-  const eventAlertPlaybackChangedRef = useRef(false);
   const appliedCommandRevisionRef = useRef(0);
   const bootId = searchParams.get("cosmic-boot")?.trim() ?? "";
   const setMusicPlaying = useCallback((source: string, playing: boolean) => {
@@ -301,18 +277,6 @@ function KioskNormalSlideshow() {
       delete musicSourceTimersRef.current[source];
     }
     setMusicSources((current) => current[source]?.playing === playing && current[source]?.lastSeenAt === lastSeenAt ? current : { ...current, [source]: { playing, lastSeenAt } });
-  }, []);
-  const setMusicController = useCallback((source: string, controller: KioskMusicController | null) => {
-    setMusicControllers((current) => {
-      if (!controller) {
-        if (!(source in current)) return current;
-        const next = { ...current };
-        delete next[source];
-        return next;
-      }
-      if (current[source]?.playing === controller.playing) return current;
-      return { ...current, [source]: controller };
-    });
   }, []);
   const pause = useCallback(() => { setManualPaused(true); }, []);
   const resume = useCallback(() => { setManualPaused(false); setTimerEpoch((epoch) => epoch + 1); }, []);
@@ -364,9 +328,6 @@ function KioskNormalSlideshow() {
             ? current
             : { event: liveEvent, kind: "live", phase: current.phase };
         });
-      } else if (preEventAlert) {
-        setFiredAlertKeys((current) => current.includes(preEventAlert.key) ? current : [...current, preEventAlert.key]);
-        setSportsPresentation((current) => current ?? { event: preEventAlert.event, kind: "alert", thresholdMinutes: preEventAlert.thresholdMinutes, phase: "entering" });
       } else {
         setSportsPresentation((current) => {
           if (!current || current.phase === "exiting") return current;
@@ -376,7 +337,7 @@ function KioskNormalSlideshow() {
     }, 0);
 
     return () => window.clearTimeout(syncTimeout);
-  }, [liveEvent, preEventAlert]);
+  }, [liveEvent]);
 
   useEffect(() => {
     if (!sportsPresentation) return;
@@ -396,11 +357,6 @@ function KioskNormalSlideshow() {
         setSportsPresentation(null);
         sportsPresentationTransitionRef.current = null;
       }, KIOSK_TRANSITION_DURATION_MS);
-    } else if (sportsPresentation.kind === "alert") {
-      sportsPresentationTransitionRef.current = window.setTimeout(() => {
-        setSportsPresentation((current) => current?.kind === "alert" ? { ...current, phase: "exiting" } : current);
-        sportsPresentationTransitionRef.current = null;
-      }, KIOSK_SPORTS_ALERT_DURATION_MS);
     }
 
     return () => {
@@ -412,7 +368,7 @@ function KioskNormalSlideshow() {
   }, [sportsPresentation]);
 
   useEffect(() => {
-    if (liveEvent || sportsPresentation || eventAlert || paused) {
+    if (liveEvent || sportsPresentation || paused) {
       return;
     }
 
@@ -437,33 +393,11 @@ function KioskNormalSlideshow() {
   }, [
     liveEvent,
     sportsPresentation,
-    eventAlert,
     paused,
     goToRelativeSlide,
     timerEpoch,
     widgets.length,
   ]);
-
-  useEffect(() => {
-    if (!eventAlert) {
-      eventAlertPauseAttemptRef.current = null;
-      eventAlertPlaybackChangedRef.current = false;
-      return;
-    }
-    const controller = eventAlert.musicSource ? musicControllers[eventAlert.musicSource] : undefined;
-    if (controller?.playing && eventAlert.wasPlayingBeforeAlert && !eventAlert.pausedByCosmic && eventAlertPauseAttemptRef.current !== eventAlert.alert.id) {
-      eventAlertPauseAttemptRef.current = eventAlert.alert.id;
-      void controller.pause().then((pausedByCosmic) => setEventAlert((current) => current ? { ...current, pausedByCosmic } : current));
-    } else if (controller?.playing && eventAlert.pausedByCosmic && !eventAlert.playbackChangedDuringAlert) {
-      eventAlertPlaybackChangedRef.current = true;
-    }
-    const timer = window.setTimeout(() => {
-      const currentController = eventAlert.musicSource ? musicControllers[eventAlert.musicSource] : undefined;
-      if (currentController && shouldResumeMusicAfterAlert({ ...eventAlert, playbackChangedDuringAlert: eventAlert.playbackChangedDuringAlert || eventAlertPlaybackChangedRef.current })) void currentController.play();
-      setEventAlert(null);
-    }, 30_000);
-    return () => window.clearTimeout(timer);
-  }, [eventAlert, musicControllers]);
 
   useEffect(() => () => {
     if (transitionTimeoutRef.current !== null) window.clearTimeout(transitionTimeoutRef.current);
@@ -582,7 +516,7 @@ function KioskNormalSlideshow() {
     return null;
   }
 
-  const control = { currentSlide: currentWidget.id, paused, pauseReason, pause, resume, togglePause, setMusicPlaying, setMusicController, requestEventAlert };
+  const control = { currentSlide: currentWidget.id, paused, pauseReason, pause, resume, togglePause, setMusicPlaying };
   return (
     <KioskSlideshowProvider value={control}>
     <div
@@ -614,10 +548,9 @@ function KioskNormalSlideshow() {
 
       {sportsPresentation ? (
         <div className={`kiosk-sports-transition-layer kiosk-sports-transition-sports kiosk-sports-transition-sports-${sportsPresentation.phase}`} aria-hidden={sportsPresentation.phase !== "active"}>
-          {sportsPresentation.kind === "alert" ? <KioskSportsAlert event={sportsPresentation.event} thresholdMinutes={sportsPresentation.thresholdMinutes ?? 5} /> : <KioskSportsOverride event={sportsPresentation.event} />}
+          <KioskSportsOverride event={sportsPresentation.event} />
         </div>
       ) : null}
-      {eventAlert && !liveEvent ? <div className="kiosk-sports-transition-layer kiosk-sports-transition-sports kiosk-sports-transition-sports-active"><KioskEventAlert alert={eventAlert.alert} /></div> : null}
 
       <span className="sr-only" aria-live="polite">Current kiosk scene: {currentWidget.id}</span>
       {paused ? <span className="pointer-events-none absolute right-5 top-5 z-30 rounded-full border border-white/15 bg-black/35 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-white/65 backdrop-blur-sm">Paused</span> : null}
@@ -707,8 +640,6 @@ function KioskSponsorDemo() {
     resume: () => { setPaused(false); setCompleted(false); },
     togglePause: () => setPaused((value) => !value),
     setMusicPlaying: () => undefined,
-    setMusicController: () => undefined,
-    requestEventAlert: () => undefined,
   };
 
   return (

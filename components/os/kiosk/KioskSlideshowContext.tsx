@@ -4,9 +4,6 @@ import { createContext, useContext } from "react";
 
 import type { KioskSlideshowPauseReason } from "@/core/contracts/Kiosk";
 
-export interface KioskEventAlertRequest { id: string; title: string; subtitle?: string; timingLabel?: string; }
-export interface KioskMusicController { playing: boolean; pause: () => Promise<boolean>; play: () => Promise<boolean>; }
-
 export interface KioskSlideshowControl {
   currentSlide: string | null;
   paused: boolean;
@@ -15,8 +12,6 @@ export interface KioskSlideshowControl {
   resume: () => void;
   togglePause: () => void;
   setMusicPlaying: (source: string, playing: boolean) => void;
-  setMusicController: (source: string, controller: KioskMusicController | null) => void;
-  requestEventAlert: (alert: KioskEventAlertRequest) => void;
 }
 
 const KioskSlideshowContext = createContext<KioskSlideshowControl | null>(null);
@@ -32,7 +27,5 @@ export function useKioskSlideshowControl() {
     resume: () => undefined,
     togglePause: () => undefined,
     setMusicPlaying: () => undefined,
-    setMusicController: () => undefined,
-    requestEventAlert: () => undefined,
   } satisfies KioskSlideshowControl;
 }
