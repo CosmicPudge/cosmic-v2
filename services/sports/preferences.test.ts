@@ -37,3 +37,13 @@ test("legacy untyped F1 favorites remain compatible", () => {
   const race = event("race", "scheduled", "2026-09-06T13:00:00Z", { sport: "f1" });
   assert.equal(isFavoriteEvent(race, preferences), true);
 });
+
+test("earlier upcoming event beats a later favorite", () => {
+  const preferences = structuredClone(neutralPreferences);
+  preferences.sports.followedTeams = [{ sport: "nfl", provider: "espn", teamId: "9", label: "Green Bay Packers" }];
+  const sections = favoriteFirstSections([
+    event("packers", "scheduled", "2026-09-06T13:00:00Z", { homeTeam: { id: "9", name: "Green Bay Packers" } }),
+    event("earlier", "scheduled", "2026-09-05T13:00:00Z"),
+  ], preferences);
+  assert.equal(sections.next[0]?.id, "earlier");
+});

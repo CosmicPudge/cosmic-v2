@@ -2,7 +2,48 @@ import type { SportsEvent, SportsEventStatus, SportsStanding } from "@/core/cont
 import type { SportsProvider, SportsProviderResult } from "./types";
 import { date, fetchJson, isRecord, number, records, string } from "./types";
 
-function status(value: unknown, now: Date, start: Date, end?: Date): SportsEventStatus {
+export const F1_SESSION_DURATION_MS = {
+  practice: 90 * 60_000,
+  qualifying: 120 * 60_000,
+  sprint: 120 * 60_000,
+  race: 180 * 60_000,
+} as const;
+
+const F1_CIRCUIT_TIMEZONES: Array<{ timezone: string; aliases: string[] }> = [
+  { timezone: "Australia/Melbourne", aliases: ["albert park", "melbourne", "australia"] },
+  { timezone: "Asia/Shanghai", aliases: ["shanghai", "china"] },
+  { timezone: "Asia/Tokyo", aliases: ["suzuka", "japan"] },
+  { timezone: "America/New_York", aliases: ["miami"] },
+  { timezone: "America/Toronto", aliases: ["gilles villeneuve", "montreal", "canada"] },
+  { timezone: "Europe/Monaco", aliases: ["monaco"] },
+  { timezone: "Europe/Madrid", aliases: ["barcelona", "catalunya", "madrid", "spain"] },
+  { timezone: "Europe/Vienna", aliases: ["red bull ring", "spielberg", "austria"] },
+  { timezone: "Europe/London", aliases: ["silverstone", "great britain", "united kingdom"] },
+  { timezone: "Europe/Brussels", aliases: ["spa francorchamps", "spa", "belgium"] },
+  { timezone: "Europe/Budapest", aliases: ["hungaroring", "budapest", "hungary"] },
+  { timezone: "Europe/Rome", aliases: ["autodromo nazionale monza", "monza", "italy"] },
+  { timezone: "Asia/Baku", aliases: ["baku", "azerbaijan"] },
+  { timezone: "Asia/Kuala_Lumpur", aliases: ["sepang international circuit", "sepang", "malaysia"] },
+  { timezone: "Asia/Singapore", aliases: ["marina bay street circuit", "marina bay", "singapore"] },
+  { timezone: "America/Chicago", aliases: ["circuit of the americas", "cota", "austin", "united states"] },
+  { timezone: "America/Mexico_City", aliases: ["autodromo hermanos rodriguez", "hermanos rodriguez", "mexico city", "mexico"] },
+  { timezone: "America/Sao_Paulo", aliases: ["autodromo jose carlos pace", "jose carlos pace", "interlagos", "sao paulo", "brazil"] },
+  { timezone: "America/Los_Angeles", aliases: ["las vegas strip circuit", "las vegas", "vegas"] },
+  { timezone: "Asia/Qatar", aliases: ["lusail international circuit", "lusail", "qatar"] },
+  { timezone: "Asia/Dubai", aliases: ["yas marina circuit", "yas marina", "abu dhabi"] },
+];
+
+function normalized(value?: string) { return value?.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim() ?? ""; }
+
+export function resolveF1Timezone(circuit?: string, country?: string) {
+  const circuitText = normalized(circuit);
+  const circuitMatch = F1_CIRCUIT_TIMEZONES.find(({ aliases }) => aliases.some((alias) => circuitText.includes(normalized(alias))));
+  if (circuitMatch) return circuitMatch.timezone;
+  const haystack = normalized(country);
+  return F1_CIRCUIT_TIMEZONES.find(({ aliases }) => aliases.some((alias) => haystack.includes(normalized(alias))))?.timezone;
+}
+
+function providerStatus(value: unknown, now: Date, start: Date, end?: Date): SportsEventStatus {
   const statusRecord = isRecord(value) ? value : undefined;
   const type = isRecord(statusRecord?.type) ? statusRecord.type : undefined;
   const state = string(type?.state) ?? string(statusRecord?.state);
@@ -35,16 +76,34 @@ export function f1SessionKey(label: string) {
   return "race";
 }
 
-const LOCAL_SESSION_OFFSETS_MINUTES: Record<string, number> = { malaysia: 8 * 60, singapore: 8 * 60 };
+function localDateToUtc(dateValue: string, timeValue: string, timezone: string) {
+  const naive = new Date(`${dateValue}T${timeValue}Z`);
+  if (Number.isNaN(naive.getTime())) return naive;
+  const parts = new Intl.DateTimeFormat("en-US", { timeZone: timezone, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23" }).formatToParts(naive).reduce<Record<string, string>>((result, part) => {
+    if (part.type !== "literal") result[part.type] = part.value;
+    return result;
+  }, {});
+  const renderedAsUtc = Date.UTC(Number(parts.year), Number(parts.month) - 1, Number(parts.day), Number(parts.hour), Number(parts.minute), Number(parts.second));
+  return new Date(naive.getTime() - (renderedAsUtc - naive.getTime()));
+}
 
-export function parseF1SessionStart(dateValue: string, timeValue: string | undefined, country?: string) {
+export function parseF1SessionStart(dateValue: string, timeValue: string | undefined, country?: string, circuit?: string) {
   const time = timeValue?.trim() || "00:00:00";
   const raw = `${dateValue}T${time}`;
   if (/[zZ]|[+-]\d{2}:?\d{2}$/.test(time)) return new Date(raw);
-  const localOffset = LOCAL_SESSION_OFFSETS_MINUTES[country?.trim().toLowerCase() ?? ""];
-  const utcValue = new Date(`${raw}Z`);
-  if (Number.isNaN(utcValue.getTime()) || localOffset === undefined) return utcValue;
-  return new Date(utcValue.getTime() - localOffset * 60_000);
+  const timezone = resolveF1Timezone(circuit, country);
+  return timezone ? localDateToUtc(dateValue, time, timezone) : new Date(`${raw}Z`);
+}
+
+export function resolveF1SessionState(input: { start: Date; now: Date; kind: "practice" | "qualifying" | "sprint" | "race"; providerStatus?: SportsEventStatus; providerEnd?: Date }) {
+  const expectedEnd = input.providerEnd ?? new Date(input.start.getTime() + F1_SESSION_DURATION_MS[input.kind]);
+  const explicitLive = input.providerStatus === "live" || input.providerStatus === "delayed";
+  const explicitComplete = input.providerStatus === "final" || input.providerStatus === "cancelled" || input.providerStatus === "postponed";
+  if (explicitLive) return { state: "live" as const, status: input.providerStatus!, statusSource: "provider" as const, inferredLive: false, expectedEnd };
+  if (explicitComplete) return { state: "complete" as const, status: input.providerStatus!, statusSource: "provider" as const, inferredLive: false, expectedEnd };
+  if (input.now < input.start) return { state: "scheduled" as const, status: "scheduled" as const, statusSource: "inferred" as const, inferredLive: false, expectedEnd };
+  if (input.now < expectedEnd) return { state: "live" as const, status: "live" as const, statusSource: "inferred" as const, inferredLive: true, expectedEnd };
+  return { state: "complete" as const, status: "final" as const, statusSource: "inferred" as const, inferredLive: false, expectedEnd };
 }
 
 export class F1Provider implements SportsProvider {
@@ -55,7 +114,7 @@ export class F1Provider implements SportsProvider {
   readonly fallback = true;
   readonly sourceUrl = "https://www.espn.com/f1";
   readonly capabilities = { schedule: true, liveScore: true, standings: true, results: true, sessions: false, telemetry: false };
-  readonly cacheSeconds = 900;
+  readonly cacheSeconds = 30;
 
   async getSnapshot(now: Date): Promise<SportsProviderResult> {
     const payload = await fetchJson(`https://site.api.espn.com/apis/site/v2/sports/racing/f1/scoreboard?limit=1000&dates=${now.getFullYear()}`, this.cacheSeconds);
@@ -76,7 +135,7 @@ export class F1Provider implements SportsProvider {
         title,
         start,
         ...(end ? { end } : {}),
-        status: status(competition?.status, now, start, end),
+        status: providerStatus(competition?.status, now, start, end),
         ...(detail ? { statusDetail: detail } : {}),
         broadcast: "Apple TV",
         ...(string(venueRecord?.fullName) ? { venue: string(venueRecord?.fullName) } : {}),
@@ -104,7 +163,7 @@ export class F1Provider implements SportsProvider {
 
   private async getWeekendSessions(season: number, now: Date): Promise<SportsEvent[]> {
     try {
-      const payload = await fetchJson(`https://api.jolpi.ca/ergast/f1/${season}.json`, 900);
+      const payload = await fetchJson(`https://api.jolpi.ca/ergast/f1/${season}.json`, this.cacheSeconds);
       const raceTable = isRecord(payload) && isRecord(payload.MRData) && isRecord(payload.MRData.RaceTable) ? payload.MRData.RaceTable : undefined;
       const races = records(raceTable?.Races);
       return races.flatMap((race) => {
@@ -113,7 +172,7 @@ export class F1Provider implements SportsProvider {
         const location = isRecord(circuit.Location) ? [string(circuit.Location.locality), string(circuit.Location.country)].filter(Boolean).join(", ") : undefined;
         const circuitId = string(circuit.circuitId);
         const weekend = [{ label: "Practice 1", value: isRecord(race.FirstPractice) ? race.FirstPractice : undefined }, { label: "Practice 2", value: isRecord(race.SecondPractice) ? race.SecondPractice : undefined }, { label: "Practice 3", value: isRecord(race.ThirdPractice) ? race.ThirdPractice : undefined }, { label: "Sprint", value: isRecord(race.Sprint) ? race.Sprint : undefined }, { label: "Qualifying", value: isRecord(race.Qualifying) ? race.Qualifying : undefined }, { label: "Race", value: string(race.date) ? { date: race.date, time: race.time } : undefined }];
-        return weekend.flatMap(({ label, value }) => { const dateValue = value && string(value.date); if (!dateValue) return []; const country = isRecord(circuit.Location) ? string(circuit.Location.country) : undefined; const start = parseF1SessionStart(dateValue, string(value?.time), country); if (Number.isNaN(start.getTime())) return []; const kind = sessionKind(label); const sessionId = f1SessionKey(label); const title = `${raceName} · ${label}`; return [{ id: `jolpica-f1:${season}:${round}:${sessionId}`, sport: "f1" as const, title, start, status: status(undefined, now, start), venue: string(circuit.circuitName), broadcast: "Apple TV", source: "jolpica", provider: "jolpica", providerName: "Jolpica F1", official: false, fallback: true, sourceUrl: "https://api.jolpi.ca/docs/", metadata: { competition: raceName, eventName: title, sessionType: label, sessionKind: kind, circuit: string(circuit.circuitName), ...(circuitId ? { circuitId } : {}), ...(country ? { country } : {}), ...(location ? { location } : {}) } }]; });
+        return weekend.flatMap(({ label, value }) => { const dateValue = value && string(value.date); if (!dateValue) return []; const country = isRecord(circuit.Location) ? string(circuit.Location.country) : undefined; const circuitName = string(circuit.circuitName); const start = parseF1SessionStart(dateValue, string(value?.time), country, circuitName); if (Number.isNaN(start.getTime())) return []; const kind = sessionKind(label); const sessionId = f1SessionKey(label); const state = resolveF1SessionState({ start, now, kind }); const title = `${raceName} · ${label}`; const timezone = resolveF1Timezone(circuitName, country); return [{ id: `jolpica-f1:${season}:${round}:${sessionId}`, sport: "f1" as const, title, start, status: state.status, venue: circuitName, broadcast: "Apple TV", source: "jolpica", provider: "jolpica", providerName: "Jolpica F1", official: false, fallback: true, sourceUrl: "https://api.jolpi.ca/docs/", metadata: { competition: raceName, eventName: title, sessionType: label, sessionKind: kind, circuit: circuitName, normalizedState: state.state, statusSource: state.statusSource, inferredLive: state.inferredLive, expectedEnd: state.expectedEnd.toISOString(), staleAfter: new Date(state.expectedEnd.getTime() + 30 * 60_000).toISOString(), lastProviderRefresh: now.toISOString(), timezoneResolved: Boolean(timezone), ...(timezone ? { timezone } : {}), ...(circuitId ? { circuitId } : {}), ...(country ? { country } : {}), ...(location ? { location } : {}) } }]; });
       });
     } catch { return []; }
   }

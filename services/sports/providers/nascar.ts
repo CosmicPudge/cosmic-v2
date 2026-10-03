@@ -1,4 +1,4 @@
-import type { SportsEvent, SportsEventStatus, SportsStanding } from "@/core/contracts/Sports";
+import type { SportsEvent, SportsStanding } from "@/core/contracts/Sports";
 import type { SportsProvider, SportsProviderResult } from "./types";
 import { fetchJson, isRecord, number, records, string } from "./types";
 
@@ -9,16 +9,16 @@ function utcDate(value: unknown): Date | undefined {
   return Number.isNaN(parsed.getTime()) ? undefined : parsed;
 }
 
-function raceStatus(race: Record<string, unknown>, now: Date, start: Date): SportsEventStatus {
+export function resolveNascarRaceState(race: Record<string, unknown>, now: Date, start: Date) {
   const actualLaps = number(race.actual_laps);
   const scheduledLaps = number(race.scheduled_laps);
-  const elapsedMs = now.getTime() - start.getTime();
-  if (elapsedMs < 0) return "scheduled";
-  if (elapsedMs > 18 * 60 * 60 * 1_000) return "final";
-  if (actualLaps === undefined || actualLaps <= 0 || scheduledLaps === undefined || scheduledLaps <= 0) return "scheduled";
-  if (actualLaps >= scheduledLaps) return "final";
-  if (actualLaps < scheduledLaps) return "live";
-  return "scheduled";
+  const providerComplete = scheduledLaps !== undefined && scheduledLaps > 0 && actualLaps !== undefined && actualLaps >= scheduledLaps;
+  const expectedEnd = new Date(start.getTime() + 6 * 60 * 60_000);
+  if (providerComplete || now.getTime() - start.getTime() > 18 * 60 * 60_000) return { state: "complete" as const, status: "final" as const, statusSource: "provider" as const, inferredLive: false, expectedEnd };
+  if (actualLaps !== undefined && actualLaps > 0) return { state: "live" as const, status: "live" as const, statusSource: "provider" as const, inferredLive: false, expectedEnd };
+  if (now < start) return { state: "scheduled" as const, status: "scheduled" as const, statusSource: "provider" as const, inferredLive: false, expectedEnd };
+  if (now < expectedEnd) return { state: "live" as const, status: "live" as const, statusSource: "inferred" as const, inferredLive: true, expectedEnd };
+  return { state: "unknown" as const, status: "final" as const, statusSource: "inferred" as const, inferredLive: false, expectedEnd };
 }
 
 export class NascarProvider implements SportsProvider {
@@ -29,7 +29,7 @@ export class NascarProvider implements SportsProvider {
   readonly fallback = false;
   readonly sourceUrl = "https://www.nascar.com";
   readonly capabilities = { schedule: true, liveScore: true, standings: true, results: true, sessions: true, telemetry: false };
-  readonly cacheSeconds = 3_600;
+  readonly cacheSeconds = 30;
 
   async getSnapshot(now: Date): Promise<SportsProviderResult> {
     const payload = await fetchJson(`https://cf.nascar.com/cacher/${now.getFullYear()}/1/race_list_basic.json`, this.cacheSeconds);
@@ -49,11 +49,11 @@ export class NascarProvider implements SportsProvider {
         sport: "nascar",
         title,
         start,
-        status: raceStatus(race, now, start),
+        status: resolveNascarRaceState(race, now, start).status,
         ...(track ? { venue: track } : {}),
         ...(broadcast ? { broadcast } : {}),
         source: "nascar",
-        metadata: { competition: "NASCAR Cup Series", eventName: title, ...(track ? { track } : {}), ...(trackId ? { trackId } : {}), ...(location ? { location } : {}), ...(string(race.track_type) ? { trackType: string(race.track_type), trackConfiguration: string(race.track_type) } : {}), ...(number(race.scheduled_laps) !== undefined ? { laps: number(race.scheduled_laps), detail: `${number(race.scheduled_laps)} laps` } : {}), ...(string(race.race_distance) ? { raceDistance: string(race.race_distance) } : {}) },
+        metadata: { competition: "NASCAR Cup Series", eventName: title, normalizedState: resolveNascarRaceState(race, now, start).state, statusSource: resolveNascarRaceState(race, now, start).statusSource, inferredLive: resolveNascarRaceState(race, now, start).inferredLive, expectedEnd: resolveNascarRaceState(race, now, start).expectedEnd.toISOString(), staleAfter: new Date(now.getTime() + this.cacheSeconds * 1_000).toISOString(), lastProviderRefresh: now.toISOString(), ...(track ? { track } : {}), ...(trackId ? { trackId } : {}), ...(location ? { location } : {}), ...(string(race.track_type) ? { trackType: string(race.track_type), trackConfiguration: string(race.track_type) } : {}), ...(number(race.scheduled_laps) !== undefined ? { laps: number(race.scheduled_laps), detail: `${number(race.scheduled_laps)} laps` } : {}), ...(string(race.race_distance) ? { raceDistance: string(race.race_distance) } : {}) },
       }];
     });
     return { events, standings: await this.getStandings(now.getFullYear()) };

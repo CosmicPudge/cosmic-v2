@@ -54,9 +54,13 @@ export function favoriteFirstSections(events: SportsEvent[], preferences: Cosmic
     const temporal = (value: SportsEvent) => value.status === "live" || value.status === "delayed" ? 0 : value.status === "final" || value.status === "cancelled" || value.status === "postponed" ? 2 : 1;
     const firstTemporal = temporal(first); const secondTemporal = temporal(second);
     if (firstTemporal !== secondTemporal) return firstTemporal - secondTemporal;
-    const favoriteDelta = Number(isFavoriteEvent(second, preferences)) - Number(isFavoriteEvent(first, preferences));
-    if (favoriteDelta) return favoriteDelta;
-    return firstTemporal === 2 ? second.start.getTime() - first.start.getTime() : first.start.getTime() - second.start.getTime();
+    if (firstTemporal === 0) {
+      const favoriteDelta = Number(isFavoriteEvent(second, preferences)) - Number(isFavoriteEvent(first, preferences));
+      if (favoriteDelta) return favoriteDelta;
+    }
+    const timeDelta = firstTemporal === 2 ? second.start.getTime() - first.start.getTime() : first.start.getTime() - second.start.getTime();
+    if (timeDelta) return timeDelta;
+    return Number(isFavoriteEvent(second, preferences)) - Number(isFavoriteEvent(first, preferences));
   });
   return {
     now: ordered.filter((event) => event.status === "live" || event.status === "delayed"),

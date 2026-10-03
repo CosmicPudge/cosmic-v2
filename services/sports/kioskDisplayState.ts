@@ -13,7 +13,8 @@ export function resolveF1DisplayState(event: SportsEvent, now = new Date()) {
   const providerStatus = event.status;
   const explicitlyLive = providerStatus === "live" || providerStatus === "delayed";
   const complete = providerStatus === "final" || providerStatus === "cancelled" || providerStatus === "postponed";
-  const boundedEnd = event.end ?? new Date(scheduledStart.getTime() + sessionDurationMs(event));
+  const metadataEnd = event.metadata?.expectedEnd ? new Date(event.metadata.expectedEnd) : undefined;
+  const boundedEnd = metadataEnd && !Number.isNaN(metadataEnd.getTime()) ? metadataEnd : event.end ?? new Date(scheduledStart.getTime() + sessionDurationMs(event));
   const inferredLive = !explicitlyLive && !complete && scheduledStart.getTime() <= now.getTime() && now.getTime() < boundedEnd.getTime();
   const displayState: KioskDisplayState = explicitlyLive || inferredLive ? "live" : complete || now.getTime() >= boundedEnd.getTime() ? "complete" : "upcoming";
   return { providerStatus, scheduledStart, displayState, inferredLive };

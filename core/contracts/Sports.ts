@@ -9,6 +9,10 @@ export type SportsEventStatus =
   | "postponed"
   | "cancelled";
 
+export type SportsNormalizedState = "scheduled" | "live" | "complete" | "unknown";
+
+export type SportsStatusSource = "provider" | "inferred" | "unknown";
+
 export interface SportsTeam {
   id?: string;
   name: string;
@@ -48,6 +52,14 @@ export interface SportsEventMetadata {
   trackId?: string;
   trackConfiguration?: string;
   outlineAsset?: string;
+  normalizedState?: SportsNormalizedState;
+  statusSource?: SportsStatusSource;
+  inferredLive?: boolean;
+  expectedEnd?: string;
+  staleAfter?: string;
+  lastProviderRefresh?: string;
+  timezoneResolved?: boolean;
+  timezone?: string;
 }
 
 export interface SportsProviderCapabilities {
