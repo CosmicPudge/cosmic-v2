@@ -81,6 +81,13 @@ test("followed Packers game is auto-screen eligible while an unrelated NFL game 
   assert.equal(eventMatchesKioskAutoScreenPreferences(chiefs, preferences), false);
 });
 
+test("numeric ESPN team IDs match string followed-team IDs", () => {
+  const preferences = structuredClone(neutralPreferences);
+  preferences.sports.followedTeams = [{ sport: "college-football", provider: "espn", teamId: "328", label: "Utah State Aggies" }];
+  const eventWithNumericRuntimeId = event("usu-runtime", "scheduled", "2026-10-03T23:30:00Z", { sport: "college-football", homeTeam: { id: 328 as unknown as string, name: "Utah State Aggies" }, awayTeam: { id: "68", name: "Boise State Broncos" } });
+  assert.equal(eventMatchesKioskAutoScreenPreferences(eventWithNumericRuntimeId, preferences), true);
+});
+
 test("kiosk team sports with no followed teams have no eligible events", () => {
   const preferences = structuredClone(neutralPreferences);
   const game = event("usu", "scheduled", "2026-10-03T19:00:00Z", { sport: "college-football", homeTeam: { id: "328", name: "Utah State Aggies" }, awayTeam: { id: "68", name: "Boise State Broncos" } });

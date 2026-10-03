@@ -19,6 +19,22 @@ test("upcoming automatic kiosk events are ordered by actual start time", () => {
   assert.equal(selected?.event.id, "first-game");
 });
 
+test("Utah State before tomorrow's Packers game is the next automatic event", () => {
+  const selected = selectKioskSportsEvent([
+    event("usu", "college-football", "2026-10-03T23:30:00Z", { homeTeam: { id: "328", name: "Utah State Aggies" }, awayTeam: { id: "68", name: "Boise State Broncos" } }),
+    event("packers", "nfl", "2026-10-04T17:00:00Z", { awayTeam: { id: "9", name: "Green Bay Packers" }, homeTeam: { id: "27", name: "Tampa Bay Buccaneers" } }),
+  ], new Date("2026-10-03T23:28:00Z"));
+  assert.equal(selected?.event.id, "usu");
+});
+
+test("live CFB beats upcoming NFL and a final CFB releases to NFL", () => {
+  const now = new Date("2026-10-03T23:00:00Z");
+  const cfb = event("usu-live", "college-football", "2026-10-03T22:00:00Z", { status: "live", homeTeam: { id: "328", name: "Utah State Aggies" } });
+  const nfl = event("packers", "nfl", "2026-10-04T17:00:00Z", { awayTeam: { id: "9", name: "Green Bay Packers" }, homeTeam: { id: "27", name: "Tampa Bay Buccaneers" } });
+  assert.equal(selectKioskSportsEvent([cfb, nfl], now)?.event.id, "usu-live");
+  assert.equal(selectKioskSportsEvent([{ ...cfb, status: "final" }, nfl], now)?.event.id, "packers");
+});
+
 test("automatic kiosk selection ignores earlier F1 sessions", () => {
   const eveningMdt = new Date("2026-10-03T04:00:00Z");
   const fp3 = event("fp3", "f1", "2026-10-03T04:30:00Z", { title: "Malaysian Grand Prix · Practice 3", venue: "Sepang International Circuit", metadata: { sessionType: "Practice 3", country: "Malaysia", circuit: "Sepang International Circuit" } });

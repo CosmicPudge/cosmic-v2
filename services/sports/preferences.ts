@@ -53,8 +53,8 @@ export function prioritizeFollowedEvents(events: SportsEvent[], preferences: Cos
 
 export function isFavoriteEvent(event: SportsEvent, preferences: CosmicUserPreferences = neutralPreferences): boolean {
   const names = [event.homeTeam?.name, event.awayTeam?.name].filter((name): name is string => Boolean(name));
-  const ids = [event.homeTeam?.id, event.awayTeam?.id].filter((id): id is string => Boolean(id));
-  if (preferences.sports.followedTeams.some((team) => team.sport === event.sport && (ids.includes(team.teamId) || names.some((name) => name.toLowerCase() === team.label.toLowerCase())))) return true;
+  const ids = [event.homeTeam?.id, event.awayTeam?.id].filter((id): id is string => Boolean(id)).map(String);
+  if (preferences.sports.followedTeams.some((team) => team.sport === event.sport && (ids.includes(String(team.teamId)) || names.some((name) => name.trim().toLowerCase() === team.label.trim().toLowerCase())))) return true;
   if (event.sport === "f1" || event.sport === "nascar") {
     const metadata = event.metadata;
     const followedDriver = preferences.sports.followedDrivers.some((driver) => (driver.sport === event.sport || (event.sport === "f1" && driver.sport === undefined)) && (!metadata?.driverId || metadata.driverId === driver.id));

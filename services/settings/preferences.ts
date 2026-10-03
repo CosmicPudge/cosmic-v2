@@ -18,7 +18,7 @@ export const referencePreferences: CosmicUserPreferences = {
     followedTeams: [
       { sport: "mlb", provider: "mlb", teamId: "108", label: "Los Angeles Angels" },
       { sport: "nfl", provider: "espn", teamId: "9", label: "Green Bay Packers" },
-      { sport: "college-football", provider: "espn", teamId: "254", label: "Utah Utes" },
+      { sport: "college-football", provider: "espn", teamId: "328", label: "Utah State Aggies" },
     ],
     followedDrivers: [{ id: "max-verstappen", label: "Max Verstappen", sport: "f1" }, { id: "nascar-carson-hocevar", label: "Carson Hocevar", sport: "nascar" }],
     followedConstructors: [{ id: "red-bull-racing", label: "Red Bull Racing", sport: "f1" }],
