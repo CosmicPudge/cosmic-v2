@@ -6,10 +6,12 @@ import { fetchKioskCalendarIcalFeeds } from "@/services/kiosk/icalFallback";
 import { getDeveloperKioskSchoolData } from "@/services/school/server";
 import { isAssignmentActiveForPlanning } from "@/services/school/planning";
 import type { CalendarEvent } from "@/core/contracts";
+import { KIOSK_REFRESH_MS, sceneRefreshDiagnostics } from "@/services/kiosk/refreshPolicy";
 
 const DEFAULT_HOST = "dev.cosmicpudge.shop";
 const MAX_EVENTS = 8;
 const MAX_ASSIGNMENTS = 8;
+const schoolCache = new Map<string, { expiresAt: number; value: Awaited<ReturnType<typeof getDeveloperKioskSchoolData>> }>();
 
 export type KioskProviderDiagnostic = {
   category: "connected" | "provider-not-found" | "account-not-found" | "provider-error" | "parse-error" | "configuration-error" | "authentication-error" | "account-mismatch";
@@ -73,15 +75,28 @@ export async function getDeveloperKioskData() {
     weather: unknown | null;
     calendar: { events: ReturnType<typeof boundedEvent>[]; connected: boolean; error?: string; diagnostics: KioskProviderDiagnostic };
     school: { assignments: Array<{ id: string; title: string; due: string; course?: string; completed: boolean }>; overdueCount: number; sceneState: "clear" | "upcoming" | "urgent" | "overdue" | "unavailable"; connected: boolean; error?: string; diagnostics: KioskProviderDiagnostic };
+    refreshDiagnostics: {
+      weather: ReturnType<typeof sceneRefreshDiagnostics>;
+      calendar: ReturnType<typeof sceneRefreshDiagnostics>;
+      school: ReturnType<typeof sceneRefreshDiagnostics>;
+    };
   } = {
     location,
     weather: null,
     calendar: { events: [], connected: false, diagnostics: { category: "configuration-error", configured: false, accountMatched: false, source: "kiosk-ical", feedCount: 0 } },
     school: { assignments: [], overdueCount: 0, sceneState: "unavailable", connected: false, diagnostics: { category: "account-not-found", configured: false, accountMatched: false, source: "kiosk-canvas-ical" } },
+    refreshDiagnostics: {
+      weather: sceneRefreshDiagnostics(undefined, KIOSK_REFRESH_MS.weatherCurrent),
+      calendar: sceneRefreshDiagnostics(undefined, KIOSK_REFRESH_MS.calendar),
+      school: sceneRefreshDiagnostics(undefined, KIOSK_REFRESH_MS.school),
+    },
   };
 
   if (location) {
-    try { result.weather = await getEnvironment(location.lat, location.lon); }
+    try {
+      result.weather = await getEnvironment(location.lat, location.lon);
+      result.refreshDiagnostics.weather = sceneRefreshDiagnostics(new Date().toISOString(), KIOSK_REFRESH_MS.weatherCurrent);
+    }
     catch { /* The client renders the designed unavailable state. */ }
   }
 
@@ -93,6 +108,7 @@ export async function getDeveloperKioskData() {
     if (engine && engineResult) {
       const events = await engine.getEvents({ start: now, end });
       result.calendar = { connected: true, events: events.slice(0, MAX_EVENTS).map((event) => boundedEvent(event)), diagnostics: { category: "connected", configured: true, accountMatched: Boolean(accountId), source: "account-provider", feedCount: 0, ...(engineResult.context?.connection?.providerType ? { connectionType: engineResult.context.connection.providerType } : {}) } };
+      result.refreshDiagnostics.calendar = sceneRefreshDiagnostics(new Date().toISOString(), KIOSK_REFRESH_MS.calendar);
     } else {
       throw new Error("Account calendar unavailable.");
     }
@@ -104,13 +120,20 @@ export async function getDeveloperKioskData() {
       const fallback = await fetchKioskCalendarIcalFeeds(urls);
       const visibleEvents = fallback.events.filter((event) => event.end > now && event.start < end).slice(0, MAX_EVENTS).map((event) => boundedEvent(event));
       result.calendar = { connected: fallback.feedCount > 0, events: visibleEvents, ...(fallback.feedCount ? {} : { error: "Calendar feeds are temporarily unavailable." }), diagnostics: { category: fallback.feedCount ? "connected" : fallback.category, configured: true, accountMatched: Boolean(process.env.COSMIC_KIOSK_ACCOUNT_ID?.trim()), source: "kiosk-ical", feedCount: fallback.feedCount } };
+      if (fallback.feedCount > 0) result.refreshDiagnostics.calendar = sceneRefreshDiagnostics(new Date().toISOString(), KIOSK_REFRESH_MS.calendar);
     }
   }
 
   const accountId = process.env.COSMIC_KIOSK_ACCOUNT_ID?.trim();
   if (accountId) {
     try {
-      const school = await getDeveloperKioskSchoolData(accountId);
+      const cachedSchool = schoolCache.get(accountId);
+      const school = cachedSchool && cachedSchool.expiresAt > Date.now()
+        ? cachedSchool.value
+        : await getDeveloperKioskSchoolData(accountId);
+      if (!cachedSchool || cachedSchool.expiresAt <= Date.now()) {
+        schoolCache.set(accountId, { value: school, expiresAt: Date.now() + KIOSK_REFRESH_MS.school });
+      }
       const schoolUsesIcal = school.kioskSource === "kiosk-canvas-ical";
       const assignments = (school.snapshot.planningAssignments ?? []).filter((item) => isAssignmentActiveForPlanning(item) && (!schoolUsesIcal || (item.dueAt && item.dueAt >= now)));
       const upcoming = assignments.filter((item) => item.dueAt && item.completionStatus !== "completed").sort((a, b) => a.dueAt!.getTime() - b.dueAt!.getTime());
@@ -126,6 +149,7 @@ export async function getDeveloperKioskData() {
         ...(school.error ? { error: "School data temporarily unavailable." } : {}),
         diagnostics: { category: school.errorCategory ?? (connected ? "connected" : "provider-not-found"), configured: true, accountMatched: true, source: school.kioskSource ?? "account-provider", ...(connected ? { connectionType: "canvas-rest-or-calendar" } : {}), accountProviderSucceeded: school.accountProviderSucceeded ?? false, canvasIcalConfigured: school.canvasIcalConfigured ?? false, canvasIcalAttempted: school.canvasIcalAttempted ?? false, canvasIcalSucceeded: school.canvasIcalSucceeded ?? false },
       };
+      if (connected) result.refreshDiagnostics.school = sceneRefreshDiagnostics(new Date().toISOString(), KIOSK_REFRESH_MS.school);
     } catch (error) { result.school = { assignments: [], overdueCount: 0, sceneState: "unavailable", connected: false, error: "School data temporarily unavailable.", diagnostics: { category: providerErrorCategory(error), configured: true, accountMatched: true, source: "account-provider" } }; }
   }
 

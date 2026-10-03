@@ -87,7 +87,7 @@ export class MlbAngelsProvider implements SportsProvider {
   private isLive = false;
 
   get cacheSeconds(): number {
-    return this.isLive ? 60 : 300;
+    return this.isLive ? 30 : 300;
   }
 
   async getSnapshot(now: Date): Promise<SportsProviderResult> {

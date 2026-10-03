@@ -12,6 +12,11 @@ export interface DeveloperKioskData {
   weather: WeatherData | null;
   calendar: { events: Array<{ id: string; title: string; start: string; end: string; allDay: boolean; location?: string; calendar?: string; category?: CalendarEventCategory }>; nextEvent?: DeveloperKioskData["calendar"]["events"][number]; todayEvents: DeveloperKioskData["calendar"]["events"]; weekEvents: DeveloperKioskData["calendar"]["events"]; connected: boolean; error?: string };
   school: { assignments: Array<{ id: string; title: string; due: string; course?: string; completed: boolean }>; nextAssignment?: DeveloperKioskData["school"]["assignments"][number]; dueToday: DeveloperKioskData["school"]["assignments"]; dueThisWeek: DeveloperKioskData["school"]["assignments"]; overdueCount: number; sceneState: "clear" | "upcoming" | "urgent" | "overdue" | "unavailable"; connected: boolean; error?: string };
+  refreshDiagnostics?: {
+    weather?: { effectiveRefreshMs: number; lastSuccessfulRefreshAt?: string; staleAgeMs?: number; refreshMode: "idle" | "active" | "near-live" | "live" };
+    calendar?: { effectiveRefreshMs: number; lastSuccessfulRefreshAt?: string; staleAgeMs?: number; refreshMode: "idle" | "active" | "near-live" | "live" };
+    school?: { effectiveRefreshMs: number; lastSuccessfulRefreshAt?: string; staleAgeMs?: number; refreshMode: "idle" | "active" | "near-live" | "live" };
+  };
 }
 
 function normalizeKioskData(value: DeveloperKioskData): DeveloperKioskData {
@@ -50,7 +55,7 @@ export function useDeveloperKioskData() {
       finally { if (active) setLoading(false); }
     };
     void load();
-    const timer = window.setInterval(() => { cached = null; void load(); }, 5 * 60_000);
+    const timer = window.setInterval(() => { cached = null; void load(); }, 30_000);
     const completionChanged = () => { cached = null; void load(); };
     window.addEventListener("cosmic:school-completion-changed", completionChanged);
     return () => { active = false; window.clearInterval(timer); window.removeEventListener("cosmic:school-completion-changed", completionChanged); };

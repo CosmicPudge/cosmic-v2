@@ -118,6 +118,6 @@ export class EspnTeamProvider implements SportsProvider {
   }
 }
 
-export const packersProvider = new EspnTeamProvider({ id: "nfl-packers-espn-fallback", sport: "nfl", teamId: "9", leaguePath: "football/nfl", cacheSeconds: 600 });
+export const packersProvider = new EspnTeamProvider({ id: "nfl-packers-espn-fallback", sport: "nfl", teamId: "9", leaguePath: "football/nfl", cacheSeconds: 30 });
 export const utahFootballProvider = new EspnTeamProvider({ id: "college-football-utah-espn-fallback", sport: "college-football", teamId: "254", leaguePath: "football/college-football", cacheSeconds: 900 });
 export const usuFootballProvider = utahFootballProvider;

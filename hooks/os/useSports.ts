@@ -5,6 +5,7 @@ import type { SportKind, SportsEvent, SportsEventStatus, SportsSnapshot } from "
 import { useVisiblePolling } from "@/hooks/useVisiblePolling";
 import { useCosmicScope } from "@/services/storage/scope";
 import { kioskApiUrl } from "@/services/kioskRequest";
+import { sceneRefreshDiagnostics, sportsRefreshMode, sportsRefreshMs } from "@/services/kiosk/refreshPolicy";
 
 type SportsHookOptions = { sport?: SportKind; refreshMs?: number | ((snapshot: SportsSnapshot | null) => number) };
 type SportsWireEvent = Omit<SportsEvent, "start" | "end"> & { start: string; end?: string };
@@ -18,13 +19,6 @@ type SportsWireSnapshot = Omit<SportsSnapshot, "live" | "upcoming" | "recent" | 
 
 const pendingRequests = new Map<string, Promise<SportsSnapshot>>();
 const snapshotCache = new Map<string, { expiresAt: number; value: SportsSnapshot }>();
-
-function sportsRefreshMs(snapshot: SportsSnapshot | null): number {
-  if (!snapshot) return 15_000;
-  if (snapshot.live.length) return 15_000;
-  if (snapshot.upcoming.length) return 60_000;
-  return 5 * 60_000;
-}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -82,7 +76,7 @@ async function requestSnapshot(sport: SportKind | undefined, scopeId: string): P
       const payload: unknown = await response.json();
       if (!isWireSnapshot(payload)) throw new Error("Sports response was invalid.");
       const snapshot = hydrateSnapshot(payload);
-      const refreshMs = snapshot.live.length ? 15_000 : snapshot.upcoming.length ? 60_000 : 5 * 60_000;
+      const refreshMs = sportsRefreshMs(snapshot);
       snapshotCache.set(key, { value: snapshot, expiresAt: Date.now() + refreshMs });
       return snapshot;
     })
@@ -92,23 +86,25 @@ async function requestSnapshot(sport: SportKind | undefined, scopeId: string): P
 }
 
 export function useSports(options: SportsHookOptions = {}) {
-  const { sport, refreshMs = sportsRefreshMs } = options;
+  const { sport, refreshMs = (snapshot) => sportsRefreshMs(snapshot) } = options;
   const scope = useCosmicScope();
   const [data, setData] = useState<SportsSnapshot | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [lastSuccessfulRefreshAt, setLastSuccessfulRefreshAt] = useState<string>();
 
   const refresh = useCallback(async () => {
     try {
       setError(null);
       setData(await requestSnapshot(sport, scope.id));
+      setLastSuccessfulRefreshAt(new Date().toISOString());
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Sports data is temporarily unavailable.");
     } finally {
       setLoading(false);
     }
   }, [sport, scope.id]);
-  useEffect(() => { const timer = window.setTimeout(() => { setData(null); setLoading(true); setError(null); }, 0); return () => window.clearTimeout(timer); }, [scope.id]);
+  useEffect(() => { const timer = window.setTimeout(() => { setData(null); setLoading(true); setError(null); setLastSuccessfulRefreshAt(undefined); }, 0); return () => window.clearTimeout(timer); }, [scope.id]);
   useEffect(() => {
     const invalidate = () => {
       for (const key of snapshotCache.keys()) if (key.startsWith(`${scope.id}:`)) snapshotCache.delete(key);
@@ -120,5 +116,5 @@ export function useSports(options: SportsHookOptions = {}) {
   const intervalMs = typeof refreshMs === "function" ? refreshMs(data) : refreshMs;
   useVisiblePolling(refresh, intervalMs, { immediate: data === null });
 
-  return { data, loading, error, refresh };
+  return { data, loading, error, refresh, refreshDiagnostics: sceneRefreshDiagnostics(lastSuccessfulRefreshAt, intervalMs, sportsRefreshMode(data)) };
 }

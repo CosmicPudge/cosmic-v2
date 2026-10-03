@@ -12,7 +12,7 @@ import { getAstronomy } from "./providers/AstronomyProvider";
 import { mergeEnvironment } from "./utils/buildEnvironment";
 import { recordCacheMetric } from "@/services/observability/metrics";
 
-const ENVIRONMENT_CACHE_TTL_MS = 5 * 60 * 1000;
+const ENVIRONMENT_CACHE_TTL_MS = 45_000;
 const environmentCache = new Map<string, { expiresAt: number; value: WeatherData }>();
 const environmentRequests = new Map<string, Promise<WeatherData>>();
 const MAX_ENVIRONMENT_CACHE_ENTRIES = 64;

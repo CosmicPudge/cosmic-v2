@@ -28,6 +28,8 @@ function snapshotCacheKey(preferences: CosmicUserPreferences): string {
 
 function snapshotTtl(snapshot: SportsSnapshot): number {
   if (snapshot.live.length) return 5_000;
+  const now = Date.now();
+  if (snapshot.upcoming.some((event) => event.start.getTime() >= now && event.start.getTime() - now <= 60 * 60_000)) return 20_000;
   if (snapshot.upcoming.length) return 60_000;
   return 5 * 60_000;
 }

@@ -6,9 +6,10 @@ import type { MusicSnapshot } from "@/core/contracts/Music";
 import { useVisiblePolling } from "@/hooks/useVisiblePolling";
 import { useCosmicScope } from "@/services/storage/scope";
 import { kioskApiUrl } from "@/services/kioskRequest";
+import { KIOSK_REFRESH_MS, sceneRefreshDiagnostics } from "@/services/kiosk/refreshPolicy";
 
 interface UseMusicOptions {
-  refreshMs?: number;
+  refreshMs?: number | ((snapshot: MusicSnapshot | null) => number);
   enabled?: boolean;
 }
 
@@ -27,6 +28,7 @@ export function useMusic({ refreshMs, enabled = true }: UseMusicOptions = {}) {
   const [requestError, setRequestError] = useState<string>();
   const [actionError, setActionError] = useState<string>();
   const [actionLoading, setActionLoading] = useState(false);
+  const [lastSuccessfulRefreshAt, setLastSuccessfulRefreshAt] = useState<string>();
   const scope = useCosmicScope();
 
   const refresh = useCallback(async () => {
@@ -54,6 +56,7 @@ export function useMusic({ refreshMs, enabled = true }: UseMusicOptions = {}) {
         latestAcceptedSequenceRef.current = requestSequence;
         if (process.env.NODE_ENV !== "production") console.info(`[use-music] direct-response trackPresent=${Boolean(next.playback.track)} trackIdSuffix=${next.playback.track?.id?.slice(-4) ?? "none"} title=${JSON.stringify(next.playback.track?.title ?? null)}`);
         setSnapshot(next);
+        setLastSuccessfulRefreshAt(new Date().toISOString());
         setRequestError(undefined);
       } catch (cause) {
         setRequestError(cause instanceof Error ? cause.message : "Music is unavailable.");
@@ -82,9 +85,10 @@ export function useMusic({ refreshMs, enabled = true }: UseMusicOptions = {}) {
     return () => window.clearTimeout(initial);
   }, [enabled, refresh, refreshMs, scope.id]);
 
-  useEffect(() => { const timer = window.setTimeout(() => { setSnapshot(null); setLoading(true); setRequestError(undefined); hasLoaded.current = false; }, 0); return () => window.clearTimeout(timer); }, [scope.id]);
+  useEffect(() => { const timer = window.setTimeout(() => { setSnapshot(null); setLoading(true); setRequestError(undefined); setLastSuccessfulRefreshAt(undefined); hasLoaded.current = false; }, 0); return () => window.clearTimeout(timer); }, [scope.id]);
 
-  useVisiblePolling(refresh, refreshMs ?? 0, { enabled: enabled && refreshMs !== undefined });
+  const intervalMs = typeof refreshMs === "function" ? refreshMs(snapshot) : refreshMs;
+  useVisiblePolling(refresh, intervalMs ?? 0, { enabled: enabled && intervalMs !== undefined });
 
   useEffect(() => {
     if (process.env.NODE_ENV !== "production") console.info(`[use-music] hook-state trackPresent=${Boolean(snapshot?.playback.track)} trackIdSuffix=${snapshot?.playback.track?.id?.slice(-4) ?? "none"} title=${JSON.stringify(snapshot?.playback.track?.title ?? null)}`);
@@ -130,6 +134,7 @@ export function useMusic({ refreshMs, enabled = true }: UseMusicOptions = {}) {
     providerError,
     actionError,
     refresh,
+    refreshDiagnostics: sceneRefreshDiagnostics(lastSuccessfulRefreshAt, intervalMs ?? KIOSK_REFRESH_MS.musicIdle, intervalMs !== undefined && intervalMs <= KIOSK_REFRESH_MS.musicActive ? "active" : "idle"),
     actionLoading,
     configured: isMusicConfigured(snapshot),
     connected: snapshot?.connected ?? false,

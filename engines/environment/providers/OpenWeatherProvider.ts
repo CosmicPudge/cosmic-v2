@@ -17,7 +17,9 @@ export async function getOpenWeather(
   // Current Weather
   const currentUrl = new URL("https://api.openweathermap.org/data/2.5/weather");
   currentUrl.search = new URLSearchParams({ lat: String(lat), lon: String(lon), appid: API_KEY ?? "", units: "imperial" }).toString();
-  const currentResponse = await fetch(currentUrl, { redirect: "error", next: { revalidate: 300 } });
+  // Current conditions are intentionally fresher than the forecast. The
+  // forecast request below remains on the slower five-minute cache window.
+  const currentResponse = await fetch(currentUrl, { redirect: "error", next: { revalidate: 45 } });
 
   if (!currentResponse.ok) {
     throw new Error("Failed to fetch current weather.");

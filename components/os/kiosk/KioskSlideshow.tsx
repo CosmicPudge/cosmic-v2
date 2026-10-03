@@ -33,6 +33,7 @@ import { resolveKioskSwipeDirection, shouldResetKioskRotationAfterSwipe } from "
 import { createKioskSportsTestEvent, parseKioskSportsTestOverride } from "./kioskSportsTestOverride";
 import { KIOSK_MUSIC_PLAYBACK_STALE_MS, shouldPauseKioskForMusic } from "./kioskMusicRotation";
 import { normalizeKioskSportsEvent, selectKioskSportsEvent } from "@/services/sports/kioskSelection";
+import { sportsRefreshMs } from "@/services/kiosk/refreshPolicy";
 
 const TEST_SPORTS: SportKind[] = [
   "nfl",
@@ -164,7 +165,7 @@ function KioskNormalSlideshow() {
   const manualSportsOverride = useMemo(() => parseKioskSportsTestOverride(searchParams, typeof window !== "undefined" ? window.location.hostname : "", typeof window !== "undefined" ? window.location.pathname : "") , [searchParams]);
 
   const { data: sportsData } = useSports({
-    refreshMs: (snapshot) => snapshot?.live.length ? 10_000 : 60_000,
+    refreshMs: (snapshot) => sportsRefreshMs(snapshot),
   });
 
   const widgets = useMemo(() => {
