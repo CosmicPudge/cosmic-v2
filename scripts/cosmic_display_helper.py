@@ -11,6 +11,7 @@ import secrets
 import tempfile
 import subprocess
 import time
+import sys
 import urllib.error
 import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -31,6 +32,25 @@ MAINTENANCE_ACTIONS = {
     "reboot",
 }
 maintenance_state = {"state": "idle", "lastAttemptAt": None, "lastSuccessAt": None, "lastFailureCategory": None}
+
+
+def helper_log(message):
+    print(f"[cosmic-helper] {message}", file=sys.stderr, flush=True)
+
+
+def validate_browser_handoff_body(body, current_boot):
+    if not isinstance(body, dict):
+        return "invalid_body"
+    requested_boot = body.get("bootId")
+    if not requested_boot:
+        return "missing_boot_id"
+    if requested_boot != current_boot:
+        return "boot_id_mismatch"
+    return "ok"
+
+
+def origin_allowed(origin):
+    return origin in (None, ALLOWED_ORIGIN)
 
 
 def module_value(state, name):
@@ -242,7 +262,7 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(encoded)
 
     def do_OPTIONS(self):
-        if self.headers.get("Host") != ALLOWED_HOST or self.headers.get("Origin") not in (None, ALLOWED_ORIGIN):
+        if self.headers.get("Host") != ALLOWED_HOST or not origin_allowed(self.headers.get("Origin")):
             self._send(403, {"error": "origin_not_allowed"})
             return
         self._send(204, {})
@@ -258,9 +278,13 @@ class Handler(BaseHTTPRequestHandler):
         self._send(200, {"state": "needs_provisioning" if state and not credential_value(state) else ("identity_recovery" if not state else "ready"), "deviceId": module_value(state, "deviceId") if state else None, "publicNumber": module_value(state, "publicNumber") if state else None, "hasCredential": bool(state and credential_value(state))})
 
     def do_POST(self):
-        if self.headers.get("Host") != ALLOWED_HOST or self.headers.get("Origin") not in (None, ALLOWED_ORIGIN):
+        if self.headers.get("Host") != ALLOWED_HOST or not origin_allowed(self.headers.get("Origin")):
             self._send(403, {"error": "origin_not_allowed"})
             return
+        if self.path == "/v1/browser-handoff":
+            helper_log("browser_handoff requested")
+        elif self.path == "/v1/maintenance":
+            helper_log("maintenance requested")
         if self.path not in ("/v1/browser-handoff", "/v1/maintenance"):
             self._send(404, {"error": "not_found"})
             return
@@ -271,6 +295,7 @@ class Handler(BaseHTTPRequestHandler):
                 return
             body = json.loads(self.rfile.read(size).decode())
         except (ValueError, json.JSONDecodeError):
+            if self.path == "/v1/browser-handoff": helper_log("browser_handoff validation=failed reason=invalid_body")
             self._send(400, {"error": "invalid_request"})
             return
         if self.path == "/v1/maintenance":
@@ -287,24 +312,31 @@ class Handler(BaseHTTPRequestHandler):
         requested_boot = body.get("bootId") if isinstance(body, dict) else None
         pairing_code = body.get("pairingCode") if isinstance(body, dict) else None
         current_boot = boot_id()
-        if not requested_boot or requested_boot != current_boot:
+        validation = validate_browser_handoff_body(body, current_boot)
+        if validation != "ok":
+            helper_log(f"browser_handoff validation=failed reason={validation}")
             self._send(400, {"error": "boot_id_mismatch"})
             return
         state = read_state()
         if not state:
+            helper_log("browser_handoff validation=ok lifecycle=identity_recovery")
             self._send(409, {"state": "identity_recovery"})
             return
+        helper_log("browser_handoff validation=ok")
         credential = credential_value(state)
         if not credential:
             if isinstance(pairing_code, str) and pairing_code:
                 credential = complete_initial_enrollment(state, pairing_code, current_boot)
                 if credential:
+                    helper_log("server_handoff requested")
                     status, response = post_json("/api/devices/handoff", {"bootId": current_boot, "deviceId": module_value(state, "deviceId"), "publicNumber": module_value(state, "publicNumber")}, credential)
+                    helper_log(f"server_handoff status={status} state={response.get('state', 'ready' if status == 200 else 'unknown')} tokenIssued={status == 200 and bool(response.get('handoffToken'))}")
                     if status != 200:
                         lifecycle = apply_handoff_failure(state, status, response)
                         self._send(409 if lifecycle in ("needs_provisioning", "identity_recovery") else 503, {"state": lifecycle, "deviceId": module_value(state, "deviceId"), "publicNumber": module_value(state, "publicNumber"), **({"pairingRequired": True} if lifecycle == "needs_provisioning" else {})})
                         return
                     self._send(200, {"state": "ready", "deviceId": response.get("deviceId"), "handoffToken": response.get("handoffToken")})
+                    helper_log("browser_handoff response=200")
                     return
                 self._send(503, {"state": "reconnecting"})
                 return
@@ -327,12 +359,15 @@ class Handler(BaseHTTPRequestHandler):
             else:
                 self._send(409, {"state": "needs_provisioning", "deviceId": module_value(state, "deviceId"), "publicNumber": module_value(state, "publicNumber"), "challengeId": enrollment["challengeId"], "activationUrl": f"{SERVER_URL}/activate/recover?challenge={enrollment['challengeId']}"})
                 return
+        helper_log("server_handoff requested")
         status, response = post_json("/api/devices/handoff", {"bootId": current_boot, "deviceId": module_value(state, "deviceId"), "publicNumber": module_value(state, "publicNumber")}, credential)
+        helper_log(f"server_handoff status={status} state={response.get('state', 'ready' if status == 200 else 'unknown')} tokenIssued={status == 200 and bool(response.get('handoffToken'))}")
         if status != 200:
             lifecycle = apply_handoff_failure(state, status, response)
             self._send(409 if lifecycle in ("needs_provisioning", "identity_recovery") else 503, {"state": lifecycle, "deviceId": module_value(state, "deviceId"), "publicNumber": module_value(state, "publicNumber"), **({"pairingRequired": True} if lifecycle == "needs_provisioning" else {})})
             return
         self._send(200, {"state": "ready", "deviceId": response.get("deviceId"), "handoffToken": response.get("handoffToken")})
+        helper_log("browser_handoff response=200")
 
     def log_message(self, *_args):
         return

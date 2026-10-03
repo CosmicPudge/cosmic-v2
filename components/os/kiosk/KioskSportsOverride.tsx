@@ -1,6 +1,7 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
+import { useEffect } from "react";
 import type { SportsEvent } from "@/core/contracts/Sports";
 import type { BaseballLiveData, BaseballUniform } from "@/core/contracts/sports/Baseball";
 import { useSportsEvent } from "@/hooks/os/useSportsEvent";
@@ -8,6 +9,7 @@ import { MLB_UNIFORM_THEMES } from "@/services/sports/providers/mlb/uniformTheme
 import { normalizeKioskSportsEvent } from "@/services/sports/kioskSelection";
 import { selectKioskSportsBackground } from "@/components/os/widgets/shared/kioskSceneBackgrounds";
 import KioskSceneBackground from "@/components/os/widgets/shared/KioskSceneBackground";
+import { sportsDetailIsComplete, sportsDetailPresence } from "@/services/sports/detailDiagnostics";
 
 import KioskFootballView from "./sports/KioskFootballView";
 import KioskBaseballView from "./sports/KioskBaseballView";
@@ -44,6 +46,14 @@ function KioskBaseballLiveView({ event }: { event: SportsEvent }) {
   const detail = useSportsEvent(event.id, { enabled: !isDevelopmentTest });
   const live = detail.data?.live;
   const baseballLive = live?.sport === "mlb" ? live : undefined;
+  useEffect(() => {
+    if (typeof window === "undefined" || !["dev.cosmicpudge.shop", "localhost", "127.0.0.1"].includes(window.location.hostname.toLowerCase())) return;
+    const detailPresent = Boolean(baseballLive);
+    const presence = sportsDetailPresence(baseballLive);
+    const fields = Object.fromEntries(Object.entries(presence).filter(([key]) => key !== "detail"));
+    const complete = sportsDetailIsComplete(presence);
+    console.info(`[kiosk-mlb-render] event=${event.id} genericSnapshot=${Boolean(event)} liveDetail=${detailPresent} normalizedComplete=${complete} fallbackShell=${!detailPresent} reason=${detailPresent ? "detail_available" : detail.error ? "detail_request_failed" : "no_live_detail"} ${Object.entries(fields).map(([key, value]) => `${key}=${value}`).join(" ")}`);
+  }, [baseballLive, detail.error, event]);
 
   return <KioskBaseballView event={event} live={baseballLive ?? (isDevelopmentTest ? createTestBaseballLive(event, searchParams.get("home-uniform"), searchParams.get("away-uniform")) : undefined)} />;
 }

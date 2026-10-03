@@ -6,6 +6,8 @@ import { getCollegeFootballLiveData } from "@/services/sports/providers/college-
 import { getCurrentCosmicAccount, kioskBootId } from "@/services/auth/server";
 import { getAccountPreferences } from "@/services/settings/accountPreferences";
 import { referencePreferences } from "@/services/settings/preferences";
+import { isDeveloperKioskRequest } from "@/services/kiosk/developerKiosk";
+import { sportsDetailPresence } from "@/services/sports/detailDiagnostics";
 
 export const dynamic = "force-dynamic";
 
@@ -30,12 +32,16 @@ function upstreamId(eventId: string) {
 
 export async function GET(request: Request, { params }: { params: Promise<{ eventId: string }> }) {
   const eventId = decodeURIComponent((await params).eventId);
+  const diagnostics = isDeveloperKioskRequest(request);
+  const log = (message: string) => { if (diagnostics) console.info(`[kiosk-sports-detail] event=${eventId} ${message}`); };
+  log("request=started");
   const account = await getCurrentCosmicAccount(request, { allowDevice: true, bootId: kioskBootId(request) });
+  log(`auth=${account ? "authenticated" : "anonymous"}`);
   const accountKey = account?.id ?? "reference";
   const preferences = account && process.env.DATABASE_URL ? await getAccountPreferences(account.id) : referencePreferences;
   const snapshot = await cachedSnapshot(accountKey, preferences);
   const event = [...snapshot.live, ...snapshot.upcoming, ...snapshot.recent, ...snapshot.featured].find((item) => item.id === eventId);
-  if (!event) return Response.json({ error: "Sports event was not found." }, { status: 404 });
+  if (!event) { log("status=404 success=false reason=event_not_found"); return Response.json({ error: "Sports event was not found." }, { status: 404 }); }
 
   const cacheKey = `${event.id}:${event.status}`;
   let detail = detailCache.get(cacheKey)?.value;
@@ -53,5 +59,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ even
     detailCache.set(cacheKey, { value: detail, expiresAt: Date.now() + (event.status === "live" || event.status === "delayed" ? 1_500 : 15_000) });
   }
 
-  return Response.json({ event, live: await detail, providerErrors: snapshot.providerErrors, lastUpdated: snapshot.lastUpdated }, { headers: { "Cache-Control": "no-store" } });
+  const live = await detail;
+  const presence = sportsDetailPresence(live);
+  log(`status=200 detail=${presence.detail} ${Object.entries(presence).filter(([key]) => key !== "detail").map(([key, value]) => `${key}=${value}`).join(" ")}`);
+  return Response.json({ event, live, providerErrors: snapshot.providerErrors, lastUpdated: snapshot.lastUpdated }, { headers: { "Cache-Control": "no-store" } });
 }

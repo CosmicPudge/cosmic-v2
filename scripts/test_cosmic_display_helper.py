@@ -91,6 +91,16 @@ class HelperLifecycleTests(unittest.TestCase):
         result = HELPER.run_maintenance_action("check-system-updates", "wrong", "synthetic-credential")
         self.assertEqual(result["errorCategory"], "device-authorization-failed")
 
+    def test_browser_handoff_validation_requires_exact_boot_id(self):
+        self.assertEqual(HELPER.validate_browser_handoff_body({}, "boot"), "missing_boot_id")
+        self.assertEqual(HELPER.validate_browser_handoff_body({"bootId": "wrong"}, "boot"), "boot_id_mismatch")
+        self.assertEqual(HELPER.validate_browser_handoff_body({"bootId": "boot"}, "boot"), "ok")
+
+    def test_browser_handoff_origin_is_bounded(self):
+        self.assertTrue(HELPER.origin_allowed(None))
+        self.assertTrue(HELPER.origin_allowed(HELPER.ALLOWED_ORIGIN))
+        self.assertFalse(HELPER.origin_allowed("https://evil.example"))
+
 
 if __name__ == "__main__":
     unittest.main()
