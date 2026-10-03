@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useCosmicScope, createScopedStorageKey } from "@/services/storage/scope";
 import { kioskApiUrl } from "@/services/kioskRequest";
 import { TEMPORARY_KIOSK_LOCATION } from "@/services/kioskLocation";
+import { readKioskDeviceLocation } from "@/hooks/os/useKioskDeviceLocation";
 
 export interface UserLocation {
   lat: number;
@@ -42,7 +43,7 @@ export default function useLocation() {
     useState<UserLocation | null>(null);
 
   useEffect(() => {
-    const kiosk = typeof window !== "undefined" && window.location.pathname === "/os/kiosk";
+    const kiosk = typeof window !== "undefined" && ["/os/kiosk", "/kiosk"].includes(window.location.pathname);
     if (kiosk) {
       let active = true;
       const resolveKioskLocation = async () => {
@@ -62,7 +63,8 @@ export default function useLocation() {
         }
         if (!active) return;
         const saved = readSavedLocation(scope.id);
-        const resolved = profileLocation ?? saved ?? { lat: TEMPORARY_KIOSK_LOCATION.latitude, lon: TEMPORARY_KIOSK_LOCATION.longitude };
+        const local = window.location.pathname === "/kiosk" ? readKioskDeviceLocation() : null;
+        const resolved = profileLocation ?? (local ? { lat: local.latitude, lon: local.longitude } : null) ?? saved ?? { lat: TEMPORARY_KIOSK_LOCATION.latitude, lon: TEMPORARY_KIOSK_LOCATION.longitude };
         weatherLog("location-state=available");
         setLocation(resolved);
       };

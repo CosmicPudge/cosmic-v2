@@ -7,9 +7,11 @@ import type { CalendarEventCategory } from "@/core/contracts";
 import { buildKioskTimeBuckets, filterKioskSchoolAssignments } from "@/services/kiosk/timeBuckets";
 import { readSchoolCompletionOverrides } from "@/services/school/completionOverrides";
 import { useConnectionHealth } from "@/services/kiosk/ConnectionHealthProvider";
+import { kioskApiUrl } from "@/services/kioskRequest";
+import { readKioskDeviceLocation } from "@/hooks/os/useKioskDeviceLocation";
 
 export interface DeveloperKioskData {
-  location: { lat: number; lon: number; label: string } | null;
+  location: { lat: number; lon: number; label: string; source?: "current" | "last-known" | "fallback" | "unavailable"; stale?: boolean } | null;
   weather: WeatherData | null;
   calendar: { events: Array<{ id: string; title: string; start: string; end: string; allDay: boolean; location?: string; calendar?: string; category?: CalendarEventCategory }>; nextEvent?: DeveloperKioskData["calendar"]["events"][number]; todayEvents: DeveloperKioskData["calendar"]["events"]; weekEvents: DeveloperKioskData["calendar"]["events"]; connected: boolean; error?: string; diagnostics?: { category?: string } };
   school: { assignments: Array<{ id: string; title: string; due: string; course?: string; completed: boolean }>; nextAssignment?: DeveloperKioskData["school"]["assignments"][number]; dueToday: DeveloperKioskData["school"]["assignments"]; dueThisWeek: DeveloperKioskData["school"]["assignments"]; overdueCount: number; sceneState: "clear" | "upcoming" | "urgent" | "overdue" | "unavailable"; connected: boolean; error?: string; diagnostics?: { category?: string } };
@@ -52,7 +54,11 @@ export function useDeveloperKioskData() {
         recordAttempt("weather"); recordAttempt("calendar"); recordAttempt("school");
         if (!request) requestToken += 1;
         const currentRequestToken = requestToken;
-        request ??= fetch("/api/kiosk/data", { cache: "no-store" }).then(async (response) => {
+        const location = readKioskDeviceLocation();
+        const locationAge = location?.resolvedAt ? Date.now() - Date.parse(location.resolvedAt) : Number.POSITIVE_INFINITY;
+        const locationSource = location && locationAge >= 0 && locationAge <= 15 * 60_000 ? "current" : "last-known";
+        const locationQuery = location ? `?kioskLat=${encodeURIComponent(String(location.latitude))}&kioskLon=${encodeURIComponent(String(location.longitude))}&kioskLocationAt=${encodeURIComponent(location.resolvedAt ?? "")}&kioskLocationSource=${locationSource}` : "";
+        request ??= fetch(kioskApiUrl(`/api/kiosk/data${locationQuery}`), { cache: "no-store", credentials: "include" }).then(async (response) => {
           if (!response.ok) throw new Error("Developer kiosk data is unavailable.");
           return normalizeKioskData(await response.json() as DeveloperKioskData);
         }).then((value) => { cached = value; return value; }).finally(() => { request = null; });
@@ -76,8 +82,11 @@ export function useDeveloperKioskData() {
     void load();
     const timer = window.setInterval(() => { cached = null; void load(); }, 30_000);
     const completionChanged = () => { cached = null; void load(); };
+    const locationChanged = () => { cached = null; request = null; void load(); };
     window.addEventListener("cosmic:school-completion-changed", completionChanged);
-    return () => { active = false; window.clearInterval(timer); window.removeEventListener("cosmic:school-completion-changed", completionChanged); };
+    window.addEventListener("cosmic:kiosk-location-changed", locationChanged);
+    window.addEventListener("cosmic:kiosk-location-moved", locationChanged);
+    return () => { active = false; window.clearInterval(timer); window.removeEventListener("cosmic:school-completion-changed", completionChanged); window.removeEventListener("cosmic:kiosk-location-changed", locationChanged); window.removeEventListener("cosmic:kiosk-location-moved", locationChanged); };
   }, [enabled, recordAttempt, recordFailure, recordSuccess]);
   return { data, loading, error };
 }

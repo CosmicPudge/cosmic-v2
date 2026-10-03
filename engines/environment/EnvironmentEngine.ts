@@ -68,7 +68,7 @@ async function loadEnvironment(lat: number, lon: number): Promise<WeatherData> {
     getOpenMeteo(lat, lon),
     getOpenWeatherAirQuality(lat, lon),
     getWeatherAlerts(lat, lon),
-    getAstronomy(),
+    getAstronomy(lat, lon),
   ]);
 
   // Current weather is required

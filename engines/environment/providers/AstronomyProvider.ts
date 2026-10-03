@@ -5,7 +5,11 @@ const SYNODIC_MONTH = 29.530588853;
 // Known New Moon
 const KNOWN_NEW_MOON = Date.UTC(2000, 0, 6, 18, 14);
 
-export async function getAstronomy(): Promise<AstronomyData> {
+export async function getAstronomy(latitude?: number, longitude?: number): Promise<AstronomyData> {
+  // Moon phase is global; location-sensitive sunrise/sunset is supplied by the
+  // coordinate-driven OpenWeather current-conditions response.
+  void latitude;
+  void longitude;
   const now = Date.now();
 
   const daysSinceNewMoon =
@@ -53,7 +57,7 @@ export async function getAstronomy(): Promise<AstronomyData> {
     daysUntilFull += SYNODIC_MONTH;
 
   // Days until next new moon
-  let daysUntilNew =
+  const daysUntilNew =
     SYNODIC_MONTH - moonAge;
 
   const nextFullMoon = new Date(

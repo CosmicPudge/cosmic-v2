@@ -8,6 +8,7 @@ import { isAssignmentActiveForPlanning } from "@/services/school/planning";
 import type { CalendarEvent } from "@/core/contracts";
 import { KIOSK_REFRESH_MS, sceneRefreshDiagnostics } from "@/services/kiosk/refreshPolicy";
 import { readCosmicUpdateStatus } from "@/services/settings/cosmicUpdate";
+import { resolveDeviceLocation } from "@/services/kiosk/deviceLocation";
 
 const DEFAULT_HOST = "dev.cosmicpudge.shop";
 const MAX_EVENTS = 8;
@@ -47,11 +48,22 @@ export function isDeveloperKioskRequest(request: Request): boolean {
   return isDeveloperKioskHost(new URL(request.url).hostname);
 }
 
-function kioskLocation() {
+function kioskLocation(request?: Request) {
+  const params = request ? new URL(request.url).searchParams : null;
+  const currentLat = Number(params?.get("kioskLat"));
+  const currentLon = Number(params?.get("kioskLon"));
+  const currentAt = params?.get("kioskLocationAt") || undefined;
+  const locationSource = params?.get("kioskLocationSource");
   const lat = Number(process.env.COSMIC_KIOSK_LAT);
   const lon = Number(process.env.COSMIC_KIOSK_LON);
-  if (!Number.isFinite(lat) || !Number.isFinite(lon) || lat < -90 || lat > 90 || lon < -180 || lon > 180) return null;
-  return { lat, lon, label: process.env.COSMIC_KIOSK_LOCATION_LABEL?.trim() || "Kiosk location" };
+  const candidate = Number.isFinite(currentLat) && Number.isFinite(currentLon) ? { latitude: currentLat, longitude: currentLon, ...(currentAt ? { resolvedAt: currentAt } : {}) } : null;
+  const resolved = resolveDeviceLocation(
+    locationSource === "current" ? candidate : null,
+    locationSource === "last-known" ? candidate : null,
+    Number.isFinite(lat) && Number.isFinite(lon) ? { latitude: lat, longitude: lon, label: process.env.COSMIC_KIOSK_LOCATION_LABEL?.trim() || "Kiosk location" } : null,
+  );
+  if (resolved.source === "unavailable" || resolved.latitude === undefined || resolved.longitude === undefined) return null;
+  return { lat: resolved.latitude, lon: resolved.longitude, label: resolved.city ?? process.env.COSMIC_KIOSK_LOCATION_LABEL?.trim() ?? "Kiosk location", source: resolved.source, stale: resolved.stale };
 }
 
 function boundedEvent(event: { id?: string; title?: string; start: Date; end: Date; allDay?: boolean; location?: string; calendar?: string; category?: CalendarEvent["category"] }) {
@@ -67,8 +79,8 @@ function boundedEvent(event: { id?: string; title?: string; start: Date; end: Da
   };
 }
 
-export async function getDeveloperKioskData() {
-  const location = kioskLocation();
+export async function getDeveloperKioskData(request?: Request) {
+  const location = kioskLocation(request);
   const now = new Date();
   const end = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
   const result: {
@@ -98,6 +110,7 @@ export async function getDeveloperKioskData() {
   if (location) {
     try {
       result.weather = await getEnvironment(location.lat, location.lon);
+      if (location.label === "Kiosk location" && result.weather && typeof result.weather === "object" && "city" in result.weather && typeof result.weather.city === "string") location.label = result.weather.city;
       result.refreshDiagnostics.weather = sceneRefreshDiagnostics(new Date().toISOString(), KIOSK_REFRESH_MS.weatherCurrent);
     }
     catch { /* The client renders the designed unavailable state. */ }

@@ -1,6 +1,7 @@
 import type { SportsEvent } from "@/core/contracts/Sports";
 import { resolveSportsTeamIdentity } from "@/services/sports/identity";
 import { resolveF1DisplayState } from "@/services/sports/kioskDisplayState";
+import { resolveMlbVenue } from "@/services/sports/venues/mlb";
 
 export type KioskTrackedSport = "nfl" | "f1" | "nascar" | "mlb";
 
@@ -134,9 +135,9 @@ function backgroundKey(event: SportsEvent): string {
   if (event.sport === "nascar") {
     return matchBackgroundKey(venue, NASCAR_TRACK_BACKGROUND_KEYS) ?? "nascar-generic";
   }
-  const homeTeam = normalized(`${event.homeTeam?.id} ${event.homeTeam?.abbreviation} ${event.homeTeam?.name}`);
-  const homeVenue = normalized(`${event.venue} ${event.metadata?.location}`);
-  return matchBackgroundKey(`${homeTeam} ${homeVenue}`, MLB_STADIUM_BACKGROUND_KEYS) ?? "mlb-generic";
+  const mlbVenue = resolveMlbVenue({ venueId: (event.metadata as { venueId?: string } | undefined)?.venueId, homeTeamId: event.homeTeam?.id, homeTeamAbbreviation: event.homeTeam?.abbreviation, homeTeamName: event.homeTeam?.name, venue: event.venue });
+  if (mlbVenue) return MLB_STADIUM_BACKGROUND_KEYS.find(({ aliases }) => aliases.some((alias) => mlbVenue.aliases.includes(alias) || normalized(mlbVenue.canonicalName).includes(normalized(alias))))?.key ?? "mlb-generic";
+  return "mlb-generic";
 }
 
 export function normalizeKioskSportsEvent(event: SportsEvent, now = new Date()): KioskSportsEvent | undefined {
