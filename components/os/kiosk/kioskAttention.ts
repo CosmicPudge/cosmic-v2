@@ -2,6 +2,8 @@ import type { SportsEvent } from "@/core/contracts/Sports";
 import { normalizeKioskSportsEvent } from "@/services/sports/kioskSelection";
 
 export const KIOSK_PRE_EVENT_THRESHOLDS_MINUTES = [5, 10, 15] as const;
+export const KIOSK_SPORTS_ALERT_DURATION_MS = 30_000;
+export const KIOSK_SPORTS_ALERT_MAX_DURATION_MS = 60_000;
 export type KioskPreEventThreshold = (typeof KIOSK_PRE_EVENT_THRESHOLDS_MINUTES)[number];
 
 export interface KioskPreEventAlert {

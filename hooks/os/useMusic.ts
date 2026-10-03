@@ -90,9 +90,9 @@ export function useMusic({ refreshMs, enabled = true }: UseMusicOptions = {}) {
     if (process.env.NODE_ENV !== "production") console.info(`[use-music] hook-state trackPresent=${Boolean(snapshot?.playback.track)} trackIdSuffix=${snapshot?.playback.track?.id?.slice(-4) ?? "none"} title=${JSON.stringify(snapshot?.playback.track?.title ?? null)}`);
   }, [snapshot?.playback.track, snapshot?.playback.track?.id, snapshot?.playback.track?.title]);
 
-  const command = useCallback(async (action: string, value?: number) => {
+  const command = useCallback(async (action: string, value?: number): Promise<boolean> => {
     if (actionLoading) {
-      return;
+      return false;
     }
 
     setActionLoading(true);
@@ -111,8 +111,10 @@ export function useMusic({ refreshMs, enabled = true }: UseMusicOptions = {}) {
       }
 
       await refresh();
+      return true;
     } catch (cause) {
       setActionError(cause instanceof Error ? cause.message : "Music action failed.");
+      return false;
     } finally {
       setActionLoading(false);
     }

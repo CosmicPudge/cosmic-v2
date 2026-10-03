@@ -35,7 +35,7 @@ function providerName(provider: ReturnType<typeof useMusic>["provider"]) {
 export default function KioskMusicWidget({ music }: { music: ReturnType<typeof useMusic> }) {
   const { active } = useWidgetContext();
   const source = useId();
-  const { setMusicPlaying } = useKioskSlideshowControl();
+  const { setMusicPlaying, setMusicController } = useKioskSlideshowControl();
   const track = music.playback?.track;
   const state = classifyState(music, track);
   const provider = providerName(music.provider);
@@ -43,8 +43,9 @@ export default function KioskMusicWidget({ music }: { music: ReturnType<typeof u
 
   useEffect(() => {
     setMusicPlaying(source, Boolean(active && music.playback?.playing));
-    return () => setMusicPlaying(source, false);
-  }, [active, music.playback?.playing, music.playback?.updatedAt, setMusicPlaying, source]);
+    setMusicController(source, active ? { playing: Boolean(music.playback?.playing), pause: music.pause, play: music.play } : null);
+    return () => { setMusicPlaying(source, false); setMusicController(source, null); };
+  }, [active, music.pause, music.play, music.playback?.playing, music.playback?.updatedAt, setMusicController, setMusicPlaying, source]);
 
   return <Widget accent="music" className="kiosk-music-widget" contentPadding={false} hover={false} imageOpacity={0} imageBlur={0}>
     <div className="kiosk-music-scene">

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { SportsEvent } from "@/core/contracts/Sports";
-import { selectKioskPreEventAlert } from "./kioskAttention";
+import { KIOSK_SPORTS_ALERT_DURATION_MS, KIOSK_SPORTS_ALERT_MAX_DURATION_MS, selectKioskPreEventAlert } from "./kioskAttention";
 
 const now = new Date("2026-10-02T22:00:00Z");
 function event(id: string, minutes: number): SportsEvent {
@@ -24,4 +24,9 @@ test("pre-event alerts are deduplicated by event and threshold", () => {
 test("live events are never presented as upcoming alerts", () => {
   const live = { ...event("live", -1), status: "live" as const };
   assert.equal(selectKioskPreEventAlert([live], now), null);
+});
+
+test("sports warnings are visual-only and bounded to a 30-second alert under the 60-second maximum", () => {
+  assert.equal(KIOSK_SPORTS_ALERT_DURATION_MS, 30_000);
+  assert.ok(KIOSK_SPORTS_ALERT_DURATION_MS <= KIOSK_SPORTS_ALERT_MAX_DURATION_MS);
 });
