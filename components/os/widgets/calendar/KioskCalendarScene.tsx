@@ -7,6 +7,7 @@ import { Widget } from "@/components/os/ui/widget";
 import KioskSceneIdentity from "../shared/KioskSceneIdentity";
 import { compactKioskLocation } from "@/services/kiosk/presentation";
 import { useKioskSlideshowControl } from "@/components/os/kiosk/KioskSlideshowContext";
+import { selectCalendarPreEventAlert } from "./calendarAttention";
 
 interface Props { calendar: CalendarSnapshot | null; loading: boolean; error: string | null }
 
@@ -17,16 +18,16 @@ export default function KioskCalendarScene({ calendar, loading, error }: Props) 
   const weekEvents = (calendar?.upcoming ?? []).filter((event) => !sameDay(event.start, now, calendar?.timeZone)).sort(byStart);
   const nextEvent = calendar?.nextEvent;
   const { requestEventAlert } = useKioskSlideshowControl();
-  const alertedEventRef = useRef<string | null>(null);
+  const alertedEventRef = useRef(new Set<string>());
   const hasEvents = Boolean(nextEvent || todayEvents.length || weekEvents.length);
   const timeZone = calendar?.timeZone;
 
   useEffect(() => {
-    const current = todayEvents.find((event) => event.start <= now && event.end > now);
-    if (!current || alertedEventRef.current === current.id) return;
-    alertedEventRef.current = current.id;
-    requestEventAlert({ id: current.id, title: current.title, subtitle: compactKioskLocation(current.location) ?? current.calendarName ?? "Calendar event" });
-  }, [now, requestEventAlert, todayEvents]);
+    const alert = selectCalendarPreEventAlert(calendar?.today ?? [], now, alertedEventRef.current);
+    if (!alert) return;
+    alertedEventRef.current.add(alert.key);
+    requestEventAlert({ id: alert.event.id, title: alert.event.title, timingLabel: alert.timingLabel, subtitle: compactKioskLocation(alert.event.location) ?? alert.event.calendarName ?? "Calendar event" });
+  }, [calendar?.today, now, requestEventAlert]);
 
   return <Widget accent="calendar" className="kiosk-calendar-widget" contentPadding={false} sceneVariant="cinematic" imageUrl="/kiosk/scenes/calendar/calendar-cosmic-workspace.png" imagePosition="center center" imageOpacity={1} imageBlur={0}>
     <div className="kiosk-time-scene kiosk-calendar-scene">
