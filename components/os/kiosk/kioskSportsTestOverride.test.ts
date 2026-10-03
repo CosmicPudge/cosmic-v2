@@ -45,3 +45,8 @@ test("manual overrides are disabled outside the dedicated dev kiosk hosts", () =
 test("no sport override preserves automatic selection", () => {
   assert.equal(parseKioskSportsTestOverride(new URLSearchParams(), devHost, "/kiosk"), null);
 });
+
+test("dev celebration overrides are bounded to supported values", () => {
+  assert.equal(parseKioskSportsTestOverride(new URLSearchParams("sport=mlb&venue=laa&celebration=homerun"), devHost, "/kiosk")?.celebration, "homerun");
+  assert.equal(parseKioskSportsTestOverride(new URLSearchParams("sport=mlb&celebration=flash"), devHost, "/kiosk")?.celebration, undefined);
+});

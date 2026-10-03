@@ -17,7 +17,7 @@ export function getKioskSportsScenePresentation(event: SportsEvent) {
   } as const;
 }
 
-export default function KioskSportsScene({ event, children }: { event: SportsEvent; children: ReactNode }) {
+export default function KioskSportsScene({ event, celebration, children }: { event: SportsEvent; celebration?: ReactNode; children: ReactNode }) {
   const presentation = getKioskSportsScenePresentation(event);
   return (
     <div
@@ -30,6 +30,7 @@ export default function KioskSportsScene({ event, children }: { event: SportsEve
     >
       <KioskSceneBackground family="sports" state={presentation.state} image={presentation.backgroundImage} />
       <div className="kiosk-sports-scene-content relative z-10 h-full min-h-0 w-full">{children}</div>
+      {celebration}
     </div>
   );
 }

@@ -551,7 +551,7 @@ function KioskNormalSlideshow() {
 
       {sportsPresentation ? (
         <div className={`kiosk-sports-transition-layer kiosk-sports-transition-sports kiosk-sports-transition-sports-${sportsPresentation.phase}`} aria-hidden={sportsPresentation.phase !== "active"}>
-          <KioskSportsOverride event={sportsPresentation.event} />
+          <KioskSportsOverride event={sportsPresentation.event} visible={sportsPresentation.phase === "active"} />
         </div>
       ) : null}
 

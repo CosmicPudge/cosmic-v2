@@ -2,6 +2,7 @@ import type { SportsEvent, SportsTeam } from "@/core/contracts/Sports";
 
 export type KioskTestSport = "nfl" | "mlb" | "f1" | "nascar";
 export type KioskTestSession = "practice1" | "practice2" | "practice3" | "qualifying" | "sprint" | "race";
+export type KioskTestCelebration = "score" | "homerun";
 
 export interface KioskSportsTestOverride {
   sport: KioskTestSport;
@@ -9,10 +10,12 @@ export interface KioskSportsTestOverride {
   session?: KioskTestSession;
   away?: string;
   home?: string;
+  celebration?: KioskTestCelebration;
 }
 
 const SPORTS = new Set<KioskTestSport>(["nfl", "mlb", "f1", "nascar"]);
 const SESSIONS = new Set<KioskTestSession>(["practice1", "practice2", "practice3", "qualifying", "sprint", "race"]);
+const CELEBRATIONS = new Set<KioskTestCelebration>(["score", "homerun"]);
 const DEV_HOSTS = new Set(["dev.cosmicpudge.shop", "localhost", "127.0.0.1"]);
 
 const NFL_TEAMS: Record<string, SportsTeam> = {
@@ -73,10 +76,13 @@ export function parseKioskSportsTestOverride(params: URLSearchParams, hostname: 
   if (!sport || !SPORTS.has(sport)) return null;
   const venue = cleanCode(params.get("venue"));
   const session = cleanCode(params.get("session")) as KioskTestSession | undefined;
+  const celebration = cleanCode(params.get("celebration")) as KioskTestCelebration | undefined;
+  const validCelebration = celebration && ((celebration === "homerun" && sport === "mlb") || (celebration === "score" && (sport === "mlb" || sport === "nfl"))) ? celebration : undefined;
   return {
     sport,
     ...(venue && VENUES[sport][venue] ? { venue } : {}),
     ...(session && SESSIONS.has(session) ? { session } : {}),
+    ...(validCelebration && CELEBRATIONS.has(validCelebration) ? { celebration: validCelebration } : {}),
     ...(cleanCode(params.get("away")) ? { away: cleanCode(params.get("away")) } : {}),
     ...(cleanCode(params.get("home")) ? { home: cleanCode(params.get("home")) } : {}),
   };

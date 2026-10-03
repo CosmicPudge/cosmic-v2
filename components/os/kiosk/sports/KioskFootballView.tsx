@@ -1,9 +1,11 @@
 "use client";
 
 import type { SportsEvent } from "@/core/contracts/Sports";
+import type { FootballLiveData } from "@/core/contracts/sports/Football";
 
 interface KioskFootballViewProps {
   event: SportsEvent;
+  live?: FootballLiveData;
 }
 
 function getTeamName(
@@ -28,12 +30,13 @@ function getScore(
 
 export default function KioskFootballView({
   event,
+  live,
 }: KioskFootballViewProps) {
   const awayName = getTeamName(event.awayTeam);
   const homeName = getTeamName(event.homeTeam);
 
-  const awayScore = getScore(event.awayTeam);
-  const homeScore = getScore(event.homeTeam);
+  const awayScore = live?.away.score !== undefined ? String(live.away.score) : getScore(event.awayTeam);
+  const homeScore = live?.home.score !== undefined ? String(live.home.score) : getScore(event.homeTeam);
 
   return (
     <div className="kiosk-sports-view kiosk-football-view relative flex h-[100dvh] w-full items-center justify-center overflow-hidden px-[clamp(1rem,3vw,3rem)] py-[clamp(1rem,3vh,2.5rem)]">
