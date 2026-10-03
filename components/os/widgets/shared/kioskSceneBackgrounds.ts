@@ -127,5 +127,6 @@ export function selectKioskSportsBackground(backgroundKey?: string) {
   if (backgroundKey.startsWith("mlb-")) return MLB_STADIUM_ASSETS[backgroundKey] ?? GENERIC_MLB_STADIUM;
   if (backgroundKey.startsWith("f1-")) return F1_CIRCUIT_ASSETS[backgroundKey] ?? GENERIC_MOTORSPORT;
   if (backgroundKey.startsWith("nascar-")) return NASCAR_TRACK_ASSETS[backgroundKey] ?? GENERIC_MOTORSPORT;
+  if (backgroundKey === "cfb-generic" || backgroundKey.startsWith("cfb-")) return GENERIC_NFL_STADIUM;
   return GENERIC_MOTORSPORT;
 }

@@ -25,6 +25,8 @@ test("resolves Utah Utes and keeps Utah State and Utah Tech distinct", () => {
   assert.equal(utah?.logoPath, "/sports/cfb/teams/254.png");
   assert.equal(state?.canonicalId, "328");
   assert.equal(tech?.canonicalId, "3101");
+  assert.equal(state?.logoPath, "/sports/cfb/teams/328.png");
+  assert.equal(state?.accent, "#0f2439");
 });
 
 test("resolves tricky NFL city and nickname identities to distinct canonical teams", () => {

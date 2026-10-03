@@ -74,3 +74,13 @@ test("NFL scoring is supported while racing is unaffected", () => {
   const race = event({ sport: "f1" });
   assert.equal(detectSportsCelebration(createSportsScoreObservation(race, null, 1_000), createSportsScoreObservation(race, null, 2_000), race), null);
 });
+
+test("CFB score changes reuse the same celebration path", () => {
+  const game = event({ id: "cfb-1", sport: "college-football", homeTeam: { id: "328", name: "Utah State Aggies", abbreviation: "USU", score: 0 }, awayTeam: { id: "68", name: "Boise State Broncos", abbreviation: "BSU", score: 0 } });
+  const previous = createSportsScoreObservation(game, null, 1_000);
+  const current = createSportsScoreObservation({ ...game, homeTeam: { ...game.homeTeam!, score: 7 } }, null, 2_000);
+  const celebration = detectSportsCelebration(previous, current, game);
+  assert.equal(celebration?.kind, "score");
+  assert.equal(celebration?.teamId, "328");
+  assert.equal(celebration?.primaryColor, "#0f2439");
+});

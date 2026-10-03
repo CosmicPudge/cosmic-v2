@@ -42,6 +42,43 @@ function competitor(value: unknown): { side?: "home" | "away"; team?: SportsTeam
   };
 }
 
+export function normalizeEspnFootballEvents(payload: unknown, sport: Extract<SportKind, "nfl" | "nba" | "college-football">, providerId: string): SportsEvent[] {
+  const root = isRecord(payload) ? payload : undefined;
+  return records(root?.events).flatMap((event): SportsEvent[] => {
+    const id = string(event.id);
+    const start = date(event.date);
+    const competition = records(event.competitions)[0];
+    if (!id || !start || !competition) return [];
+    const competitors = records(competition.competitors).map(competitor);
+    const homeTeam = competitors.find((item) => item.side === "home")?.team;
+    const awayTeam = competitors.find((item) => item.side === "away")?.team;
+    if (!homeTeam || !awayTeam) return [];
+    const { status, detail } = eventStatus(competition.status ?? event.status);
+    const venueRecord = isRecord(competition.venue) ? competition.venue : undefined;
+    const venue = venueRecord ? string(venueRecord.fullName) : undefined;
+    const seasonType = isRecord(event.seasonType) ? string(event.seasonType.name) : undefined;
+    const conference = isRecord(competition.conference) ? string(competition.conference.name) : string(competition.conference);
+    return [{
+      id: `${providerId}:${id}`,
+      sport,
+      title: `${awayTeam.name} at ${homeTeam.name}`,
+      start,
+      status,
+      ...(detail ? { statusDetail: detail } : {}),
+      homeTeam,
+      awayTeam,
+      ...(venue ? { venue } : {}),
+      source: "espn",
+      metadata: {
+        competition: sport === "nfl" ? "NFL" : sport === "nba" ? "NBA" : "College Football",
+        gamePk: id,
+        ...(seasonType ? { seasonType } : {}),
+        ...(conference ? { conference } : {}),
+      },
+    }];
+  });
+}
+
 export class EspnTeamProvider implements SportsProvider {
   readonly id: string;
   readonly sport: Extract<SportKind, "nfl" | "nba" | "college-football">;
@@ -64,33 +101,7 @@ export class EspnTeamProvider implements SportsProvider {
     const year = now.getFullYear();
     const url = espnFootballTeamScheduleUrl(this.config.sport === "nfl" ? "nfl" : "college-football", this.config.teamId, year);
     const payload = await fetchJson(url, this.cacheSeconds);
-    const root = isRecord(payload) ? payload : undefined;
-    const events = records(root?.events).flatMap((event): SportsEvent[] => {
-      const id = string(event.id);
-      const start = date(event.date);
-      const competition = records(event.competitions)[0];
-      if (!id || !start || !competition) return [];
-      const competitors = records(competition.competitors).map(competitor);
-      const homeTeam = competitors.find((item) => item.side === "home")?.team;
-      const awayTeam = competitors.find((item) => item.side === "away")?.team;
-      if (!homeTeam || !awayTeam) return [];
-      const { status, detail } = eventStatus(competition.status ?? event.status);
-      const venue = isRecord(competition.venue) ? string(competition.venue.fullName) : undefined;
-      const seasonType = isRecord(event.seasonType) ? string(event.seasonType.name) : undefined;
-      return [{
-        id: `${this.id}:${id}`,
-        sport: this.sport,
-        title: `${awayTeam.name} at ${homeTeam.name}`,
-        start,
-        status,
-        ...(detail ? { statusDetail: detail } : {}),
-        homeTeam,
-        awayTeam,
-        ...(venue ? { venue } : {}),
-        source: "espn",
-      metadata: { competition: this.sport === "nfl" ? "NFL" : this.sport === "nba" ? "NBA" : "College Football", ...(seasonType ? { seasonType } : {}), providerTeamId: this.config.teamId },
-      }];
-    });
+    const events = normalizeEspnFootballEvents(payload, this.sport, this.id).map((event) => ({ ...event, metadata: { ...event.metadata, providerTeamId: this.config.teamId } }));
     return { events, ...(this.config.sport === "nfl" ? { standings: await this.getStandings(year) } : {}) };
   }
 
@@ -120,4 +131,4 @@ export class EspnTeamProvider implements SportsProvider {
 
 export const packersProvider = new EspnTeamProvider({ id: "nfl-packers-espn-fallback", sport: "nfl", teamId: "9", leaguePath: "football/nfl", cacheSeconds: 30 });
 export const utahFootballProvider = new EspnTeamProvider({ id: "college-football-utah-espn-fallback", sport: "college-football", teamId: "254", leaguePath: "football/college-football", cacheSeconds: 900 });
-export const usuFootballProvider = utahFootballProvider;
+export const usuFootballProvider = new EspnTeamProvider({ id: "college-football-usu-espn-fallback", sport: "college-football", teamId: "328", leaguePath: "football/college-football", cacheSeconds: 900 });

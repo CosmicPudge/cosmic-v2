@@ -50,3 +50,13 @@ test("dev celebration overrides are bounded to supported values", () => {
   assert.equal(parseKioskSportsTestOverride(new URLSearchParams("sport=mlb&venue=laa&celebration=homerun"), devHost, "/kiosk")?.celebration, "homerun");
   assert.equal(parseKioskSportsTestOverride(new URLSearchParams("sport=mlb&celebration=flash"), devHost, "/kiosk")?.celebration, undefined);
 });
+
+test("CFB Utah State override resolves to the shared football scene", () => {
+  const override = parseKioskSportsTestOverride(new URLSearchParams("sport=cfb&team=usu&state=live&celebration=score"), devHost, "/kiosk");
+  const event = override && createKioskSportsTestEvent(override);
+  assert.equal(override?.sport, "college-football");
+  assert.equal(override?.celebration, "score");
+  assert.equal(event?.homeTeam?.name, "Utah State Aggies");
+  assert.equal(event?.status, "live");
+  assert.equal(normalizeKioskSportsEvent(event!)?.backgroundKey, "cfb-generic");
+});

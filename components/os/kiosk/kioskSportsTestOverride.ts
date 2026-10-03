@@ -1,8 +1,9 @@
 import type { SportsEvent, SportsTeam } from "@/core/contracts/Sports";
 
-export type KioskTestSport = "nfl" | "mlb" | "f1" | "nascar";
+export type KioskTestSport = "nfl" | "mlb" | "f1" | "nascar" | "college-football";
 export type KioskTestSession = "practice1" | "practice2" | "practice3" | "qualifying" | "sprint" | "race";
 export type KioskTestCelebration = "score" | "homerun";
+export type KioskTestState = "scheduled" | "live" | "final";
 
 export interface KioskSportsTestOverride {
   sport: KioskTestSport;
@@ -11,11 +12,14 @@ export interface KioskSportsTestOverride {
   away?: string;
   home?: string;
   celebration?: KioskTestCelebration;
+  team?: string;
+  state?: KioskTestState;
 }
 
-const SPORTS = new Set<KioskTestSport>(["nfl", "mlb", "f1", "nascar"]);
+const SPORTS = new Set<KioskTestSport>(["nfl", "mlb", "f1", "nascar", "college-football"]);
 const SESSIONS = new Set<KioskTestSession>(["practice1", "practice2", "practice3", "qualifying", "sprint", "race"]);
 const CELEBRATIONS = new Set<KioskTestCelebration>(["score", "homerun"]);
+const STATES = new Set<KioskTestState>(["scheduled", "live", "final"]);
 const DEV_HOSTS = new Set(["dev.cosmicpudge.shop", "localhost", "127.0.0.1"]);
 
 const NFL_TEAMS: Record<string, SportsTeam> = {
@@ -55,6 +59,10 @@ const VENUES: Record<KioskTestSport, Record<string, { label: string; team?: Spor
     daytona: { label: "Daytona International Speedway", track: "Daytona" },
     cota: { label: "Circuit of the Americas", track: "COTA" },
   },
+  "college-football": {
+    usu: { label: "Maverik Stadium", team: { name: "Utah State Aggies", abbreviation: "USU" } },
+    utah: { label: "Rice-Eccles Stadium", team: { name: "Utah Utes", abbreviation: "UTAH" } },
+  },
 };
 
 function cleanCode(value: string | null) {
@@ -72,30 +80,36 @@ export function isKioskSportsTestHost(hostname: string, pathname: string) {
 
 export function parseKioskSportsTestOverride(params: URLSearchParams, hostname: string, pathname: string): KioskSportsTestOverride | null {
   if (!isKioskSportsTestHost(hostname, pathname)) return null;
-  const sport = params.get("sport")?.trim().toLowerCase() as KioskTestSport | undefined;
+  const rawSport = params.get("sport")?.trim().toLowerCase();
+  const sport = (rawSport === "cfb" ? "college-football" : rawSport) as KioskTestSport | undefined;
   if (!sport || !SPORTS.has(sport)) return null;
   const venue = cleanCode(params.get("venue"));
   const session = cleanCode(params.get("session")) as KioskTestSession | undefined;
   const celebration = cleanCode(params.get("celebration")) as KioskTestCelebration | undefined;
-  const validCelebration = celebration && ((celebration === "homerun" && sport === "mlb") || (celebration === "score" && (sport === "mlb" || sport === "nfl"))) ? celebration : undefined;
+  const team = cleanCode(params.get("team"));
+  const state = cleanCode(params.get("state")) as KioskTestState | undefined;
+  const validCelebration = celebration && ((celebration === "homerun" && sport === "mlb") || (celebration === "score" && (sport === "mlb" || sport === "nfl" || sport === "college-football"))) ? celebration : undefined;
   return {
     sport,
     ...(venue && VENUES[sport][venue] ? { venue } : {}),
     ...(session && SESSIONS.has(session) ? { session } : {}),
     ...(validCelebration && CELEBRATIONS.has(validCelebration) ? { celebration: validCelebration } : {}),
+    ...(team ? { team } : {}),
+    ...(state && STATES.has(state) ? { state } : {}),
     ...(cleanCode(params.get("away")) ? { away: cleanCode(params.get("away")) } : {}),
     ...(cleanCode(params.get("home")) ? { home: cleanCode(params.get("home")) } : {}),
   };
 }
 
 export function createKioskSportsTestEvent(override: KioskSportsTestOverride, now = new Date()): SportsEvent {
-  const venue = override.venue ? VENUES[override.sport][override.venue] : undefined;
-  const home = override.sport === "nfl" ? NFL_TEAMS[override.home ?? override.venue ?? "gb"] ?? NFL_TEAMS.gb : override.sport === "mlb" ? MLB_TEAMS[override.home ?? override.venue ?? "laa"] ?? MLB_TEAMS.laa : undefined;
-  const away = override.sport === "nfl" ? NFL_TEAMS[override.away ?? "det"] ?? NFL_TEAMS.det : override.sport === "mlb" ? MLB_TEAMS[override.away ?? "bos"] ?? MLB_TEAMS.bos : undefined;
+  const venue = override.venue ? VENUES[override.sport][override.venue] : override.sport === "college-football" && override.team ? VENUES[override.sport][override.team] : undefined;
+  const cfbTeam = override.team === "utah" ? { name: "Utah Utes", abbreviation: "UTAH", id: "254" } : { name: "Utah State Aggies", abbreviation: "USU", id: "328" };
+  const home = override.sport === "nfl" ? NFL_TEAMS[override.home ?? override.venue ?? "gb"] ?? NFL_TEAMS.gb : override.sport === "mlb" ? MLB_TEAMS[override.home ?? override.venue ?? "laa"] ?? MLB_TEAMS.laa : override.sport === "college-football" ? cfbTeam : undefined;
+  const away = override.sport === "nfl" ? NFL_TEAMS[override.away ?? "det"] ?? NFL_TEAMS.det : override.sport === "mlb" ? MLB_TEAMS[override.away ?? "bos"] ?? MLB_TEAMS.bos : override.sport === "college-football" ? { name: "Boise State Broncos", abbreviation: "BSU", id: "68" } : undefined;
   const session = override.session ?? (override.sport === "f1" || override.sport === "nascar" ? "race" : undefined);
   const normalizedSessionKind = session === "qualifying" || session === "sprint" || session === "race" ? session : undefined;
   const label = venue?.label ?? (override.sport === "f1" ? "Kiosk Test Circuit" : override.sport === "nascar" ? "Kiosk Test Speedway" : home?.name ?? "Kiosk Test Venue");
-  const title = override.sport === "nfl" || override.sport === "mlb"
+  const title = override.sport === "nfl" || override.sport === "mlb" || override.sport === "college-football"
     ? `${away?.name ?? "Away"} at ${home?.name ?? "Home"}`
     : `${label} Grand Prix`;
   return {
@@ -103,7 +117,7 @@ export function createKioskSportsTestEvent(override: KioskSportsTestOverride, no
     sport: override.sport,
     title: override.sport === "nascar" ? `${label} 400` : title,
     start: now,
-    status: "live",
+    status: override.state ?? "live",
     statusDetail: session ? `${sessionLabel(session)} · TEST` : "Live · TEST",
     ...(away ? { awayTeam: { ...away, score: 17 } } : {}),
     ...(home ? { homeTeam: { ...home, score: 24 } } : {}),
@@ -112,6 +126,7 @@ export function createKioskSportsTestEvent(override: KioskSportsTestOverride, no
     source: "kiosk-test",
     metadata: {
       ...(session ? { sessionType: sessionLabel(session) } : {}),
+      ...(override.sport === "college-football" ? { competition: "College Football", conference: "Mountain West" } : {}),
       ...(normalizedSessionKind ? { sessionKind: normalizedSessionKind } : {}),
       ...(venue?.country ? { country: venue.country } : {}),
       ...(venue?.track ? { track: venue.track } : {}),

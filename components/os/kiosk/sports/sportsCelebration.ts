@@ -1,7 +1,9 @@
 import type { SportsEvent } from "@/core/contracts/Sports";
 import type { BaseballLiveData } from "@/core/contracts/sports/Baseball";
 import type { FootballLiveData } from "@/core/contracts/sports/Football";
+import type { CollegeFootballLiveData } from "@/services/sports/providers/college-football-detail";
 import { getMlbTeamTheme } from "@/services/sports/providers/mlb/teamThemes";
+import { CFB_TEAM_IDENTITY } from "@/services/sports/identity/generated/cfbTeams";
 
 export type ScoreCelebrationKind = "score" | "home-run";
 
@@ -38,8 +40,11 @@ const NFL_TEAM_COLORS: Record<string, [string, string]> = {
   NYJ: ["#125740", "#FFFFFF"], NYG: ["#0B2265", "#A71930"], PIT: ["#FFB612", "#101820"], BAL: ["#241773", "#9E7C0C"],
 };
 
-function liveScores(event: SportsEvent, live?: BaseballLiveData | FootballLiveData | null) {
-  if (live?.sport === "mlb" || live?.sport === "nfl") {
+type SupportedLive = BaseballLiveData | FootballLiveData | CollegeFootballLiveData;
+
+function liveScores(event: SportsEvent, live?: SupportedLive | null) {
+  const liveSport = live && "sport" in live ? live.sport : undefined;
+  if (live && (liveSport === "mlb" || liveSport === "nfl" || event.sport === "college-football")) {
     return {
       homeScore: live.home.score,
       awayScore: live.away.score,
@@ -57,18 +62,19 @@ function liveScores(event: SportsEvent, live?: BaseballLiveData | FootballLiveDa
 
 export function createSportsScoreObservation(
   event: SportsEvent,
-  live?: BaseballLiveData | FootballLiveData | null,
+  live?: SupportedLive | null,
   observedAt = Date.now(),
 ): SportsScoreObservation {
   const scores = liveScores(event, live);
-  const play = live?.sport === "mlb" ? live.latestPlay : live?.sport === "nfl" ? live.latestPlay : undefined;
-  const scoringPlay = live?.sport === "mlb" ? play?.scoringPlay : live?.sport === "nfl" ? play?.scoringPlay : undefined;
-  const playType = live?.sport === "mlb" ? live.latestPlay?.eventType : live?.sport === "nfl" ? live.latestPlay?.type : undefined;
+  const play = live && "latestPlay" in live ? live.latestPlay : undefined;
+  const scoringPlay = play?.scoringPlay;
+  const liveSport = live && "sport" in live ? live.sport : undefined;
+  const playType = liveSport === "mlb" ? (live as BaseballLiveData).latestPlay?.eventType : liveSport === "nfl" ? (live as FootballLiveData).latestPlay?.type : undefined;
   return {
     eventId: event.id,
     sport: event.sport,
     ...scores,
-    stale: Boolean(live?.stale),
+    stale: Boolean(live && "stale" in live ? live.stale : false),
     observedAt,
     ...(play?.id ? { playId: play.id } : {}),
     ...(scoringPlay !== undefined ? { scoringPlay } : {}),
@@ -86,6 +92,12 @@ function colorsForTeam(sport: SportsEvent["sport"], teamId?: string, abbreviatio
   if (sport === "mlb") {
     const theme = getMlbTeamTheme({ id: teamId, abbreviation });
     return { primaryColor: theme.primary, secondaryColor: theme.secondary || NEUTRAL_SECONDARY };
+  }
+  if (sport === "college-football") {
+    const catalog = CFB_TEAM_IDENTITY[teamId ?? ""];
+    const primary = catalog?.color ? `#${catalog.color.replace(/^#/, "")}` : undefined;
+    const secondary = catalog?.alternateColor ? `#${catalog.alternateColor.replace(/^#/, "")}` : undefined;
+    return { primaryColor: primary ?? "#8AE7FF", secondaryColor: secondary ?? NEUTRAL_SECONDARY };
   }
   const pair = NFL_TEAM_COLORS[abbreviation?.toUpperCase() ?? teamId?.toUpperCase() ?? ""];
   return { primaryColor: pair?.[0] ?? "#8AE7FF", secondaryColor: pair?.[1] ?? NEUTRAL_SECONDARY };

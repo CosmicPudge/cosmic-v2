@@ -3,7 +3,7 @@ import { resolveSportsTeamIdentity } from "@/services/sports/identity";
 import { resolveF1DisplayState } from "@/services/sports/kioskDisplayState";
 import { resolveMlbVenue } from "@/services/sports/venues/mlb";
 
-export type KioskTrackedSport = "nfl" | "f1" | "nascar" | "mlb";
+export type KioskTrackedSport = "nfl" | "f1" | "nascar" | "mlb" | "college-football";
 
 export interface KioskSportsEvent {
   event: SportsEvent;
@@ -44,7 +44,7 @@ export interface KioskSportsSelectionCandidate {
   finalRankingPosition?: number;
 }
 
-const SPORT_LABELS: Record<KioskTrackedSport, string> = { nfl: "NFL", f1: "FORMULA 1", nascar: "NASCAR", mlb: "MLB" };
+const SPORT_LABELS: Record<KioskTrackedSport, string> = { nfl: "NFL", f1: "FORMULA 1", nascar: "NASCAR", mlb: "MLB", "college-football": "COLLEGE FOOTBALL" };
 const SESSION_IMPORTANCE: Record<string, number> = { practice1: 10, practice2: 20, practice3: 30, practice: 10, qualifying: 50, sprint: 70, race: 100 };
 const F1_CIRCUIT_BACKGROUND_KEYS: Array<{ key: string; aliases: string[] }> = [
   { key: "f1-australia", aliases: ["albert park", "melbourne", "australia", "albert_park"] },
@@ -101,6 +101,7 @@ function favoriteWeight(event: SportsEvent) {
   if (event.sport === "nfl" && /green bay packers|packers/.test(teams)) return 100;
   if (event.sport === "mlb" && /angels|los angeles angels/.test(teams)) return 100;
   if (event.sport === "mlb" && isPostseason(event)) return 70;
+  if (event.sport === "college-football" && /utah state|utah utes/.test(teams)) return 100;
   return 0;
 }
 
@@ -131,21 +132,22 @@ function backgroundKey(event: SportsEvent): string {
   if (event.sport === "nascar") {
     return matchBackgroundKey(venue, NASCAR_TRACK_BACKGROUND_KEYS) ?? "nascar-generic";
   }
+  if (event.sport === "college-football") return "cfb-generic";
   const mlbVenue = resolveMlbVenue({ venueId: (event.metadata as { venueId?: string } | undefined)?.venueId, homeTeamId: event.homeTeam?.id, homeTeamAbbreviation: event.homeTeam?.abbreviation, homeTeamName: event.homeTeam?.name, venue: event.venue });
   if (mlbVenue) return `mlb-${mlbVenue.slug}`;
   return "mlb-generic";
 }
 
 export function normalizeKioskSportsEvent(event: SportsEvent, now = new Date()): KioskSportsEvent | undefined {
-  if (!["nfl", "f1", "nascar", "mlb"].includes(event.sport)) return undefined;
+  if (!["nfl", "f1", "nascar", "mlb", "college-football"].includes(event.sport)) return undefined;
   if (["final", "cancelled", "postponed"].includes(event.status)) return undefined;
   const sport = event.sport as KioskTrackedSport;
   const session = sessionKind(event);
   const f1Display = sport === "f1" ? resolveF1DisplayState(event, now) : undefined;
   const live = f1Display ? f1Display.displayState === "live" : event.status === "live" || event.status === "delayed";
-  const importance = sport === "f1" || sport === "nascar" ? SESSION_IMPORTANCE[session] ?? 0 : sport === "mlb" && isPostseason(event) ? 90 : 50;
+  const importance = sport === "f1" || sport === "nascar" ? SESSION_IMPORTANCE[session] ?? 0 : sport === "mlb" && isPostseason(event) ? 90 : sport === "college-football" && event.metadata?.conference ? 55 : 50;
   const location = event.metadata?.location;
-  return { event, sport, sportLabel: SPORT_LABELS[sport], title: event.title, eventType: eventType(event, session), startTime: event.start, ...(event.end ? { endTime: event.end } : {}), live, importance, favoriteWeight: favoriteWeight(event), ...(event.venue ? { venueName: event.venue } : {}), ...(location ? { venueLocation: location } : {}), backgroundKey: backgroundKey(event), homeAware: sport === "nfl" || sport === "mlb", ...(isPostseason(event) ? { seriesContext: event.metadata?.competition ?? "Postseason" } : {}), ...(sport === "f1" || sport === "nascar" ? { sessionContext: session } : {}), providerStatus: event.status, displayState: f1Display?.displayState ?? (live ? "live" : event.status === "final" ? "complete" : "upcoming"), inferredLive: f1Display?.inferredLive ?? false, ...(sport === "f1" ? { broadcaster: "Apple TV" } : event.broadcast ? { broadcaster: event.broadcast } : {}) };
+  return { event, sport, sportLabel: SPORT_LABELS[sport], title: event.title, eventType: eventType(event, session), startTime: event.start, ...(event.end ? { endTime: event.end } : {}), live, importance, favoriteWeight: favoriteWeight(event), ...(event.venue ? { venueName: event.venue } : {}), ...(location ? { venueLocation: location } : {}), backgroundKey: backgroundKey(event), homeAware: sport === "nfl" || sport === "mlb" || sport === "college-football", ...(isPostseason(event) ? { seriesContext: event.metadata?.competition ?? "Postseason" } : {}), ...(sport === "f1" || sport === "nascar" ? { sessionContext: session } : {}), providerStatus: event.status, displayState: f1Display?.displayState ?? (live ? "live" : event.status === "final" ? "complete" : "upcoming"), inferredLive: f1Display?.inferredLive ?? false, ...(sport === "f1" ? { broadcaster: "Apple TV" } : event.broadcast ? { broadcaster: event.broadcast } : {}) };
 }
 
 export function selectKioskSportsEvent(events: SportsEvent[], now = new Date()): KioskSportsEvent | undefined {

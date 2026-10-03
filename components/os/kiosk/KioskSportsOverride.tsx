@@ -4,6 +4,7 @@ import { useSearchParams } from "next/navigation";
 import { useEffect } from "react";
 import type { SportsEvent } from "@/core/contracts/Sports";
 import type { BaseballLiveData, BaseballUniform } from "@/core/contracts/sports/Baseball";
+import type { CollegeFootballLiveData } from "@/services/sports/providers/college-football-detail";
 import { useSportsEvent } from "@/hooks/os/useSportsEvent";
 import { MLB_UNIFORM_THEMES } from "@/services/sports/providers/mlb/uniformThemes";
 import { sportsDetailIsComplete, sportsDetailPresence } from "@/services/sports/detailDiagnostics";
@@ -30,17 +31,18 @@ export default function KioskSportsOverride({
 function KioskSportsPresentation({ event, visible }: { event: SportsEvent; visible: boolean }) {
   const searchParams = useSearchParams();
   const isDevelopmentTest = process.env.NODE_ENV !== "production" && event.source === "kiosk-test";
-  const detail = useSportsEvent(event.id, { enabled: !isDevelopmentTest && (event.sport === "mlb" || event.sport === "nfl") });
+  const detail = useSportsEvent(event.id, { enabled: !isDevelopmentTest && (event.sport === "mlb" || event.sport === "nfl" || event.sport === "college-football") });
   const live = detail.data?.live;
   const baseballLive = live?.sport === "mlb" ? live : undefined;
   const footballLive = live?.sport === "nfl" ? live : undefined;
+  const collegeFootballLive = event.sport === "college-football" && live ? live as unknown as CollegeFootballLiveData : undefined;
   useEffect(() => {
     if (typeof window === "undefined" || event.sport !== "mlb" || !["dev.cosmicpudge.shop", "localhost", "127.0.0.1"].includes(window.location.hostname.toLowerCase())) return;
     const presence = sportsDetailPresence(baseballLive);
     const fields = Object.fromEntries(Object.entries(presence).filter(([key]) => key !== "detail"));
     console.info(`[kiosk-mlb-render] event=${event.id} genericSnapshot=${Boolean(event)} liveDetail=${Boolean(baseballLive)} normalizedComplete=${sportsDetailIsComplete(presence)} fallbackShell=${!baseballLive} reason=${baseballLive ? "detail_available" : detail.error ? "detail_request_failed" : "no_live_detail"} ${Object.entries(fields).map(([key, value]) => `${key}=${value}`).join(" ")}`);
   }, [baseballLive, detail.error, event]);
-  const forcedKind = isDevelopmentTest && ((searchParams.get("celebration") === "score" && (event.sport === "mlb" || event.sport === "nfl")) || (searchParams.get("celebration") === "homerun" && event.sport === "mlb"))
+  const forcedKind = isDevelopmentTest && ((searchParams.get("celebration") === "score" && (event.sport === "mlb" || event.sport === "nfl" || event.sport === "college-football")) || (searchParams.get("celebration") === "homerun" && event.sport === "mlb"))
     ? searchParams.get("celebration") as ScoreCelebrationKind
     : undefined;
   const celebration = useSportsCelebration(event, live, visible, forcedKind);
@@ -48,6 +50,8 @@ function KioskSportsPresentation({ event, visible }: { event: SportsEvent; visib
     switch (event.sport) {
       case "nfl":
         return <KioskFootballView event={event} live={footballLive} />;
+      case "college-football":
+        return <KioskFootballView event={event} live={collegeFootballLive} />;
       case "mlb":
         return <KioskBaseballView event={event} live={baseballLive ?? (isDevelopmentTest ? createTestBaseballLive(event, searchParams.get("home-uniform"), searchParams.get("away-uniform")) : undefined)} />;
       case "f1":

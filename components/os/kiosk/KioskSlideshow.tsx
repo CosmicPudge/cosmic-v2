@@ -41,6 +41,7 @@ const TEST_SPORTS: SportKind[] = [
   "mlb",
   "f1",
   "nascar",
+  "college-football",
 ];
 
 function isTestSport(

@@ -2,10 +2,12 @@
 
 import type { SportsEvent } from "@/core/contracts/Sports";
 import type { FootballLiveData } from "@/core/contracts/sports/Football";
+import type { CollegeFootballLiveData } from "@/services/sports/providers/college-football-detail";
+import { resolveSportsTeamIdentity } from "@/services/sports/identity";
 
 interface KioskFootballViewProps {
   event: SportsEvent;
-  live?: FootballLiveData;
+  live?: FootballLiveData | CollegeFootballLiveData;
 }
 
 function getTeamName(
@@ -22,7 +24,7 @@ function getScore(
   team: SportsEvent["homeTeam"] | SportsEvent["awayTeam"],
 ) {
   if (!team || team.score === undefined) {
-    return "0";
+    return "—";
   }
 
   return String(team.score);
@@ -34,6 +36,9 @@ export default function KioskFootballView({
 }: KioskFootballViewProps) {
   const awayName = getTeamName(event.awayTeam);
   const homeName = getTeamName(event.homeTeam);
+  const isCollegeFootball = event.sport === "college-football";
+  const collegeLive = live && "period" in live ? live : undefined;
+  const situation = live && "situation" in live ? live.situation : collegeLive?.situation;
 
   const awayScore = live?.away.score !== undefined ? String(live.away.score) : getScore(event.awayTeam);
   const homeScore = live?.home.score !== undefined ? String(live.home.score) : getScore(event.homeTeam);
@@ -52,7 +57,7 @@ export default function KioskFootballView({
 
             <div>
               <p className="text-[clamp(.65rem,1vw,.8rem)] font-semibold uppercase tracking-[0.24em] text-red-200/65">
-                {event.status === "live" ? "LIVE" : "UPCOMING"} • NFL
+                {event.status === "live" || event.status === "delayed" ? "LIVE" : event.status === "final" ? "FINAL" : "UPCOMING"} • {isCollegeFootball ? "CFB" : "NFL"}
               </p>
 
               <h1 className="text-[clamp(1.15rem,2vw,1.7rem)] font-semibold tracking-tight text-white/90">
@@ -74,7 +79,7 @@ export default function KioskFootballView({
           {/* Game status */}
           <div className="mb-[clamp(1.5rem,4vh,3rem)] text-center">
             <p className="text-[clamp(1rem,2vw,1.5rem)] font-bold uppercase tracking-[0.18em] text-white/55">
-              {event.statusDetail ?? "Live"}
+              {event.statusDetail ?? collegeLive?.status ?? (situation?.quarter ? `Q${situation.quarter}${situation.clock ? ` · ${situation.clock}` : ""}` : "Live")}
             </p>
           </div>
 
@@ -83,6 +88,7 @@ export default function KioskFootballView({
 
             {/* Away */}
             <div className="min-w-0 text-right">
+              <TeamLogo event={event} side="away" />
               <p className="truncate text-[clamp(1.5rem,4vw,3.25rem)] font-black uppercase tracking-[-0.04em] text-white/90">
                 {awayName}
               </p>
@@ -109,6 +115,8 @@ export default function KioskFootballView({
                 {homeName}
               </p>
 
+              <TeamLogo event={event} side="home" />
+
               <p className="mt-3 text-[clamp(4.5rem,13vw,10rem)] font-black leading-[0.8] tracking-[-0.08em] text-white">
                 {homeScore}
               </p>
@@ -117,6 +125,10 @@ export default function KioskFootballView({
 
           {/* Details */}
           <div className="mt-[clamp(2rem,6vh,4rem)] flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-[clamp(.75rem,1.2vw,1rem)] font-medium text-white/40">
+            {situation?.quarter ? <span>Q{situation.quarter}{situation.clock ? ` · ${situation.clock}` : ""}</span> : null}
+            {collegeLive?.rankings?.length ? <span>{collegeLive.rankings.map((ranking) => `#${ranking.rank} ${ranking.team}`).join(" · ")}</span> : null}
+            {situation?.downDistanceText ? <span>{situation.downDistanceText}</span> : null}
+            {situation?.possessionText ? <span>{situation.possessionText}</span> : null}
             {event.venue ? (
               <span>{event.venue}</span>
             ) : null}
@@ -146,4 +158,10 @@ export default function KioskFootballView({
       </section>
     </div>
   );
+}
+
+function TeamLogo({ event, side }: { event: SportsEvent; side: "home" | "away" }) {
+  const team = side === "home" ? event.homeTeam : event.awayTeam;
+  const identity = resolveSportsTeamIdentity(event.sport, team);
+  return identity?.logoPath ? <img className="mx-auto mb-2 h-10 w-10 object-contain opacity-85" src={identity.logoPath} alt="" draggable={false} /> : null;
 }

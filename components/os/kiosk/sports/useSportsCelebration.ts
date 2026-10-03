@@ -6,7 +6,7 @@ import type { SportsLiveData } from "@/core/contracts/sports/Core";
 import { createSportsScoreObservation, createTestSportsCelebration, detectSportsCelebration, type ScoreCelebrationKind, type SportsCelebration } from "./sportsCelebration";
 
 export function useSportsCelebration(event: SportsEvent, live: SportsLiveData | null | undefined, visible: boolean, forcedKind?: ScoreCelebrationKind) {
-  const observation = useMemo(() => createSportsScoreObservation(event, live?.sport === "mlb" || live?.sport === "nfl" ? live : null), [event, live]);
+  const observation = useMemo(() => createSportsScoreObservation(event, live?.sport === "mlb" || live?.sport === "nfl" || event.sport === "college-football" ? live as Parameters<typeof createSportsScoreObservation>[1] : null), [event, live]);
   const previousRef = useRef<ReturnType<typeof createSportsScoreObservation> | null>(null);
   const forcedEventRef = useRef<string | null>(null);
   const timerRef = useRef<number | null>(null);

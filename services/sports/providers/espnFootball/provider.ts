@@ -4,9 +4,63 @@ import type { SportsProviderResult } from "../types";
 import { sportsDirectoryBySport } from "@/services/sports/directory";
 import { fetchJson } from "../types";
 import { getCollegeFootballDirectory } from "../college-football-directory";
-import { EspnTeamProvider } from "../espn-team";
+import { EspnTeamProvider, normalizeEspnFootballEvents } from "../espn-team";
 import { espnFootballCoreEventUrl, espnFootballRankingsUrl, espnFootballScoreboardUrl, espnFootballSummaryUrl, type EspnFootballLeague } from "./endpoints";
 import type { FootballProvider } from "./types";
+
+function espnDate(value: Date) {
+  return `${value.getUTCFullYear()}${String(value.getUTCMonth() + 1).padStart(2, "0")}${String(value.getUTCDate()).padStart(2, "0")}`;
+}
+
+function scoreboardWindow(now: Date) {
+  const from = new Date(now.getTime() - 24 * 60 * 60_000);
+  const to = new Date(now.getTime() + 14 * 24 * 60 * 60_000);
+  return `${espnDate(from)}-${espnDate(to)}`;
+}
+
+export class EspnCollegeFootballScoreboardProvider implements FootballProvider {
+  readonly provider = "espn" as const;
+  readonly league = "college-football" as const;
+  readonly sport = "college-football" as const;
+  readonly id = "espn-college-football-scoreboard";
+  readonly cacheSeconds = 20;
+  readonly providerName = "ESPN College Football";
+  readonly official = false;
+  readonly fallback = false;
+  readonly sourceUrl = "https://site.api.espn.com";
+  readonly capabilities = { schedule: true, liveScore: true, liveState: true, playByPlay: true, standings: true, results: true, stats: true, sessions: false, telemetry: false };
+
+  async getTeams() { return getCollegeFootballDirectory(); }
+  async getTeam(teamId: string) { return (await this.getTeams()).find((team) => team.providerId === teamId); }
+  async getTeamSchedule(teamId: string, now = new Date()) { return (await new EspnTeamProvider({ id: `espn-college-football-team-${teamId}`, sport: this.league, teamId, leaguePath: "football/college-football", cacheSeconds: 900 }).getSnapshot(now)).events; }
+  async getTeamSnapshot(teamId: string, now = new Date()) { return { events: await this.getTeamSchedule(teamId, now) }; }
+  async getScoreboard(dates?: string) { return fetchJson(espnFootballScoreboardUrl(this.league, dates), 20); }
+  async getEventSummary(eventId: string) { return fetchJson(espnFootballSummaryUrl(this.league, eventId), 5); }
+  async getPlayByPlay(eventId: string) { return fetchJson(espnFootballCoreEventUrl(this.league, eventId, "plays", 500), 2); }
+  async getDrives(eventId: string) { return fetchJson(espnFootballCoreEventUrl(this.league, eventId, "drives", 100), 3); }
+  async getRankings(): Promise<SportsStanding[]> {
+    const payload = await fetchJson(espnFootballRankingsUrl(new Date().getFullYear()), 900);
+    const root = payload && typeof payload === "object" ? payload as { rankings?: unknown } : {};
+    return (Array.isArray(root.rankings) ? root.rankings : []).flatMap((poll) => {
+      if (!poll || typeof poll !== "object") return [];
+      const record = poll as { name?: unknown; ranks?: unknown };
+      const pollName = typeof record.name === "string" ? record.name : "College Football rankings";
+      return Array.isArray(record.ranks) ? record.ranks.flatMap((rank) => {
+        if (!rank || typeof rank !== "object") return [];
+        const item = rank as { current?: unknown; team?: { id?: unknown; displayName?: unknown; name?: unknown }; record?: { summary?: unknown } };
+        const name = typeof item.team?.displayName === "string" ? item.team.displayName : typeof item.team?.name === "string" ? item.team.name : undefined;
+        const current = typeof item.current === "number" ? item.current : undefined;
+        return name && current !== undefined ? [{ id: `espn-cfb-ranking-${String(item.team?.id ?? name)}-${pollName}`, sport: "college-football" as const, name, team: name, rank: current, ...(typeof item.record?.summary === "string" ? { record: item.record.summary } : {}), source: "espn-cfb-rankings" }] : [];
+      }) : [];
+    });
+  }
+
+  async getSnapshot(now = new Date()): Promise<SportsProviderResult> {
+    const payload = await this.getScoreboard(scoreboardWindow(now));
+    const events = normalizeEspnFootballEvents(payload, this.sport, this.id);
+    return { events, standings: await this.getRankings().catch(() => []) };
+  }
+}
 
 export class EspnFootballProvider implements FootballProvider {
   readonly provider = "espn" as const;

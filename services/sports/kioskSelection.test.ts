@@ -73,6 +73,7 @@ test("venue-aware background keys cover each tracked sport", () => {
   assert.equal(normalizeKioskSportsEvent(event("f1", "f1", "2026-10-03T12:00:00Z", { venue: "Sepang International Circuit", metadata: { country: "Malaysia" } }))?.backgroundKey, "f1-malaysia");
   assert.equal(normalizeKioskSportsEvent(event("nascar", "nascar", "2026-10-03T12:00:00Z", { venue: "Daytona International Speedway" }))?.backgroundKey, "nascar-daytona");
   assert.equal(normalizeKioskSportsEvent(event("mlb", "mlb", "2026-10-03T12:00:00Z", { homeTeam: { name: "Los Angeles Angels" }, awayTeam: { name: "Seattle Mariners" } }))?.backgroundKey, "mlb-angel-stadium");
+  assert.equal(normalizeKioskSportsEvent(event("usu", "college-football", "2026-10-03T12:00:00Z", { homeTeam: { id: "328", name: "Utah State Aggies", abbreviation: "USU" }, awayTeam: { name: "Boise State Broncos", abbreviation: "BSU" } }))?.backgroundKey, "cfb-generic");
 });
 
 test("NASCAR Las Vegas resolves to its dedicated track key and asset", () => {
@@ -91,6 +92,7 @@ test("unknown venues use the sport-specific generic fallback", () => {
   assert.equal(selectKioskSportsBackground("mlb-unknown"), "/dashboard/sports/baseball.webp");
   assert.equal(selectKioskSportsBackground("f1-unknown"), "/dashboard/sports/motorsport.webp");
   assert.equal(selectKioskSportsBackground("nascar-unknown"), "/dashboard/sports/motorsport.webp");
+  assert.equal(selectKioskSportsBackground("cfb-generic"), "/dashboard/sports/stadium.webp");
 });
 
 test("F1 circuit aliases resolve to the imported venue backgrounds", () => {

@@ -7,7 +7,8 @@ export type KioskSport =
   | "nfl"
   | "mlb"
   | "f1"
-  | "nascar";
+  | "nascar"
+  | "college-football";
 
 const KIOSK_SPORT_PRIORITY: Record<
   KioskSport,
@@ -17,6 +18,7 @@ const KIOSK_SPORT_PRIORITY: Record<
   mlb: 300,
   f1: 200,
   nascar: 100,
+  "college-football": 250,
 };
 
 function isKioskSport(
@@ -26,7 +28,8 @@ function isKioskSport(
     sport === "nfl" ||
     sport === "mlb" ||
     sport === "f1" ||
-    sport === "nascar"
+    sport === "nascar" ||
+    sport === "college-football"
   );
 }
 
