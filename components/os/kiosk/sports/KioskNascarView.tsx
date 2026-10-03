@@ -37,7 +37,7 @@ export default function KioskNascarView({
 
             <div>
               <p className="text-[clamp(.65rem,1vw,.8rem)] font-semibold uppercase tracking-[0.24em] text-red-200/65">
-                Live NASCAR
+                {event.status === "live" ? "LIVE" : "UPCOMING"} • NASCAR
               </p>
 
               <h1 className="text-[clamp(1.15rem,2vw,1.7rem)] font-semibold tracking-tight text-white/90">

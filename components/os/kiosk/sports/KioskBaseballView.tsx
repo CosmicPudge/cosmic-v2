@@ -82,7 +82,7 @@ export default function KioskBaseballView({ event, live }: KioskBaseballViewProp
   return (
     <div className="kiosk-sports-view baseball-broadcast-wrap">
       <section className="baseball-broadcast" style={style} aria-label={`${event.title} live game center`}>
-        <BroadcastHeader />
+        <BroadcastHeader event={event} />
 
         <main className="baseball-broadcast-main">
           <div className="baseball-watermark baseball-watermark-away" aria-hidden="true">
@@ -113,10 +113,10 @@ export default function KioskBaseballView({ event, live }: KioskBaseballViewProp
   );
 }
 
-function BroadcastHeader() {
+function BroadcastHeader({ event }: { event: SportsEvent }) {
   return (
     <header className="broadcast-header">
-      <p><span className="broadcast-live-dot" /> LIVE <span aria-hidden="true">•</span> MLB</p>
+      <p><span className="broadcast-live-dot" /> {event.status === "live" ? "LIVE" : "UPCOMING"} <span aria-hidden="true">•</span> MLB</p>
       <p>COSMIC SPORTS</p>
     </header>
   );

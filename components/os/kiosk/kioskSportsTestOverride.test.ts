@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { normalizeKioskSportsEvent } from "@/services/sports/kioskSelection";
 import { createKioskSportsTestEvent, parseKioskSportsTestOverride } from "./kioskSportsTestOverride";
+import { getKioskSportsScenePresentation } from "./sports/KioskSportsScene";
 
 const devHost = "dev.cosmicpudge.shop";
 
@@ -21,6 +22,16 @@ test("venue overrides select MLB stadiums, F1 circuits, and NASCAR tracks", () =
   assert.equal(normalizeKioskSportsEvent(createKioskSportsTestEvent(f1!))?.backgroundKey, "f1-malaysia");
   assert.equal(normalizeKioskSportsEvent(createKioskSportsTestEvent(nascar!))?.backgroundKey, "nascar-las-vegas");
   assert.equal(createKioskSportsTestEvent(f1!).metadata?.sessionType, "Practice 2");
+});
+
+test("shared Sports scene presentation preserves exact venue backgrounds", () => {
+  const mlb = parseKioskSportsTestOverride(new URLSearchParams("sport=mlb&venue=bos"), devHost, "/kiosk");
+  const f1 = parseKioskSportsTestOverride(new URLSearchParams("sport=f1&venue=suzuka&session=practice3"), devHost, "/kiosk");
+  const nascar = parseKioskSportsTestOverride(new URLSearchParams("sport=nascar&venue=las-vegas"), devHost, "/kiosk");
+
+  assert.equal(getKioskSportsScenePresentation(createKioskSportsTestEvent(mlb!)).backgroundKey, "mlb-fenway-park");
+  assert.equal(getKioskSportsScenePresentation(createKioskSportsTestEvent(f1!)).backgroundKey, "f1-japan");
+  assert.equal(getKioskSportsScenePresentation(createKioskSportsTestEvent(nascar!)).backgroundSource, "exact-venue");
 });
 
 test("manual overrides are disabled outside the dedicated dev kiosk hosts", () => {

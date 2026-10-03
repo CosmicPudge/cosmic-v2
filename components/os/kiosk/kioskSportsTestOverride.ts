@@ -38,8 +38,10 @@ const VENUES: Record<KioskTestSport, Record<string, { label: string; team?: Spor
   mlb: {
     laa: { label: "Angel Stadium", team: MLB_TEAMS.laa },
     nyy: { label: "Yankee Stadium", team: MLB_TEAMS.nyy },
+    bos: { label: "Fenway Park", team: MLB_TEAMS.bos },
   },
   f1: {
+    suzuka: { label: "Suzuka Circuit", country: "Japan", track: "Suzuka" },
     malaysia: { label: "Sepang International Circuit", country: "Malaysia", track: "Sepang International Circuit" },
     monza: { label: "Autodromo Nazionale Monza", country: "Italy", track: "Monza" },
     austin: { label: "Circuit of the Americas", country: "United States", track: "COTA" },

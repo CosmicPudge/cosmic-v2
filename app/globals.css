@@ -1143,6 +1143,20 @@ html[data-cosmic-reduced-effects="true"] *::after {
 .kiosk-f1-view > section { background: linear-gradient(135deg, rgba(127,29,29,.28), rgba(3,8,18,.88) 55%); }
 .kiosk-nascar-view > section { background: linear-gradient(135deg, rgba(234,88,12,.22), rgba(3,8,18,.88) 55%); }
 .kiosk-football-view .bg-red-400, .kiosk-f1-view .bg-red-400, .kiosk-nascar-view .bg-red-400 { box-shadow: 0 0 10px rgba(248,113,113,.7); }
+.kiosk-sports-scene .kiosk-sports-view { height: 100%; min-height: 0; }
+.kiosk-sports-scene .kiosk-sports-view > section,
+.kiosk-sports-scene .baseball-broadcast {
+  border-color: rgba(255,255,255,.16);
+  background: linear-gradient(115deg, rgba(5,12,27,.68), rgba(5,12,27,.38) 58%, rgba(5,12,27,.56));
+  box-shadow: 0 26px 100px rgba(0,0,0,.34), inset 0 1px 0 rgba(255,255,255,.06);
+  backdrop-filter: blur(10px) saturate(1.08);
+}
+.kiosk-sports-scene .baseball-broadcast-wrap { height: 100%; padding: clamp(1rem, 3vw, 3rem); }
+.kiosk-sports-scene .baseball-broadcast { width: min(100%, 1500px); height: 100%; margin: 0 auto; border-radius: clamp(1.5rem, 3vw, 2.75rem); }
+.kiosk-sports-scene .kiosk-sports-view > section > header,
+.kiosk-sports-scene .broadcast-header { border-color: rgba(255,255,255,.12); }
+.kiosk-sports-scene .kiosk-sports-view > section > footer,
+.kiosk-sports-scene .broadcast-footer { border-color: rgba(255,255,255,.1); }
 .baseball-broadcast-wrap { height: 100dvh; width: 100%; padding: 0; }
 .baseball-broadcast { display: grid; grid-template-rows: 6% minmax(0, 1fr) 6%; height: 100%; width: 100%; overflow: hidden; border: 1px solid rgba(255,255,255,.12); border-radius: 0; background: linear-gradient(90deg, color-mix(in srgb, var(--away-bg-start, var(--away-secondary)) 72%, #02040a) 0%, color-mix(in srgb, var(--away-bg-end, var(--away-primary)) 42%, #02040a) 22%, #02040a 43%, #02040a 57%, color-mix(in srgb, var(--home-bg-end, var(--home-primary)) 42%, #02040a) 78%, color-mix(in srgb, var(--home-bg-start, var(--home-secondary)) 72%, #02040a) 100%); box-shadow: 0 18px 60px rgba(0,0,0,.3); }
 .broadcast-header, .broadcast-footer { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding-inline: clamp(.75rem, 3vw, 3rem); background: rgba(1,4,12,.78); color: rgba(255,255,255,.58); font-size: clamp(.55rem, .9vw, .82rem); font-weight: 700; letter-spacing: .2em; text-transform: uppercase; }
