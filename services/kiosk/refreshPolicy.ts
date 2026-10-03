@@ -1,4 +1,5 @@
 import type { SportsSnapshot } from "@/core/contracts/Sports";
+import { KIOSK_KICKOFF_GRACE_MS } from "@/services/sports/preferences";
 
 export type KioskRefreshMode = "idle" | "active" | "near-live" | "live";
 
@@ -21,7 +22,11 @@ export function musicRefreshMs(active: boolean, playing: boolean) {
 export function sportsRefreshMode(snapshot: SportsSnapshot | null, now = new Date()): KioskRefreshMode {
   if (!snapshot) return "active";
   if (snapshot.live.length > 0) return "live";
-  const nearLive = snapshot.upcoming.some((event) => event.start.getTime() - now.getTime() <= 60 * 60_000 && event.start.getTime() >= now.getTime());
+  const nearLive = snapshot.upcoming.some((event) => {
+    if (!["scheduled", "pregame"].includes(event.status)) return false;
+    const untilStart = event.start.getTime() - now.getTime();
+    return (untilStart >= 0 && untilStart <= 60 * 60_000) || (untilStart < 0 && untilStart >= -KIOSK_KICKOFF_GRACE_MS);
+  });
   return nearLive ? "near-live" : "idle";
 }
 

@@ -27,6 +27,37 @@ test("Utah State before tomorrow's Packers game is the next automatic event", ()
   assert.equal(selected?.event.id, "usu");
 });
 
+test("scheduled CFB remains upcoming just before kickoff and starting during grace", () => {
+  const kickoff = new Date("2026-10-03T23:30:00Z");
+  const game = event("usu", "college-football", kickoff.toISOString(), { homeTeam: { id: "328", name: "Utah State Aggies" }, awayTeam: { id: "68", name: "Boise State Broncos" } });
+  const before = normalizeKioskSportsEvent(game, new Date("2026-10-03T23:28:00Z"));
+  const sevenMinutesAfter = normalizeKioskSportsEvent(game, new Date("2026-10-03T23:37:00Z"));
+  const thirtyMinutesAfter = normalizeKioskSportsEvent(game, new Date("2026-10-04T00:00:00Z"));
+  assert.equal(before?.starting, false);
+  assert.equal(before?.displayState, "upcoming");
+  assert.equal(sevenMinutesAfter?.starting, true);
+  assert.equal(sevenMinutesAfter?.live, false);
+  assert.equal(sevenMinutesAfter?.displayState, "starting");
+  assert.equal(thirtyMinutesAfter?.starting, true);
+  assert.equal(selectKioskSportsEvent([game], new Date("2026-10-03T23:37:00Z"))?.event.id, "usu");
+});
+
+test("scheduled CFB beyond kickoff grace is released", () => {
+  const game = event("usu-expired", "college-football", "2026-10-03T23:30:00Z", { homeTeam: { id: "328", name: "Utah State Aggies" }, awayTeam: { id: "68", name: "Boise State Broncos" } });
+  const now = new Date("2026-10-04T00:16:00Z");
+  assert.equal(normalizeKioskSportsEvent(game, now)?.starting, false);
+  assert.equal(selectKioskSportsEvent([game], now), undefined);
+  assert.equal(describeKioskSportsSelection([game], now).candidates[0]?.exclusionReason, "start-before-now");
+});
+
+test("NFL receives the same kickoff grace and delayed games are not inferred live", () => {
+  const nfl = event("packers", "nfl", "2026-10-04T17:00:00Z", { homeTeam: { id: "27", name: "Tampa Bay Buccaneers" }, awayTeam: { id: "9", name: "Green Bay Packers" } });
+  const delayed = { ...nfl, status: "delayed" as const };
+  assert.equal(normalizeKioskSportsEvent(nfl, new Date("2026-10-04T17:07:00Z"))?.starting, true);
+  assert.equal(normalizeKioskSportsEvent(delayed, new Date("2026-10-04T17:07:00Z"))?.live, false);
+  assert.equal(normalizeKioskSportsEvent(delayed, new Date("2026-10-04T17:07:00Z"))?.starting, false);
+});
+
 test("live CFB beats upcoming NFL and a final CFB releases to NFL", () => {
   const now = new Date("2026-10-03T23:00:00Z");
   const cfb = event("usu-live", "college-football", "2026-10-03T22:00:00Z", { status: "live", homeTeam: { id: "328", name: "Utah State Aggies" } });

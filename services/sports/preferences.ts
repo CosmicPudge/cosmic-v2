@@ -20,6 +20,7 @@ export function eventMatchesPreferences(event: SportsEvent, preferences: CosmicU
 
 const TEAM_SPORTS: SportKind[] = ["mlb", "nfl", "college-football"];
 export const KIOSK_AUTO_SCREEN_SPORTS: SportKind[] = ["nfl", "college-football"];
+export const KIOSK_KICKOFF_GRACE_MS = 45 * 60_000;
 
 export function isTeamSport(sport: SportKind): boolean {
   return TEAM_SPORTS.includes(sport);

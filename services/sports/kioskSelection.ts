@@ -2,7 +2,7 @@ import type { SportsEvent } from "@/core/contracts/Sports";
 import { resolveSportsTeamIdentity } from "@/services/sports/identity";
 import { resolveF1DisplayState } from "@/services/sports/kioskDisplayState";
 import { resolveMlbVenue } from "@/services/sports/venues/mlb";
-import { KIOSK_AUTO_SCREEN_SPORTS } from "@/services/sports/preferences";
+import { KIOSK_AUTO_SCREEN_SPORTS, KIOSK_KICKOFF_GRACE_MS } from "@/services/sports/preferences";
 
 export type KioskTrackedSport = "nfl" | "f1" | "nascar" | "mlb" | "college-football";
 
@@ -24,7 +24,8 @@ export interface KioskSportsEvent {
   seriesContext?: string;
   sessionContext?: string;
   providerStatus: SportsEvent["status"];
-  displayState: "upcoming" | "live" | "complete";
+  displayState: "upcoming" | "starting" | "live" | "complete";
+  starting: boolean;
   inferredLive: boolean;
   broadcaster?: string;
 }
@@ -38,6 +39,7 @@ export interface KioskSportsSelectionCandidate {
   parsedUtcStart?: string;
   parsedLocalStart?: string;
   live: boolean;
+  starting?: boolean;
   favoriteWeight?: number;
   importance?: number;
   eligible: boolean;
@@ -139,22 +141,29 @@ function backgroundKey(event: SportsEvent): string {
   return "mlb-generic";
 }
 
+function isKickoffGraceEvent(event: SportsEvent, now: Date) {
+  if (!KIOSK_AUTO_SCREEN_SPORTS.includes(event.sport) || !["scheduled", "pregame"].includes(event.status)) return false;
+  const elapsed = now.getTime() - event.start.getTime();
+  return elapsed >= 0 && elapsed <= KIOSK_KICKOFF_GRACE_MS;
+}
+
 export function normalizeKioskSportsEvent(event: SportsEvent, now = new Date()): KioskSportsEvent | undefined {
   if (!["nfl", "f1", "nascar", "mlb", "college-football"].includes(event.sport)) return undefined;
   if (["final", "cancelled", "postponed"].includes(event.status)) return undefined;
   const sport = event.sport as KioskTrackedSport;
   const session = sessionKind(event);
   const f1Display = sport === "f1" ? resolveF1DisplayState(event, now) : undefined;
-  const live = f1Display ? f1Display.displayState === "live" : event.status === "live" || event.status === "delayed";
+  const live = f1Display ? f1Display.displayState === "live" : event.status === "live";
+  const starting = isKickoffGraceEvent(event, now);
   const importance = sport === "f1" || sport === "nascar" ? SESSION_IMPORTANCE[session] ?? 0 : sport === "mlb" && isPostseason(event) ? 90 : sport === "college-football" && event.metadata?.conference ? 55 : 50;
   const location = event.metadata?.location;
-  return { event, sport, sportLabel: SPORT_LABELS[sport], title: event.title, eventType: eventType(event, session), startTime: event.start, ...(event.end ? { endTime: event.end } : {}), live, importance, favoriteWeight: favoriteWeight(event), ...(event.venue ? { venueName: event.venue } : {}), ...(location ? { venueLocation: location } : {}), backgroundKey: backgroundKey(event), homeAware: sport === "nfl" || sport === "mlb" || sport === "college-football", ...(isPostseason(event) ? { seriesContext: event.metadata?.competition ?? "Postseason" } : {}), ...(sport === "f1" || sport === "nascar" ? { sessionContext: session } : {}), providerStatus: event.status, displayState: f1Display?.displayState ?? (live ? "live" : event.status === "final" ? "complete" : "upcoming"), inferredLive: f1Display?.inferredLive ?? false, ...(sport === "f1" ? { broadcaster: "Apple TV" } : event.broadcast ? { broadcaster: event.broadcast } : {}) };
+  return { event, sport, sportLabel: SPORT_LABELS[sport], title: event.title, eventType: eventType(event, session), startTime: event.start, ...(event.end ? { endTime: event.end } : {}), live, starting, importance, favoriteWeight: favoriteWeight(event), ...(event.venue ? { venueName: event.venue } : {}), ...(location ? { venueLocation: location } : {}), backgroundKey: backgroundKey(event), homeAware: sport === "nfl" || sport === "mlb" || sport === "college-football", ...(isPostseason(event) ? { seriesContext: event.metadata?.competition ?? "Postseason" } : {}), ...(sport === "f1" || sport === "nascar" ? { sessionContext: session } : {}), providerStatus: event.status, displayState: f1Display?.displayState ?? (live ? "live" : starting ? "starting" : event.status === "final" ? "complete" : "upcoming"), inferredLive: f1Display?.inferredLive ?? false, ...(sport === "f1" ? { broadcaster: "Apple TV" } : event.broadcast ? { broadcaster: event.broadcast } : {}) };
 }
 
 export function selectKioskSportsEvent(events: SportsEvent[], now = new Date()): KioskSportsEvent | undefined {
   const candidates = [...new Map(events.map((event) => [event.id, event])).values()].flatMap((event) => {
     const normalizedEvent = normalizeKioskSportsEvent(event, now);
-    return normalizedEvent && KIOSK_AUTO_SCREEN_SPORTS.includes(normalizedEvent.sport) && (normalizedEvent.live || normalizedEvent.startTime.getTime() >= now.getTime()) ? [normalizedEvent] : [];
+    return normalizedEvent && KIOSK_AUTO_SCREEN_SPORTS.includes(normalizedEvent.sport) && (normalizedEvent.live || normalizedEvent.starting || normalizedEvent.startTime.getTime() >= now.getTime()) ? [normalizedEvent] : [];
   });
   return candidates.sort(compareKioskSportsEvents)[0];
 }
@@ -168,7 +177,7 @@ export function describeKioskSportsSelection(events: SportsEvent[], now = new Da
     if (!normalizedEvent) exclusionReason = !["nfl", "f1", "nascar", "mlb", "college-football"].includes(event.sport) ? "unsupported-sport-or-terminal-status" : "invalid-event";
     else if (!KIOSK_AUTO_SCREEN_SPORTS.includes(normalizedEvent.sport)) exclusionReason = "sport-not-eligible-for-automatic-kiosk-screen";
     else if (!Number.isFinite(normalizedEvent.startTime.getTime())) exclusionReason = "invalid-start";
-    else if (!normalizedEvent.live && normalizedEvent.startTime.getTime() < now.getTime()) exclusionReason = "start-before-now";
+    else if (!normalizedEvent.live && !normalizedEvent.starting && normalizedEvent.startTime.getTime() < now.getTime()) exclusionReason = "start-before-now";
     const candidate: KioskSportsSelectionCandidate = {
       sport: event.sport,
       title: event.title,
@@ -177,6 +186,7 @@ export function describeKioskSportsSelection(events: SportsEvent[], now = new Da
       rawStart,
       ...(normalizedEvent ? { parsedUtcStart: normalizedEvent.startTime.toISOString(), parsedLocalStart: normalizedEvent.startTime.toLocaleString("en-US", { timeZone: localTimeZone, timeZoneName: "short" }) } : {}),
       live: normalizedEvent?.live ?? false,
+      ...(normalizedEvent?.starting ? { starting: true } : {}),
       favoriteWeight: normalizedEvent?.favoriteWeight,
       importance: normalizedEvent?.importance,
       eligible: !exclusionReason,
