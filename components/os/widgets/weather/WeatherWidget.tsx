@@ -19,6 +19,7 @@ import mapWeatherCondition from "@/components/icons/weather/mapWeatherCondition"
 import { resolveWeatherKioskScene } from "./weatherScene";
 import KioskSceneIdentity from "../shared/KioskSceneIdentity";
 import { useDeveloperKioskData } from "@/hooks/os/useDeveloperKioskData";
+import KioskConnectionStatus from "@/components/os/widgets/shared/KioskConnectionStatus";
 
 export default function WeatherWidget() {
   const { size, presentation } = useWidgetContext();
@@ -36,7 +37,7 @@ export default function WeatherWidget() {
   const scene = resolveWeatherKioskScene(kioskWeather, developmentWeatherOverride);
 
   if (presentation === "kiosk") {
-    return <KioskWeatherScene weather={kioskWeather} loading={developer.loading || loading} error={developer.error ?? error} scene={scene} locationLabel={developer.data?.location?.label} />;
+    return <KioskWeatherScene weather={kioskWeather} loading={developer.loading || loading} error={developer.error ?? error} scene={scene} locationLabel={developer.data?.location?.label} lastUpdated={developer.data?.refreshDiagnostics?.weather?.lastSuccessfulRefreshAt} />;
   }
 
   return (
@@ -75,7 +76,7 @@ export default function WeatherWidget() {
   );
 }
 
-function KioskWeatherScene({ weather, loading, error, scene, locationLabel }: { weather: WeatherData | null; loading: boolean; error: string | null; scene: ReturnType<typeof resolveWeatherKioskScene>; locationLabel?: string }) {
+function KioskWeatherScene({ weather, loading, error, scene, locationLabel, lastUpdated }: { weather: WeatherData | null; loading: boolean; error: string | null; scene: ReturnType<typeof resolveWeatherKioskScene>; locationLabel?: string; lastUpdated?: string }) {
   const isDay = scene.id.endsWith("day") || (weather !== null && weather.daylightProgress > 0 && weather.daylightProgress < 100);
   const forecast = weather?.hourlyForecast.slice(0, 5) ?? [];
 
@@ -102,6 +103,7 @@ function KioskWeatherScene({ weather, loading, error, scene, locationLabel }: { 
           </div>
           {weather && <WeatherIcon condition={mapWeatherCondition(weather.condition)} isDay={isDay} size={56} />}
         </div>
+        <div className="relative z-10 mt-1"><KioskConnectionStatus service="weather" lastUpdated={lastUpdated} /></div>
 
         {weather ? (
           <div className="relative z-10 mt-5 flex min-h-0 flex-1 flex-col justify-center gap-5 sm:mt-2 sm:flex-row sm:items-center sm:justify-between sm:gap-10">

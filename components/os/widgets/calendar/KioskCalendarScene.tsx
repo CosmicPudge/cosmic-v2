@@ -5,6 +5,7 @@ import { useClockTick } from "@/hooks/os/useClock";
 import { Widget } from "@/components/os/ui/widget";
 import KioskSceneIdentity from "../shared/KioskSceneIdentity";
 import { compactKioskLocation } from "@/services/kiosk/presentation";
+import KioskConnectionStatus from "../shared/KioskConnectionStatus";
 
 interface Props { calendar: CalendarSnapshot | null; loading: boolean; error: string | null }
 
@@ -20,7 +21,7 @@ export default function KioskCalendarScene({ calendar, loading, error }: Props) 
   return <Widget accent="calendar" className="kiosk-calendar-widget" contentPadding={false} sceneVariant="cinematic" imageUrl="/kiosk/scenes/calendar/calendar-cosmic-workspace.png" imagePosition="center center" imageOpacity={1} imageBlur={0}>
     <div className="kiosk-time-scene kiosk-calendar-scene">
       <KioskSceneIdentity sceneLabel="COSMIC • CALENDAR" variant="inline" />
-      <header className="kiosk-time-scene-heading"><div><p className="kiosk-time-scene-kicker">CALENDAR · TODAY</p><p className="kiosk-time-scene-date">{formatDate(now, { weekday: "long", month: "long", day: "numeric" }, timeZone)}</p></div>{error && calendar ? <p className="kiosk-time-scene-status">Updating</p> : null}</header>
+      <header className="kiosk-time-scene-heading"><div><p className="kiosk-time-scene-kicker">CALENDAR · TODAY</p><p className="kiosk-time-scene-date">{formatDate(now, { weekday: "long", month: "long", day: "numeric" }, timeZone)}<KioskConnectionStatus service="calendar" /></p></div>{error && calendar ? <p className="kiosk-time-scene-status">Updating</p> : null}</header>
       {loading && !calendar ? <div className="kiosk-time-scene-empty-state">Loading calendar…</div> : error && !calendar ? <div className="kiosk-time-scene-empty-state">Calendar temporarily unavailable</div> : !hasEvents ? <div className="kiosk-time-scene-empty-state"><p>Your day is clear</p><span>Nothing scheduled.</span></div> : <div className="kiosk-time-scene-grid">
         <section className="kiosk-time-scene-hero" aria-label="Up next"><p className="kiosk-time-scene-label">Up next</p>{nextEvent ? <><p className="kiosk-time-scene-hero-title">{nextEvent.title}</p><p className="kiosk-time-scene-hero-meta">{compactKioskLocation(nextEvent.location) ?? nextEvent.calendarName ?? "Personal calendar"}</p><p className="kiosk-time-scene-hero-due">{formatEventTime(nextEvent, timeZone, true)}</p></> : <p className="kiosk-time-scene-empty">No more events today</p>}</section>
         <div className="kiosk-time-scene-lists"><KioskEventList label={`TODAY · ${formatDate(now, { weekday: "long", month: "long", day: "numeric" }, timeZone)}`} items={todayEvents} timeZone={timeZone} excludeId={nextEvent?.id} empty="Nothing else scheduled today" /><KioskEventWeekList items={weekEvents} timeZone={timeZone} excludeId={nextEvent?.id} empty="No more events this week" /></div>

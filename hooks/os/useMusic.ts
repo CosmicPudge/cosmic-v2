@@ -7,6 +7,7 @@ import { useVisiblePolling } from "@/hooks/useVisiblePolling";
 import { useCosmicScope } from "@/services/storage/scope";
 import { kioskApiUrl } from "@/services/kioskRequest";
 import { KIOSK_REFRESH_MS, sceneRefreshDiagnostics } from "@/services/kiosk/refreshPolicy";
+import { useConnectionHealth } from "@/services/kiosk/ConnectionHealthProvider";
 
 interface UseMusicOptions {
   refreshMs?: number | ((snapshot: MusicSnapshot | null) => number);
@@ -21,6 +22,7 @@ export function isMusicConfigured(snapshot: MusicSnapshot | null) {
 
 export function useMusic({ refreshMs, enabled = true }: UseMusicOptions = {}) {
   const scope = useCosmicScope();
+  const { recordAttempt, recordSuccess, recordFailure } = useConnectionHealth();
   const [snapshot, setSnapshot] = useState<MusicSnapshot | null>(() => musicCache.get(scope.id) ?? null);
   const hasLoaded = useRef(false);
   const refreshPromiseRef = useRef<Promise<void> | null>(null);
@@ -47,6 +49,7 @@ export function useMusic({ refreshMs, enabled = true }: UseMusicOptions = {}) {
 
     const request = (async () => {
       try {
+        recordAttempt("music");
         const response = await fetch(kioskApiUrl("/api/music"), { credentials: "include", cache: "no-store" });
 
         if (!response.ok) {
@@ -61,7 +64,9 @@ export function useMusic({ refreshMs, enabled = true }: UseMusicOptions = {}) {
         musicCache.set(scope.id, next);
         setLastSuccessfulRefreshAt(new Date().toISOString());
         setRequestError(undefined);
+        recordSuccess("music");
       } catch (cause) {
+        recordFailure("music", "provider-error");
         setRequestError(cause instanceof Error ? cause.message : "Music is unavailable.");
       } finally {
         hasLoaded.current = true;
@@ -76,7 +81,7 @@ export function useMusic({ refreshMs, enabled = true }: UseMusicOptions = {}) {
     } finally {
       if (refreshPromiseRef.current === request) refreshPromiseRef.current = null;
     }
-  }, [scope.id]);
+  }, [recordAttempt, recordFailure, recordSuccess, scope.id]);
 
   useEffect(() => {
     if (!enabled || refreshMs !== undefined) return;

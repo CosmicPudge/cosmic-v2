@@ -4,6 +4,7 @@ import KioskSceneBackground from "../shared/KioskSceneBackground";
 import KioskSceneIdentity from "../shared/KioskSceneIdentity";
 import { formatKioskSchoolDue } from "@/services/kiosk/timeBuckets";
 import { formatKioskSchoolAssignment } from "@/services/kiosk/presentation";
+import KioskConnectionStatus from "../shared/KioskConnectionStatus";
 
 type Assignment = { id: string; title: string; due: string; course?: string; completed: boolean };
 
@@ -13,7 +14,7 @@ export default function KioskSchoolScene({ school }: { school: { assignments: As
     <KioskSceneBackground family="school" state={school.sceneState} />
     <KioskSceneIdentity sceneLabel="COSMIC • SCHOOL" />
     <div className="kiosk-time-scene">
-      <header className="kiosk-time-scene-heading"><div><p className="kiosk-time-scene-date">Academic workload</p></div>{school.error ? <p className="kiosk-time-scene-status">Updating</p> : null}</header>
+      <header className="kiosk-time-scene-heading"><div><p className="kiosk-time-scene-date">Academic workload</p><KioskConnectionStatus service="school" /></div>{school.error ? <p className="kiosk-time-scene-status">Updating</p> : null}</header>
       <div className="kiosk-time-scene-grid">
         <section className="kiosk-time-scene-hero" aria-label="Up next">
           <p className="kiosk-time-scene-label">Up next</p>

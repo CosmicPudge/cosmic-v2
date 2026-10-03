@@ -7,10 +7,13 @@ import { useSystem } from "@/components/os/system/SystemProvider";
 import { formatBytes } from "@/services/system/browser";
 import { Widget, WidgetBody, WidgetHeader, useWidgetContext } from "@/components/os/ui/widget";
 import KioskSceneFrame from "@/components/os/widgets/shared/KioskSceneFrame";
+import { useConnectionHealth } from "@/services/kiosk/ConnectionHealthProvider";
+import { formatKioskHealthTime, KIOSK_HEALTH_SERVICES } from "@/services/kiosk/connectionHealth";
 
 export default function SystemWidget() {
   const { size, presentation } = useWidgetContext();
   const { snapshot } = useSystem();
+  const { health } = useConnectionHealth();
   const priority = !snapshot.network.online
     ? "Offline"
     : snapshot.power.effective === "reduced"
@@ -20,7 +23,7 @@ export default function SystemWidget() {
         : "Ready";
 
   const backgroundState = snapshot.network.online ? snapshot.power.effective === "reduced" ? "reduced" : "healthy" : "offline";
-  if (presentation === "kiosk") return <KioskSceneFrame scene="system" backgroundState={backgroundState} eyebrow="COSMIC • SYSTEM" title={snapshot.network.online ? "SYSTEM ONLINE" : "SYSTEM OFFLINE"} subtitle="Kiosk mode"><div className="kiosk-system-status-layout"><div className="kiosk-system-status-grid"><div><p>Network</p><strong>{snapshot.network.online ? "Connected" : "Offline"}</strong></div><div><p>Display</p><strong>Active</strong></div><div><p>Mode</p><strong>Kiosk</strong></div></div><div className={`kiosk-system-status-orbit ${snapshot.network.online ? "is-online" : "is-offline"}`} aria-hidden="true"><span /><span /><span /></div></div></KioskSceneFrame>;
+  if (presentation === "kiosk") return <KioskSceneFrame scene="system" backgroundState={backgroundState} eyebrow="COSMIC • SYSTEM" title={snapshot.network.online ? "SYSTEM ONLINE" : "SYSTEM OFFLINE"} subtitle="Kiosk mode" healthService="network"><div className="kiosk-system-status-layout"><div className="kiosk-system-status-grid"><div><p>Network</p><strong>{snapshot.network.online ? "Connected" : "Offline"}</strong></div><div><p>Display</p><strong>Active</strong></div><div><p>Mode</p><strong>Kiosk</strong></div></div><div className={`kiosk-system-status-orbit ${snapshot.network.online ? "is-online" : "is-offline"}`} aria-hidden="true"><span /><span /><span /></div></div><div className="kiosk-system-health-grid">{KIOSK_HEALTH_SERVICES.filter((service) => service !== "network").map((service) => { const item = health[service]; const updated = formatKioskHealthTime(item.lastSuccessfulAt); return <div key={service}><p>{service}</p><strong>{item.state === "connected" ? "Connected" : item.state === "reconnecting" ? "Reconnecting" : `Lost at ${formatKioskHealthTime(item.lostAt) ?? "—"}`}</strong>{updated ? <span>Updated {updated}</span> : null}</div>; })}</div></KioskSceneFrame>;
   return <Widget accent="system">
     <WidgetHeader title="System" subtitle={size === "small" ? undefined : `${snapshot.device.deviceClass} · ${snapshot.display.profile}`} action={<Link href="/system" aria-label="Open System" className="rounded-xl p-2 text-white/45 transition hover:bg-white/8 hover:text-white focus-visible:outline-2 focus-visible:outline-cyan-200"><ArrowUpRight size={17} /></Link>} />
     <WidgetBody className={size === "small" ? "gap-2" : "gap-3"}>

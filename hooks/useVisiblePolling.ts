@@ -59,9 +59,14 @@ export function useVisiblePolling(
       clearTimer();
       if (document.visibilityState === "visible") void run().finally(schedule);
     };
+    const handleOnline = () => {
+      clearTimer();
+      if (document.visibilityState === "visible") void run().finally(schedule);
+    };
     const handleAuthLost = () => { authLost = true; clearTimer(); };
 
     document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("online", handleOnline);
     window.addEventListener("cosmic:auth-lost", handleAuthLost);
     if (document.visibilityState === "visible") {
       if (immediate) void run().finally(schedule);
@@ -72,6 +77,7 @@ export function useVisiblePolling(
       disposed = true;
       clearTimer();
       document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("online", handleOnline);
       window.removeEventListener("cosmic:auth-lost", handleAuthLost);
     };
   }, [enabled, immediate, intervalMs]);

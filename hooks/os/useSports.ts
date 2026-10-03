@@ -6,6 +6,7 @@ import { useVisiblePolling } from "@/hooks/useVisiblePolling";
 import { useCosmicScope } from "@/services/storage/scope";
 import { kioskApiUrl } from "@/services/kioskRequest";
 import { sceneRefreshDiagnostics, sportsRefreshMode, sportsRefreshMs } from "@/services/kiosk/refreshPolicy";
+import { useConnectionHealth } from "@/services/kiosk/ConnectionHealthProvider";
 
 type SportsHookOptions = { sport?: SportKind; refreshMs?: number | ((snapshot: SportsSnapshot | null) => number) };
 type SportsWireEvent = Omit<SportsEvent, "start" | "end"> & { start: string; end?: string };
@@ -93,6 +94,7 @@ async function requestSnapshot(sport: SportKind | undefined, scopeId: string): P
 export function useSports(options: SportsHookOptions = {}) {
   const { sport, refreshMs = (snapshot) => sportsRefreshMs(snapshot) } = options;
   const scope = useCosmicScope();
+  const { recordAttempt, recordSuccess, recordFailure } = useConnectionHealth();
   const cacheKey = `${scope.id}:${sport ?? "all"}`;
   const [data, setData] = useState<SportsSnapshot | null>(() => cachedSnapshot(cacheKey));
   const [loading, setLoading] = useState(() => !cachedSnapshot(cacheKey));
@@ -101,15 +103,18 @@ export function useSports(options: SportsHookOptions = {}) {
 
   const refresh = useCallback(async () => {
     try {
+      recordAttempt("sports");
       setError(null);
       setData(await requestSnapshot(sport, scope.id));
       setLastSuccessfulRefreshAt(new Date().toISOString());
+      recordSuccess("sports");
     } catch (reason) {
+      recordFailure("sports", "provider-error");
       setError(reason instanceof Error ? reason.message : "Sports data is temporarily unavailable.");
     } finally {
       setLoading(false);
     }
-  }, [sport, scope.id]);
+  }, [recordAttempt, recordFailure, recordSuccess, scope.id, sport]);
   useEffect(() => { const timer = window.setTimeout(() => { const next = cachedSnapshot(cacheKey); setData(next); setLoading(!next); setError(null); setLastSuccessfulRefreshAt(next ? next.lastUpdated.toISOString() : undefined); }, 0); return () => window.clearTimeout(timer); }, [cacheKey]);
   useEffect(() => {
     const invalidate = () => {
