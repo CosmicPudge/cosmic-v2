@@ -5,7 +5,7 @@ import { getAccountPreferences } from "@/services/settings/accountPreferences";
 import { referencePreferences } from "@/services/settings/preferences";
 import { isDatabaseConfigured } from "@/services/database/client";
 import { isDeveloperKioskRequest } from "@/services/kiosk/developerKiosk";
-import { eventMatchesKioskPreferences } from "@/services/sports/preferences";
+import { eventMatchesKioskAutoScreenPreferences } from "@/services/sports/preferences";
 
 function isSportKind(value: string): value is SportKind {
   return value === "mlb" || value === "nfl" || value === "nba" || value === "mls" || value === "f1" || value === "nascar" || value === "college-football";
@@ -18,7 +18,7 @@ export async function GET(request: Request) {
   const kioskEligibility = new URL(request.url).searchParams.get("kiosk") === "true";
   const requestedSport = new URL(request.url).searchParams.get("sport");
   const snapshot = await getSportsSnapshot(new Date(), preferences);
-  const filter = (event: SportsEvent) => kioskEligibility ? eventMatchesKioskPreferences(event, preferences) : true;
+  const filter = (event: SportsEvent) => kioskEligibility ? eventMatchesKioskAutoScreenPreferences(event, preferences) : true;
   const filteredSnapshot = kioskEligibility ? {
     ...snapshot,
     live: snapshot.live.filter(filter),

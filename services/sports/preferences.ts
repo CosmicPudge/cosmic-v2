@@ -19,6 +19,7 @@ export function eventMatchesPreferences(event: SportsEvent, preferences: CosmicU
 }
 
 const TEAM_SPORTS: SportKind[] = ["mlb", "nfl", "college-football"];
+export const KIOSK_AUTO_SCREEN_SPORTS: SportKind[] = ["nfl", "college-football"];
 
 export function isTeamSport(sport: SportKind): boolean {
   return TEAM_SPORTS.includes(sport);
@@ -28,6 +29,10 @@ export function isTeamSport(sport: SportKind): boolean {
 export function eventMatchesKioskPreferences(event: SportsEvent, preferences: CosmicUserPreferences = neutralPreferences): boolean {
   if (!eventMatchesPreferences(event, preferences)) return false;
   return !isTeamSport(event.sport) || isFavoriteEvent(event, preferences);
+}
+
+export function eventMatchesKioskAutoScreenPreferences(event: SportsEvent, preferences: CosmicUserPreferences = neutralPreferences): boolean {
+  return KIOSK_AUTO_SCREEN_SPORTS.includes(event.sport) && eventMatchesKioskPreferences(event, preferences);
 }
 
 export function followedEventRank(event: SportsEvent, preferences: CosmicUserPreferences = neutralPreferences): number {

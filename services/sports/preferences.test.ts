@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import type { SportsEvent } from "@/core/contracts/Sports";
 import { neutralPreferences } from "@/services/settings/preferences";
-import { eventMatchesKioskPreferences, favoriteFirstSections, isFavoriteEvent } from "./preferences";
+import { eventMatchesKioskAutoScreenPreferences, eventMatchesKioskPreferences, favoriteFirstSections, isFavoriteEvent } from "./preferences";
 
 function event(id: string, status: SportsEvent["status"], start: string, overrides: Partial<SportsEvent> = {}): SportsEvent {
   return { id, sport: "nfl", title: id, start: new Date(start), status, source: "test", ...overrides };
@@ -57,6 +57,8 @@ test("kiosk team-sport eligibility is hard favorite-only", () => {
   assert.equal(eventMatchesKioskPreferences(unrelated, preferences), false);
   assert.equal(eventMatchesKioskPreferences({ ...favorite, sport: "f1" }, preferences), true);
   assert.equal(eventMatchesKioskPreferences({ ...favorite, sport: "nascar" }, preferences), true);
+  assert.equal(eventMatchesKioskAutoScreenPreferences(favorite, preferences), false);
+  assert.equal(eventMatchesKioskAutoScreenPreferences({ ...favorite, sport: "nfl" }, preferences), false);
 });
 
 test("Utah State followed makes CFB eligible while unrelated games are excluded", () => {
@@ -66,10 +68,22 @@ test("Utah State followed makes CFB eligible while unrelated games are excluded"
   const alabama = event("alabama", "scheduled", "2026-10-03T17:00:00Z", { sport: "college-football", homeTeam: { id: "333", name: "Alabama Crimson Tide" }, awayTeam: { id: "61", name: "Georgia Bulldogs" } });
   assert.equal(eventMatchesKioskPreferences(usu, preferences), true);
   assert.equal(eventMatchesKioskPreferences(alabama, preferences), false);
+  assert.equal(eventMatchesKioskAutoScreenPreferences(usu, preferences), true);
+  assert.equal(eventMatchesKioskAutoScreenPreferences(alabama, preferences), false);
+});
+
+test("followed Packers game is auto-screen eligible while an unrelated NFL game is not", () => {
+  const preferences = structuredClone(neutralPreferences);
+  preferences.sports.followedTeams = [{ sport: "nfl", provider: "espn", teamId: "9", label: "Green Bay Packers" }];
+  const packers = event("packers", "live", "2026-10-03T19:00:00Z", { homeTeam: { id: "9", name: "Green Bay Packers" }, awayTeam: { id: "6", name: "Chicago Bears" } });
+  const chiefs = event("chiefs", "live", "2026-10-03T19:00:00Z", { homeTeam: { id: "13", name: "Kansas City Chiefs" }, awayTeam: { id: "23", name: "Las Vegas Raiders" } });
+  assert.equal(eventMatchesKioskAutoScreenPreferences(packers, preferences), true);
+  assert.equal(eventMatchesKioskAutoScreenPreferences(chiefs, preferences), false);
 });
 
 test("kiosk team sports with no followed teams have no eligible events", () => {
   const preferences = structuredClone(neutralPreferences);
   const game = event("usu", "scheduled", "2026-10-03T19:00:00Z", { sport: "college-football", homeTeam: { id: "328", name: "Utah State Aggies" }, awayTeam: { id: "68", name: "Boise State Broncos" } });
   assert.equal(eventMatchesKioskPreferences(game, preferences), false);
+  assert.equal(eventMatchesKioskAutoScreenPreferences(game, preferences), false);
 });

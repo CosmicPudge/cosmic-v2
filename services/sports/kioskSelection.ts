@@ -2,6 +2,7 @@ import type { SportsEvent } from "@/core/contracts/Sports";
 import { resolveSportsTeamIdentity } from "@/services/sports/identity";
 import { resolveF1DisplayState } from "@/services/sports/kioskDisplayState";
 import { resolveMlbVenue } from "@/services/sports/venues/mlb";
+import { KIOSK_AUTO_SCREEN_SPORTS } from "@/services/sports/preferences";
 
 export type KioskTrackedSport = "nfl" | "f1" | "nascar" | "mlb" | "college-football";
 
@@ -153,7 +154,7 @@ export function normalizeKioskSportsEvent(event: SportsEvent, now = new Date()):
 export function selectKioskSportsEvent(events: SportsEvent[], now = new Date()): KioskSportsEvent | undefined {
   const candidates = [...new Map(events.map((event) => [event.id, event])).values()].flatMap((event) => {
     const normalizedEvent = normalizeKioskSportsEvent(event, now);
-    return normalizedEvent && (normalizedEvent.live || normalizedEvent.startTime.getTime() >= now.getTime()) ? [normalizedEvent] : [];
+    return normalizedEvent && KIOSK_AUTO_SCREEN_SPORTS.includes(normalizedEvent.sport) && (normalizedEvent.live || normalizedEvent.startTime.getTime() >= now.getTime()) ? [normalizedEvent] : [];
   });
   return candidates.sort(compareKioskSportsEvents)[0];
 }
@@ -164,7 +165,8 @@ export function describeKioskSportsSelection(events: SportsEvent[], now = new Da
     const rawStart = event.start instanceof Date ? event.start.toISOString() : String(event.start);
     const normalizedEvent = normalizeKioskSportsEvent(event, now);
     let exclusionReason: string | undefined;
-    if (!normalizedEvent) exclusionReason = !["nfl", "f1", "nascar", "mlb"].includes(event.sport) ? "unsupported-sport-or-terminal-status" : "invalid-event";
+    if (!normalizedEvent) exclusionReason = !["nfl", "f1", "nascar", "mlb", "college-football"].includes(event.sport) ? "unsupported-sport-or-terminal-status" : "invalid-event";
+    else if (!KIOSK_AUTO_SCREEN_SPORTS.includes(normalizedEvent.sport)) exclusionReason = "sport-not-eligible-for-automatic-kiosk-screen";
     else if (!Number.isFinite(normalizedEvent.startTime.getTime())) exclusionReason = "invalid-start";
     else if (!normalizedEvent.live && normalizedEvent.startTime.getTime() < now.getTime()) exclusionReason = "start-before-now";
     const candidate: KioskSportsSelectionCandidate = {

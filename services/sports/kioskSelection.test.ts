@@ -14,27 +14,28 @@ test("live events beat future events across tracked sports", () => {
   assert.equal(selected?.event.id, "game");
 });
 
-test("upcoming events are ordered by actual start time across sports", () => {
-  const selected = selectKioskSportsEvent([event("later-race", "f1", "2026-10-05T12:00:00Z"), event("first-game", "mlb", "2026-10-02T14:00:00Z")], now);
+test("upcoming automatic kiosk events are ordered by actual start time", () => {
+  const selected = selectKioskSportsEvent([event("later-game", "college-football", "2026-10-05T12:00:00Z"), event("first-game", "nfl", "2026-10-02T14:00:00Z")], now);
   assert.equal(selected?.event.id, "first-game");
 });
 
-test("Sepang FP3 beats a later Packers game using actual MDT-relative start times", () => {
+test("automatic kiosk selection ignores earlier F1 sessions", () => {
   const eveningMdt = new Date("2026-10-03T04:00:00Z");
   const fp3 = event("fp3", "f1", "2026-10-03T04:30:00Z", { title: "Malaysian Grand Prix · Practice 3", venue: "Sepang International Circuit", metadata: { sessionType: "Practice 3", country: "Malaysia", circuit: "Sepang International Circuit" } });
   const packers = event("packers-later", "nfl", "2026-10-04T19:00:00Z", { title: "Green Bay Packers at Tampa Bay Buccaneers", awayTeam: { name: "Green Bay Packers", abbreviation: "GB" }, homeTeam: { name: "Tampa Bay Buccaneers", abbreviation: "TB" } });
   const selected = selectKioskSportsEvent([fp3, packers], eveningMdt);
-  assert.equal(selected?.event.id, "fp3");
+  assert.equal(selected?.event.id, "packers-later");
   const diagnostics = describeKioskSportsSelection([fp3, packers], eveningMdt, "America/Denver");
-  assert.equal(diagnostics.candidates.find((candidate) => candidate.title.includes("Practice 3"))?.finalRankingPosition, 1);
+  assert.equal(diagnostics.candidates.find((candidate) => candidate.title.includes("Practice 3"))?.eligible, false);
+  assert.equal(diagnostics.candidates.find((candidate) => candidate.title.includes("Practice 3"))?.exclusionReason, "sport-not-eligible-for-automatic-kiosk-screen");
   assert.equal(diagnostics.candidates.find((candidate) => candidate.title.includes("Practice 3"))?.parsedUtcStart, "2026-10-03T04:30:00.000Z");
 });
 
-test("qualifying becomes next after FP3 is complete", () => {
+test("completed and upcoming F1 sessions do not become automatic kiosk events", () => {
   const now = new Date("2026-10-03T06:00:00Z");
   const fp3 = event("fp3-complete", "f1", "2026-10-03T04:30:00Z", { title: "Malaysian Grand Prix · Practice 3", status: "final", metadata: { sessionType: "Practice 3", country: "Malaysia" } });
   const qualifying = event("qualifying", "f1", "2026-10-03T08:00:00Z", { title: "Malaysian Grand Prix · Qualifying", metadata: { sessionType: "Qualifying", country: "Malaysia" } });
-  assert.equal(selectKioskSportsEvent([fp3, qualifying], now)?.event.id, "qualifying");
+  assert.equal(selectKioskSportsEvent([fp3, qualifying], now), undefined);
 });
 
 test("NFL is selected after earlier F1 sessions are no longer upcoming", () => {
@@ -52,10 +53,30 @@ test("Packers and Angels receive favorite priority when timing is equal", () => 
   assert.equal(selected?.event.id, "packers");
 });
 
+test("only NFL and CFB can be automatic kiosk sports", () => {
+  const liveEvents = [
+    event("mlb-live", "mlb", "2026-10-02T12:00:00Z", { status: "live" }),
+    event("f1-live", "f1", "2026-10-02T12:00:00Z", { status: "live" }),
+    event("nascar-live", "nascar", "2026-10-02T12:00:00Z", { status: "live" }),
+    event("cfb-live", "college-football", "2026-10-02T12:00:00Z", { status: "live" }),
+  ];
+  assert.equal(selectKioskSportsEvent(liveEvents)?.event.id, "cfb-live");
+  assert.equal(selectKioskSportsEvent(liveEvents.filter((item) => item.sport !== "college-football")), undefined);
+});
+
+test("followed-team automatic sports remain eligible for live pinning", () => {
+  const selected = selectKioskSportsEvent([
+    event("packers-live", "nfl", "2026-10-02T12:00:00Z", { status: "live", homeTeam: { id: "9", name: "Green Bay Packers" } }),
+    event("usu-live", "college-football", "2026-10-02T12:00:00Z", { status: "live", homeTeam: { id: "328", name: "Utah State Aggies" } }),
+  ], now);
+  assert.equal(["packers-live", "usu-live"].includes(selected?.event.id ?? ""), true);
+});
+
 test("MLB postseason remains eligible when the Angels are inactive", () => {
-  const selected = selectKioskSportsEvent([event("alds", "mlb", "2026-10-02T14:00:00Z", { title: "ALDS Game 2: Yankees vs Orioles", homeTeam: { name: "New York Yankees", abbreviation: "NYY" }, awayTeam: { name: "Baltimore Orioles" }, metadata: { seasonType: "Postseason", competition: "ALDS" } })], now);
-  assert.equal(selected?.eventType, "POSTSEASON");
-  assert.equal(selected?.backgroundKey, "mlb-yankee-stadium");
+  const postseason = normalizeKioskSportsEvent(event("alds", "mlb", "2026-10-02T14:00:00Z", { title: "ALDS Game 2: Yankees vs Orioles", homeTeam: { name: "New York Yankees", abbreviation: "NYY" }, awayTeam: { name: "Baltimore Orioles" }, metadata: { seasonType: "Postseason", competition: "ALDS" } }));
+  assert.equal(postseason?.eventType, "POSTSEASON");
+  assert.equal(postseason?.backgroundKey, "mlb-yankee-stadium");
+  assert.equal(selectKioskSportsEvent([postseason!.event], now), undefined);
 });
 
 test("F1 session importance ranks race over sprint, qualifying, and practice", () => {
