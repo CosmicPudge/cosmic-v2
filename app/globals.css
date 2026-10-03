@@ -394,6 +394,11 @@ html, body { width: 100%; min-height: 100%; background: #030511; }
 .kiosk-system-health-grid p { color: rgba(226,232,240,.45); font-size: .58rem; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; }
 .kiosk-system-health-grid strong { display: block; margin-top: .25rem; overflow: hidden; color: rgba(248,250,252,.78); font-size: .78rem; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
 .kiosk-system-health-grid span { display: block; margin-top: .2rem; color: rgba(226,232,240,.38); font-size: .62rem; }
+.kiosk-system-update-status { display: flex; align-items: center; flex-wrap: wrap; gap: .7rem 1rem; max-width: 42rem; margin-top: .8rem; padding: .7rem .8rem; border: 1px solid rgba(103,232,249,.14); border-radius: .9rem; background: rgba(103,232,249,.045); }
+.kiosk-system-update-status p { color: rgba(165,243,252,.62); font-size: .58rem; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; }
+.kiosk-system-update-status strong { color: rgba(248,250,252,.8); font-size: .78rem; font-weight: 650; }
+.kiosk-system-update-status span { color: rgba(226,232,240,.45); font-size: .68rem; }
+.kiosk-system-update-status button { border: 1px solid rgba(165,243,252,.25); border-radius: .65rem; background: rgba(103,232,249,.12); padding: .35rem .65rem; color: rgba(236,254,255,.9); font-size: .68rem; font-weight: 700; }
 .kiosk-time-scene { position: relative; display: flex; height: 100%; min-height: 0; flex-direction: column; overflow: hidden; padding: clamp(1.25rem, 3vw, 2.5rem) clamp(1.25rem, 4vw, 4rem) clamp(1rem, 2vw, 2rem); color: rgba(248,250,252,.96); }
 .kiosk-time-scene::after { position: absolute; inset: 0; z-index: 0; pointer-events: none; background: linear-gradient(90deg, rgba(2,6,23,.5), rgba(2,6,23,.2) 46%, rgba(2,6,23,.08)); content: ""; }
 .kiosk-time-scene > * { position: relative; z-index: 1; }

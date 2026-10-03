@@ -9,6 +9,8 @@ import hashlib
 import os
 import secrets
 import tempfile
+import subprocess
+import time
 import urllib.error
 import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -21,6 +23,14 @@ LISTEN_PORT = int(os.environ.get("COSMIC_HELPER_PORT", "8765"))
 ALLOWED_ORIGIN = os.environ.get("COSMIC_HELPER_ORIGIN", SERVER_URL)
 ALLOWED_HOST = f"{LISTEN_HOST}:{LISTEN_PORT}"
 MAX_REQUEST_BYTES = 4096
+MAINTENANCE_ACTIONS = {
+    "check-system-updates",
+    "install-system-updates",
+    "restart-kiosk",
+    "reload-kiosk",
+    "reboot",
+}
+maintenance_state = {"state": "idle", "lastAttemptAt": None, "lastSuccessAt": None, "lastFailureCategory": None}
 
 
 def module_value(state, name):
@@ -95,6 +105,46 @@ def post_json(path, body, credential=None):
         return error.code, {"error": "server_error"}
     except (urllib.error.URLError, TimeoutError, ValueError) as error:
         return getattr(error, "code", 503), {"error": "server_unavailable"}
+
+
+def reboot_required():
+    return Path("/var/run/reboot-required").exists()
+
+
+def normalize_update_check(output):
+    lines = output.splitlines()
+    updates = [line for line in lines if line.startswith("Inst ")]
+    security = [line for line in updates if "security" in line.lower()]
+    return {"updatesAvailable": len(updates), "securityUpdates": len(security), "rebootRequired": reboot_required()}
+
+
+def run_maintenance_action(action, credential, expected_credential):
+    """Run only fixed, named maintenance operations; no client command is accepted."""
+    if action not in MAINTENANCE_ACTIONS:
+        return {"state": "failed", "errorCategory": "action-not-allowed"}
+    if not credential or not expected_credential or not secrets.compare_digest(credential, expected_credential):
+        return {"state": "failed", "errorCategory": "device-authorization-failed"}
+    maintenance_state["lastAttemptAt"] = int(time.time())
+    maintenance_state["lastFailureCategory"] = None
+    if action == "check-system-updates":
+        maintenance_state["state"] = "checking"
+        try:
+            completed = subprocess.run(["/usr/bin/apt-get", "-s", "upgrade"], capture_output=True, text=True, timeout=20, check=False)
+            if completed.returncode != 0:
+                raise RuntimeError("package-check-failed")
+            result = normalize_update_check(completed.stdout)
+            maintenance_state.update({"state": "available" if result["updatesAvailable"] else "idle", "lastSuccessAt": int(time.time())})
+            return {"state": maintenance_state["state"], "checkedAt": maintenance_state["lastAttemptAt"], **result}
+        except subprocess.TimeoutExpired:
+            maintenance_state.update({"state": "failed", "lastFailureCategory": "timeout"})
+            return {"state": "failed", "errorCategory": "timeout"}
+        except (OSError, RuntimeError):
+            maintenance_state.update({"state": "failed", "lastFailureCategory": "package-check-failed"})
+            return {"state": "failed", "errorCategory": "package-check-failed"}
+    # Installation/reboot actions are explicit protocol members but remain
+    # unavailable until a separately privileged maintenance unit is installed.
+    maintenance_state.update({"state": "failed", "lastFailureCategory": "privileged-helper-unavailable"})
+    return {"state": "failed", "errorCategory": "privileged-helper-unavailable"}
 
 
 def clear_owner_authentication(state):
@@ -211,7 +261,7 @@ class Handler(BaseHTTPRequestHandler):
         if self.headers.get("Host") != ALLOWED_HOST or self.headers.get("Origin") not in (None, ALLOWED_ORIGIN):
             self._send(403, {"error": "origin_not_allowed"})
             return
-        if self.path != "/v1/browser-handoff":
+        if self.path not in ("/v1/browser-handoff", "/v1/maintenance"):
             self._send(404, {"error": "not_found"})
             return
         try:
@@ -222,6 +272,17 @@ class Handler(BaseHTTPRequestHandler):
             body = json.loads(self.rfile.read(size).decode())
         except (ValueError, json.JSONDecodeError):
             self._send(400, {"error": "invalid_request"})
+            return
+        if self.path == "/v1/maintenance":
+            state = read_state()
+            credential = self.headers.get("Authorization", "")
+            credential = credential[7:] if credential.startswith("Bearer ") else ""
+            action = body.get("action") if isinstance(body, dict) else None
+            if not isinstance(action, str):
+                self._send(400, {"error": "action_required"})
+                return
+            result = run_maintenance_action(action, credential, credential_value(state) if state else None)
+            self._send(200 if result.get("errorCategory") is None else (403 if result.get("errorCategory") == "device-authorization-failed" else 503), result)
             return
         requested_boot = body.get("bootId") if isinstance(body, dict) else None
         pairing_code = body.get("pairingCode") if isinstance(body, dict) else None

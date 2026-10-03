@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import type { SportsEvent, SportsSnapshot } from "@/core/contracts/Sports";
 import { neutralPreferences } from "@/services/settings/preferences";
-import { buildSportsSignals, sportsSignalState, type SportsSignalState } from "./signals";
+import { buildSportsSignals, buildSportsSummaryNotifications, sportsSignalState, type SportsSignalState } from "./signals";
 
 const now = new Date("2026-09-05T12:00:00.000Z");
 function snapshot(events: SportsEvent[]): SportsSnapshot { return { live: events.filter((event) => event.status === "live" || event.status === "delayed"), upcoming: events.filter((event) => event.status === "scheduled" || event.status === "pregame"), recent: events.filter((event) => event.status === "final" || event.status === "postponed" || event.status === "cancelled"), featured: [], standings: {}, providerErrors: [], sources: [], lastUpdated: now }; }
@@ -45,4 +45,20 @@ test("favorite driver results require provider finishing data", () => {
 test("stale snapshots cannot create sports signals", () => {
   const event = game(); const stale = { ...snapshot([event]), lastUpdated: new Date("2026-09-05T11:00:00.000Z") };
   assert.deepEqual(buildSportsSignals(stale, preferences(), now), []);
+});
+
+test("summary notifications use followed sports without making favorites exclusive", () => {
+  const value = preferences();
+  value.sports.followedTeams = [{ sport: "nfl", provider: "espn", teamId: "9", label: "Green Bay Packers" }];
+  const other = game({ id: "other", title: "Chicago Bears at Detroit Lions", start: new Date("2026-09-05T13:00:00Z"), awayTeam: { id: "6", name: "Chicago Bears" }, homeTeam: { id: "10", name: "Detroit Lions" } });
+  const items = buildSportsSummaryNotifications(snapshot([game(), other]), value, now);
+  assert.equal(items.length, 2);
+  assert.equal(items[0].title, "NFL · TODAY");
+  assert.equal(items.some((item) => item.body?.includes("Chicago Bears")), true);
+});
+
+test("disabled sports do not produce summary notifications", () => {
+  const value = preferences();
+  value.sports.enabledSports = value.sports.enabledSports.filter((sport) => sport !== "nfl");
+  assert.deepEqual(buildSportsSummaryNotifications(snapshot([game()]), value, now), []);
 });

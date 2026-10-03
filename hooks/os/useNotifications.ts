@@ -10,7 +10,7 @@ import { usePersonalCapabilities } from "@/hooks/os/usePersonalCapabilities";
 import { useSchoolData } from "@/components/school/hooks/useSchoolData";
 import { deserializeSchoolBaseline, detectSchoolChanges, serializeSchoolBaseline, type SchoolBaseline } from "@/services/school/changes";
 import { useSettingsData } from "@/components/apps/settings/SettingsProvider";
-import { buildSportsSignals, sportsSignalState, type SportsSignalState } from "@/services/sports/signals";
+import { buildSportsSignals, buildSportsSummaryNotifications, sportsSignalState, type SportsSignalState } from "@/services/sports/signals";
 
 const SCHOOL_BASELINE_KEY = "cosmic.school.notification-baseline";
 const SPORTS_SIGNAL_STATE_KEY = "cosmic.sports.signal-state";
@@ -39,7 +39,14 @@ export function useNotifications() {
   const [sportsState, setSportsState] = useState<SportsSignalState>({});
   const [sportsStateReady, setSportsStateReady] = useState(false);
   const schoolChanges = useMemo(() => schoolBaselineReady && school.snapshot ? detectSchoolChanges(schoolBaseline, school.snapshot) : [], [school.snapshot, schoolBaseline, schoolBaselineReady]);
-  const sportsSignals = useMemo(() => sports && sportsStateReady ? buildSportsSignals(sports, settings.preferences, new Date(), sportsState, new Set(stored.map((item) => item.id))) : [], [settings.preferences, sports, sportsState, sportsStateReady, stored]);
+  const sportsSignals = useMemo(() => {
+    if (!sports) return [];
+    const now = new Date();
+    const existingIds = new Set(stored.map((item) => item.id));
+    const summaries = buildSportsSummaryNotifications(sports, settings.preferences, now);
+    const transitions = sportsStateReady ? buildSportsSignals(sports, settings.preferences, now, sportsState, existingIds) : [];
+    return [...summaries, ...transitions];
+  }, [settings.preferences, sports, sportsState, sportsStateReady, stored]);
   const incoming = useMemo(() => [...buildSourceNotifications(calendar, sports, sportsSignals), ...schoolChanges.map((change) => ({ id: change.id, source: "school" as const, title: change.title, body: change.body, timestamp: change.timestamp, read: false, importance: "important" as const, category: change.type, icon: "school", href: "/school" }))], [calendar, schoolChanges, sports, sportsSignals]);
   const merged = useMemo(() => mergeNotifications(stored, incoming), [stored, incoming]);
   useEffect(() => {

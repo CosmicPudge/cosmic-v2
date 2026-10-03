@@ -1,9 +1,9 @@
 import type { CosmicNotification } from "@/core/contracts/Notifications";
 import type { CosmicUserPreferences } from "@/core/contracts/Settings";
-import type { SportsEvent, SportsSnapshot } from "@/core/contracts/Sports";
-import { isFavoriteEvent } from "./preferences";
+import type { SportKind, SportsEvent, SportsSnapshot } from "@/core/contracts/Sports";
+import { eventMatchesPreferences, isFavoriteEvent } from "./preferences";
 
-export type SportsSignalType = "GAME_STARTING_SOON" | "RACE_STARTING_SOON" | "QUALIFYING_STARTING_SOON" | "GAME_LIVE" | "CLOSE_GAME" | "FINAL_RESULT" | "EVENT_DELAYED" | "EVENT_POSTPONED" | "QUALIFYING_RESULT" | "RACE_RESULT" | "FAVORITE_DRIVER_RESULT";
+export type SportsSignalType = "GAME_STARTING_SOON" | "RACE_STARTING_SOON" | "QUALIFYING_STARTING_SOON" | "GAME_LIVE" | "CLOSE_GAME" | "FINAL_RESULT" | "EVENT_DELAYED" | "EVENT_POSTPONED" | "QUALIFYING_RESULT" | "RACE_RESULT" | "FAVORITE_DRIVER_RESULT" | "SUMMARY_LIVE" | "SUMMARY_UPCOMING";
 export interface SportsPreviousState { status: SportsEvent["status"]; score?: string; }
 export type SportsSignalState = Record<string, SportsPreviousState>;
 
@@ -92,4 +92,51 @@ export function buildSportsSignals(snapshot: SportsSnapshot, preferences: Cosmic
 
 export function sportsSignalState(snapshot: SportsSnapshot): SportsSignalState {
   return Object.fromEntries([...snapshot.live, ...snapshot.upcoming, ...snapshot.recent].map((event) => [event.id, { status: event.status, ...(score(event) ? { score: score(event) } : {}) }]));
+}
+
+function summaryBody(event: SportsEvent, now: Date) {
+  if (event.status === "live" || event.status === "delayed") {
+    const currentScore = score(event);
+    const detail = event.statusDetail ?? event.metadata?.detail ?? "Live now";
+    return currentScore ? `${currentScore}${event.metadata?.period ? ` · ${event.metadata.period}${event.sport === "mlb" ? "th" : ""}` : ""}${event.metadata?.clock ? ` · ${event.metadata.clock}` : ""}` : detail;
+  }
+  const time = event.start.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  const day = event.start.toDateString() === now.toDateString() ? "Today" : event.start.toLocaleDateString([], { weekday: "short" });
+  return `${day} · ${time}${event.venue ? ` · ${event.venue}` : ""}`;
+}
+
+/**
+ * Passive, bounded notification summaries. Followed sports remain eligible;
+ * favorites only influence which items are selected first.
+ */
+export function buildSportsSummaryNotifications(snapshot: SportsSnapshot, preferences: CosmicUserPreferences, now = new Date()): CosmicNotification[] {
+  const candidates = [...snapshot.live, ...snapshot.upcoming]
+    .filter((event) => eventMatchesPreferences(event, preferences))
+    .filter((event) => event.start.getTime() >= now.getTime() - 6 * 60 * 60_000)
+    .sort((left, right) => {
+      const leftLive = left.status === "live" || left.status === "delayed";
+      const rightLive = right.status === "live" || right.status === "delayed";
+      if (leftLive !== rightLive) return Number(rightLive) - Number(leftLive);
+      const favoriteDelta = Number(isFavoriteEvent(right, preferences)) - Number(isFavoriteEvent(left, preferences));
+      if (favoriteDelta) return favoriteDelta;
+      return left.start.getTime() - right.start.getTime();
+    });
+  const selected: CosmicNotification[] = [];
+  const perSport = new Map<SportKind, number>();
+  for (const event of candidates) {
+    const count = perSport.get(event.sport) ?? 0;
+    if (count >= 2 || selected.length >= 8) continue;
+    perSport.set(event.sport, count + 1);
+    const live = event.status === "live" || event.status === "delayed";
+    selected.push(notification(
+      live ? "SUMMARY_LIVE" : "SUMMARY_UPCOMING",
+      event,
+      preferences,
+      now,
+      `${event.sport.toUpperCase()} · ${live ? "LIVE" : event.start.toDateString() === now.toDateString() ? "TODAY" : "NEXT"}`,
+      `${event.title} · ${summaryBody(event, now)}`,
+      live ? "important" : "normal",
+    ));
+  }
+  return selected;
 }

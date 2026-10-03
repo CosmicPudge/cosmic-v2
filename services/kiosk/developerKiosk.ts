@@ -7,6 +7,7 @@ import { getDeveloperKioskSchoolData } from "@/services/school/server";
 import { isAssignmentActiveForPlanning } from "@/services/school/planning";
 import type { CalendarEvent } from "@/core/contracts";
 import { KIOSK_REFRESH_MS, sceneRefreshDiagnostics } from "@/services/kiosk/refreshPolicy";
+import { readCosmicUpdateStatus } from "@/services/settings/cosmicUpdate";
 
 const DEFAULT_HOST = "dev.cosmicpudge.shop";
 const MAX_EVENTS = 8;
@@ -80,6 +81,7 @@ export async function getDeveloperKioskData() {
       calendar: ReturnType<typeof sceneRefreshDiagnostics>;
       school: ReturnType<typeof sceneRefreshDiagnostics>;
     };
+    cosmicUpdate: ReturnType<typeof readCosmicUpdateStatus>;
   } = {
     location,
     weather: null,
@@ -90,6 +92,7 @@ export async function getDeveloperKioskData() {
       calendar: sceneRefreshDiagnostics(undefined, KIOSK_REFRESH_MS.calendar),
       school: sceneRefreshDiagnostics(undefined, KIOSK_REFRESH_MS.school),
     },
+    cosmicUpdate: readCosmicUpdateStatus(now),
   };
 
   if (location) {

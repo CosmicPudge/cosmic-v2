@@ -83,6 +83,14 @@ class HelperLifecycleTests(unittest.TestCase):
         self.assertNotIn("credential", {"state": HELPER.classify_handoff_failure(503, {"error": "server_unavailable"})})
         self.assertNotIn("token", {"state": "needs_provisioning", "deviceId": "test-device"})
 
+    def test_maintenance_rejects_arbitrary_action(self):
+        result = HELPER.run_maintenance_action("exec", "synthetic-credential", "synthetic-credential")
+        self.assertEqual(result["errorCategory"], "action-not-allowed")
+
+    def test_maintenance_requires_device_credential(self):
+        result = HELPER.run_maintenance_action("check-system-updates", "wrong", "synthetic-credential")
+        self.assertEqual(result["errorCategory"], "device-authorization-failed")
+
 
 if __name__ == "__main__":
     unittest.main()
