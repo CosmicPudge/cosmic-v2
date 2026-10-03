@@ -1,6 +1,7 @@
 "use client";
 
 import type { SportsEvent } from "@/core/contracts/Sports";
+import { resolveF1DisplayState } from "@/services/sports/kioskDisplayState";
 
 interface KioskF1ViewProps {
   event: SportsEvent;
@@ -9,6 +10,7 @@ interface KioskF1ViewProps {
 export default function KioskF1View({
   event,
 }: KioskF1ViewProps) {
+  const display = resolveF1DisplayState(event);
   const session =
     event.metadata?.sessionType ??
     "Race";
@@ -37,7 +39,7 @@ export default function KioskF1View({
 
             <div>
               <p className="text-[clamp(.65rem,1vw,.8rem)] font-semibold uppercase tracking-[0.24em] text-red-200/65">
-                Live Formula 1
+                {display.displayState === "upcoming" ? "Upcoming Formula 1" : display.displayState === "live" ? "Live Formula 1" : "Formula 1 Complete"}
               </p>
 
               <h1 className="text-[clamp(1.15rem,2vw,1.7rem)] font-semibold tracking-tight text-white/90">
@@ -75,11 +77,11 @@ export default function KioskF1View({
             {/* Live status */}
             <div className="mx-auto mt-[clamp(2rem,6vh,4rem)] max-w-4xl rounded-[2rem] border border-white/[0.08] bg-white/[0.035] px-[clamp(1.5rem,4vw,3rem)] py-[clamp(1.5rem,4vh,2.5rem)] text-center">
               <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-white/30">
-                Current Race Status
+                  {display.displayState === "upcoming" ? "Up Next" : display.displayState === "live" ? "Live" : "Final"}
               </p>
 
               <p className="mt-3 text-[clamp(2rem,6vw,5rem)] font-black leading-none tracking-[-0.05em] text-white">
-                {event.statusDetail ?? "LIVE"}
+                {display.displayState === "upcoming" ? formatStartsIn(display.scheduledStart) : event.statusDetail ?? (display.displayState === "live" ? "LIVE" : "COMPLETE")}
               </p>
             </div>
 
@@ -133,4 +135,11 @@ export default function KioskF1View({
       </section>
     </div>
   );
+}
+
+function formatStartsIn(start: Date) {
+  const minutes = Math.max(0, Math.ceil((start.getTime() - Date.now()) / 60_000));
+  if (minutes <= 1) return "STARTS SOON";
+  const hours = Math.floor(minutes / 60);
+  return hours ? `STARTS IN ${hours}H ${minutes % 60}M` : `STARTS IN ${minutes}M`;
 }

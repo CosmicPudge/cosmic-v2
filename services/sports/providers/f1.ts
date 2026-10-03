@@ -78,6 +78,7 @@ export class F1Provider implements SportsProvider {
         ...(end ? { end } : {}),
         status: status(competition?.status, now, start, end),
         ...(detail ? { statusDetail: detail } : {}),
+        broadcast: "Apple TV",
         ...(string(venueRecord?.fullName) ? { venue: string(venueRecord?.fullName) } : {}),
         source: "espn",
         metadata: {
@@ -112,7 +113,7 @@ export class F1Provider implements SportsProvider {
         const location = isRecord(circuit.Location) ? [string(circuit.Location.locality), string(circuit.Location.country)].filter(Boolean).join(", ") : undefined;
         const circuitId = string(circuit.circuitId);
         const weekend = [{ label: "Practice 1", value: isRecord(race.FirstPractice) ? race.FirstPractice : undefined }, { label: "Practice 2", value: isRecord(race.SecondPractice) ? race.SecondPractice : undefined }, { label: "Practice 3", value: isRecord(race.ThirdPractice) ? race.ThirdPractice : undefined }, { label: "Sprint", value: isRecord(race.Sprint) ? race.Sprint : undefined }, { label: "Qualifying", value: isRecord(race.Qualifying) ? race.Qualifying : undefined }, { label: "Race", value: string(race.date) ? { date: race.date, time: race.time } : undefined }];
-        return weekend.flatMap(({ label, value }) => { const dateValue = value && string(value.date); if (!dateValue) return []; const country = isRecord(circuit.Location) ? string(circuit.Location.country) : undefined; const start = parseF1SessionStart(dateValue, string(value?.time), country); if (Number.isNaN(start.getTime())) return []; const kind = sessionKind(label); const sessionId = f1SessionKey(label); const title = `${raceName} · ${label}`; return [{ id: `jolpica-f1:${season}:${round}:${sessionId}`, sport: "f1" as const, title, start, status: status(undefined, now, start), venue: string(circuit.circuitName), source: "jolpica", provider: "jolpica", providerName: "Jolpica F1", official: false, fallback: true, sourceUrl: "https://api.jolpi.ca/docs/", metadata: { competition: raceName, eventName: title, sessionType: label, sessionKind: kind, circuit: string(circuit.circuitName), ...(circuitId ? { circuitId } : {}), ...(country ? { country } : {}), ...(location ? { location } : {}) } }]; });
+        return weekend.flatMap(({ label, value }) => { const dateValue = value && string(value.date); if (!dateValue) return []; const country = isRecord(circuit.Location) ? string(circuit.Location.country) : undefined; const start = parseF1SessionStart(dateValue, string(value?.time), country); if (Number.isNaN(start.getTime())) return []; const kind = sessionKind(label); const sessionId = f1SessionKey(label); const title = `${raceName} · ${label}`; return [{ id: `jolpica-f1:${season}:${round}:${sessionId}`, sport: "f1" as const, title, start, status: status(undefined, now, start), venue: string(circuit.circuitName), broadcast: "Apple TV", source: "jolpica", provider: "jolpica", providerName: "Jolpica F1", official: false, fallback: true, sourceUrl: "https://api.jolpi.ca/docs/", metadata: { competition: raceName, eventName: title, sessionType: label, sessionKind: kind, circuit: string(circuit.circuitName), ...(circuitId ? { circuitId } : {}), ...(country ? { country } : {}), ...(location ? { location } : {}) } }]; });
       });
     } catch { return []; }
   }

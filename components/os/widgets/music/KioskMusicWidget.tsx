@@ -44,7 +44,7 @@ export default function KioskMusicWidget({ music }: { music: ReturnType<typeof u
   useEffect(() => {
     setMusicPlaying(source, Boolean(active && music.playback?.playing));
     return () => setMusicPlaying(source, false);
-  }, [active, music.playback?.playing, setMusicPlaying, source]);
+  }, [active, music.playback?.playing, music.playback?.updatedAt, setMusicPlaying, source]);
 
   return <Widget accent="music" className="kiosk-music-widget" contentPadding={false} hover={false} imageOpacity={0} imageBlur={0}>
     <div className="kiosk-music-scene">

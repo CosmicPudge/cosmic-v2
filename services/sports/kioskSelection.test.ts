@@ -118,6 +118,10 @@ test("F1 session types preserve the same venue background", () => {
   }
 });
 
+test("F1 sessions use Apple TV as their kiosk broadcaster", () => {
+  assert.equal(normalizeKioskSportsEvent(event("f1-broadcast", "f1", "2026-10-03T12:00:00Z", { title: "Malaysia Grand Prix · Qualifying", metadata: { sessionType: "Qualifying" } }))?.broadcaster, "Apple TV");
+});
+
 test("unknown F1 venues use the generic motorsport fallback", () => {
   const normalized = normalizeKioskSportsEvent(event("unknown-f1", "f1", "2026-10-03T12:00:00Z", { venue: "Unknown International Circuit", metadata: { country: "Unknown" } }));
   assert.equal(normalized?.backgroundKey, "f1-generic");

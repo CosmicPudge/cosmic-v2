@@ -20,6 +20,7 @@ import type {
 import KioskSlide from "./KioskSlide";
 import { useKioskAmbientFrame } from "./KioskAmbientFrame";
 import KioskSportsOverride from "./KioskSportsOverride";
+import KioskSportsAlert from "./KioskSportsAlert";
 import KioskSceneFrame from "@/components/os/widgets/shared/KioskSceneFrame";
 
 import {
@@ -32,7 +33,8 @@ import { useEntitlements } from "@/hooks/os/useEntitlements";
 import { resolveKioskSwipeDirection, shouldResetKioskRotationAfterSwipe } from "./kioskSlideshowInteraction";
 import { createKioskSportsTestEvent, parseKioskSportsTestOverride } from "./kioskSportsTestOverride";
 import { KIOSK_MUSIC_PLAYBACK_STALE_MS, shouldPauseKioskForMusic } from "./kioskMusicRotation";
-import { selectKioskSportsEvent } from "@/services/sports/kioskSelection";
+import { normalizeKioskSportsEvent, selectKioskSportsEvent } from "@/services/sports/kioskSelection";
+import { selectKioskPreEventAlert } from "./kioskAttention";
 
 const TEST_SPORTS: SportKind[] = [
   "nfl",
@@ -146,6 +148,8 @@ function createTestEvent(
 
 type SportsPresentationState = {
   event: SportsEvent;
+  kind: "live" | "alert";
+  thresholdMinutes?: number;
   phase: "entering" | "active" | "exiting";
 };
 
@@ -212,8 +216,8 @@ function KioskNormalSlideshow() {
       testSportParam,
     ]);
 
-  const liveEvent = useMemo(() => {
-    if (manualSportsOverride) return createKioskSportsTestEvent(manualSportsOverride);
+  const sportsSelection = useMemo(() => {
+    if (manualSportsOverride) return normalizeKioskSportsEvent(createKioskSportsTestEvent(manualSportsOverride));
     if (
       testModeAllowed &&
       testSportParam === "none"
@@ -222,14 +226,14 @@ function KioskNormalSlideshow() {
     }
 
     if (testLiveEvent) {
-      return testLiveEvent;
+      return normalizeKioskSportsEvent(testLiveEvent);
     }
 
     if (!sportsData) {
       return null;
     }
 
-    return selectKioskSportsEvent([...sportsData.live, ...sportsData.upcoming, ...sportsData.featured])?.event ?? null;
+    return selectKioskSportsEvent([...sportsData.live, ...sportsData.upcoming, ...sportsData.featured]);
   }, [
     manualSportsOverride,
     sportsData,
@@ -237,6 +241,15 @@ function KioskNormalSlideshow() {
     testModeAllowed,
     testSportParam,
   ]);
+
+  const sportsEvents = useMemo(() => sportsData ? [...sportsData.live, ...sportsData.upcoming, ...sportsData.featured] : [], [sportsData]);
+  const [dismissedLiveEventId, setDismissedLiveEventId] = useState<string | null>(null);
+  const [firedAlertKeys, setFiredAlertKeys] = useState<string[]>([]);
+  const liveEvent = sportsSelection && sportsSelection.live && sportsSelection.event.id !== dismissedLiveEventId ? sportsSelection.event : null;
+  const preEventAlert = useMemo(() => {
+    if (liveEvent || manualSportsOverride || (testModeAllowed && testSportParam)) return null;
+    return selectKioskPreEventAlert(sportsEvents, new Date(), new Set(firedAlertKeys));
+  }, [firedAlertKeys, liveEvent, manualSportsOverride, sportsEvents, testModeAllowed, testSportParam]);
 
   const [currentIndex, setCurrentIndex] =
     useState(0);
@@ -292,7 +305,9 @@ function KioskNormalSlideshow() {
   const pauseReason: KioskSlideshowPauseReason = manualPaused ? "manual" : musicHold ? "music-playing" : null;
 
   const goToRelativeSlide = useCallback((direction: 1 | -1, resetTimer: boolean) => {
-    if (liveEvent || sportsPresentation || widgets.length <= 1 || transitionLockRef.current) return false;
+    if (widgets.length <= 1 || transitionLockRef.current) return false;
+    if (sportsPresentation?.kind === "live") setDismissedLiveEventId(sportsPresentation.event.id);
+    if (sportsPresentation) setSportsPresentation(null);
 
     transitionLockRef.current = true;
     setCurrentIndex((current) => {
@@ -310,18 +325,21 @@ function KioskNormalSlideshow() {
       transitionTimeoutRef.current = null;
     }, KIOSK_TRANSITION_DURATION_MS);
     return true;
-  }, [liveEvent, sportsPresentation, widgets.length]);
+  }, [sportsPresentation, widgets.length]);
 
   useEffect(() => {
     const syncTimeout = window.setTimeout(() => {
       if (liveEvent) {
         setSportsPresentation((current) => {
-          if (!current) return { event: liveEvent, phase: "entering" };
-          if (current.phase === "exiting") return { event: liveEvent, phase: "entering" };
+          if (!current) return { event: liveEvent, kind: "live", phase: "entering" };
+          if (current.phase === "exiting") return { event: liveEvent, kind: "live", phase: "entering" };
           return current.event.id === liveEvent.id
             ? current
-            : { event: liveEvent, phase: current.phase };
+            : { event: liveEvent, kind: "live", phase: current.phase };
         });
+      } else if (preEventAlert) {
+        setFiredAlertKeys((current) => current.includes(preEventAlert.key) ? current : [...current, preEventAlert.key]);
+        setSportsPresentation((current) => current ?? { event: preEventAlert.event, kind: "alert", thresholdMinutes: preEventAlert.thresholdMinutes, phase: "entering" });
       } else {
         setSportsPresentation((current) => {
           if (!current || current.phase === "exiting") return current;
@@ -331,7 +349,7 @@ function KioskNormalSlideshow() {
     }, 0);
 
     return () => window.clearTimeout(syncTimeout);
-  }, [liveEvent]);
+  }, [liveEvent, preEventAlert]);
 
   useEffect(() => {
     if (!sportsPresentation) return;
@@ -351,6 +369,11 @@ function KioskNormalSlideshow() {
         setSportsPresentation(null);
         sportsPresentationTransitionRef.current = null;
       }, KIOSK_TRANSITION_DURATION_MS);
+    } else if (sportsPresentation.kind === "alert") {
+      sportsPresentationTransitionRef.current = window.setTimeout(() => {
+        setSportsPresentation((current) => current?.kind === "alert" ? { ...current, phase: "exiting" } : current);
+        sportsPresentationTransitionRef.current = null;
+      }, 30_000);
     }
 
     return () => {
@@ -362,7 +385,7 @@ function KioskNormalSlideshow() {
   }, [sportsPresentation]);
 
   useEffect(() => {
-    if (liveEvent || paused) {
+    if (liveEvent || sportsPresentation || paused) {
       return;
     }
 
@@ -386,6 +409,7 @@ function KioskNormalSlideshow() {
     };
   }, [
     liveEvent,
+    sportsPresentation,
     paused,
     goToRelativeSlide,
     timerEpoch,
@@ -441,7 +465,7 @@ function KioskNormalSlideshow() {
   }, [bootId, goToRelativeSlide]);
 
   const handlePointerDown = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
-    if (liveEvent || sportsPresentation || widgets.length <= 1 || (event.pointerType === "mouse" && event.button !== 0)) return;
+    if (widgets.length <= 1 || (event.pointerType === "mouse" && event.button !== 0)) return;
     gestureRef.current = {
       pointerId: event.pointerId,
       startX: event.clientX,
@@ -450,7 +474,7 @@ function KioskNormalSlideshow() {
       lastY: event.clientY,
     };
     event.currentTarget.setPointerCapture(event.pointerId);
-  }, [liveEvent, sportsPresentation, widgets.length]);
+  }, [widgets.length]);
 
   const handlePointerMove = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
     const gesture = gestureRef.current;
@@ -541,7 +565,7 @@ function KioskNormalSlideshow() {
 
       {sportsPresentation ? (
         <div className={`kiosk-sports-transition-layer kiosk-sports-transition-sports kiosk-sports-transition-sports-${sportsPresentation.phase}`} aria-hidden={sportsPresentation.phase !== "active"}>
-          <KioskSportsOverride event={sportsPresentation.event} />
+          {sportsPresentation.kind === "alert" ? <KioskSportsAlert event={sportsPresentation.event} thresholdMinutes={sportsPresentation.thresholdMinutes ?? 5} /> : <KioskSportsOverride event={sportsPresentation.event} />}
         </div>
       ) : null}
 

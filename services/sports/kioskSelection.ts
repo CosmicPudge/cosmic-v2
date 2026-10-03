@@ -1,5 +1,6 @@
 import type { SportsEvent } from "@/core/contracts/Sports";
 import { resolveSportsTeamIdentity } from "@/services/sports/identity";
+import { resolveF1DisplayState } from "@/services/sports/kioskDisplayState";
 
 export type KioskTrackedSport = "nfl" | "f1" | "nascar" | "mlb";
 
@@ -20,6 +21,10 @@ export interface KioskSportsEvent {
   homeAware: boolean;
   seriesContext?: string;
   sessionContext?: string;
+  providerStatus: SportsEvent["status"];
+  displayState: "upcoming" | "live" | "complete";
+  inferredLive: boolean;
+  broadcaster?: string;
 }
 
 export interface KioskSportsSelectionCandidate {
@@ -134,20 +139,21 @@ function backgroundKey(event: SportsEvent): string {
   return matchBackgroundKey(`${homeTeam} ${homeVenue}`, MLB_STADIUM_BACKGROUND_KEYS) ?? "mlb-generic";
 }
 
-export function normalizeKioskSportsEvent(event: SportsEvent): KioskSportsEvent | undefined {
+export function normalizeKioskSportsEvent(event: SportsEvent, now = new Date()): KioskSportsEvent | undefined {
   if (!["nfl", "f1", "nascar", "mlb"].includes(event.sport)) return undefined;
   if (["final", "cancelled", "postponed"].includes(event.status)) return undefined;
   const sport = event.sport as KioskTrackedSport;
   const session = sessionKind(event);
-  const live = event.status === "live" || event.status === "delayed";
+  const f1Display = sport === "f1" ? resolveF1DisplayState(event, now) : undefined;
+  const live = f1Display ? f1Display.displayState === "live" : event.status === "live" || event.status === "delayed";
   const importance = sport === "f1" || sport === "nascar" ? SESSION_IMPORTANCE[session] ?? 0 : sport === "mlb" && isPostseason(event) ? 90 : 50;
   const location = event.metadata?.location;
-  return { event, sport, sportLabel: SPORT_LABELS[sport], title: event.title, eventType: eventType(event, session), startTime: event.start, ...(event.end ? { endTime: event.end } : {}), live, importance, favoriteWeight: favoriteWeight(event), ...(event.venue ? { venueName: event.venue } : {}), ...(location ? { venueLocation: location } : {}), backgroundKey: backgroundKey(event), homeAware: sport === "nfl" || sport === "mlb", ...(isPostseason(event) ? { seriesContext: event.metadata?.competition ?? "Postseason" } : {}), ...(sport === "f1" || sport === "nascar" ? { sessionContext: session } : {}) };
+  return { event, sport, sportLabel: SPORT_LABELS[sport], title: event.title, eventType: eventType(event, session), startTime: event.start, ...(event.end ? { endTime: event.end } : {}), live, importance, favoriteWeight: favoriteWeight(event), ...(event.venue ? { venueName: event.venue } : {}), ...(location ? { venueLocation: location } : {}), backgroundKey: backgroundKey(event), homeAware: sport === "nfl" || sport === "mlb", ...(isPostseason(event) ? { seriesContext: event.metadata?.competition ?? "Postseason" } : {}), ...(sport === "f1" || sport === "nascar" ? { sessionContext: session } : {}), providerStatus: event.status, displayState: f1Display?.displayState ?? (live ? "live" : event.status === "final" ? "complete" : "upcoming"), inferredLive: f1Display?.inferredLive ?? false, ...(sport === "f1" ? { broadcaster: "Apple TV" } : event.broadcast ? { broadcaster: event.broadcast } : {}) };
 }
 
 export function selectKioskSportsEvent(events: SportsEvent[], now = new Date()): KioskSportsEvent | undefined {
   const candidates = [...new Map(events.map((event) => [event.id, event])).values()].flatMap((event) => {
-    const normalizedEvent = normalizeKioskSportsEvent(event);
+    const normalizedEvent = normalizeKioskSportsEvent(event, now);
     return normalizedEvent && (normalizedEvent.live || normalizedEvent.startTime.getTime() >= now.getTime()) ? [normalizedEvent] : [];
   });
   return candidates.sort(compareKioskSportsEvents)[0];
@@ -157,7 +163,7 @@ export function describeKioskSportsSelection(events: SportsEvent[], now = new Da
   const uniqueEvents = [...new Map(events.map((event) => [event.id, event])).values()];
   const rows: Array<{ event: SportsEvent; normalized?: KioskSportsEvent; candidate: KioskSportsSelectionCandidate }> = uniqueEvents.map((event) => {
     const rawStart = event.start instanceof Date ? event.start.toISOString() : String(event.start);
-    const normalizedEvent = normalizeKioskSportsEvent(event);
+    const normalizedEvent = normalizeKioskSportsEvent(event, now);
     let exclusionReason: string | undefined;
     if (!normalizedEvent) exclusionReason = !["nfl", "f1", "nascar", "mlb"].includes(event.sport) ? "unsupported-sport-or-terminal-status" : "invalid-event";
     else if (!Number.isFinite(normalizedEvent.startTime.getTime())) exclusionReason = "invalid-start";
