@@ -18,6 +18,18 @@ export function eventMatchesPreferences(event: SportsEvent, preferences: CosmicU
   return preferences.sports.enabledSports.includes(event.sport);
 }
 
+const TEAM_SPORTS: SportKind[] = ["mlb", "nfl", "college-football"];
+
+export function isTeamSport(sport: SportKind): boolean {
+  return TEAM_SPORTS.includes(sport);
+}
+
+/** Kiosk team sports are intentionally favorite-only; racing remains session-based. */
+export function eventMatchesKioskPreferences(event: SportsEvent, preferences: CosmicUserPreferences = neutralPreferences): boolean {
+  if (!eventMatchesPreferences(event, preferences)) return false;
+  return !isTeamSport(event.sport) || isFavoriteEvent(event, preferences);
+}
+
 export function followedEventRank(event: SportsEvent, preferences: CosmicUserPreferences = neutralPreferences): number {
   const teamNames = [event.homeTeam?.name, event.awayTeam?.name].filter((name): name is string => Boolean(name));
   const teamIndex = preferences.sports.followedTeams.findIndex((team) => team.sport === event.sport && ([event.homeTeam?.id, event.awayTeam?.id].includes(team.teamId) || teamNames.some((name) => name.toLowerCase() === team.label.toLowerCase())));

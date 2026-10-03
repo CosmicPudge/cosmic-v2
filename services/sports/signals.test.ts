@@ -47,14 +47,23 @@ test("stale snapshots cannot create sports signals", () => {
   assert.deepEqual(buildSportsSignals(stale, preferences(), now), []);
 });
 
-test("summary notifications use followed sports without making favorites exclusive", () => {
+test("summary notifications exclude unrelated team-sport games", () => {
   const value = preferences();
   value.sports.followedTeams = [{ sport: "nfl", provider: "espn", teamId: "9", label: "Green Bay Packers" }];
   const other = game({ id: "other", title: "Chicago Bears at Detroit Lions", start: new Date("2026-09-05T13:00:00Z"), awayTeam: { id: "6", name: "Chicago Bears" }, homeTeam: { id: "10", name: "Detroit Lions" } });
   const items = buildSportsSummaryNotifications(snapshot([game(), other]), value, now);
-  assert.equal(items.length, 2);
+  assert.equal(items.length, 1);
   assert.equal(items[0].title, "NFL · TODAY");
-  assert.equal(items.some((item) => item.body?.includes("Chicago Bears")), true);
+  assert.equal(items.some((item) => item.body?.includes("Green Bay Packers")), true);
+});
+
+test("summary notifications keep racing sports session-based", () => {
+  const value = preferences();
+  value.sports.followedTeams = [];
+  const f1 = game({ id: "f1", sport: "f1", title: "Japanese Grand Prix · Qualifying", metadata: { sessionKind: "qualifying" }, start: new Date("2026-09-05T13:00:00Z") });
+  const nascar = game({ id: "nascar", sport: "nascar", title: "NASCAR Cup Series · Race", start: new Date("2026-09-05T14:00:00Z") });
+  const items = buildSportsSummaryNotifications(snapshot([f1, nascar]), value, now);
+  assert.equal(items.length, 2);
 });
 
 test("disabled sports do not produce summary notifications", () => {

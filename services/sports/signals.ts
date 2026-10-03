@@ -1,7 +1,7 @@
 import type { CosmicNotification } from "@/core/contracts/Notifications";
 import type { CosmicUserPreferences } from "@/core/contracts/Settings";
 import type { SportKind, SportsEvent, SportsSnapshot } from "@/core/contracts/Sports";
-import { eventMatchesPreferences, isFavoriteEvent } from "./preferences";
+import { eventMatchesKioskPreferences, isFavoriteEvent } from "./preferences";
 
 export type SportsSignalType = "GAME_STARTING_SOON" | "RACE_STARTING_SOON" | "QUALIFYING_STARTING_SOON" | "GAME_LIVE" | "CLOSE_GAME" | "FINAL_RESULT" | "EVENT_DELAYED" | "EVENT_POSTPONED" | "QUALIFYING_RESULT" | "RACE_RESULT" | "FAVORITE_DRIVER_RESULT" | "SUMMARY_LIVE" | "SUMMARY_UPCOMING";
 export interface SportsPreviousState { status: SportsEvent["status"]; score?: string; }
@@ -111,7 +111,7 @@ function summaryBody(event: SportsEvent, now: Date) {
  */
 export function buildSportsSummaryNotifications(snapshot: SportsSnapshot, preferences: CosmicUserPreferences, now = new Date()): CosmicNotification[] {
   const candidates = [...snapshot.live, ...snapshot.upcoming]
-    .filter((event) => eventMatchesPreferences(event, preferences))
+    .filter((event) => eventMatchesKioskPreferences(event, preferences))
     .filter((event) => event.start.getTime() >= now.getTime() - 6 * 60 * 60_000)
     .sort((left, right) => {
       const leftLive = left.status === "live" || left.status === "delayed";

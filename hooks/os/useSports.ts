@@ -8,7 +8,7 @@ import { kioskApiUrl } from "@/services/kioskRequest";
 import { sceneRefreshDiagnostics, sportsRefreshMode, sportsRefreshMs } from "@/services/kiosk/refreshPolicy";
 import { useConnectionHealth } from "@/services/kiosk/ConnectionHealthProvider";
 
-type SportsHookOptions = { sport?: SportKind; refreshMs?: number | ((snapshot: SportsSnapshot | null) => number) };
+type SportsHookOptions = { sport?: SportKind; kioskEligibility?: boolean; refreshMs?: number | ((snapshot: SportsSnapshot | null) => number) };
 type SportsWireEvent = Omit<SportsEvent, "start" | "end"> & { start: string; end?: string };
 type SportsWireSnapshot = Omit<SportsSnapshot, "live" | "upcoming" | "recent" | "featured" | "lastUpdated"> & {
   live: SportsWireEvent[];
@@ -69,13 +69,16 @@ function isWireSnapshot(value: unknown): value is SportsWireSnapshot {
     && [snapshot.live, snapshot.upcoming, snapshot.recent, snapshot.featured].every((items) => Array.isArray(items) && items.every(isWireEvent));
 }
 
-async function requestSnapshot(sport: SportKind | undefined, scopeId: string): Promise<SportsSnapshot> {
-  const key = `${scopeId}:${sport ?? "all"}`;
+async function requestSnapshot(sport: SportKind | undefined, scopeId: string, kioskEligibility: boolean): Promise<SportsSnapshot> {
+  const key = `${scopeId}:${sport ?? "all"}:${kioskEligibility ? "kiosk" : "all"}`;
   const cached = snapshotCache.get(key);
   if (cached && cached.expiresAt > Date.now()) return cached.value;
   const pendingRequest = pendingRequests.get(key);
   if (pendingRequest) return pendingRequest;
-  const query = sport ? `?sport=${encodeURIComponent(sport)}` : "";
+  const params = new URLSearchParams();
+  if (sport) params.set("sport", sport);
+  if (kioskEligibility) params.set("kiosk", "true");
+  const query = params.toString() ? `?${params.toString()}` : "";
   const request = fetch(kioskApiUrl(`/api/sports${query}`), { credentials: "include", cache: "no-store" })
     .then(async (response) => {
       if (!response.ok) throw new Error("Sports data is temporarily unavailable.");
@@ -92,10 +95,10 @@ async function requestSnapshot(sport: SportKind | undefined, scopeId: string): P
 }
 
 export function useSports(options: SportsHookOptions = {}) {
-  const { sport, refreshMs = (snapshot) => sportsRefreshMs(snapshot) } = options;
+  const { sport, kioskEligibility = false, refreshMs = (snapshot) => sportsRefreshMs(snapshot) } = options;
   const scope = useCosmicScope();
   const { recordAttempt, recordSuccess, recordFailure } = useConnectionHealth();
-  const cacheKey = `${scope.id}:${sport ?? "all"}`;
+  const cacheKey = `${scope.id}:${sport ?? "all"}:${kioskEligibility ? "kiosk" : "all"}`;
   const [data, setData] = useState<SportsSnapshot | null>(() => cachedSnapshot(cacheKey));
   const [loading, setLoading] = useState(() => !cachedSnapshot(cacheKey));
   const [error, setError] = useState<string | null>(null);
@@ -105,7 +108,7 @@ export function useSports(options: SportsHookOptions = {}) {
     try {
       recordAttempt("sports");
       setError(null);
-      setData(await requestSnapshot(sport, scope.id));
+      setData(await requestSnapshot(sport, scope.id, kioskEligibility));
       setLastSuccessfulRefreshAt(new Date().toISOString());
       recordSuccess("sports");
     } catch (reason) {
@@ -114,7 +117,7 @@ export function useSports(options: SportsHookOptions = {}) {
     } finally {
       setLoading(false);
     }
-  }, [recordAttempt, recordFailure, recordSuccess, scope.id, sport]);
+  }, [kioskEligibility, recordAttempt, recordFailure, recordSuccess, scope.id, sport]);
   useEffect(() => { const timer = window.setTimeout(() => { const next = cachedSnapshot(cacheKey); setData(next); setLoading(!next); setError(null); setLastSuccessfulRefreshAt(next ? next.lastUpdated.toISOString() : undefined); }, 0); return () => window.clearTimeout(timer); }, [cacheKey]);
   useEffect(() => {
     const invalidate = () => {

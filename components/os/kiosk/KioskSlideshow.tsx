@@ -167,6 +167,7 @@ function KioskNormalSlideshow() {
   const manualSportsOverride = useMemo(() => parseKioskSportsTestOverride(searchParams, typeof window !== "undefined" ? window.location.hostname : "", typeof window !== "undefined" ? window.location.pathname : "") , [searchParams]);
 
   const { data: sportsData } = useSports({
+    kioskEligibility: standaloneDeveloperKiosk,
     refreshMs: (snapshot) => sportsRefreshMs(snapshot),
   });
 
