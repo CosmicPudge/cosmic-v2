@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect } from "react";
+
 import Widget from "@/components/os/ui/widget/Widget";
 import WidgetHeader from "@/components/os/ui/widget/WidgetHeader";
 import WidgetBody from "@/components/os/ui/widget/WidgetBody";
@@ -19,7 +21,7 @@ import SportsFooter from "./SportsFooter";
 import { dashboardImage } from "@/components/dashboard/images/dashboardImageManifest";
 import { selectNflStadiumBackground } from "@/components/os/widgets/shared/kioskSceneBackgrounds";
 import { selectKioskSportsBackground } from "@/components/os/widgets/shared/kioskSceneBackgrounds";
-import { selectKioskSportsEvent } from "@/services/sports/kioskSelection";
+import { describeKioskSportsSelection, selectKioskSportsEvent } from "@/services/sports/kioskSelection";
 
 export default function SportsWidget() {
   const { size, presentation } = useWidgetContext();
@@ -29,6 +31,11 @@ export default function SportsWidget() {
   const upcoming = data ? prioritizeFollowedEvents(data.upcoming, settings.preferences) : [];
   const kioskSelection = data ? selectKioskSportsEvent([...data.live, ...data.upcoming, ...data.featured]) : undefined;
   const kioskEvent = kioskSelection?.event ?? liveOrFeatured ?? upcoming[0];
+  useEffect(() => {
+    if (presentation !== "kiosk" || !data || typeof window === "undefined" || window.location.pathname !== "/kiosk" || !["dev.cosmicpudge.shop", "localhost", "127.0.0.1"].includes(window.location.hostname.toLowerCase())) return;
+    const diagnostics = describeKioskSportsSelection([...data.live, ...data.upcoming, ...data.featured], new Date(), Intl.DateTimeFormat().resolvedOptions().timeZone);
+    console.info("[kiosk-sports-selection]", JSON.stringify({ ...diagnostics, currentServerTime: data.lastUpdated.toISOString() }));
+  }, [data, presentation]);
   const sportsImage = liveOrFeatured?.sport.toLowerCase().includes("mlb") || liveOrFeatured?.sport.toLowerCase().includes("baseball") ? dashboardImage("sports-mlb") : liveOrFeatured?.sport.toLowerCase().includes("f1") || liveOrFeatured?.sport.toLowerCase().includes("formula") ? dashboardImage("sports-f1") : dashboardImage("sports");
   const standings = data ? Object.values(data.standings).flat() : [];
   useDashboardWidgetReadiness("sports", loading && !data ? "loading" : error && !data ? "degraded" : "ready");

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { SportsEvent } from "@/core/contracts/Sports";
-import { normalizeKioskSportsEvent, selectKioskSportsEvent } from "./kioskSelection";
+import { describeKioskSportsSelection, normalizeKioskSportsEvent, selectKioskSportsEvent } from "./kioskSelection";
 import { selectKioskSportsBackground } from "@/components/os/widgets/shared/kioskSceneBackgrounds";
 
 const now = new Date("2026-10-02T12:00:00Z");
@@ -17,6 +17,31 @@ test("live events beat future events across tracked sports", () => {
 test("upcoming events are ordered by actual start time across sports", () => {
   const selected = selectKioskSportsEvent([event("later-race", "f1", "2026-10-05T12:00:00Z"), event("first-game", "mlb", "2026-10-02T14:00:00Z")], now);
   assert.equal(selected?.event.id, "first-game");
+});
+
+test("Sepang FP3 beats a later Packers game using actual MDT-relative start times", () => {
+  const eveningMdt = new Date("2026-10-03T04:00:00Z");
+  const fp3 = event("fp3", "f1", "2026-10-03T04:30:00Z", { title: "Malaysian Grand Prix · Practice 3", venue: "Sepang International Circuit", metadata: { sessionType: "Practice 3", country: "Malaysia", circuit: "Sepang International Circuit" } });
+  const packers = event("packers-later", "nfl", "2026-10-04T19:00:00Z", { title: "Green Bay Packers at Tampa Bay Buccaneers", awayTeam: { name: "Green Bay Packers", abbreviation: "GB" }, homeTeam: { name: "Tampa Bay Buccaneers", abbreviation: "TB" } });
+  const selected = selectKioskSportsEvent([fp3, packers], eveningMdt);
+  assert.equal(selected?.event.id, "fp3");
+  const diagnostics = describeKioskSportsSelection([fp3, packers], eveningMdt, "America/Denver");
+  assert.equal(diagnostics.candidates.find((candidate) => candidate.title.includes("Practice 3"))?.finalRankingPosition, 1);
+  assert.equal(diagnostics.candidates.find((candidate) => candidate.title.includes("Practice 3"))?.parsedUtcStart, "2026-10-03T04:30:00.000Z");
+});
+
+test("qualifying becomes next after FP3 is complete", () => {
+  const now = new Date("2026-10-03T06:00:00Z");
+  const fp3 = event("fp3-complete", "f1", "2026-10-03T04:30:00Z", { title: "Malaysian Grand Prix · Practice 3", status: "final", metadata: { sessionType: "Practice 3", country: "Malaysia" } });
+  const qualifying = event("qualifying", "f1", "2026-10-03T08:00:00Z", { title: "Malaysian Grand Prix · Qualifying", metadata: { sessionType: "Qualifying", country: "Malaysia" } });
+  assert.equal(selectKioskSportsEvent([fp3, qualifying], now)?.event.id, "qualifying");
+});
+
+test("NFL is selected after earlier F1 sessions are no longer upcoming", () => {
+  const now = new Date("2026-10-04T20:00:00Z");
+  const fp3 = event("fp3-finished", "f1", "2026-10-03T04:30:00Z", { title: "Malaysian Grand Prix · Practice 3", status: "final", metadata: { sessionType: "Practice 3", country: "Malaysia" } });
+  const packers = event("packers-current", "nfl", "2026-10-04T21:00:00Z", { title: "Green Bay Packers at Tampa Bay Buccaneers", awayTeam: { name: "Green Bay Packers", abbreviation: "GB" }, homeTeam: { name: "Tampa Bay Buccaneers", abbreviation: "TB" } });
+  assert.equal(selectKioskSportsEvent([fp3, packers], now)?.event.id, "packers-current");
 });
 
 test("Packers and Angels receive favorite priority when timing is equal", () => {

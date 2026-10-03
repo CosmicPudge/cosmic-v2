@@ -22,6 +22,22 @@ export interface KioskSportsEvent {
   sessionContext?: string;
 }
 
+export interface KioskSportsSelectionCandidate {
+  sport: string;
+  title: string;
+  eventType?: string;
+  session?: string;
+  rawStart: string;
+  parsedUtcStart?: string;
+  parsedLocalStart?: string;
+  live: boolean;
+  favoriteWeight?: number;
+  importance?: number;
+  eligible: boolean;
+  exclusionReason?: string;
+  finalRankingPosition?: number;
+}
+
 const SPORT_LABELS: Record<KioskTrackedSport, string> = { nfl: "NFL", f1: "FORMULA 1", nascar: "NASCAR", mlb: "MLB" };
 const SESSION_IMPORTANCE: Record<string, number> = { practice1: 10, practice2: 20, practice3: 30, practice: 10, qualifying: 50, sprint: 70, race: 100 };
 const F1_CIRCUIT_BACKGROUND_KEYS: Array<{ key: string; aliases: string[] }> = [
@@ -77,6 +93,15 @@ function matchBackgroundKey(text: string, mappings: Array<{ key: string; aliases
   return mappings.find(({ aliases }) => aliases.some((alias) => text.includes(alias)))?.key;
 }
 
+function compareKioskSportsEvents(left: KioskSportsEvent, right: KioskSportsEvent) {
+  if (left.live !== right.live) return left.live ? -1 : 1;
+  if (left.live && right.live && left.importance !== right.importance) return right.importance - left.importance;
+  const timeDelta = left.startTime.getTime() - right.startTime.getTime();
+  if (timeDelta) return timeDelta;
+  if (left.favoriteWeight !== right.favoriteWeight) return right.favoriteWeight - left.favoriteWeight;
+  return right.importance - left.importance || left.sport.localeCompare(right.sport);
+}
+
 function backgroundKey(event: SportsEvent): string {
   const venue = normalized(`${event.venue} ${event.metadata?.circuit} ${event.metadata?.track} ${event.metadata?.country} ${event.metadata?.location}`);
   if (event.sport === "nfl") return `nfl-${(resolveSportsTeamIdentity("nfl", event.homeTeam)?.abbreviation ?? event.homeTeam?.abbreviation ?? event.homeTeam?.id ?? "generic").toLowerCase()}`;
@@ -107,11 +132,41 @@ export function selectKioskSportsEvent(events: SportsEvent[], now = new Date()):
     const normalizedEvent = normalizeKioskSportsEvent(event);
     return normalizedEvent && (normalizedEvent.live || normalizedEvent.startTime.getTime() >= now.getTime()) ? [normalizedEvent] : [];
   });
-  return candidates.sort((left, right) => {
-    if (left.live !== right.live) return left.live ? -1 : 1;
-    if (left.live && right.live && left.importance !== right.importance) return right.importance - left.importance;
-    if (left.favoriteWeight !== right.favoriteWeight) return right.favoriteWeight - left.favoriteWeight;
-    const timeDelta = left.startTime.getTime() - right.startTime.getTime();
-    return timeDelta || right.importance - left.importance || left.sport.localeCompare(right.sport);
-  })[0];
+  return candidates.sort(compareKioskSportsEvents)[0];
+}
+
+export function describeKioskSportsSelection(events: SportsEvent[], now = new Date(), localTimeZone = "UTC") {
+  const uniqueEvents = [...new Map(events.map((event) => [event.id, event])).values()];
+  const rows: Array<{ event: SportsEvent; normalized?: KioskSportsEvent; candidate: KioskSportsSelectionCandidate }> = uniqueEvents.map((event) => {
+    const rawStart = event.start instanceof Date ? event.start.toISOString() : String(event.start);
+    const normalizedEvent = normalizeKioskSportsEvent(event);
+    let exclusionReason: string | undefined;
+    if (!normalizedEvent) exclusionReason = !["nfl", "f1", "nascar", "mlb"].includes(event.sport) ? "unsupported-sport-or-terminal-status" : "invalid-event";
+    else if (!Number.isFinite(normalizedEvent.startTime.getTime())) exclusionReason = "invalid-start";
+    else if (!normalizedEvent.live && normalizedEvent.startTime.getTime() < now.getTime()) exclusionReason = "start-before-now";
+    const candidate: KioskSportsSelectionCandidate = {
+      sport: event.sport,
+      title: event.title,
+      eventType: normalizedEvent?.eventType,
+      session: normalizedEvent?.sessionContext,
+      rawStart,
+      ...(normalizedEvent ? { parsedUtcStart: normalizedEvent.startTime.toISOString(), parsedLocalStart: normalizedEvent.startTime.toLocaleString("en-US", { timeZone: localTimeZone, timeZoneName: "short" }) } : {}),
+      live: normalizedEvent?.live ?? false,
+      favoriteWeight: normalizedEvent?.favoriteWeight,
+      importance: normalizedEvent?.importance,
+      eligible: !exclusionReason,
+      ...(exclusionReason ? { exclusionReason } : {}),
+    };
+    return { event, normalized: normalizedEvent, candidate };
+  });
+  const ranked = rows.filter((row): row is typeof row & { normalized: KioskSportsEvent } => Boolean(row.normalized && row.candidate.eligible)).sort((left, right) => compareKioskSportsEvents(left.normalized, right.normalized));
+  ranked.forEach((row, index) => { row.candidate.finalRankingPosition = index + 1; });
+  const selected = ranked[0]?.normalized;
+  return {
+    currentServerTime: now.toISOString(),
+    timezoneUsed: localTimeZone,
+    candidates: rows.map((row) => row.candidate),
+    selectedEvent: selected ? { sport: selected.sport, title: selected.title, eventType: selected.eventType, start: selected.startTime.toISOString() } : null,
+    whyWon: selected ? "earliest eligible upcoming event after live/importance handling" : "no eligible event",
+  };
 }

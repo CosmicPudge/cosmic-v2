@@ -25,6 +25,28 @@ function sessionKind(label: string): "practice" | "qualifying" | "sprint" | "rac
   return "race";
 }
 
+export function f1SessionKey(label: string) {
+  const normalized = label.toLowerCase();
+  if (normalized.includes("practice 1") || normalized.includes("fp1")) return "practice1";
+  if (normalized.includes("practice 2") || normalized.includes("fp2")) return "practice2";
+  if (normalized.includes("practice 3") || normalized.includes("fp3")) return "practice3";
+  if (normalized.includes("qualifying") || normalized.includes("shootout")) return "qualifying";
+  if (normalized.includes("sprint")) return "sprint";
+  return "race";
+}
+
+const LOCAL_SESSION_OFFSETS_MINUTES: Record<string, number> = { malaysia: 8 * 60, singapore: 8 * 60 };
+
+export function parseF1SessionStart(dateValue: string, timeValue: string | undefined, country?: string) {
+  const time = timeValue?.trim() || "00:00:00";
+  const raw = `${dateValue}T${time}`;
+  if (/[zZ]|[+-]\d{2}:?\d{2}$/.test(time)) return new Date(raw);
+  const localOffset = LOCAL_SESSION_OFFSETS_MINUTES[country?.trim().toLowerCase() ?? ""];
+  const utcValue = new Date(`${raw}Z`);
+  if (Number.isNaN(utcValue.getTime()) || localOffset === undefined) return utcValue;
+  return new Date(utcValue.getTime() - localOffset * 60_000);
+}
+
 export class F1Provider implements SportsProvider {
   readonly id = "f1-espn-fallback";
   readonly sport = "f1" as const;
@@ -90,7 +112,7 @@ export class F1Provider implements SportsProvider {
         const location = isRecord(circuit.Location) ? [string(circuit.Location.locality), string(circuit.Location.country)].filter(Boolean).join(", ") : undefined;
         const circuitId = string(circuit.circuitId);
         const weekend = [{ label: "Practice 1", value: isRecord(race.FirstPractice) ? race.FirstPractice : undefined }, { label: "Practice 2", value: isRecord(race.SecondPractice) ? race.SecondPractice : undefined }, { label: "Practice 3", value: isRecord(race.ThirdPractice) ? race.ThirdPractice : undefined }, { label: "Sprint", value: isRecord(race.Sprint) ? race.Sprint : undefined }, { label: "Qualifying", value: isRecord(race.Qualifying) ? race.Qualifying : undefined }, { label: "Race", value: string(race.date) ? { date: race.date, time: race.time } : undefined }];
-        return weekend.flatMap(({ label, value }) => { const dateValue = value && string(value.date); if (!dateValue) return []; const start = new Date(`${dateValue}T${string(value?.time) ?? "00:00:00Z"}`); if (Number.isNaN(start.getTime())) return []; const kind = sessionKind(label); const title = `${raceName} · ${label}`; return [{ id: `jolpica-f1:${season}:${round}:${kind}`, sport: "f1" as const, title, start, status: status(undefined, now, start), venue: string(circuit.circuitName), source: "jolpica", provider: "jolpica", providerName: "Jolpica F1", official: false, fallback: true, sourceUrl: "https://api.jolpi.ca/docs/", metadata: { competition: raceName, eventName: title, sessionType: label, sessionKind: kind, circuit: string(circuit.circuitName), ...(circuitId ? { circuitId } : {}), country: isRecord(circuit.Location) ? string(circuit.Location.country) : undefined, ...(location ? { location } : {}) } }]; });
+        return weekend.flatMap(({ label, value }) => { const dateValue = value && string(value.date); if (!dateValue) return []; const country = isRecord(circuit.Location) ? string(circuit.Location.country) : undefined; const start = parseF1SessionStart(dateValue, string(value?.time), country); if (Number.isNaN(start.getTime())) return []; const kind = sessionKind(label); const sessionId = f1SessionKey(label); const title = `${raceName} · ${label}`; return [{ id: `jolpica-f1:${season}:${round}:${sessionId}`, sport: "f1" as const, title, start, status: status(undefined, now, start), venue: string(circuit.circuitName), source: "jolpica", provider: "jolpica", providerName: "Jolpica F1", official: false, fallback: true, sourceUrl: "https://api.jolpi.ca/docs/", metadata: { competition: raceName, eventName: title, sessionType: label, sessionKind: kind, circuit: string(circuit.circuitName), ...(circuitId ? { circuitId } : {}), ...(country ? { country } : {}), ...(location ? { location } : {}) } }]; });
       });
     } catch { return []; }
   }

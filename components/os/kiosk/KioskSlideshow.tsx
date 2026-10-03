@@ -23,10 +23,6 @@ import KioskSportsOverride from "./KioskSportsOverride";
 import KioskSceneFrame from "@/components/os/widgets/shared/KioskSceneFrame";
 
 import {
-  selectKioskLiveEvent,
-} from "./kioskSports";
-
-import {
   KIOSK_SLIDE_DURATION_MS,
   KIOSK_TRANSITION_DURATION_MS,
 } from "./kioskConfig";
@@ -36,6 +32,7 @@ import { useEntitlements } from "@/hooks/os/useEntitlements";
 import { resolveKioskSwipeDirection, shouldResetKioskRotationAfterSwipe } from "./kioskSlideshowInteraction";
 import { createKioskSportsTestEvent, parseKioskSportsTestOverride } from "./kioskSportsTestOverride";
 import { KIOSK_MUSIC_PLAYBACK_STALE_MS, shouldPauseKioskForMusic } from "./kioskMusicRotation";
+import { selectKioskSportsEvent } from "@/services/sports/kioskSelection";
 
 const TEST_SPORTS: SportKind[] = [
   "nfl",
@@ -232,9 +229,7 @@ function KioskNormalSlideshow() {
       return null;
     }
 
-    return selectKioskLiveEvent(
-      sportsData.live,
-    );
+    return selectKioskSportsEvent([...sportsData.live, ...sportsData.upcoming, ...sportsData.featured])?.event ?? null;
   }, [
     manualSportsOverride,
     sportsData,
