@@ -21,6 +21,26 @@ export function resolveNascarRaceState(race: Record<string, unknown>, now: Date,
   return { state: "unknown" as const, status: "final" as const, statusSource: "inferred" as const, inferredLive: false, expectedEnd };
 }
 
+export function nascarSessionKind(session: Record<string, unknown>): "practice" | "qualifying" | "race" | null {
+  const runType = number(session.run_type);
+  if (runType === 3) return "race";
+  if (runType === 2) return "qualifying";
+  if (runType === 1) return "practice";
+  const label = `${string(session.name) ?? ""} ${string(session.session_name) ?? ""}`.toLowerCase();
+  if (label.includes("qualif")) return "qualifying";
+  if (label.includes("practice") || label.includes("warm")) return "practice";
+  return null;
+}
+
+function resolveNascarSessionState(session: Record<string, unknown>, now: Date, start: Date) {
+  const kind = nascarSessionKind(session);
+  if (kind === "race") return resolveNascarRaceState(session, now, start);
+  const expectedEnd = new Date(start.getTime() + 2 * 60 * 60_000);
+  if (now < start) return { state: "scheduled" as const, status: "scheduled" as const, statusSource: "provider" as const, inferredLive: false, expectedEnd };
+  if (now < expectedEnd) return { state: "live" as const, status: "live" as const, statusSource: "inferred" as const, inferredLive: true, expectedEnd };
+  return { state: "complete" as const, status: "final" as const, statusSource: "inferred" as const, inferredLive: false, expectedEnd };
+}
+
 export class NascarProvider implements SportsProvider {
   readonly id = "nascar-official";
   readonly sport = "nascar" as const;
@@ -37,14 +57,32 @@ export class NascarProvider implements SportsProvider {
       const id = number(race.race_id);
       const title = string(race.race_name);
       const sessions = records(race.schedule);
-      const mainSession = sessions.find((session) => number(session.run_type) === 3);
+      const mainSession = sessions.find((session) => nascarSessionKind(session) === "race");
       const start = utcDate(mainSession?.start_time_utc) ?? utcDate(race.race_date) ?? utcDate(race.date_scheduled);
       if (id === undefined || !title || !start) return [];
       const track = string(race.track_name);
       const trackId = string(race.track_id) ?? (number(race.track_id) !== undefined ? String(number(race.track_id)) : undefined);
       const location = [string(race.track_city), string(race.track_state), string(race.track_country)].filter(Boolean).join(", ");
       const broadcast = string(race.television_broadcaster);
-      return [{
+      const raceEvents = sessions.flatMap((session): SportsEvent[] => {
+        const sessionKind = nascarSessionKind(session);
+        const sessionStart = utcDate(session.start_time_utc) ?? (sessionKind === "race" ? start : undefined);
+        if (!sessionKind || !sessionStart) return [];
+        const state = resolveNascarSessionState({ ...race, ...session }, now, sessionStart);
+        const label = sessionKind === "race" ? "Race" : sessionKind === "qualifying" ? "Qualifying" : "Practice";
+        return [{
+          id: `${this.id}:${id}:${sessionKind}`,
+          sport: "nascar",
+          title: `${title} · ${label}`,
+          start: sessionStart,
+          status: state.status,
+          ...(track ? { venue: track } : {}),
+          ...(broadcast ? { broadcast } : {}),
+          source: "nascar",
+          metadata: { competition: "NASCAR Cup Series", eventName: title, sessionType: label, sessionKind, normalizedState: state.state, statusSource: state.statusSource, inferredLive: state.inferredLive, expectedEnd: state.expectedEnd.toISOString(), staleAfter: new Date(now.getTime() + this.cacheSeconds * 1_000).toISOString(), lastProviderRefresh: now.toISOString(), ...(track ? { track } : {}), ...(trackId ? { trackId } : {}), ...(location ? { location } : {}), ...(string(race.track_type) ? { trackType: string(race.track_type), trackConfiguration: string(race.track_type) } : {}), ...(sessionKind === "race" && number(race.scheduled_laps) !== undefined ? { laps: number(race.scheduled_laps), detail: `${number(race.scheduled_laps)} laps` } : {}), ...(string(race.race_distance) ? { raceDistance: string(race.race_distance) } : {}) },
+        }];
+      });
+      return raceEvents.length ? raceEvents : [{
         id: `${this.id}:${id}`,
         sport: "nascar",
         title,
@@ -53,7 +91,7 @@ export class NascarProvider implements SportsProvider {
         ...(track ? { venue: track } : {}),
         ...(broadcast ? { broadcast } : {}),
         source: "nascar",
-        metadata: { competition: "NASCAR Cup Series", eventName: title, normalizedState: resolveNascarRaceState(race, now, start).state, statusSource: resolveNascarRaceState(race, now, start).statusSource, inferredLive: resolveNascarRaceState(race, now, start).inferredLive, expectedEnd: resolveNascarRaceState(race, now, start).expectedEnd.toISOString(), staleAfter: new Date(now.getTime() + this.cacheSeconds * 1_000).toISOString(), lastProviderRefresh: now.toISOString(), ...(track ? { track } : {}), ...(trackId ? { trackId } : {}), ...(location ? { location } : {}), ...(string(race.track_type) ? { trackType: string(race.track_type), trackConfiguration: string(race.track_type) } : {}), ...(number(race.scheduled_laps) !== undefined ? { laps: number(race.scheduled_laps), detail: `${number(race.scheduled_laps)} laps` } : {}), ...(string(race.race_distance) ? { raceDistance: string(race.race_distance) } : {}) },
+        metadata: { competition: "NASCAR Cup Series", eventName: title, sessionType: "Race", sessionKind: "race", normalizedState: resolveNascarRaceState(race, now, start).state, statusSource: resolveNascarRaceState(race, now, start).statusSource, inferredLive: resolveNascarRaceState(race, now, start).inferredLive, expectedEnd: resolveNascarRaceState(race, now, start).expectedEnd.toISOString(), staleAfter: new Date(now.getTime() + this.cacheSeconds * 1_000).toISOString(), lastProviderRefresh: now.toISOString(), ...(track ? { track } : {}), ...(trackId ? { trackId } : {}), ...(location ? { location } : {}), ...(number(race.scheduled_laps) !== undefined ? { laps: number(race.scheduled_laps), detail: `${number(race.scheduled_laps)} laps` } : {}) },
       }];
     });
     return { events, standings: await this.getStandings(now.getFullYear()) };

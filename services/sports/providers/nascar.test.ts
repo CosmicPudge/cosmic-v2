@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { resolveNascarRaceState } from "./nascar";
+import { nascarSessionKind, resolveNascarRaceState } from "./nascar";
 
 const start = new Date("2026-10-04T18:00:00Z");
 
@@ -24,4 +24,11 @@ test("NASCAR missing live fields use a bounded inferred window", () => {
 
 test("NASCAR completion wins immediately", () => {
   assert.equal(resolveNascarRaceState({ actual_laps: 267, scheduled_laps: 267 }, new Date("2026-10-04T20:00:00Z"), start).state, "complete");
+});
+
+test("NASCAR schedule sessions normalize practice and qualifying", () => {
+  assert.equal(nascarSessionKind({ run_type: 1 }), "practice");
+  assert.equal(nascarSessionKind({ run_type: 2 }), "qualifying");
+  assert.equal(nascarSessionKind({ run_type: 3 }), "race");
+  assert.equal(nascarSessionKind({ name: "Qualifying" }), "qualifying");
 });

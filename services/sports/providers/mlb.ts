@@ -28,6 +28,13 @@ function team(value: unknown): SportsTeam | undefined {
   return { name, ...(id !== undefined ? { id: String(id) } : {}) };
 }
 
+export function isMlbPostseasonGame(value: Record<string, unknown>): boolean {
+  const gameType = string(value.gameType)?.toUpperCase();
+  if (gameType === "P") return true;
+  const seriesDescription = string(value.seriesDescription) ?? string(value.seriesStatus);
+  return Boolean(seriesDescription && /wild card|division series|league championship|world series|postseason|playoff/i.test(seriesDescription));
+}
+
 function gameEvent(value: unknown): SportsEvent | null {
   if (!isRecord(value)) return null;
   const gamePk = number(value.gamePk);
@@ -42,6 +49,9 @@ function gameEvent(value: unknown): SportsEvent | null {
   if (Number.isNaN(startDate.getTime())) return null;
   const status = isRecord(value.status) ? value.status : undefined;
   const detail = string(status?.detailedState) ?? string(status?.abstractGameState);
+  const venue = isRecord(value.venue) ? string(value.venue.name) ?? string(value.venue.fullName) : undefined;
+  const seriesContext = string(value.seriesDescription) ?? string(value.seriesStatus);
+  const postseason = isMlbPostseasonGame(value);
   const awayScore = number(away?.score);
   const homeScore = number(home?.score);
   return {
@@ -51,10 +61,11 @@ function gameEvent(value: unknown): SportsEvent | null {
     start: startDate,
     status: statusOf(detail),
     ...(detail ? { statusDetail: detail } : {}),
+    ...(venue ? { venue } : {}),
     awayTeam: { ...awayTeam, ...(awayScore !== undefined ? { score: awayScore } : {}) },
     homeTeam: { ...homeTeam, ...(homeScore !== undefined ? { score: homeScore } : {}) },
     source: "mlb-stats-api",
-    metadata: { competition: "MLB", gamePk: String(gamePk) },
+    metadata: { competition: "MLB", gamePk: String(gamePk), ...(postseason ? { seasonType: "Postseason" } : {}), ...(seriesContext ? { detail: seriesContext.slice(0, 120) } : {}) },
   };
 }
 
@@ -97,7 +108,15 @@ export class MlbAngelsProvider implements SportsProvider {
     const standingsUrl = `https://statsapi.mlb.com/api/v1/standings?leagueId=103&season=${now.getFullYear()}&hydrate=team`;
     const [payload, standingsPayload] = await Promise.all([fetchJson(url, this.cacheSeconds), fetchJson(standingsUrl, 3_600)]);
     const dates = isRecord(payload) ? records(payload.dates) : [];
-    const events = dates.flatMap((item) => records(item.games).map(gameEvent).filter((event): event is SportsEvent => event !== null));
+    let events = dates.flatMap((item) => records(item.games).map(gameEvent).filter((event): event is SportsEvent => event !== null));
+    const hasMeaningfulAngelsGame = events.some((event) => (event.status === "live" || event.status === "delayed") || event.start.getTime() >= now.getTime());
+    if (!hasMeaningfulAngelsGame) {
+      const postseasonUrl = `https://statsapi.mlb.com/api/v1/schedule?sportId=1&startDate=${dayKey(now)}&endDate=${dayKey(new Date(now.getTime() + 30 * DAY))}&hydrate=team,venue,seriesStatus`;
+      const postseasonPayload = await fetchJson(postseasonUrl, this.cacheSeconds);
+      const postseasonDates = isRecord(postseasonPayload) ? records(postseasonPayload.dates) : [];
+      const postseasonEvents = postseasonDates.flatMap((item) => records(item.games).map(gameEvent).filter((event): event is SportsEvent => event !== null)).filter((event) => event.metadata?.seasonType === "Postseason");
+      events = [...events, ...postseasonEvents];
+    }
     this.isLive = events.some((event) => event.status === "live" || event.status === "delayed");
     return { events, standings: teamStanding(standingsPayload) };
   }

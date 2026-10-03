@@ -82,6 +82,11 @@ const DEFAULT_REFRESH_INTERVAL_MS = 5 * 60 * 1000;
 const calendarCache = new Map<string, { expiresAt: number; value: CalendarSnapshot }>();
 const calendarRequests = new Map<string, Promise<CalendarSnapshot>>();
 
+function cachedCalendarSnapshot(scopeId: string) {
+  const entry = calendarCache.get(scopeId);
+  return entry && entry.expiresAt > Date.now() ? entry.value : null;
+}
+
 async function requestCalendarSnapshot(scopeId: string): Promise<CalendarSnapshot> {
   const cached = calendarCache.get(scopeId);
   if (cached && cached.expiresAt > Date.now()) return cached.value;
@@ -109,10 +114,10 @@ export default function useCalendar({ refreshMs = DEFAULT_REFRESH_INTERVAL_MS, e
   const entitlements = usePersonalCapabilities();
   const school = useSchoolData({ enabled: entitlements.features["school.basic"] });
   const [calendar, setCalendar] =
-    useState<CalendarSnapshot | null>(null);
+    useState<CalendarSnapshot | null>(() => cachedCalendarSnapshot(scope.id));
 
   const [loading, setLoading] =
-    useState(true);
+    useState(() => !cachedCalendarSnapshot(scope.id));
 
   const [error, setError] =
     useState<string | null>(null);

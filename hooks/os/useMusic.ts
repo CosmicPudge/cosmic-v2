@@ -13,12 +13,15 @@ interface UseMusicOptions {
   enabled?: boolean;
 }
 
+const musicCache = new Map<string, MusicSnapshot>();
+
 export function isMusicConfigured(snapshot: MusicSnapshot | null) {
   return snapshot?.configured === true;
 }
 
 export function useMusic({ refreshMs, enabled = true }: UseMusicOptions = {}) {
-  const [snapshot, setSnapshot] = useState<MusicSnapshot | null>(null);
+  const scope = useCosmicScope();
+  const [snapshot, setSnapshot] = useState<MusicSnapshot | null>(() => musicCache.get(scope.id) ?? null);
   const hasLoaded = useRef(false);
   const refreshPromiseRef = useRef<Promise<void> | null>(null);
   const requestSequenceRef = useRef(0);
@@ -29,7 +32,6 @@ export function useMusic({ refreshMs, enabled = true }: UseMusicOptions = {}) {
   const [actionError, setActionError] = useState<string>();
   const [actionLoading, setActionLoading] = useState(false);
   const [lastSuccessfulRefreshAt, setLastSuccessfulRefreshAt] = useState<string>();
-  const scope = useCosmicScope();
 
   const refresh = useCallback(async () => {
     if (refreshPromiseRef.current) return refreshPromiseRef.current;
@@ -56,6 +58,7 @@ export function useMusic({ refreshMs, enabled = true }: UseMusicOptions = {}) {
         latestAcceptedSequenceRef.current = requestSequence;
         if (process.env.NODE_ENV !== "production") console.info(`[use-music] direct-response trackPresent=${Boolean(next.playback.track)} trackIdSuffix=${next.playback.track?.id?.slice(-4) ?? "none"} title=${JSON.stringify(next.playback.track?.title ?? null)}`);
         setSnapshot(next);
+        musicCache.set(scope.id, next);
         setLastSuccessfulRefreshAt(new Date().toISOString());
         setRequestError(undefined);
       } catch (cause) {
@@ -73,7 +76,7 @@ export function useMusic({ refreshMs, enabled = true }: UseMusicOptions = {}) {
     } finally {
       if (refreshPromiseRef.current === request) refreshPromiseRef.current = null;
     }
-  }, []);
+  }, [scope.id]);
 
   useEffect(() => {
     if (!enabled || refreshMs !== undefined) return;
@@ -85,7 +88,7 @@ export function useMusic({ refreshMs, enabled = true }: UseMusicOptions = {}) {
     return () => window.clearTimeout(initial);
   }, [enabled, refresh, refreshMs, scope.id]);
 
-  useEffect(() => { const timer = window.setTimeout(() => { setSnapshot(null); setLoading(true); setRequestError(undefined); setLastSuccessfulRefreshAt(undefined); hasLoaded.current = false; }, 0); return () => window.clearTimeout(timer); }, [scope.id]);
+  useEffect(() => { const timer = window.setTimeout(() => { const cachedSnapshot = musicCache.get(scope.id) ?? null; setSnapshot(cachedSnapshot); setLoading(!cachedSnapshot); setRequestError(undefined); setLastSuccessfulRefreshAt(cachedSnapshot ? new Date().toISOString() : undefined); hasLoaded.current = false; }, 0); return () => window.clearTimeout(timer); }, [scope.id]);
 
   const intervalMs = typeof refreshMs === "function" ? refreshMs(snapshot) : refreshMs;
   useVisiblePolling(refresh, intervalMs ?? 0, { enabled: enabled && intervalMs !== undefined });

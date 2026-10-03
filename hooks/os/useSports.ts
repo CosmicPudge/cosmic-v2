@@ -20,6 +20,11 @@ type SportsWireSnapshot = Omit<SportsSnapshot, "live" | "upcoming" | "recent" | 
 const pendingRequests = new Map<string, Promise<SportsSnapshot>>();
 const snapshotCache = new Map<string, { expiresAt: number; value: SportsSnapshot }>();
 
+function cachedSnapshot(key: string) {
+  const entry = snapshotCache.get(key);
+  return entry && entry.expiresAt > Date.now() ? entry.value : null;
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -88,8 +93,9 @@ async function requestSnapshot(sport: SportKind | undefined, scopeId: string): P
 export function useSports(options: SportsHookOptions = {}) {
   const { sport, refreshMs = (snapshot) => sportsRefreshMs(snapshot) } = options;
   const scope = useCosmicScope();
-  const [data, setData] = useState<SportsSnapshot | null>(null);
-  const [loading, setLoading] = useState(true);
+  const cacheKey = `${scope.id}:${sport ?? "all"}`;
+  const [data, setData] = useState<SportsSnapshot | null>(() => cachedSnapshot(cacheKey));
+  const [loading, setLoading] = useState(() => !cachedSnapshot(cacheKey));
   const [error, setError] = useState<string | null>(null);
   const [lastSuccessfulRefreshAt, setLastSuccessfulRefreshAt] = useState<string>();
 
@@ -104,7 +110,7 @@ export function useSports(options: SportsHookOptions = {}) {
       setLoading(false);
     }
   }, [sport, scope.id]);
-  useEffect(() => { const timer = window.setTimeout(() => { setData(null); setLoading(true); setError(null); setLastSuccessfulRefreshAt(undefined); }, 0); return () => window.clearTimeout(timer); }, [scope.id]);
+  useEffect(() => { const timer = window.setTimeout(() => { const next = cachedSnapshot(cacheKey); setData(next); setLoading(!next); setError(null); setLastSuccessfulRefreshAt(next ? next.lastUpdated.toISOString() : undefined); }, 0); return () => window.clearTimeout(timer); }, [cacheKey]);
   useEffect(() => {
     const invalidate = () => {
       for (const key of snapshotCache.keys()) if (key.startsWith(`${scope.id}:`)) snapshotCache.delete(key);
