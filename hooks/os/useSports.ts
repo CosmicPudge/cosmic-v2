@@ -7,6 +7,7 @@ import { useCosmicScope } from "@/services/storage/scope";
 import { kioskApiUrl } from "@/services/kioskRequest";
 import { sceneRefreshDiagnostics, sportsRefreshMode, sportsRefreshMs } from "@/services/kiosk/refreshPolicy";
 import { useConnectionHealth } from "@/services/kiosk/ConnectionHealthProvider";
+import { fetchWithTimeout } from "@/services/kiosk/fetchWithTimeout";
 
 type SportsHookOptions = { sport?: SportKind; kioskEligibility?: boolean; refreshMs?: number | ((snapshot: SportsSnapshot | null) => number); enabled?: boolean };
 type SportsWireEvent = Omit<SportsEvent, "start" | "end"> & { start: string; end?: string };
@@ -79,7 +80,7 @@ async function requestSnapshot(sport: SportKind | undefined, scopeId: string, ki
   if (sport) params.set("sport", sport);
   if (kioskEligibility) params.set("kiosk", "true");
   const query = params.toString() ? `?${params.toString()}` : "";
-  const request = fetch(kioskApiUrl(`/api/sports${query}`), { credentials: "include", cache: "no-store" })
+  const request = fetchWithTimeout(kioskApiUrl(`/api/sports${query}`), { credentials: "include", cache: "no-store" })
     .then(async (response) => {
       if (!response.ok) throw new Error("Sports data is temporarily unavailable.");
       const payload: unknown = await response.json();
@@ -128,7 +129,7 @@ export function useSports(options: SportsHookOptions = {}) {
   }, [scope.id]);
 
   const intervalMs = typeof refreshMs === "function" ? refreshMs(data) : refreshMs;
-  useVisiblePolling(refresh, intervalMs, { enabled, immediate: data === null });
+  useVisiblePolling(refresh, intervalMs, { enabled, immediate: data === null }, "sports");
 
   return { data, loading, error, refresh, refreshDiagnostics: sceneRefreshDiagnostics(lastSuccessfulRefreshAt, intervalMs, sportsRefreshMode(data)) };
 }

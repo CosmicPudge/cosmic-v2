@@ -1,0 +1,14 @@
+[Unit]
+Description=Cosmic kiosk renderer heartbeat watchdog
+After=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 %h/.local/libexec/cosmic_kiosk_watchdog.py --service cosmic-kiosk.service --port 8766 --stale-after 45 --confirm-after 10 --cooldown 180
+Restart=always
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=default.target

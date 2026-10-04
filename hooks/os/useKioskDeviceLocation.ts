@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { hasMeaningfulDeviceLocationMove, type DeviceLocationCandidate } from "@/services/kiosk/deviceLocation";
+import { startKioskResource } from "@/services/kiosk/resourceLifecycle";
 
 export const KIOSK_LOCATION_STORAGE_KEY = "cosmic:kiosk-device-location:v1";
 
@@ -20,6 +21,7 @@ function writeLocation(value: DeviceLocationCandidate) {
 export default function useKioskDeviceLocation() {
   useEffect(() => {
     if (!navigator.geolocation) return;
+    const stopResource = startKioskResource("geolocation");
     let active = true;
     let retryTimer: number | undefined;
     let lastAttempt = 0;
@@ -42,7 +44,7 @@ export default function useKioskDeviceLocation() {
     const interval = window.setInterval(resolve, 30 * 60_000);
     window.addEventListener("online", onOnline);
     document.addEventListener("visibilitychange", onVisibility);
-    return () => { active = false; window.clearInterval(interval); if (retryTimer) window.clearTimeout(retryTimer); window.removeEventListener("online", onOnline); document.removeEventListener("visibilitychange", onVisibility); };
+    return () => { active = false; window.clearInterval(interval); if (retryTimer) window.clearTimeout(retryTimer); window.removeEventListener("online", onOnline); document.removeEventListener("visibilitychange", onVisibility); stopResource(); };
   }, []);
 }
 

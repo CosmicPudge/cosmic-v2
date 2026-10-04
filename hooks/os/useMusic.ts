@@ -8,6 +8,7 @@ import { useCosmicScope } from "@/services/storage/scope";
 import { kioskApiUrl } from "@/services/kioskRequest";
 import { KIOSK_REFRESH_MS, musicBackoffMs, sceneRefreshDiagnostics } from "@/services/kiosk/refreshPolicy";
 import { useConnectionHealth } from "@/services/kiosk/ConnectionHealthProvider";
+import { fetchWithTimeout } from "@/services/kiosk/fetchWithTimeout";
 
 interface UseMusicOptions {
   refreshMs?: number | ((snapshot: MusicSnapshot | null) => number);
@@ -52,7 +53,7 @@ export function useMusic({ refreshMs, enabled = true }: UseMusicOptions = {}) {
     const request = (async () => {
       try {
         recordAttempt("music");
-        const response = await fetch(kioskApiUrl("/api/music"), { credentials: "include", cache: "no-store" });
+        const response = await fetchWithTimeout(kioskApiUrl("/api/music"), { credentials: "include", cache: "no-store" });
 
         if (!response.ok) {
           const retryAfter = response.headers.get("Retry-After");
@@ -118,7 +119,7 @@ export function useMusic({ refreshMs, enabled = true }: UseMusicOptions = {}) {
 
   const intervalMs = typeof refreshMs === "function" ? refreshMs(snapshot) : refreshMs;
   const effectiveIntervalMs = intervalMs === undefined ? undefined : Math.max(intervalMs, musicBackoffMs(failureCount, retryAfterMs));
-  useVisiblePolling(refresh, effectiveIntervalMs ?? 0, { enabled: enabled && effectiveIntervalMs !== undefined });
+  useVisiblePolling(refresh, effectiveIntervalMs ?? 0, { enabled: enabled && effectiveIntervalMs !== undefined }, "music");
 
   useEffect(() => {
     if (process.env.NODE_ENV !== "production") console.info(`[use-music] hook-state trackPresent=${Boolean(snapshot?.playback.track)} trackIdSuffix=${snapshot?.playback.track?.id?.slice(-4) ?? "none"} title=${JSON.stringify(snapshot?.playback.track?.title ?? null)}`);

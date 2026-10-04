@@ -21,7 +21,7 @@ export default function SystemWidget() {
   useEffect(() => {
     for (const service of KIOSK_HEALTH_SERVICES) traceKioskHealth(service, "system-consumer", { status: health[service].state });
   }, [health]);
-  const cosmicUpdate = useKioskUpdateStatus();
+  const cosmicUpdate = useKioskUpdateStatus({ enabled: presentation !== "kiosk" });
   const { data: developerKiosk } = useDeveloperKioskData({ poll: false });
   const priority = !snapshot.network.online
     ? "Offline"

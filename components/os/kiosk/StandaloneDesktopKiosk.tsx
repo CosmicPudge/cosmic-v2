@@ -12,6 +12,24 @@ export default function StandaloneDesktopKiosk() {
   const [runtimeReady, setRuntimeReady] = useState(false);
   useKioskDeviceLocation();
   useEffect(() => {
+    let stopped = false;
+    let timer: number | undefined;
+    let inFlight = false;
+    const heartbeat = async () => {
+      if (stopped || inFlight) return;
+      inFlight = true;
+      try {
+        await fetch("http://127.0.0.1:8766/heartbeat", { method: "GET", mode: "no-cors", cache: "no-store", credentials: "omit" });
+      } catch { /* The external watchdog owns recovery when the renderer cannot heartbeat. */ }
+      finally {
+        inFlight = false;
+        if (!stopped) timer = window.setTimeout(() => void heartbeat(), 10_000);
+      }
+    };
+    void heartbeat();
+    return () => { stopped = true; if (timer !== undefined) window.clearTimeout(timer); };
+  }, []);
+  useEffect(() => {
     document.documentElement.dataset.cosmicKiosk = "true";
     document.body.dataset.cosmicKiosk = "true";
     return () => { delete document.documentElement.dataset.cosmicKiosk; delete document.body.dataset.cosmicKiosk; };

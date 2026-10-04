@@ -37,6 +37,7 @@ import { musicRefreshMs, sportsRefreshMs } from "@/services/kiosk/refreshPolicy"
 import { useDeveloperKioskData } from "@/hooks/os/useDeveloperKioskData";
 import { useMusic } from "@/hooks/os/useMusic";
 import { useKioskRuntimeReady } from "./KioskRuntimeContext";
+import { startKioskResource } from "@/services/kiosk/resourceLifecycle";
 
 const TEST_SPORTS: SportKind[] = [
   "nfl",
@@ -425,9 +426,16 @@ function KioskNormalSlideshow() {
   useEffect(() => {
     if (!bootId) return;
     let cancelled = false;
+    let inFlight = false;
+    let controller: AbortController | null = null;
+    const stopResource = startKioskResource("kiosk-control");
     const sync = async () => {
+      if (inFlight) return;
+      inFlight = true;
+      controller = new AbortController();
+      const timeout = window.setTimeout(() => controller?.abort(), 4_000);
       try {
-        const response = await fetch(`/api/devices/kiosk-control?cosmic-kiosk=1&cosmic-boot=${encodeURIComponent(bootId)}`, { cache: "no-store", credentials: "include" });
+        const response = await fetch(`/api/devices/kiosk-control?cosmic-kiosk=1&cosmic-boot=${encodeURIComponent(bootId)}`, { cache: "no-store", credentials: "include", signal: controller.signal });
         if (!response.ok || cancelled) return;
         const state = await response.json() as { paused: boolean; pauseReason: KioskSlideshowPauseReason; holdMusicWhilePlaying: boolean; command?: "pause" | "resume" | "next" | "previous" | null; commandRevision: number; appliedCommandRevision: number };
         setHoldMusicWhilePlaying(state.holdMusicWhilePlaying);
@@ -447,12 +455,13 @@ function KioskNormalSlideshow() {
         } else {
           appliedCommandRevisionRef.current = Math.max(appliedCommandRevisionRef.current, state.appliedCommandRevision);
         }
-        await fetch(`/api/devices/kiosk-control?cosmic-kiosk=1&cosmic-boot=${encodeURIComponent(bootId)}`, { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include", body: JSON.stringify({ action: "report", currentSlide: stateRef.current.currentSlide, paused: nextPaused, pauseReason: nextReason, appliedCommandRevision: appliedCommandRevisionRef.current }) });
+        await fetch(`/api/devices/kiosk-control?cosmic-kiosk=1&cosmic-boot=${encodeURIComponent(bootId)}`, { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include", body: JSON.stringify({ action: "report", currentSlide: stateRef.current.currentSlide, paused: nextPaused, pauseReason: nextReason, appliedCommandRevision: appliedCommandRevisionRef.current }), signal: controller.signal });
       } catch { /* A transient control failure must not interrupt the kiosk. */ }
+      finally { window.clearTimeout(timeout); controller = null; inFlight = false; }
     };
     void sync();
     const interval = window.setInterval(() => void sync(), 1500);
-    return () => { cancelled = true; window.clearInterval(interval); };
+    return () => { cancelled = true; window.clearInterval(interval); controller?.abort(); stopResource(); };
   }, [bootId, goToRelativeSlide]);
 
   const handlePointerDown = useCallback((event: React.PointerEvent<HTMLDivElement>) => {

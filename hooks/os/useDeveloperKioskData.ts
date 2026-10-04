@@ -11,6 +11,8 @@ import { kioskApiUrl } from "@/services/kioskRequest";
 import { readKioskDeviceLocation } from "@/hooks/os/useKioskDeviceLocation";
 import { classifyKioskDataHealth } from "@/services/kiosk/dataHealth";
 import { traceKioskHealth } from "@/services/kiosk/healthTrace";
+import { startKioskResource } from "@/services/kiosk/resourceLifecycle";
+import { fetchWithTimeout } from "@/services/kiosk/fetchWithTimeout";
 
 export interface DeveloperKioskData {
   location: { lat: number; lon: number; label: string; source?: "current" | "last-known" | "fallback" | "unavailable"; stale?: boolean } | null;
@@ -67,6 +69,7 @@ export function useDeveloperKioskData({ enabled: requestedEnabled, poll = true }
   const { recordAttempt, recordSuccess, recordFailure } = useConnectionHealth();
   useEffect(() => {
     if (!enabled) return;
+    const stopResource = poll ? startKioskResource("kiosk-data") : undefined;
     let active = true;
     const load = async () => {
       try {
@@ -84,7 +87,7 @@ export function useDeveloperKioskData({ enabled: requestedEnabled, poll = true }
           params.set("kioskLocationAt", location.resolvedAt ?? "");
           params.set("kioskLocationSource", locationSource);
         }
-        request ??= fetch(kioskApiUrl(`/api/kiosk/data?${params.toString()}`), { cache: "no-store", credentials: "include" }).then(async (response) => {
+        request ??= fetchWithTimeout(kioskApiUrl(`/api/kiosk/data?${params.toString()}`), { cache: "no-store", credentials: "include" }).then(async (response) => {
           if (!response.ok) {
             if (response.status === 401 || response.status === 403) window.dispatchEvent(new CustomEvent("cosmic:kiosk-auth-needed"));
             throw new Error(response.status === 401 || response.status === 403 ? "Kiosk session renewal is required." : "Developer kiosk data is unavailable.");
@@ -133,7 +136,7 @@ export function useDeveloperKioskData({ enabled: requestedEnabled, poll = true }
     window.addEventListener("cosmic:kiosk-data-updated", syncCachedData);
     window.addEventListener("online", retryWhenOnline);
     document.addEventListener("visibilitychange", retryWhenVisible);
-    return () => { active = false; if (timer !== undefined) window.clearInterval(timer); window.removeEventListener("cosmic:school-completion-changed", completionChanged); window.removeEventListener("cosmic:kiosk-location-changed", locationChanged); window.removeEventListener("cosmic:kiosk-location-moved", locationChanged); window.removeEventListener("cosmic:kiosk-session-renewed", sessionRenewed); window.removeEventListener("cosmic:kiosk-data-updated", syncCachedData); window.removeEventListener("online", retryWhenOnline); document.removeEventListener("visibilitychange", retryWhenVisible); };
+    return () => { active = false; if (timer !== undefined) window.clearInterval(timer); stopResource?.(); window.removeEventListener("cosmic:school-completion-changed", completionChanged); window.removeEventListener("cosmic:kiosk-location-changed", locationChanged); window.removeEventListener("cosmic:kiosk-location-moved", locationChanged); window.removeEventListener("cosmic:kiosk-session-renewed", sessionRenewed); window.removeEventListener("cosmic:kiosk-data-updated", syncCachedData); window.removeEventListener("online", retryWhenOnline); document.removeEventListener("visibilitychange", retryWhenVisible); };
   }, [enabled, poll, recordAttempt, recordFailure, recordSuccess]);
   return { data, loading, error };
 }

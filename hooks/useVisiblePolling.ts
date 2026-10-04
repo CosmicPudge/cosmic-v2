@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { startKioskResource, type KioskResourceName } from "@/services/kiosk/resourceLifecycle";
 
 interface UseVisiblePollingOptions {
   enabled?: boolean;
@@ -12,6 +13,7 @@ export function useVisiblePolling(
   callback: () => void | Promise<void>,
   intervalMs: number,
   { enabled = true, immediate = true }: UseVisiblePollingOptions = {},
+  resourceName?: KioskResourceName,
 ) {
   const callbackRef = useRef(callback);
 
@@ -21,6 +23,8 @@ export function useVisiblePolling(
 
   useEffect(() => {
     if (!enabled) return;
+
+    const stopResource = resourceName ? startKioskResource(resourceName) : undefined;
 
     let disposed = false;
     let authLost = false;
@@ -79,6 +83,7 @@ export function useVisiblePolling(
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("cosmic:auth-lost", handleAuthLost);
+      stopResource?.();
     };
-  }, [enabled, immediate, intervalMs]);
+  }, [enabled, immediate, intervalMs, resourceName]);
 }
