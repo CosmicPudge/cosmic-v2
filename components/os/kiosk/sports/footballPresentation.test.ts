@@ -23,7 +23,7 @@ test("football presentation exposes drive, penalty, and review attention data", 
     sport: "nfl", eventId: "x", generatedAt: new Date().toISOString(), stale: false, sources: [],
     away: { team: { id: "gb", name: "Green Bay Packers", abbreviation: "GB" }, score: 7, timeoutsRemaining: 2 }, home: { team: { id: "tb", name: "Tampa Bay Buccaneers", abbreviation: "TB" }, score: 10, timeoutsRemaining: 3 }, situation: { quarter: 2, clock: "04:20", downDistanceText: "3rd & 4", possessionTeamId: "gb" }, currentDrive: { description: "Green Bay drive · 6 plays, 42 yards" }, latestPlay: { description: "Holding, offense", penalty: true }, penalty: { text: "Holding, offense", yards: 10 }, review: { text: "Challenge under review", active: true },
   });
-  assert.equal(view.driveLabel, "Green Bay drive · 6 plays, 42 yards"); assert.equal(view.penaltyText, "Holding, offense · 10-yard penalty"); assert.equal(view.reviewText, "Challenge under review"); assert.equal(view.away.timeouts, 2);
+  assert.equal(view.driveLabel, "Green Bay drive · 6 plays, 42 yards"); assert.equal(view.penaltyText, "Holding · 10 yards"); assert.equal(view.reviewText, "Challenge under review"); assert.equal(view.away.timeouts, 2);
 });
 
 test("attention state priority is review over flag and preserves possession color", () => {
@@ -62,4 +62,14 @@ test("uses normalized CFB school names and does not invent unknown scores or ran
   assert.equal(view.away.abbreviation, "USU"); assert.equal(view.home.abbreviation, "BSU");
   assert.equal(view.away.score, undefined); assert.equal(view.home.score, 21);
   assert.deepEqual(view.rankings, ["#22 Boise State Broncos"]);
+});
+
+test("historical provider penalties do not become current FLAG attention", () => {
+  const view = createFootballPresentation(event("nfl"), {
+    sport: "nfl", eventId: "x", generatedAt: new Date().toISOString(), stale: false, sources: [],
+    away: { team: { id: "gb", name: "Green Bay Packers", abbreviation: "GB" }, score: 17 }, home: { team: { id: "tb", name: "Tampa Bay Buccaneers", abbreviation: "TB" }, score: 7 }, situation: { quarter: 4, clock: "10:02" },
+    latestPlay: { id: "q4-play", description: "Pass complete for 8 yards", type: "pass" }, penalty: { text: "Defensive Holding", teamId: "tb", yards: 5 },
+  });
+  assert.equal(view.attention, "normal");
+  assert.equal(view.penaltyDisplay, undefined);
 });

@@ -1,6 +1,6 @@
 import type { FootballPlay, FootballPenaltyState } from "@/core/contracts/sports/Football";
 
-export const FOOTBALL_PENALTY_DISPLAY_MS = 7_000;
+export const FOOTBALL_PENALTY_DISPLAY_MS = 6_000;
 
 export interface FootballPenaltyLifecycle {
   identity?: string;
@@ -10,7 +10,8 @@ export interface FootballPenaltyLifecycle {
 
 export function footballPlayIdentity(play?: FootballPlay, penalty?: FootballPenaltyState) {
   if (!play && !penalty) return undefined;
-  if (play?.id) return `play:${play.id}`;
+  const penaltyRevision = penalty ? `:${penalty.text}:${penalty.teamId ?? ""}:${penalty.yards ?? ""}:${penalty.accepted ? "accepted" : ""}:${penalty.declined ? "declined" : ""}:${penalty.offsetting ? "offsetting" : ""}` : "";
+  if (play?.id) return `play:${play.id}${penaltyRevision}`;
   if (play?.sequence !== undefined) return `sequence:${play.sequence}`;
   return `penalty:${play?.period ?? ""}:${play?.clock ?? ""}:${penalty?.teamId ?? play?.teamId ?? ""}:${penalty?.text ?? play?.description ?? ""}`;
 }

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import type { SportsEvent } from "@/core/contracts/Sports";
 import type { BaseballLiveData } from "@/core/contracts/sports/Baseball";
-import { createSportsScoreObservation, detectSportsCelebration } from "./sportsCelebration";
+import { createSportsScoreObservation, detectSportsCelebration, sportsCelebrationDurationMs } from "./sportsCelebration";
 import type { FootballLiveData } from "@/core/contracts/sports/Football";
 
 const event = (overrides: Partial<SportsEvent> = {}): SportsEvent => ({
@@ -105,4 +105,12 @@ test("nullified football scoring plays do not celebrate", () => {
   const previous = createSportsScoreObservation(game, base, 1_000);
   const current = createSportsScoreObservation(game, { ...base, home: { ...base.home, score: 7 }, latestPlay: { id: "play-null", description: "Touchdown nullified by penalty", scoringPlay: true, touchdown: true } }, 2_000);
   assert.equal(detectSportsCelebration(previous, current, game), null);
+});
+
+test("football celebrations use sport-specific broadcast durations", () => {
+  assert.equal(sportsCelebrationDurationMs("touchdown"), 8_000);
+  assert.equal(sportsCelebrationDurationMs("field-goal"), 7_000);
+  assert.equal(sportsCelebrationDurationMs("two-point"), 7_000);
+  assert.equal(sportsCelebrationDurationMs("extra-point"), 5_000);
+  assert.equal(sportsCelebrationDurationMs("safety"), 8_000);
 });

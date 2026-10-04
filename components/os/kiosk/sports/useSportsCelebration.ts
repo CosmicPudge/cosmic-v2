@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { SportsEvent } from "@/core/contracts/Sports";
 import type { SportsLiveData } from "@/core/contracts/sports/Core";
-import { createSportsScoreObservation, createTestSportsCelebration, detectSportsCelebration, type ScoreCelebrationKind, type SportsCelebration } from "./sportsCelebration";
+import { createSportsScoreObservation, createTestSportsCelebration, detectSportsCelebration, sportsCelebrationDurationMs, type ScoreCelebrationKind, type SportsCelebration } from "./sportsCelebration";
 
 export function useSportsCelebration(event: SportsEvent, live: SportsLiveData | null | undefined, visible: boolean, forcedKind?: ScoreCelebrationKind) {
   const observation = useMemo(() => createSportsScoreObservation(event, live?.sport === "mlb" || live?.sport === "nfl" || event.sport === "college-football" ? live as Parameters<typeof createSportsScoreObservation>[1] : null), [event, live]);
@@ -27,8 +27,7 @@ export function useSportsCelebration(event: SportsEvent, live: SportsLiveData | 
     if (!detected) return;
     setCelebration(detected);
     if (timerRef.current !== null) window.clearTimeout(timerRef.current);
-    const footballCelebration = ["touchdown", "extra-point", "field-goal", "two-point", "safety"].includes(detected.kind);
-    timerRef.current = window.setTimeout(() => setCelebration(null), footballCelebration ? 7_000 : detected.kind === "home-run" ? 3_200 : 2_000);
+    timerRef.current = window.setTimeout(() => setCelebration(null), sportsCelebrationDurationMs(detected.kind));
   }, [event, forcedKind, observation, visible]);
 
   useEffect(() => () => { if (timerRef.current !== null) window.clearTimeout(timerRef.current); }, []);

@@ -463,6 +463,7 @@ html, body { width: 100%; min-height: 100%; background: #030511; }
 .kiosk-football-state-dot { background: var(--football-accent); box-shadow: 0 0 0 4px color-mix(in srgb, var(--football-accent) 13%, transparent), 0 0 20px color-mix(in srgb, var(--football-accent) 70%, transparent); }
 .kiosk-football-panel--normal .kiosk-football-state-dot { background: #4ade80; box-shadow: 0 0 0 4px rgba(74,222,128,.12), 0 0 18px rgba(74,222,128,.7); }
 .kiosk-football-brand { color: color-mix(in srgb, var(--football-accent) 72%, white); }
+.kiosk-football-matchup-title { text-wrap: balance; }
 .kiosk-football-scoreboard { padding-block: clamp(.25rem, 1.2vh, 1.1rem); }
 .kiosk-football-team { min-width: 0; }
 .kiosk-football-team-name { line-height: .98; text-shadow: 0 3px 18px rgba(0,0,0,.72); }
@@ -508,6 +509,7 @@ html, body { width: 100%; min-height: 100%; background: #030511; }
   .kiosk-football-scene { padding: .65rem 1rem; }
   .kiosk-football-panel { border-radius: 1.35rem; }
   .kiosk-football-topbar { padding-block: .65rem; }
+  .kiosk-football-matchup-title { font-size: clamp(.85rem, 1.8vw, 1.4rem); }
   .kiosk-football-main { gap: .55rem; padding: .65rem 1.25rem; }
   .kiosk-football-statusline { min-height: 1.5rem; }
   .kiosk-football-scoreboard { grid-template-columns: minmax(0,1fr) minmax(15rem,20rem) minmax(0,1fr); gap: 1.25rem; }

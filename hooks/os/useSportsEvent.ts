@@ -7,6 +7,7 @@ import { useVisiblePolling } from "@/hooks/useVisiblePolling";
 import { kioskApiUrl } from "@/services/kioskRequest";
 import { sportsDetailPresence } from "@/services/sports/detailDiagnostics";
 import { diffFootballState, hasFootballStateChange } from "@/services/sports/football/stateDiff";
+import { footballDetailPollMode, footballDetailPollMs } from "@/services/sports/football/polling";
 
 interface WireResponse { event: Omit<SportsEvent, "start" | "end"> & { start: string; end?: string }; live: SportsLiveData | null; lastUpdated: string; providerErrors: unknown[]; }
 function hydrate(value: WireResponse) { const { start, end, ...event } = value.event; return { ...value, event: { ...event, start: new Date(start), ...(end ? { end: new Date(end) } : {}) } }; }
@@ -39,12 +40,12 @@ export function useSportsEvent(eventId: string, options: { enabled?: boolean; sp
     dataRef.current = null;
   }, [eventId]);
   const refresh = useCallback(async () => {
-    controllerRef.current?.abort();
+    if (controllerRef.current) return;
     const controller = new AbortController();
     controllerRef.current = controller;
     const diagnostics = detailLogAllowed();
     const startedAt = performance.now();
-    for (let attempt = 1; attempt <= 3; attempt += 1) {
+    try { for (let attempt = 1; attempt <= 3; attempt += 1) {
       if (controller.signal.aborted) return;
       if (diagnostics) console.info(`[kiosk-sports-detail] event=${eventId} request=started attempt=${attempt}`);
       const response = await fetch(kioskApiUrl(`/api/sports/event/${encodeURIComponent(eventId)}`), { credentials: "include", cache: "no-store", signal: controller.signal });
@@ -71,12 +72,12 @@ export function useSportsEvent(eventId: string, options: { enabled?: boolean; sp
       setError(null);
       setLoading(false);
       return;
-    }
+    } } finally { if (controllerRef.current === controller) controllerRef.current = null; }
   }, [eventId, options.sport]);
   useEffect(() => () => controllerRef.current?.abort(), [eventId]);
   const status: SportsEventStatus | undefined = data?.event.status;
   const football = options.sport === "nfl" || options.sport === "college-football";
-  const polling = status === undefined || status === "live" || status === "delayed" || status === "suspended" || (football && (status === "scheduled" || status === "pregame")) ? 10_000 : 60_000;
+  const polling = football ? status === undefined ? 10_000 : footballDetailPollMs(footballDetailPollMode(status, data?.live && "state" in data.live ? data.live.state : data?.live && "status" in data.live ? data.live.status : undefined)) : status === undefined || status === "live" || status === "delayed" || status === "suspended" ? 10_000 : 60_000;
   useVisiblePolling(async () => { try { await refresh(); } catch (reason) { if (reason instanceof DOMException && reason.name === "AbortError") return; setErrorEvent(eventId); setError(reason instanceof Error ? reason.message : "Sports event data is unavailable."); setLoading(false); } }, polling, { immediate: true, enabled: enabled && status !== "final" && status !== "cancelled" && status !== "postponed" });
   return { data: data?.event.id === eventId ? data : null, loading: loading || data?.event.id !== eventId, error: errorEvent === eventId ? error : null, refresh };
 }

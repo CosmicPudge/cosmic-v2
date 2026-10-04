@@ -21,6 +21,9 @@ export interface SportsScoreObservation {
   playType?: string;
   playDescription?: string;
   scoringIdentity?: string;
+  penaltyAccepted?: boolean;
+  penaltyDeclined?: boolean;
+  penaltyOffsetting?: boolean;
 }
 
 export interface SportsCelebration {
@@ -31,6 +34,13 @@ export interface SportsCelebration {
   secondaryColor: string;
   playId?: string;
   label: "SCORE" | "HOME RUN" | "TOUCHDOWN" | "XP / EXTRA POINT GOOD" | "FIELD GOAL GOOD" | "2-POINT CONVERSION GOOD" | "SAFETY";
+}
+
+export function sportsCelebrationDurationMs(kind: ScoreCelebrationKind) {
+  if (kind === "touchdown" || kind === "safety") return 8_000;
+  if (kind === "field-goal" || kind === "two-point") return 7_000;
+  if (kind === "extra-point") return 5_000;
+  return kind === "home-run" ? 3_200 : 2_000;
 }
 
 const NEUTRAL_SECONDARY = "#D7E7F5";
@@ -83,6 +93,9 @@ export function createSportsScoreObservation(
     ...(playType ? { playType } : {}),
     ...(play?.description ? { playDescription: play.description } : {}),
     ...(play?.scoringPlay ? { scoringIdentity: play.id ?? `${footballPlay?.period ?? ""}-${footballPlay?.clock ?? ""}-${footballPlay?.teamId ?? ""}-${play.description}` } : {}),
+    ...((live && "penalty" in live && live.penalty?.accepted) || footballPlay?.penaltyAccepted ? { penaltyAccepted: true } : {}),
+    ...((live && "penalty" in live && live.penalty?.declined) || footballPlay?.penaltyDeclined ? { penaltyDeclined: true } : {}),
+    ...((live && "penalty" in live && live.penalty?.offsetting) || footballPlay?.penaltyOffsetting ? { penaltyOffsetting: true } : {}),
   };
 }
 
@@ -103,7 +116,7 @@ function footballScoringKind(observation: SportsScoreObservation): Extract<Score
 
 function isNullifiedFootballScore(observation: SportsScoreObservation) {
   const value = `${observation.playDescription ?? ""}`.toLowerCase();
-  return /no good|nullif|revers|overturned|penalty\s+(?:nullifies|wipes out)|score does not count/.test(value);
+  return /no good|nullif|revers|overturned|penalty\s+(?:nullifies|wipes out)|score does not count|no play/.test(value) || (observation.penaltyAccepted === true && /offensive\s+(?:holding|pass interference)/.test(value));
 }
 
 function celebrationLabel(kind: ScoreCelebrationKind): SportsCelebration["label"] {

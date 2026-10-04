@@ -8,6 +8,7 @@ import { resolveSportsTeamIdentity } from "@/services/sports/identity";
 import { createFootballPresentation } from "./footballPresentation";
 import KioskFootballContextCards from "./KioskFootballContextCards";
 import { FOOTBALL_PENALTY_DISPLAY_MS } from "./footballAttention";
+import { interpolateFootballClock } from "@/services/sports/football/clock";
 
 type FootballView = ReturnType<typeof createFootballPresentation>;
 
@@ -48,9 +49,38 @@ function useFootballPenaltyBanner(identity?: string) {
   return visibleIdentity === identity;
 }
 
-function AttentionBanner({ view }: { view: FootballView }) { const flag = view.attention === "flag"; return <div className={`kiosk-football-attention flex items-center gap-4 border-b border-current/20 px-[clamp(1.25rem,4vw,4rem)] py-3 ${flag ? "kiosk-football-attention--flag" : "justify-center text-center"}`}><span className="kiosk-football-attention-icon text-[clamp(1.5rem,2.5vw,2.5rem)]" aria-hidden="true">{flag ? "⚑" : "◉"}</span><div className="min-w-0 flex-1"><p className="kiosk-football-attention-title text-[clamp(1.1rem,2.4vw,2rem)] font-black uppercase tracking-[.15em]">{view.attentionLabel}</p>{flag ? <p className="truncate text-[clamp(.85rem,1.4vw,1.2rem)] font-bold text-black/85">{view.penaltyText ?? "Penalty under review"}</p> : view.attention === "challenge" && view.attentionTeam ? <p className="mt-1 text-[clamp(.8rem,1.2vw,1rem)] font-semibold uppercase tracking-[.14em]">Challenge by {view.attentionTeam}</p> : view.attention === "official-review" ? <p className="mt-1 text-[clamp(.8rem,1.2vw,1rem)]">Ruling on the field under review</p> : null}</div>{flag && view.situation?.playClock ? <span className="kiosk-football-play-clock text-[clamp(1rem,1.8vw,1.5rem)] font-black tabular-nums text-black">{view.situation.playClock}</span> : null}</div>; }
+function AttentionBanner({ view }: { view: FootballView }) { const flag = view.attention === "flag"; return <div className={`kiosk-football-attention flex items-center gap-4 border-b border-current/20 px-[clamp(1.25rem,4vw,4rem)] py-2 ${flag ? "kiosk-football-attention--flag" : "justify-center text-center"}`}><span className="kiosk-football-attention-icon text-[clamp(1.5rem,2.5vw,2.5rem)]" aria-hidden="true">{flag ? "⚑" : "◉"}</span><div className="min-w-0 flex-1"><p className="kiosk-football-attention-title text-[clamp(1.1rem,2.4vw,2rem)] font-black uppercase tracking-[.15em]">{view.attentionLabel}</p>{flag ? <><p className="truncate text-[clamp(.85rem,1.4vw,1.2rem)] font-bold text-black/85">{view.penaltyDisplay?.headline ?? "Penalty under review"}</p>{view.penaltyDisplay?.detail ? <p className="truncate text-[clamp(.7rem,1vw,.9rem)] font-semibold text-black/75">{view.penaltyDisplay.detail}</p> : null}</> : view.attention === "challenge" && view.attentionTeam ? <p className="mt-1 text-[clamp(.8rem,1.2vw,1rem)] font-semibold uppercase tracking-[.14em]">Challenge by {view.attentionTeam}</p> : view.attention === "official-review" ? <p className="mt-1 text-[clamp(.8rem,1.2vw,1rem)]">Ruling on the field under review</p> : null}</div>{flag && view.situation?.playClock ? <span className="kiosk-football-play-clock text-[clamp(1rem,1.8vw,1.5rem)] font-black tabular-nums text-black">{view.situation.playClock}</span> : null}</div>; }
 
-function CenterSituation({ view, possessionText }: { view: FootballView; possessionText?: string }) { const situation = view.situation; const showDown = view.lifecycleState === "live" || view.lifecycleState === "starting" || view.lifecycleState === "overtime"; return <div className="kiosk-football-center flex min-w-[clamp(7rem,16vw,13rem)] flex-col items-center gap-3 text-center"><p className="kiosk-football-clock text-[clamp(1.5rem,3vw,2.8rem)] font-black leading-none text-white">{showDown ? situation?.clock ?? "—" : view.lifecycleState === "pregame" ? "KICKOFF" : "—"}</p><p className="kiosk-football-period text-[clamp(.8rem,1.1vw,1rem)] font-bold uppercase tracking-[.16em] text-white/80">{view.quarterLabel ?? (view.lifecycleState === "halftime" ? "HALFTIME" : view.lifecycleState === "final" ? "FINAL" : "GAME")}</p>{showDown ? <p className="kiosk-football-down text-[clamp(1rem,1.8vw,1.5rem)] font-black uppercase tracking-[.08em] text-white">{situation?.downDistanceText ?? "VS"}</p> : null}<FieldStrip view={view} possessionText={possessionText} /></div>; }
+function CenterSituation({ view, possessionText }: { view: FootballView; possessionText?: string }) { const situation = view.situation; const showDown = view.lifecycleState === "live" || view.lifecycleState === "starting" || view.lifecycleState === "overtime"; const displayClock = useFootballClock(showDown ? view.clock ?? situation?.clock : undefined, view.quarterLabel, showDown); return <div className="kiosk-football-center flex min-w-[clamp(7rem,16vw,13rem)] flex-col items-center gap-3 text-center"><p className="kiosk-football-clock text-[clamp(1.5rem,3vw,2.8rem)] font-black leading-none text-white">{showDown ? displayClock ?? "—" : view.lifecycleState === "pregame" ? "KICKOFF" : "—"}</p><p className="kiosk-football-period text-[clamp(.8rem,1.1vw,1rem)] font-bold uppercase tracking-[.16em] text-white/80">{view.quarterLabel ?? (view.lifecycleState === "halftime" ? "HALFTIME" : view.lifecycleState === "final" ? "FINAL" : "GAME")}</p>{showDown ? <p className="kiosk-football-down text-[clamp(1rem,1.8vw,1.5rem)] font-black uppercase tracking-[.08em] text-white">{situation?.downDistanceText ?? "VS"}</p> : null}<FieldStrip view={view} possessionText={possessionText} /></div>; }
+
+function useFootballClock(authoritativeClock: string | undefined, period: string | undefined, active: boolean) {
+  const [displayClock, setDisplayClock] = useState(authoritativeClock);
+  const state = useRef({ authoritativeClock, period, sampleAt: 0, sameSince: 0, running: false });
+  useEffect(() => {
+    const now = performance.now();
+    const previous = state.current;
+    const changed = authoritativeClock !== previous.authoritativeClock || period !== previous.period;
+    if (!active || !authoritativeClock) {
+      state.current = { authoritativeClock, period, sampleAt: now, sameSince: now, running: false };
+    } else if (changed) {
+      const clockProgressed = previous.period === period && previous.authoritativeClock !== undefined && authoritativeClock !== previous.authoritativeClock;
+      state.current = { authoritativeClock, period, sampleAt: now, sameSince: clockProgressed ? now : previous.sameSince, running: clockProgressed };
+    } else if (now - previous.sameSince >= 1_100) {
+      state.current.running = false;
+    }
+    const sync = window.setTimeout(() => setDisplayClock(authoritativeClock), 0);
+    return () => window.clearTimeout(sync);
+  }, [active, authoritativeClock, period]);
+  useEffect(() => {
+    if (!active) return;
+    const ticker = window.setInterval(() => {
+      const current = state.current;
+      if (current.running && current.authoritativeClock) setDisplayClock(interpolateFootballClock(current.authoritativeClock, performance.now() - current.sampleAt, true));
+    }, 250);
+    return () => window.clearInterval(ticker);
+  }, [active]);
+  return displayClock;
+}
 
 function FieldStrip({ view, possessionText }: { view: FootballView; possessionText?: string }) { const field = view.situation?.fieldPosition; const yard = field?.yardLine ?? view.situation?.ballYardLine; const first = view.situation?.firstDownYardLine; const display = field?.display ?? possessionText; return <div className="kiosk-football-field-strip w-full max-w-[19rem] rounded-xl border border-white/20 bg-emerald-950/55 p-2"><div className="flex justify-between text-[.55rem] font-black tracking-[.12em] text-white/80"><span>{view.away.abbreviation}</span><span>{view.home.abbreviation}</span></div><svg viewBox="0 0 220 30" className="mt-1 h-8 w-full" role="img" aria-label={display ? `Field position ${display}` : "Football field position"}><rect x="1" y="4" width="218" height="22" rx="3" fill="rgba(16,94,62,.75)" stroke="rgba(255,255,255,.35)" />{[22,44,66,88,110,132,154,176,198].map((x) => <line key={x} x1={x} x2={x} y1="5" y2="25" stroke="rgba(255,255,255,.28)" />)}{first !== undefined ? <line x1={Math.max(4, Math.min(216, first * 2.2))} x2={Math.max(4, Math.min(216, first * 2.2))} y1="5" y2="25" stroke="#facc15" strokeWidth="2" /> : null}{yard !== undefined ? <circle cx={Math.max(7, Math.min(213, yard * 2.2))} cy="15" r="4" fill="#fff" stroke="#111827" strokeWidth="2" /> : null}</svg><p className="mt-1 text-[.65rem] font-semibold text-white/80">{display ? `🏈 ${display}` : "Field position unavailable"}</p></div>; }
 

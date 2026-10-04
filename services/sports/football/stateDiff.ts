@@ -34,7 +34,7 @@ export function diffFootballState(previous: FootballLiveSource, next: FootballLi
     situationChanged: situationKey(previous) !== situationKey(next),
     playChanged: playId(previous) !== playId(next),
     driveChanged: driveId(previous) !== driveId(next),
-    penaltyChanged: JSON.stringify([before?.penalty?.text, before?.penalty?.teamId, before?.penalty?.yards]) !== JSON.stringify([after?.penalty?.text, after?.penalty?.teamId, after?.penalty?.yards]),
+    penaltyChanged: JSON.stringify([before?.penalty?.text, before?.penalty?.teamId, before?.penalty?.yards, before?.penalty?.accepted, before?.penalty?.declined, before?.penalty?.offsetting, before?.penalty?.active]) !== JSON.stringify([after?.penalty?.text, after?.penalty?.teamId, after?.penalty?.yards, after?.penalty?.accepted, after?.penalty?.declined, after?.penalty?.offsetting, after?.penalty?.active]),
     reviewChanged: JSON.stringify([before?.review?.text, before?.review?.active, before?.review?.outcome]) !== JSON.stringify([after?.review?.text, after?.review?.active, after?.review?.outcome]),
     statsChanged: statsKey(previous) !== statsKey(next),
     lifecycleChanged: JSON.stringify([before?.state, before && "status" in before ? before.status : undefined, before?.statusText, before?.stale]) !== JSON.stringify([after?.state, after && "status" in after ? after.status : undefined, after?.statusText, after?.stale]),

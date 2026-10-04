@@ -13,7 +13,7 @@ import { KIOSK_KICKOFF_GRACE_MS } from "@/services/sports/preferences";
 export const dynamic = "force-dynamic";
 
 const snapshotCache = new Map<string, { expiresAt: number; value: ReturnType<typeof getSportsSnapshot> }>();
-const detailCache = new Map<string, { expiresAt: number; value: Promise<unknown> }>();
+const detailCache = new Map<string, { expiresAt: number; value: Promise<unknown>; inFlight: boolean }>();
 const lastGoodFootballDetail = new Map<string, { value: unknown; fetchedAt: string }>();
 
 function cachedSnapshot(key: string, preferences: Parameters<typeof getSportsSnapshot>[1]) {
@@ -53,8 +53,9 @@ export async function GET(request: Request, { params }: { params: Promise<{ even
 
   const cacheKey = `${event.id}:${event.status}`;
   const footballStarting = (event.sport === "nfl" || event.sport === "college-football") && event.status === "scheduled" && Date.now() >= event.start.getTime() && Date.now() <= event.start.getTime() + KIOSK_KICKOFF_GRACE_MS;
-  let detail = detailCache.get(cacheKey)?.value;
-  if (!detail || (detailCache.get(cacheKey)?.expiresAt ?? 0) <= Date.now()) {
+  const cachedDetail = detailCache.get(cacheKey);
+  let detail = cachedDetail?.value;
+  if (!detail || (cachedDetail && !cachedDetail.inFlight && (cachedDetail.expiresAt ?? 0) <= Date.now())) {
     const requestDetail = event.sport === "mlb" && ["live", "delayed", "final"].includes(event.status)
       ? getMLBLiveData(mlbGamePk(event))
       : event.sport === "nfl" && (["live", "delayed", "suspended", "final"].includes(event.status) || footballStarting)
@@ -72,7 +73,16 @@ export async function GET(request: Request, { params }: { params: Promise<{ even
       if (!previous) return null;
       return typeof previous.value === "object" && previous.value !== null ? { ...(previous.value as Record<string, unknown>), stale: true, detailUpdatedAt: previous.fetchedAt } : previous.value;
     });
-    detailCache.set(cacheKey, { value: detail, expiresAt: Date.now() + (event.status === "live" || event.status === "delayed" || event.status === "suspended" || footballStarting ? 1_500 : 15_000) });
+    const liveFootball = event.sport === "nfl" || event.sport === "college-football";
+    const ttl = liveFootball && (event.status === "live" || event.status === "delayed" || event.status === "suspended" || footballStarting) ? 0 : event.status === "live" || event.status === "delayed" || event.status === "suspended" ? 1_500 : 15_000;
+    detailCache.set(cacheKey, { value: detail, expiresAt: Date.now() + ttl, inFlight: true });
+    void detail.finally(() => {
+      const current = detailCache.get(cacheKey);
+      if (current && current.value === detail) {
+        current.inFlight = false;
+        current.expiresAt = Date.now() + ttl;
+      }
+    });
   }
 
   const live = await detail;
