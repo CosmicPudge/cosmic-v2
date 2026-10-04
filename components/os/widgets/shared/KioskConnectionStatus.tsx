@@ -9,7 +9,7 @@ export default function KioskConnectionStatus({ service, lastUpdated }: { servic
   const { health } = useConnectionHealth();
   const current = health[service];
   useEffect(() => {
-    traceKioskHealth(service, "consumer", { status: current.state });
+    traceKioskHealth(service, `consumer-${service}`, { status: current.state });
   }, [current.state, service]);
   if (current.state === "connected") return null;
   if (current.state === "reconnecting") return <span className="kiosk-connection-status is-reconnecting">Reconnecting…</span>;

@@ -93,7 +93,7 @@ export function useDeveloperKioskData({ enabled: requestedEnabled, poll = true }
             throw new Error(response.status === 401 || response.status === 403 ? "Kiosk session renewal is required." : "Developer kiosk data is unavailable.");
           }
           const body = await response.json() as Partial<DeveloperKioskData>;
-          for (const service of ["weather", "calendar", "school"] as const) traceKioskHealth(service, "response", { present: body[service] !== undefined });
+          for (const service of ["weather", "calendar", "school"] as const) traceKioskHealth(service, "response", { status: response.status, present: body[service] !== undefined });
           return normalizeKioskData(mergeKioskData(prior, body));
         }).then((value) => { cached = value; return value; }).finally(() => { request = null; });
         const value = await request;
@@ -107,7 +107,7 @@ export function useDeveloperKioskData({ enabled: requestedEnabled, poll = true }
           lastHealthReportToken = currentRequestToken;
           const health = classifyKioskDataHealth(value);
           for (const service of ["weather", "calendar", "school"] as const) traceKioskHealth(service, "classify", { result: health[service] ? "success" : "failure" });
-          if (health.weather) recordSuccess("weather"); else recordFailure("weather", "unavailable");
+          if (health.weather) recordSuccess("weather");
           if (health.calendar) recordSuccess("calendar"); else recordFailure("calendar", value.calendar.diagnostics?.category ?? "provider-error");
           if (health.school) recordSuccess("school"); else recordFailure("school", value.school.diagnostics?.category ?? "provider-error");
         }
@@ -115,7 +115,7 @@ export function useDeveloperKioskData({ enabled: requestedEnabled, poll = true }
       } catch (reason) {
         if (requestToken !== lastHealthReportToken) {
           lastHealthReportToken = requestToken;
-          recordFailure("weather", "request-error"); recordFailure("calendar", "request-error"); recordFailure("school", "request-error");
+          recordFailure("calendar", "request-error"); recordFailure("school", "request-error");
         }
         if (active) { setData(cached); setError(reason instanceof Error ? reason.message : "Developer kiosk data is unavailable."); }
       }

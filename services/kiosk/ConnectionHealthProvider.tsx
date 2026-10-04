@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import {
   createInitialConnectionHealth,
   KIOSK_HEALTH_SERVICES,
@@ -9,7 +9,7 @@ import {
   type ConnectionHealthMap,
   type KioskHealthService,
 } from "./connectionHealth";
-import { traceKioskHealth } from "./healthTrace";
+import { kioskDiagnosticsEnabled, traceKioskHealth } from "./healthTrace";
 
 const STORAGE_KEY = "cosmic:kiosk-connection-health:v1";
 const MAX_PERSISTED_AGE_MS = 7 * 24 * 60 * 60_000;
@@ -50,9 +50,10 @@ function readPersisted(): ConnectionHealthMap {
 export function ConnectionHealthProvider({ children }: { children: React.ReactNode }) {
   const [instanceId] = useState(() => ++providerInstanceSequence);
   const [health, setHealth] = useState<ConnectionHealthMap>(() => readPersisted());
+  const persistedStatesRef = useRef<Partial<Record<KioskHealthService, string>>>({});
   useEffect(() => {
-    if (process.env.NODE_ENV !== "production") console.info(`[kiosk-health-provider] instance=${instanceId} mounted`);
-    return () => { if (process.env.NODE_ENV !== "production") console.info(`[kiosk-health-provider] instance=${instanceId} unmounted`); };
+    if (kioskDiagnosticsEnabled()) console.info(`[kiosk-health-provider] instance=${instanceId} mounted`);
+    return () => { if (kioskDiagnosticsEnabled()) console.info(`[kiosk-health-provider] instance=${instanceId} unmounted`); };
   }, [instanceId]);
   const update = useCallback((service: KioskHealthService, event: Parameters<typeof reduceConnectionHealth>[1]) => {
     setHealth((current) => {
@@ -60,7 +61,7 @@ export function ConnectionHealthProvider({ children }: { children: React.ReactNo
       traceKioskHealth(service, "provider-before", { status: previous.state, failures: previous.consecutiveFailures });
       const next = reduceConnectionHealth(previous, event);
       traceKioskHealth(service, "provider-after", { status: next.state, failures: next.consecutiveFailures });
-      if (process.env.NODE_ENV !== "production" && previous.state !== next.state) {
+      if (kioskDiagnosticsEnabled() && previous.state !== next.state) {
         console.info(`[kiosk-health] service=${service} event=${event.type} previous=${previous.state} next=${next.state} failures=${next.consecutiveFailures}`);
       }
       return { ...current, [service]: next };
@@ -69,13 +70,19 @@ export function ConnectionHealthProvider({ children }: { children: React.ReactNo
   const recordAttempt = useCallback((service: KioskHealthService) => update(service, { type: "attempt", at: new Date().toISOString() }), [update]);
   const recordSuccess = useCallback((service: KioskHealthService) => {
     const at = new Date().toISOString();
-    traceKioskHealth(service, "update-request", { event: "success" });
+    traceKioskHealth(service, "record-success", {});
     update(service, { type: "success", at });
     if (service !== "network") update("network", { type: "success", at });
   }, [update]);
   const recordFailure = useCallback((service: KioskHealthService, category?: string) => update(service, { type: "failure", at: new Date().toISOString(), category }), [update]);
 
   useEffect(() => {
+    for (const service of KIOSK_HEALTH_SERVICES) {
+      if (persistedStatesRef.current[service] !== health[service].state) {
+        traceKioskHealth(service, "persist", { status: health[service].state });
+        persistedStatesRef.current[service] = health[service].state;
+      }
+    }
     const persist = () => window.localStorage.setItem(STORAGE_KEY, JSON.stringify(health));
     try { persist(); } catch { /* Storage is optional on kiosk browsers. */ }
   }, [health]);

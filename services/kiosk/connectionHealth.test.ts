@@ -38,6 +38,18 @@ test("recovery clears the active outage and a later outage receives a new timest
   assert.equal(failedAgainThreeTimes.lostAt, "2026-10-03T16:01:00.000Z");
 });
 
+test("success updates immutable map entries and wins over persisted disconnected state", () => {
+  const previous = createInitialConnectionHealth();
+  previous.weather = reduceConnectionHealth(previous.weather, { type: "failure", at: firstFailure });
+  const previousWeather = previous.weather;
+  const nextWeather = reduceConnectionHealth(previousWeather, { type: "success", at: "2026-10-03T15:00:00.000Z" });
+  const next = { ...previous, weather: nextWeather };
+  assert.notEqual(next, previous);
+  assert.notEqual(next.weather, previous.weather);
+  assert.equal(next.weather.state, "connected");
+  assert.equal(next.weather.lostAt, undefined);
+});
+
 test("network offline marks each service independently without changing successful timestamps", () => {
   const initial = createInitialConnectionHealth();
   const connected = reduceConnectionHealth(initial.calendar, { type: "success", at: "2026-10-03T14:00:00.000Z" });
