@@ -1,167 +1,18 @@
 "use client";
-
 import type { SportsEvent } from "@/core/contracts/Sports";
 import type { FootballLiveData } from "@/core/contracts/sports/Football";
 import type { CollegeFootballLiveData } from "@/services/sports/providers/college-football-detail";
 import { resolveSportsTeamIdentity } from "@/services/sports/identity";
+import { createFootballPresentation } from "./footballPresentation";
 
-interface KioskFootballViewProps {
-  event: SportsEvent;
-  live?: FootballLiveData | CollegeFootballLiveData;
+export default function KioskFootballView({ event, live }: { event: SportsEvent; live?: FootballLiveData | CollegeFootballLiveData }) {
+  const view = createFootballPresentation(event, live); const possession = view.situation?.possessionText ?? view.situation?.possessionTeamAbbreviation; const ball = view.situation?.fieldPosition?.display ?? possession;
+  return <div className="kiosk-sports-view relative flex h-[100dvh] w-full items-center justify-center overflow-hidden px-[clamp(1rem,3vw,3rem)] py-[clamp(1rem,3vh,2.5rem)]"><section className="relative flex h-full w-full max-w-[1500px] flex-col overflow-hidden rounded-[clamp(1.5rem,3vw,2.75rem)] border border-white/15 bg-slate-950/35 shadow-[0_30px_120px_rgba(0,0,0,.32)] backdrop-blur-md">
+    <header className="flex shrink-0 items-center justify-between border-b border-white/10 px-[clamp(1.25rem,3vw,2.5rem)] py-[clamp(.9rem,2vh,1.4rem)]"><div className="flex items-center gap-4"><span className="h-3 w-3 rounded-full bg-red-400 shadow-[0_0_18px_rgba(248,113,113,.9)]" /><div><p className="text-[clamp(.7rem,1vw,.9rem)] font-bold uppercase tracking-[0.24em] text-red-100/90">{view.statusLabel} · {view.sportLabel}</p><h1 className="text-[clamp(1.15rem,2vw,1.7rem)] font-semibold tracking-tight text-white">{event.title}</h1></div></div><p className="text-right text-[clamp(.65rem,1vw,.85rem)] font-semibold uppercase tracking-[0.2em] text-white/60">Cosmic Sports</p></header>
+    <div className="grid min-h-0 flex-1 grid-rows-[auto_1fr_auto] gap-5 px-[clamp(1.25rem,4vw,4rem)] py-[clamp(1rem,3vh,2rem)]"><div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-center text-[clamp(.9rem,1.5vw,1.25rem)] font-bold uppercase tracking-[.12em] text-white/90">{view.quarterLabel ? <span>{view.quarterLabel}{view.clock ? ` · ${view.clock}` : ""}</span> : null}{view.rankings.map((rank) => <span key={rank} className="text-amber-100">{rank}</span>)}{view.reviewText ? <span className="rounded-full bg-amber-300/20 px-3 py-1 text-amber-100">{view.reviewText}</span> : null}</div>
+      <div className="grid min-h-0 grid-cols-[1fr_auto_1fr] items-center gap-[clamp(1rem,5vw,5rem)]"><ScoreTeam event={event} side="away" team={view.away} /><div className="flex flex-col items-center gap-4 text-center"><span className="text-[clamp(.8rem,1vw,1rem)] font-black uppercase tracking-[.22em] text-white/75">{view.situation?.downDistanceText ?? "VS"}</span><span className="text-[clamp(.8rem,1.2vw,1.1rem)] font-semibold uppercase tracking-[.15em] text-emerald-100/90">{possession ? `🏈 ${possession}` : "FOOTBALL"}</span><span className="text-[clamp(.75rem,1vw,.95rem)] font-semibold text-white/70">{ball ? `Ball on ${ball}` : "Awaiting drive data"}</span></div><ScoreTeam event={event} side="home" team={view.home} /></div>
+      <div className="grid gap-3 md:grid-cols-3"><InfoCard label="LAST PLAY" value={view.latestPlay?.shortDescription ?? view.latestPlay?.description ?? "No play-by-play yet"} /><InfoCard label="CURRENT DRIVE" value={view.driveLabel ?? "Drive data unavailable"} /><InfoCard label={view.penaltyText ? "PENALTY" : "GAME STATUS"} value={view.penaltyText ?? (view.venue ?? "Live detail updating")} emphasis={Boolean(view.penaltyText)} /></div></div>
+    <footer className="flex shrink-0 items-center justify-between border-t border-white/10 px-[clamp(1.25rem,3vw,2.5rem)] py-3 text-[10px] font-semibold uppercase tracking-[0.2em] text-white/55"><span>Live football detail</span><span>{view.away.timeouts !== undefined || view.home.timeouts !== undefined ? `Timeouts ${view.away.timeouts ?? "—"} · ${view.home.timeouts ?? "—"}` : "Scoreboard updating"}</span></footer><div className="pointer-events-none absolute inset-0 rounded-[inherit] ring-1 ring-inset ring-white/10" /></section></div>;
 }
-
-function getTeamName(
-  team: SportsEvent["homeTeam"] | SportsEvent["awayTeam"],
-) {
-  if (!team) {
-    return "—";
-  }
-
-  return team.abbreviation ?? team.name;
-}
-
-function getScore(
-  team: SportsEvent["homeTeam"] | SportsEvent["awayTeam"],
-) {
-  if (!team || team.score === undefined) {
-    return "—";
-  }
-
-  return String(team.score);
-}
-
-export default function KioskFootballView({
-  event,
-  live,
-}: KioskFootballViewProps) {
-  const awayName = getTeamName(event.awayTeam);
-  const homeName = getTeamName(event.homeTeam);
-  const isCollegeFootball = event.sport === "college-football";
-  const collegeLive = live && "period" in live ? live : undefined;
-  const situation = live && "situation" in live ? live.situation : collegeLive?.situation;
-
-  const awayScore = live?.away.score !== undefined ? String(live.away.score) : getScore(event.awayTeam);
-  const homeScore = live?.home.score !== undefined ? String(live.home.score) : getScore(event.homeTeam);
-
-  return (
-    <div className="kiosk-sports-view kiosk-football-view relative flex h-[100dvh] w-full items-center justify-center overflow-hidden px-[clamp(1rem,3vw,3rem)] py-[clamp(1rem,3vh,2.5rem)]">
-      <section className="relative flex h-full w-full max-w-[1500px] flex-col overflow-hidden rounded-[clamp(1.5rem,3vw,2.75rem)] border border-white/10 bg-black/10 shadow-[0_30px_120px_rgba(0,0,0,.32)] backdrop-blur-md">
-
-        {/* Header */}
-        <header className="flex shrink-0 items-center justify-between border-b border-white/[0.07] px-[clamp(1.25rem,3vw,2.5rem)] py-[clamp(.9rem,2vh,1.4rem)]">
-          <div className="flex items-center gap-4">
-            <span className="relative flex h-3 w-3">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-60" />
-              <span className="relative inline-flex h-3 w-3 rounded-full bg-red-400" />
-            </span>
-
-            <div>
-              <p className="text-[clamp(.65rem,1vw,.8rem)] font-semibold uppercase tracking-[0.24em] text-red-200/65">
-                {event.status === "live" || event.status === "delayed" ? "LIVE" : event.status === "final" ? "FINAL" : "UPCOMING"} • {isCollegeFootball ? "CFB" : "NFL"}
-              </p>
-
-              <h1 className="text-[clamp(1.15rem,2vw,1.7rem)] font-semibold tracking-tight text-white/90">
-                {event.title}
-              </h1>
-            </div>
-          </div>
-
-          <div className="text-right">
-            <p className="text-[clamp(.65rem,1vw,.8rem)] font-semibold uppercase tracking-[0.2em] text-white/25">
-              Cosmic Sports
-            </p>
-          </div>
-        </header>
-
-        {/* Game */}
-        <div className="flex min-h-0 flex-1 flex-col items-center justify-center px-[clamp(1.5rem,5vw,5rem)] py-6">
-
-          {/* Game status */}
-          <div className="mb-[clamp(1.5rem,4vh,3rem)] text-center">
-            <p className="text-[clamp(1rem,2vw,1.5rem)] font-bold uppercase tracking-[0.18em] text-white/55">
-              {event.statusDetail ?? collegeLive?.status ?? (situation?.quarter ? `Q${situation.quarter}${situation.clock ? ` · ${situation.clock}` : ""}` : "Live")}
-            </p>
-          </div>
-
-          {/* Scoreboard */}
-          <div className="grid w-full max-w-5xl grid-cols-[1fr_auto_1fr] items-center gap-[clamp(1.25rem,5vw,5rem)]">
-
-            {/* Away */}
-            <div className="min-w-0 text-right">
-              <TeamLogo event={event} side="away" />
-              <p className="truncate text-[clamp(1.5rem,4vw,3.25rem)] font-black uppercase tracking-[-0.04em] text-white/90">
-                {awayName}
-              </p>
-
-              <p className="mt-3 text-[clamp(4.5rem,13vw,10rem)] font-black leading-[0.8] tracking-[-0.08em] text-white">
-                {awayScore}
-              </p>
-            </div>
-
-            {/* Divider */}
-            <div className="flex flex-col items-center">
-              <div className="h-24 w-px bg-gradient-to-b from-transparent via-white/20 to-transparent" />
-
-              <span className="my-4 text-[clamp(.7rem,1vw,.9rem)] font-bold uppercase tracking-[0.22em] text-white/25">
-                at
-              </span>
-
-              <div className="h-24 w-px bg-gradient-to-b from-transparent via-white/20 to-transparent" />
-            </div>
-
-            {/* Home */}
-            <div className="min-w-0 text-left">
-              <p className="truncate text-[clamp(1.5rem,4vw,3.25rem)] font-black uppercase tracking-[-0.04em] text-white/90">
-                {homeName}
-              </p>
-
-              <TeamLogo event={event} side="home" />
-
-              <p className="mt-3 text-[clamp(4.5rem,13vw,10rem)] font-black leading-[0.8] tracking-[-0.08em] text-white">
-                {homeScore}
-              </p>
-            </div>
-          </div>
-
-          {/* Details */}
-          <div className="mt-[clamp(2rem,6vh,4rem)] flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-[clamp(.75rem,1.2vw,1rem)] font-medium text-white/40">
-            {situation?.quarter ? <span>Q{situation.quarter}{situation.clock ? ` · ${situation.clock}` : ""}</span> : null}
-            {collegeLive?.rankings?.length ? <span>{collegeLive.rankings.map((ranking) => `#${ranking.rank} ${ranking.team}`).join(" · ")}</span> : null}
-            {situation?.downDistanceText ? <span>{situation.downDistanceText}</span> : null}
-            {situation?.possessionText ? <span>{situation.possessionText}</span> : null}
-            {event.venue ? (
-              <span>{event.venue}</span>
-            ) : null}
-
-            {event.venue && event.broadcast ? (
-              <span className="text-white/15">•</span>
-            ) : null}
-
-            {event.broadcast ? (
-              <span>{event.broadcast}</span>
-            ) : null}
-          </div>
-        </div>
-
-        {/* Footer */}
-        <footer className="flex shrink-0 items-center justify-between border-t border-white/[0.06] px-[clamp(1.25rem,3vw,2.5rem)] py-3">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/20">
-            Kiosk slideshow paused
-          </p>
-
-          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/20">
-            Football Priority 1
-          </p>
-        </footer>
-
-        <div className="pointer-events-none absolute inset-0 rounded-[inherit] ring-1 ring-inset ring-white/[0.035]" />
-      </section>
-    </div>
-  );
-}
-
-function TeamLogo({ event, side }: { event: SportsEvent; side: "home" | "away" }) {
-  const team = side === "home" ? event.homeTeam : event.awayTeam;
-  const identity = resolveSportsTeamIdentity(event.sport, team);
-  return identity?.logoPath ? <img className="mx-auto mb-2 h-10 w-10 object-contain opacity-85" src={identity.logoPath} alt="" draggable={false} /> : null;
-}
+function ScoreTeam({ event, side, team }: { event: SportsEvent; side: "home" | "away"; team: ReturnType<typeof createFootballPresentation>["home"] }) { const source = side === "home" ? event.homeTeam : event.awayTeam; const identity = resolveSportsTeamIdentity(event.sport, source); return <div className={`${side === "home" ? "text-left" : "text-right"} min-w-0`}><div className="mb-2 flex items-center gap-3"><div className="rounded-full bg-white/90 p-1 shadow-lg">{identity?.logoPath ? <img className="h-10 w-10 object-contain" src={identity.logoPath} alt="" draggable={false} /> : <span className="block h-10 w-10" />}</div><div className="min-w-0"><p className="truncate text-[clamp(1.2rem,3vw,2.6rem)] font-black uppercase tracking-[-.035em] text-white">{team.name}</p><p className="text-[clamp(.7rem,1vw,.9rem)] font-bold uppercase tracking-[.15em] text-white/75">{team.abbreviation}{team.record ? ` · ${team.record}` : ""}{team.possession ? " · POSSESSION" : ""}</p></div></div><p className="text-[clamp(4rem,11vw,8rem)] font-black leading-none tracking-[-.08em] text-white drop-shadow-[0_4px_18px_rgba(0,0,0,.7)]">{team.score}</p></div>; }
+function InfoCard({ label, value, emphasis = false }: { label: string; value: string; emphasis?: boolean }) { return <div className={`rounded-2xl border px-4 py-3 ${emphasis ? "border-amber-200/40 bg-amber-300/15" : "border-white/15 bg-black/25"}`}><p className="text-[clamp(.65rem,1vw,.8rem)] font-black uppercase tracking-[.18em] text-white/75">{label}</p><p className="mt-1 line-clamp-2 text-[clamp(.85rem,1.2vw,1.05rem)] font-medium leading-snug text-white">{value}</p></div>; }

@@ -1,5 +1,5 @@
 import { isRecord, number, records, string } from "./types";
-import type { FootballDriveSummary, FootballPlay, FootballScoringPlay, FootballSituation } from "@/core/contracts/sports/Football";
+import type { FootballDriveSummary, FootballPlay, FootballScoringPlay, FootballSituation, FootballPenaltyState, FootballReviewState } from "@/core/contracts/sports/Football";
 import { parseFootballFieldPosition } from "@/services/sports/football/field";
 import { espnFootballSummaryUrl } from "./espnFootball/endpoints";
 
@@ -19,6 +19,8 @@ export interface CollegeFootballLiveData {
   scoringPlayDetails?: FootballScoringPlay[];
   currentDrive?: FootballDriveSummary;
   drives?: FootballDriveSummary[];
+  penalty?: FootballPenaltyState;
+  review?: FootballReviewState;
 }
 
 function team(value: unknown) {
@@ -60,6 +62,8 @@ function normalizeCollegePlay(raw: Record<string, unknown>, sequence: number): F
   const type: FootballPlay["type"] = lower.includes("intercept") ? "interception" : lower.includes("sack") ? "sack" : lower.includes("fumble") ? "fumble" : lower.includes("punt") ? "punt" : lower.includes("pass") ? "pass" : lower.includes("rush") || lower.includes("run") ? "rush" : lower.includes("field goal") ? "field-goal" : "other";
   const start = isRecord(raw.start) ? raw.start : {};
   const scoring = raw.scoringPlay === true;
+  const penalty = raw.penalty === true || lower.includes("penalty");
+  const penaltyYards = number(raw.penaltyYards) ?? number(raw.yardsPenalized);
   return {
     id: string(raw.id), sequence, period: number(raw.period) ?? number(raw.periodNumber), clock: string(raw.clock?.toString()), type,
     description, shortDescription: string(raw.shortText), teamId: string(isRecord(raw.team) ? raw.team.id : raw.teamId),
@@ -67,7 +71,7 @@ function normalizeCollegePlay(raw: Record<string, unknown>, sequence: number): F
     downDistanceText: string(start.downDistanceText) ?? string(raw.downDistanceText), possessionText: string(start.possessionText),
     yardLine: number(start.yardLine) ?? number(raw.yardLine), yardsToEndzone: number(start.yardsToEndzone), yardsGained: number(raw.yards),
     scoringPlay: scoring, touchdown: scoring && lower.includes("touchdown"), turnover: raw.turnover === true || lower.includes("intercept") || lower.includes("fumble"),
-    penalty: raw.penalty === true || lower.includes("penalty"), firstDown: raw.firstDown === true || lower.includes("first down"), sack: type === "sack", interception: type === "interception", fumble: type === "fumble",
+    penalty, ...(penaltyYards !== undefined ? { penaltyYards } : {}), firstDown: raw.firstDown === true || lower.includes("first down"), sack: type === "sack", interception: type === "interception", fumble: type === "fumble",
   };
 }
 
@@ -105,6 +109,10 @@ export function normalizeCollegeFootballSummary(payload: unknown): CollegeFootba
     return description || teamId ? [{ id: string(drive.id) ?? `cfb-drive-${index}`, teamId, teamAbbreviation: string(isRecord(drive.team) ? drive.team.abbreviation : undefined), description, result: string(drive.displayResult) ?? string(drive.result), plays: number(drive.plays), yards: number(drive.yards), scoringDrive: drive.isScore === true || drive.scoringDrive === true }] : [];
   });
   const rankings = competitors.flatMap((item) => { const name = team(item.team)?.name; const rank = isRecord(item.curatedRank) ? number(item.curatedRank.current) : undefined; return name && rank !== undefined ? [{ team: name, rank }] : []; });
+  const latestPlay = normalizedPlays.at(-1);
+  const penalty = latestPlay?.penalty ? { text: latestPlay.description, teamId: latestPlay.teamId, ...(latestPlay.penaltyYards !== undefined ? { yards: latestPlay.penaltyYards } : {}) } : undefined;
+  const reviewValue = isRecord(competition.status) ? string(competition.status.detail) ?? string(competition.status.description) : undefined;
+  const review = reviewValue && /review|challenge/i.test(reviewValue) ? { text: reviewValue, active: !/final|complete|overturned|upheld/i.test(reviewValue) } : undefined;
   return {
     status: string(status.detail) ?? string(status.description),
     period: number(situation.period) ?? number(status.period),
@@ -117,6 +125,7 @@ export function normalizeCollegeFootballSummary(payload: unknown): CollegeFootba
     ...(normalizedPlays.length ? { normalizedPlays } : {}),
     ...(scoringPlayDetails.length ? { scoringPlayDetails } : {}),
     ...(drives.length ? { drives, currentDrive: drives[drives.length - 1] } : {}),
+    ...(penalty ? { penalty } : {}), ...(review ? { review } : {}),
   };
 }
 

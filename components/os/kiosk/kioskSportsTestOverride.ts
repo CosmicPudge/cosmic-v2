@@ -4,6 +4,7 @@ export type KioskTestSport = "nfl" | "mlb" | "f1" | "nascar" | "college-football
 export type KioskTestSession = "practice1" | "practice2" | "practice3" | "qualifying" | "sprint" | "race";
 export type KioskTestCelebration = "score" | "homerun";
 export type KioskTestState = "scheduled" | "live" | "final";
+export type KioskTestFootballState = "flag" | "challenge" | "redzone";
 
 export interface KioskSportsTestOverride {
   sport: KioskTestSport;
@@ -14,12 +15,14 @@ export interface KioskSportsTestOverride {
   celebration?: KioskTestCelebration;
   team?: string;
   state?: KioskTestState;
+  football?: KioskTestFootballState;
 }
 
 const SPORTS = new Set<KioskTestSport>(["nfl", "mlb", "f1", "nascar", "college-football"]);
 const SESSIONS = new Set<KioskTestSession>(["practice1", "practice2", "practice3", "qualifying", "sprint", "race"]);
 const CELEBRATIONS = new Set<KioskTestCelebration>(["score", "homerun"]);
 const STATES = new Set<KioskTestState>(["scheduled", "live", "final"]);
+const FOOTBALL_STATES = new Set<KioskTestFootballState>(["flag", "challenge", "redzone"]);
 const DEV_HOSTS = new Set(["dev.cosmicpudge.shop", "localhost", "127.0.0.1"]);
 
 const NFL_TEAMS: Record<string, SportsTeam> = {
@@ -88,6 +91,7 @@ export function parseKioskSportsTestOverride(params: URLSearchParams, hostname: 
   const celebration = cleanCode(params.get("celebration")) as KioskTestCelebration | undefined;
   const team = cleanCode(params.get("team"));
   const state = cleanCode(params.get("state")) as KioskTestState | undefined;
+  const football = cleanCode(params.get("football")) as KioskTestFootballState | undefined;
   const validCelebration = celebration && ((celebration === "homerun" && sport === "mlb") || (celebration === "score" && (sport === "mlb" || sport === "nfl" || sport === "college-football"))) ? celebration : undefined;
   return {
     sport,
@@ -96,6 +100,7 @@ export function parseKioskSportsTestOverride(params: URLSearchParams, hostname: 
     ...(validCelebration && CELEBRATIONS.has(validCelebration) ? { celebration: validCelebration } : {}),
     ...(team ? { team } : {}),
     ...(state && STATES.has(state) ? { state } : {}),
+    ...(football && FOOTBALL_STATES.has(football) && (sport === "nfl" || sport === "college-football") ? { football } : {}),
     ...(cleanCode(params.get("away")) ? { away: cleanCode(params.get("away")) } : {}),
     ...(cleanCode(params.get("home")) ? { home: cleanCode(params.get("home")) } : {}),
   };
@@ -131,6 +136,7 @@ export function createKioskSportsTestEvent(override: KioskSportsTestOverride, no
       ...(venue?.country ? { country: venue.country } : {}),
       ...(venue?.track ? { track: venue.track } : {}),
       ...(override.sport === "f1" ? { circuit: label } : {}),
+      ...(override.football ? { footballState: override.football } : {}),
     },
   };
 }

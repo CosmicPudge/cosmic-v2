@@ -5,6 +5,7 @@ import { useEffect } from "react";
 import type { SportsEvent } from "@/core/contracts/Sports";
 import type { BaseballLiveData, BaseballUniform } from "@/core/contracts/sports/Baseball";
 import type { CollegeFootballLiveData } from "@/services/sports/providers/college-football-detail";
+import type { FootballLiveData } from "@/core/contracts/sports/Football";
 import { useSportsEvent } from "@/hooks/os/useSportsEvent";
 import { MLB_UNIFORM_THEMES } from "@/services/sports/providers/mlb/uniformThemes";
 import { sportsDetailIsComplete, sportsDetailPresence } from "@/services/sports/detailDiagnostics";
@@ -31,10 +32,12 @@ export default function KioskSportsOverride({
 function KioskSportsPresentation({ event, visible }: { event: SportsEvent; visible: boolean }) {
   const searchParams = useSearchParams();
   const isDevelopmentTest = process.env.NODE_ENV !== "production" && event.source === "kiosk-test";
-  const detail = useSportsEvent(event.id, { enabled: !isDevelopmentTest && (event.sport === "mlb" || event.sport === "nfl" || event.sport === "college-football") });
-  const live = detail.data?.live;
-  const baseballLive = live?.sport === "mlb" ? live : undefined;
-  const footballLive = live?.sport === "nfl" ? live : undefined;
+  const detail = useSportsEvent(event.id, { sport: event.sport, enabled: !isDevelopmentTest && (event.sport === "mlb" || event.sport === "nfl" || event.sport === "college-football") });
+  const fetchedLive = detail.data?.live;
+  const testFootball = isDevelopmentTest && (event.sport === "nfl" || event.sport === "college-football") ? createTestFootballLive(event, searchParams.get("football")) : undefined;
+  const live = testFootball ?? fetchedLive;
+  const baseballLive = fetchedLive?.sport === "mlb" ? fetchedLive : undefined;
+  const footballLive = fetchedLive?.sport === "nfl" ? fetchedLive : testFootball && event.sport === "nfl" ? testFootball as FootballLiveData : undefined;
   const collegeFootballLive = event.sport === "college-football" && live ? live as unknown as CollegeFootballLiveData : undefined;
   useEffect(() => {
     if (typeof window === "undefined" || event.sport !== "mlb" || !["dev.cosmicpudge.shop", "localhost", "127.0.0.1"].includes(window.location.hostname.toLowerCase())) return;
@@ -45,7 +48,7 @@ function KioskSportsPresentation({ event, visible }: { event: SportsEvent; visib
   const forcedKind = isDevelopmentTest && ((searchParams.get("celebration") === "score" && (event.sport === "mlb" || event.sport === "nfl" || event.sport === "college-football")) || (searchParams.get("celebration") === "homerun" && event.sport === "mlb"))
     ? searchParams.get("celebration") as ScoreCelebrationKind
     : undefined;
-  const celebration = useSportsCelebration(event, live, visible, forcedKind);
+  const celebration = useSportsCelebration(event, fetchedLive, visible, forcedKind);
   const content = (() => {
     switch (event.sport) {
       case "nfl":
@@ -63,6 +66,13 @@ function KioskSportsPresentation({ event, visible }: { event: SportsEvent; visib
     }
   })();
   return <KioskSportsScene event={event} celebration={<SportsCelebrationOverlay celebration={celebration} />}>{content}</KioskSportsScene>;
+}
+
+function createTestFootballLive(event: SportsEvent, state: string | null): FootballLiveData | CollegeFootballLiveData {
+  const away = event.awayTeam ?? { id: "68", name: "Boise State Broncos", abbreviation: "BSU" };
+  const home = event.homeTeam ?? { id: "328", name: "Utah State Aggies", abbreviation: "USU" };
+  const situation = { quarter: 3, clock: "08:42", possessionTeamId: home.id, downDistanceText: state === "redzone" ? "1st & Goal" : "2nd & 7 at USU 35", possessionText: state === "redzone" ? "USU 8" : "USU 35", redZone: state === "redzone" };
+  return { sport: event.sport === "college-football" ? "college-football" : "nfl", eventId: event.id, generatedAt: new Date().toISOString(), stale: false, sources: [], away: { team: away, score: away.score ?? 17, timeoutsRemaining: 2 }, home: { team: home, score: home.score ?? 24, timeoutsRemaining: 3, possession: true }, situation, latestPlay: { description: state === "challenge" ? "Challenge under review" : state === "flag" ? "Holding, offense" : "Pass complete for 8 yards", shortDescription: state === "challenge" ? "Review" : state === "flag" ? "Penalty" : "Complete", penalty: state === "flag", type: state === "flag" ? "penalty" : "pass" }, ...(state === "flag" ? { penalty: { text: "Holding, offense", yards: 10 } } : {}), ...(state === "challenge" ? { review: { text: "Challenge under review", active: true } } : {}) } as FootballLiveData | CollegeFootballLiveData;
 }
 
 function fixtureUniform(teamId: string, code: string | null): BaseballUniform | undefined {

@@ -11,7 +11,7 @@ interface WireResponse { event: Omit<SportsEvent, "start" | "end"> & { start: st
 function hydrate(value: WireResponse) { const { start, end, ...event } = value.event; return { ...value, event: { ...event, start: new Date(start), ...(end ? { end: new Date(end) } : {}) } }; }
 function detailLogAllowed() { if (typeof window === "undefined") return false; return window.location.hostname === "dev.cosmicpudge.shop" || window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"; }
 
-export function useSportsEvent(eventId: string, options: { enabled?: boolean } = {}) {
+export function useSportsEvent(eventId: string, options: { enabled?: boolean; sport?: string } = {}) {
   const enabled = options.enabled ?? true;
   const [data, setData] = useState<ReturnType<typeof hydrate> | null>(null);
   const [loading, setLoading] = useState(true);
@@ -39,7 +39,8 @@ export function useSportsEvent(eventId: string, options: { enabled?: boolean } =
     }
   }, [eventId]);
   const status: SportsEventStatus | undefined = data?.event.status;
-  const polling = status === undefined || status === "live" || status === "delayed" ? 2_000 : status === "pregame" ? 15_000 : 60_000;
+  const football = options.sport === "nfl" || options.sport === "college-football";
+  const polling = status === undefined || status === "live" || status === "delayed" || (football && (status === "scheduled" || status === "pregame")) ? 10_000 : 60_000;
   useVisiblePolling(async () => { try { await refresh(); } catch (reason) { setError(reason instanceof Error ? reason.message : "Sports event data is unavailable."); setLoading(false); } }, polling, { immediate: true, enabled: enabled && status !== "final" && status !== "cancelled" && status !== "postponed" });
   return { data, loading, error, refresh };
 }

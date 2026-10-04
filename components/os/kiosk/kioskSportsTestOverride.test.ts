@@ -60,3 +60,9 @@ test("CFB Utah State override resolves to the shared football scene", () => {
   assert.equal(event?.status, "live");
   assert.equal(normalizeKioskSportsEvent(event!)?.backgroundKey, "cfb-generic");
 });
+
+test("football test override can exercise red-zone, flag, and review states", () => {
+  const override = parseKioskSportsTestOverride(new URLSearchParams("sport=cfb&team=usu&football=challenge"), devHost, "/kiosk");
+  assert.equal(override?.football, "challenge");
+  assert.equal(parseKioskSportsTestOverride(new URLSearchParams("sport=mlb&football=flag"), devHost, "/kiosk")?.football, undefined);
+});

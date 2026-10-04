@@ -8,6 +8,7 @@ import { getAccountPreferences } from "@/services/settings/accountPreferences";
 import { referencePreferences } from "@/services/settings/preferences";
 import { isDeveloperKioskRequest } from "@/services/kiosk/developerKiosk";
 import { sportsDetailPresence } from "@/services/sports/detailDiagnostics";
+import { KIOSK_KICKOFF_GRACE_MS } from "@/services/sports/preferences";
 
 export const dynamic = "force-dynamic";
 
@@ -44,19 +45,20 @@ export async function GET(request: Request, { params }: { params: Promise<{ even
   if (!event) { log("status=404 success=false reason=event_not_found"); return Response.json({ error: "Sports event was not found." }, { status: 404 }); }
 
   const cacheKey = `${event.id}:${event.status}`;
+  const footballStarting = (event.sport === "nfl" || event.sport === "college-football") && event.status === "scheduled" && Date.now() >= event.start.getTime() && Date.now() <= event.start.getTime() + KIOSK_KICKOFF_GRACE_MS;
   let detail = detailCache.get(cacheKey)?.value;
   if (!detail || (detailCache.get(cacheKey)?.expiresAt ?? 0) <= Date.now()) {
     const requestDetail = event.sport === "mlb" && ["live", "delayed", "final"].includes(event.status)
       ? getMLBLiveData(mlbGamePk(event))
-      : event.sport === "nfl" && ["live", "delayed", "final"].includes(event.status)
+      : event.sport === "nfl" && (["live", "delayed", "final"].includes(event.status) || footballStarting)
         ? getNFLLiveData(upstreamId(event.id))
         : event.sport === "nba" && ["pregame", "live", "delayed", "final"].includes(event.status)
         ? getNBAEventDetail(upstreamId(event.id), event.status === "live" || event.status === "delayed" ? 15 : 120)
-          : event.sport === "college-football" && ["pregame", "live", "delayed", "final"].includes(event.status)
+          : event.sport === "college-football" && (["pregame", "live", "delayed", "final"].includes(event.status) || footballStarting)
             ? getCollegeFootballLiveData(upstreamId(event.id))
           : Promise.resolve(null);
     detail = requestDetail.catch(() => null);
-    detailCache.set(cacheKey, { value: detail, expiresAt: Date.now() + (event.status === "live" || event.status === "delayed" ? 1_500 : 15_000) });
+    detailCache.set(cacheKey, { value: detail, expiresAt: Date.now() + (event.status === "live" || event.status === "delayed" || footballStarting ? 1_500 : 15_000) });
   }
 
   const live = await detail;

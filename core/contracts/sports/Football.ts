@@ -216,6 +216,21 @@ export interface FootballPlay {
   awayScore?: number;
 
   possessionAfterPlayTeamId?: string;
+
+  /** Penalty yards when the provider supplies them. */
+  penaltyYards?: number;
+}
+
+export interface FootballPenaltyState {
+  text: string;
+  teamId?: string;
+  yards?: number;
+}
+
+export interface FootballReviewState {
+  text: string;
+  outcome?: string;
+  active?: boolean;
 }
 
 export interface FootballScoringPlay {
@@ -565,4 +580,27 @@ export interface FootballLiveData
     home?: number;
     away?: number;
   };
+
+  penalty?: FootballPenaltyState;
+  review?: FootballReviewState;
+  providerUpdatedAt?: string;
+}
+
+/** Shared kiosk-facing football detail contract for NFL and CFB rendering. */
+export interface FootballLiveDetail {
+  sport: "nfl" | "college-football";
+  eventId?: string;
+  status?: string;
+  period?: number;
+  clock?: string;
+  away: FootballTeamState;
+  home: FootballTeamState;
+  situation?: FootballSituation;
+  latestPlay?: FootballPlay;
+  currentDrive?: FootballDriveSummary;
+  rankings?: Array<{ team: string; rank: number }>;
+  venue?: FootballVenueInfo;
+  penalty?: FootballPenaltyState;
+  review?: FootballReviewState;
+  providerUpdatedAt?: string;
 }
