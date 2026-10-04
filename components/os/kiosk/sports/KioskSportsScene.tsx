@@ -13,7 +13,7 @@ export function getKioskSportsScenePresentation(event: SportsEvent) {
     backgroundKey,
     backgroundImage,
     backgroundSource,
-    state: normalized?.live ? "live" : "upcoming",
+    state: normalized?.lifecycleState ?? (normalized?.live ? "live" : "upcoming"),
   } as const;
 }
 

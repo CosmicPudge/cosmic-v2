@@ -5,6 +5,7 @@ export type SportsEventStatus =
   | "pregame"
   | "live"
   | "delayed"
+  | "suspended"
   | "final"
   | "postponed"
   | "cancelled";
@@ -19,6 +20,7 @@ export interface SportsTeam {
   abbreviation?: string;
   score?: number;
   record?: string;
+  rank?: number;
   logo?: string;
 }
 
@@ -65,6 +67,7 @@ export interface SportsEventMetadata {
   statusSource?: SportsStatusSource;
   inferredLive?: boolean;
   expectedEnd?: string;
+  finalizedAt?: string;
   staleAfter?: string;
   lastProviderRefresh?: string;
   timezoneResolved?: boolean;

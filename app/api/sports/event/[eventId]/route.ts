@@ -51,11 +51,11 @@ export async function GET(request: Request, { params }: { params: Promise<{ even
   if (!detail || (detailCache.get(cacheKey)?.expiresAt ?? 0) <= Date.now()) {
     const requestDetail = event.sport === "mlb" && ["live", "delayed", "final"].includes(event.status)
       ? getMLBLiveData(mlbGamePk(event))
-      : event.sport === "nfl" && (["live", "delayed", "final"].includes(event.status) || footballStarting)
+      : event.sport === "nfl" && (["live", "delayed", "suspended", "final"].includes(event.status) || footballStarting)
         ? getNFLLiveData(upstreamId(event.id))
         : event.sport === "nba" && ["pregame", "live", "delayed", "final"].includes(event.status)
         ? getNBAEventDetail(upstreamId(event.id), event.status === "live" || event.status === "delayed" ? 15 : 120)
-          : event.sport === "college-football" && (["pregame", "live", "delayed", "final"].includes(event.status) || footballStarting)
+          : event.sport === "college-football" && (["pregame", "live", "delayed", "suspended", "final"].includes(event.status) || footballStarting)
             ? getCollegeFootballLiveData(upstreamId(event.id))
           : Promise.resolve(null);
     detail = requestDetail.then((value) => {
@@ -66,7 +66,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ even
       if (!previous) return null;
       return typeof previous.value === "object" && previous.value !== null ? { ...(previous.value as Record<string, unknown>), stale: true, detailUpdatedAt: previous.fetchedAt } : previous.value;
     });
-    detailCache.set(cacheKey, { value: detail, expiresAt: Date.now() + (event.status === "live" || event.status === "delayed" || footballStarting ? 1_500 : 15_000) });
+    detailCache.set(cacheKey, { value: detail, expiresAt: Date.now() + (event.status === "live" || event.status === "delayed" || event.status === "suspended" || footballStarting ? 1_500 : 15_000) });
   }
 
   const live = await detail;

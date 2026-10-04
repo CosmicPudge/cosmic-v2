@@ -35,10 +35,11 @@ function competitor(value: unknown): { side?: "home" | "away"; team?: SportsTeam
   const abbreviation = string(teamRecord?.abbreviation);
   const score = number(value.score);
   const record = records(value.records).map((item) => string(item.summary)).find(Boolean);
+  const rank = isRecord(value.curatedRank) ? number(value.curatedRank.current) : undefined;
   const side = string(value.homeAway);
   return {
     ...(side === "home" || side === "away" ? { side } : {}),
-    team: { name, ...(id ? { id } : {}), ...(abbreviation ? { abbreviation } : {}), ...(score !== undefined ? { score } : {}), ...(record ? { record } : {}) },
+    team: { name, ...(id ? { id } : {}), ...(abbreviation ? { abbreviation } : {}), ...(score !== undefined ? { score } : {}), ...(record ? { record } : {}), ...(rank !== undefined ? { rank } : {}) },
   };
 }
 
@@ -60,6 +61,10 @@ export function normalizeEspnFootballEvents(payload: unknown, sport: Extract<Spo
     const neutralSite = competition.neutralSite === true || event.neutralSite === true;
     const seasonType = isRecord(event.seasonType) ? string(event.seasonType.name) : undefined;
     const conference = isRecord(competition.conference) ? string(competition.conference.name) : string(competition.conference);
+    const broadcast = records(competition.broadcasts).map((item) => {
+      const names = Array.isArray(item.names) ? item.names : [];
+      return (typeof names[0] === "string" ? names[0] : undefined) ?? string(item.name);
+    }).find(Boolean);
     const stableId = sport === "college-football" ? `espn:college-football:${id}` : `${providerId}:${id}`;
     const statusRecord = isRecord(competition.status) ? competition.status : {};
     const situation = isRecord(competition.situation) ? competition.situation : {};
@@ -80,6 +85,7 @@ export function normalizeEspnFootballEvents(payload: unknown, sport: Extract<Spo
       homeTeam,
       awayTeam,
       ...(venue ? { venue } : {}),
+      ...(broadcast ? { broadcast } : {}),
       source: "espn",
       metadata: {
         competition: sport === "nfl" ? "NFL" : sport === "nba" ? "NBA" : "College Football",

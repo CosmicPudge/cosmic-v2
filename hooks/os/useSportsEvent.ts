@@ -40,7 +40,7 @@ export function useSportsEvent(eventId: string, options: { enabled?: boolean; sp
   }, [eventId]);
   const status: SportsEventStatus | undefined = data?.event.status;
   const football = options.sport === "nfl" || options.sport === "college-football";
-  const polling = status === undefined || status === "live" || status === "delayed" || (football && (status === "scheduled" || status === "pregame")) ? 10_000 : 60_000;
+  const polling = status === undefined || status === "live" || status === "delayed" || status === "suspended" || (football && (status === "scheduled" || status === "pregame")) ? 10_000 : 60_000;
   useVisiblePolling(async () => { try { await refresh(); } catch (reason) { setError(reason instanceof Error ? reason.message : "Sports event data is unavailable."); setLoading(false); } }, polling, { immediate: true, enabled: enabled && status !== "final" && status !== "cancelled" && status !== "postponed" });
   return { data, loading, error, refresh };
 }

@@ -243,8 +243,8 @@ function KioskNormalSlideshow() {
     testSportParam,
   ]);
 
-  const [dismissedLiveEventId, setDismissedLiveEventId] = useState<string | null>(null);
-  const liveEvent = sportsSelection && sportsSelection.live && sportsSelection.event.id !== dismissedLiveEventId ? sportsSelection.event : null;
+  const [dismissedSportsEventId, setDismissedSportsEventId] = useState<string | null>(null);
+  const sportsAttentionEvent = sportsSelection && sportsSelection.lifecycleState && sportsSelection.lifecycleState !== "upcoming" && sportsSelection.lifecycleState !== "postgame" && sportsSelection.event.id !== dismissedSportsEventId ? sportsSelection.event : null;
 
   const [currentIndex, setCurrentIndex] =
     useState(0);
@@ -301,7 +301,7 @@ function KioskNormalSlideshow() {
 
   const goToRelativeSlide = useCallback((direction: 1 | -1, resetTimer: boolean) => {
     if (widgets.length <= 1 || transitionLockRef.current) return false;
-    if (sportsPresentation?.kind === "live") setDismissedLiveEventId(sportsPresentation.event.id);
+    if (sportsPresentation?.kind === "live") setDismissedSportsEventId(sportsPresentation.event.id);
     if (sportsPresentation) setSportsPresentation(null);
 
     transitionLockRef.current = true;
@@ -324,13 +324,13 @@ function KioskNormalSlideshow() {
 
   useEffect(() => {
     const syncTimeout = window.setTimeout(() => {
-      if (liveEvent) {
+      if (sportsAttentionEvent) {
         setSportsPresentation((current) => {
-          if (!current) return { event: liveEvent, kind: "live", phase: "entering" };
-          if (current.phase === "exiting") return { event: liveEvent, kind: "live", phase: "entering" };
-          return current.event.id === liveEvent.id
+          if (!current) return { event: sportsAttentionEvent, kind: "live", phase: "entering" };
+          if (current.phase === "exiting") return { event: sportsAttentionEvent, kind: "live", phase: "entering" };
+          return current.event.id === sportsAttentionEvent.id
             ? current
-            : { event: liveEvent, kind: "live", phase: current.phase };
+            : { event: sportsAttentionEvent, kind: "live", phase: current.phase };
         });
       } else {
         setSportsPresentation((current) => {
@@ -341,7 +341,7 @@ function KioskNormalSlideshow() {
     }, 0);
 
     return () => window.clearTimeout(syncTimeout);
-  }, [liveEvent]);
+  }, [sportsAttentionEvent]);
 
   useEffect(() => {
     if (!sportsPresentation) return;
@@ -372,7 +372,7 @@ function KioskNormalSlideshow() {
   }, [sportsPresentation]);
 
   useEffect(() => {
-    if (liveEvent || sportsPresentation || paused) {
+    if (sportsAttentionEvent || sportsPresentation || paused) {
       return;
     }
 
@@ -395,7 +395,7 @@ function KioskNormalSlideshow() {
       if (process.env.NODE_ENV !== "production") console.info("[kiosk-slideshow] interval-stop");
     };
   }, [
-    liveEvent,
+    sportsAttentionEvent,
     sportsPresentation,
     paused,
     goToRelativeSlide,
@@ -485,9 +485,9 @@ function KioskNormalSlideshow() {
   }, [goToRelativeSlide]);
 
   useEffect(() => {
-    setPersistentClockHidden(!liveEvent && !sportsPresentation && currentWidget?.id === "clock");
+    setPersistentClockHidden(!sportsAttentionEvent && !sportsPresentation && currentWidget?.id === "clock");
     return () => setPersistentClockHidden(false);
-  }, [currentWidget?.id, liveEvent, setPersistentClockHidden, sportsPresentation]);
+  }, [currentWidget?.id, sportsAttentionEvent, setPersistentClockHidden, sportsPresentation]);
 
   if (widgets.length === 0) {
     return (

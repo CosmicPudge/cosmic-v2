@@ -2,6 +2,7 @@ import type { SportsEvent } from "@/core/contracts/Sports";
 import type { FootballLiveData, FootballPlay, FootballSituation } from "@/core/contracts/sports/Football";
 import type { CollegeFootballLiveData } from "@/services/sports/providers/college-football-detail";
 import { resolveSportsTeamIdentity } from "@/services/sports/identity";
+import { footballCountdownLabel, resolveFootballLifecycle, type FootballLifecycleState } from "@/services/sports/football/lifecycle";
 
 export type FootballLiveSource = FootballLiveData | CollegeFootballLiveData;
 export interface KioskFootballPresentation {
@@ -13,6 +14,9 @@ export interface KioskFootballPresentation {
   attentionLabel?: string;
   attentionTeam?: string;
   reviewOutcome?: string;
+  broadcast?: string;
+  lifecycleState: FootballLifecycleState;
+  countdownLabel?: string;
 }
 function abbreviation(name: string, value?: string) { const aliases: Record<string, string> = { BOIS: "BSU", BOISE: "BSU", USTA: "USU" }; return aliases[value?.toUpperCase() ?? ""] ?? value?.toUpperCase() ?? name.split(/\s+/).map((part) => part[0]).join("").slice(0, 4).toUpperCase(); }
 function teamState(sport: SportsEvent["sport"], eventTeam: SportsEvent["homeTeam"] | SportsEvent["awayTeam"], liveTeam: FootballLiveSource["home"] | undefined, possessionTeamId?: string) {
@@ -26,13 +30,17 @@ function teamState(sport: SportsEvent["sport"], eventTeam: SportsEvent["homeTeam
   return { name, abbreviation: abbreviation(name, liveTeam?.team?.abbreviation ?? eventTeam?.abbreviation), score: liveTeam?.score ?? eventTeam?.score ?? 0, record: liveRecord ?? teamRecord, timeouts, possession: Boolean(hasPossession || (id && id === possessionTeamId)), ...(identity?.accent ? { color: identity.accent } : {}) };
 }
 export function createFootballPresentation(event: SportsEvent, live?: FootballLiveSource): KioskFootballPresentation {
+  const lifecycleState = resolveFootballLifecycle(event, live && { state: "state" in live ? live.state : undefined, statusText: "statusText" in live ? live.statusText : "status" in live ? live.status : undefined });
   const situation = live && "situation" in live ? live.situation : undefined; const period = live && "period" in live ? live.period : situation?.quarter; const clock = live && "clock" in live ? live.clock : situation?.clock; const status = normalizeStatus(live && "status" in live ? live.status : live && "statusText" in live ? live.statusText : event.status); const possessionId = situation?.possessionTeamId;
-  const away = teamState(event.sport, event.awayTeam, live?.away, possessionId); const home = teamState(event.sport, event.homeTeam, live?.home, possessionId); const latestPlay = live && "latestPlay" in live ? live.latestPlay : live && "normalizedPlays" in live ? live.normalizedPlays?.at(-1) : undefined; const rankings = live && "rankings" in live ? (live.rankings ?? []).map((item) => `#${item.rank} ${item.team}`) : []; const currentDrive = live && "currentDrive" in live ? live.currentDrive : undefined; const penalty = live && "penalty" in live ? live.penalty : latestPlay?.penalty ? { text: latestPlay.description, teamId: latestPlay.teamId } : undefined; const review = live && "review" in live ? live.review : undefined;
+  const away = teamState(event.sport, event.awayTeam, live?.away, possessionId); const home = teamState(event.sport, event.homeTeam, live?.home, possessionId); const latestPlay = live && "latestPlay" in live ? live.latestPlay : live && "normalizedPlays" in live ? live.normalizedPlays?.at(-1) : undefined; const rankings = live && "rankings" in live ? (live.rankings ?? []).map((item) => `#${item.rank} ${item.team}`) : [event.awayTeam, event.homeTeam].flatMap((team) => team?.rank !== undefined ? [`#${team.rank} ${team.name}`] : []); const currentDrive = live && "currentDrive" in live ? live.currentDrive : undefined; const penalty = live && "penalty" in live ? live.penalty : latestPlay?.penalty ? { text: latestPlay.description, teamId: latestPlay.teamId } : undefined; const review = live && "review" in live ? live.review : undefined;
   const penaltyTeam = penalty?.teamId === homeTeamId(live) ? home.name : penalty?.teamId === awayTeamId(live) ? away.name : undefined;
   const penaltyText = penalty ? [penalty.text, penaltyTeam, penalty.yards !== undefined ? `${penalty.yards}-yard penalty` : undefined].filter(Boolean).join(" · ") : undefined;
   const attention = review?.active ? review.kind ?? "official-review" : penalty ? "flag" : "normal";
   const attentionLabel = attention === "challenge" ? "COACH'S CHALLENGE" : attention === "official-review" ? "OFFICIAL REVIEW" : attention === "flag" ? "FLAG" : undefined;
-  return { sportLabel: event.sport === "college-football" ? "CFB" : "NFL", statusLabel: status === "live" ? "LIVE" : status === "halftime" ? "HALFTIME" : status === "overtime" ? "OVERTIME" : status === "end-period" ? "END OF QUARTER" : status === "delayed" ? "DELAYED" : status === "final" ? "FINAL" : status === "suspended" ? "SUSPENDED" : "STARTING · AWAITING LIVE UPDATE", ...(period !== undefined ? { quarterLabel: `Q${period}` } : {}), ...(clock && status !== "halftime" ? { clock } : {}), away, home, rankings, situation, latestPlay, ...(currentDrive?.description || currentDrive?.result ? { driveLabel: currentDrive.description ?? currentDrive.result } : {}), ...(event.venue ? { venue: event.venue } : {}), ...(penaltyText ? { penaltyText } : {}), ...(review ? { reviewText: review.text } : {}), attention, ...(attentionLabel ? { attentionLabel } : {}), ...(review?.teamName ? { attentionTeam: review.teamName } : {}), ...(review?.outcome ? { reviewOutcome: review.outcome } : {}) };
+  const statusLabel = lifecycleState === "upcoming" || lifecycleState === "pregame" ? (lifecycleState === "pregame" ? footballCountdownLabel(event) : "UPCOMING") : lifecycleState === "starting" ? "STARTING · AWAITING LIVE UPDATE" : lifecycleState === "live" ? (status === "end-period" ? "END OF QUARTER" : "LIVE") : lifecycleState === "halftime" ? "HALFTIME" : lifecycleState === "overtime" ? "OVERTIME" : lifecycleState === "delayed" ? "DELAYED" : lifecycleState === "suspended" ? "SUSPENDED" : lifecycleState === "final" ? "FINAL" : "POSTGAME";
+  const liveBroadcast = live && "broadcast" in live && live.broadcast && typeof live.broadcast === "object" && "network" in live.broadcast && typeof live.broadcast.network === "string" ? live.broadcast.network : undefined;
+  const broadcast = liveBroadcast ?? event.broadcast;
+  return { sportLabel: event.sport === "college-football" ? "CFB" : "NFL", statusLabel, ...(lifecycleState === "pregame" ? { countdownLabel: footballCountdownLabel(event) } : {}), lifecycleState, ...(period !== undefined ? { quarterLabel: `Q${period}` } : {}), ...(clock && lifecycleState !== "halftime" && lifecycleState !== "pregame" ? { clock } : {}), away, home, rankings, situation, latestPlay, ...(currentDrive?.description || currentDrive?.result ? { driveLabel: currentDrive.description ?? currentDrive.result } : {}), ...(event.venue ? { venue: event.venue } : {}), ...(broadcast ? { broadcast } : {}), ...(penaltyText ? { penaltyText } : {}), ...(review ? { reviewText: review.text } : {}), attention, ...(attentionLabel ? { attentionLabel } : {}), ...(review?.teamName ? { attentionTeam: review.teamName } : {}), ...(review?.outcome ? { reviewOutcome: review.outcome } : {}) };
 }
 
 function normalizeStatus(value?: string) {

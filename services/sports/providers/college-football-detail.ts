@@ -12,6 +12,8 @@ export interface CollegeFootballLiveData {
   stale?: boolean;
   sources?: SportsDataSource[];
   status?: string;
+  statusText?: string;
+  state?: "scheduled" | "live" | "halftime" | "end-period" | "overtime" | "final" | "delayed" | "suspended";
   period?: number;
   clock?: string;
   away: { team: { id?: string; name: string; abbreviation?: string; record?: string }; score: number };
@@ -126,8 +128,13 @@ export function normalizeCollegeFootballSummary(payload: unknown): CollegeFootba
   const reviewTeam = isRecord(reviewRecord?.team) ? reviewRecord.team : undefined;
   const reviewOutcome = string(reviewRecord?.outcome) ?? string(reviewRecord?.result);
   const review = reviewValue && /review|challenge/i.test(reviewValue) ? { text: reviewValue, active: !/final|complete|overturned|upheld|stands/i.test(reviewValue), kind: /official/i.test(reviewValue) ? "official-review" as const : "challenge" as const, ...(reviewOutcome ? { outcome: reviewOutcome } : {}), ...(string(reviewTeam?.id) ? { teamId: string(reviewTeam?.id) } : {}), ...(string(reviewTeam?.displayName) || string(reviewTeam?.name) ? { teamName: string(reviewTeam?.displayName) ?? string(reviewTeam?.name) } : {}) } : undefined;
+  const statusText = string(status.detail) ?? string(status.description);
+  const statusLower = statusText?.toLowerCase() ?? "";
+  const state = statusLower.includes("postpon") ? "final" : statusLower.includes("suspend") ? "suspended" : statusLower.includes("delay") ? "delayed" : statusLower.includes("half") ? "halftime" : statusLower.includes("overtime") || /\bot\b/.test(statusLower) ? "overtime" : statusLower.includes("final") || statusLower.includes("complete") ? "final" : statusLower.includes("quarter") || statusLower.includes("progress") ? "live" : "scheduled";
   return {
-    status: string(status.detail) ?? string(status.description),
+    status: statusText,
+    statusText,
+    state,
     period: number(situation.period) ?? number(status.period),
     clock: string(situation.displayClock) ?? string(status.displayClock),
     away: { team: { ...awayTeam, ...(records(away?.records)[0] && string(records(away?.records)[0].summary) ? { record: string(records(away?.records)[0].summary) } : {}) }, score: number(away?.score) ?? 0 },

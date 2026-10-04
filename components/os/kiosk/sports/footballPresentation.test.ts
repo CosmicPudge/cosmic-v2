@@ -41,3 +41,9 @@ test("zero scores remain numeric and halftime is not rendered as a running clock
   });
   assert.equal(view.away.score, 0); assert.equal(view.home.score, 14); assert.equal(view.statusLabel, "HALFTIME"); assert.equal(view.clock, undefined);
 });
+
+test("pregame exposes countdown, records, venue, and network without live clock", () => {
+  const kickoff = new Date(Date.now() + 18 * 60_000);
+  const view = createFootballPresentation({ ...event("college-football"), start: kickoff, status: "scheduled", broadcast: "ABC", venue: "Maverik Stadium" });
+  assert.equal(view.lifecycleState, "pregame"); assert.match(view.statusLabel, /KICKOFF IN/); assert.equal(view.clock, undefined); assert.equal(view.broadcast, "ABC"); assert.equal(view.venue, "Maverik Stadium");
+});

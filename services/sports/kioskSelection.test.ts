@@ -34,7 +34,7 @@ test("scheduled CFB remains upcoming just before kickoff and starting during gra
   const sevenMinutesAfter = normalizeKioskSportsEvent(game, new Date("2026-10-03T23:37:00Z"));
   const thirtyMinutesAfter = normalizeKioskSportsEvent(game, new Date("2026-10-04T00:00:00Z"));
   assert.equal(before?.starting, false);
-  assert.equal(before?.displayState, "upcoming");
+  assert.equal(before?.displayState, "pregame");
   assert.equal(sevenMinutesAfter?.starting, true);
   assert.equal(sevenMinutesAfter?.live, false);
   assert.equal(sevenMinutesAfter?.displayState, "starting");
@@ -48,6 +48,25 @@ test("scheduled CFB beyond kickoff grace is released", () => {
   assert.equal(normalizeKioskSportsEvent(game, now)?.starting, false);
   assert.equal(selectKioskSportsEvent([game], now), undefined);
   assert.equal(describeKioskSportsSelection([game], now).candidates[0]?.exclusionReason, "start-before-now");
+});
+
+test("pregame event outranks a later future football event and delayed stays selected", () => {
+  const pregameNow = new Date("2026-10-03T23:00:00Z");
+  const pregame = event("usu-pregame", "college-football", "2026-10-03T23:20:00Z", { homeTeam: { id: "328", name: "Utah State Aggies" } });
+  const later = event("packers-later", "nfl", "2026-10-04T17:00:00Z", { awayTeam: { id: "9", name: "Green Bay Packers" } });
+  assert.equal(normalizeKioskSportsEvent(pregame, pregameNow)?.displayState, "pregame");
+  assert.equal(selectKioskSportsEvent([later, pregame], pregameNow)?.event.id, "usu-pregame");
+  const delayed = { ...pregame, status: "delayed" as const, statusDetail: "Weather delay" };
+  assert.equal(normalizeKioskSportsEvent(delayed, pregameNow)?.displayState, "delayed");
+  assert.equal(selectKioskSportsEvent([later, delayed], pregameNow)?.event.id, "usu-pregame");
+});
+
+test("final football event is held briefly, then releases", () => {
+  const finalAt = new Date("2026-10-03T23:00:00Z");
+  const finished = event("usu-final", "college-football", finalAt.toISOString(), { status: "final", metadata: { finalizedAt: finalAt.toISOString() } });
+  const next = event("packers-next", "nfl", "2026-10-04T17:00:00Z", { awayTeam: { id: "9", name: "Green Bay Packers" } });
+  assert.equal(selectKioskSportsEvent([finished, next], new Date("2026-10-03T23:03:00Z"))?.event.id, "usu-final");
+  assert.equal(selectKioskSportsEvent([finished, next], new Date("2026-10-03T23:05:01Z"))?.event.id, "packers-next");
 });
 
 test("NFL receives the same kickoff grace and delayed games are not inferred live", () => {

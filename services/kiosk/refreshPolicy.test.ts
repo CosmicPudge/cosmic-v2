@@ -22,7 +22,7 @@ test("sports refreshes live events within ten seconds and near-start events with
   assert.equal(sportsRefreshMode(kickoffGrace, now), "near-live");
   assert.equal(sportsRefreshMs(kickoffGrace, now), KIOSK_REFRESH_MS.sportsNearLive);
   const delayed = { ...empty(now), upcoming: [event(new Date(now.getTime() - 10 * 60_000), "college-football", "delayed")] };
-  assert.equal(sportsRefreshMode(delayed, now), "idle");
+  assert.equal(sportsRefreshMode(delayed, now), "near-live");
 });
 
 test("kiosk provider intervals keep slower data off the fast presentation loop", () => {

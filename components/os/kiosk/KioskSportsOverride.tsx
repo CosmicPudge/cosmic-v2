@@ -34,7 +34,7 @@ function KioskSportsPresentation({ event, visible }: { event: SportsEvent; visib
   const isDevelopmentTest = process.env.NODE_ENV !== "production" && event.source === "kiosk-test";
   const detail = useSportsEvent(event.id, { sport: event.sport, enabled: !isDevelopmentTest && (event.sport === "mlb" || event.sport === "nfl" || event.sport === "college-football") });
   const fetchedLive = detail.data?.live;
-  const testFootball = isDevelopmentTest && (event.sport === "nfl" || event.sport === "college-football") ? createTestFootballLive(event, searchParams.get("football")) : undefined;
+  const testFootball = isDevelopmentTest && (event.sport === "nfl" || event.sport === "college-football") && ["live", "halftime", "overtime", "delayed", "suspended", "final"].includes(searchParams.get("state") ?? "live") ? createTestFootballLive(event, searchParams.get("football"), searchParams.get("state")) : undefined;
   const live = testFootball ?? fetchedLive;
   const baseballLive = fetchedLive?.sport === "mlb" ? fetchedLive : undefined;
   const footballLive = fetchedLive?.sport === "nfl" ? fetchedLive : testFootball && event.sport === "nfl" ? testFootball as FootballLiveData : undefined;
@@ -68,11 +68,11 @@ function KioskSportsPresentation({ event, visible }: { event: SportsEvent; visib
   return <KioskSportsScene event={event} celebration={<SportsCelebrationOverlay celebration={celebration} />}>{content}</KioskSportsScene>;
 }
 
-function createTestFootballLive(event: SportsEvent, state: string | null): FootballLiveData | CollegeFootballLiveData {
+function createTestFootballLive(event: SportsEvent, state: string | null, lifecycle: string | null): FootballLiveData | CollegeFootballLiveData {
   const away = event.awayTeam ?? { id: "68", name: "Boise State Broncos", abbreviation: "BSU" };
   const home = event.homeTeam ?? { id: "328", name: "Utah State Aggies", abbreviation: "USU" };
   const situation = { quarter: 3, clock: "08:42", possessionTeamId: home.id, downDistanceText: state === "redzone" ? "1st & Goal" : "2nd & 7 at USU 35", possessionText: state === "redzone" ? "USU 8" : "USU 35", redZone: state === "redzone" };
-  return { sport: event.sport === "college-football" ? "college-football" : "nfl", eventId: event.id, generatedAt: new Date().toISOString(), stale: false, sources: [], away: { team: away, score: away.score ?? 17, timeoutsRemaining: 2 }, home: { team: home, score: home.score ?? 24, timeoutsRemaining: 3, possession: true }, situation, latestPlay: { description: state === "challenge" ? "Challenge under review" : state === "flag" ? "Holding, offense" : "Pass complete for 8 yards", shortDescription: state === "challenge" ? "Review" : state === "flag" ? "Penalty" : "Complete", penalty: state === "flag", type: state === "flag" ? "penalty" : "pass" }, ...(state === "flag" ? { penalty: { text: "Holding, offense", yards: 10 } } : {}), ...(state === "challenge" ? { review: { text: "Challenge under review", active: true } } : {}) } as FootballLiveData | CollegeFootballLiveData;
+  return { sport: event.sport === "college-football" ? "college-football" : "nfl", eventId: event.id, generatedAt: new Date().toISOString(), stale: false, sources: [], status: lifecycle === "halftime" ? "Halftime" : lifecycle === "overtime" ? "Overtime" : lifecycle === "final" ? "Final" : "Live", ...(lifecycle === "halftime" ? { state: "halftime" as const } : lifecycle === "overtime" ? { state: "overtime" as const } : lifecycle === "final" ? { state: "final" as const } : lifecycle === "delayed" ? { state: "delayed" as const } : lifecycle === "suspended" ? { state: "suspended" as const } : { state: "live" as const }), away: { team: away, score: away.score ?? 17, timeoutsRemaining: 2 }, home: { team: home, score: home.score ?? 24, timeoutsRemaining: 3, possession: true }, situation, latestPlay: { description: state === "challenge" ? "Challenge under review" : state === "flag" ? "Holding, offense" : "Pass complete for 8 yards", shortDescription: state === "challenge" ? "Review" : state === "flag" ? "Penalty" : "Complete", penalty: state === "flag", type: state === "flag" ? "penalty" : "pass" }, ...(state === "flag" ? { penalty: { text: "Holding, offense", yards: 10 } } : {}), ...(state === "challenge" ? { review: { text: "Challenge under review", active: true } } : {}) } as FootballLiveData | CollegeFootballLiveData;
 }
 
 function fixtureUniform(teamId: string, code: string | null): BaseballUniform | undefined {

@@ -3,7 +3,7 @@ import type { SportsEvent, SportsTeam } from "@/core/contracts/Sports";
 export type KioskTestSport = "nfl" | "mlb" | "f1" | "nascar" | "college-football";
 export type KioskTestSession = "practice1" | "practice2" | "practice3" | "qualifying" | "sprint" | "race";
 export type KioskTestCelebration = "score" | "homerun";
-export type KioskTestState = "scheduled" | "live" | "final";
+export type KioskTestState = "scheduled" | "pregame" | "starting" | "live" | "halftime" | "overtime" | "delayed" | "postponed" | "suspended" | "final";
 export type KioskTestFootballState = "flag" | "challenge" | "redzone";
 
 export interface KioskSportsTestOverride {
@@ -21,7 +21,7 @@ export interface KioskSportsTestOverride {
 const SPORTS = new Set<KioskTestSport>(["nfl", "mlb", "f1", "nascar", "college-football"]);
 const SESSIONS = new Set<KioskTestSession>(["practice1", "practice2", "practice3", "qualifying", "sprint", "race"]);
 const CELEBRATIONS = new Set<KioskTestCelebration>(["score", "homerun"]);
-const STATES = new Set<KioskTestState>(["scheduled", "live", "final"]);
+const STATES = new Set<KioskTestState>(["scheduled", "pregame", "starting", "live", "halftime", "overtime", "delayed", "postponed", "suspended", "final"]);
 const FOOTBALL_STATES = new Set<KioskTestFootballState>(["flag", "challenge", "redzone"]);
 const DEV_HOSTS = new Set(["dev.cosmicpudge.shop", "localhost", "127.0.0.1"]);
 
@@ -121,13 +121,17 @@ export function createKioskSportsTestEvent(override: KioskSportsTestOverride, no
   const title = override.sport === "nfl" || override.sport === "mlb" || override.sport === "college-football"
     ? `${away?.name ?? "Away"} at ${home?.name ?? "Home"}`
     : `${label} Grand Prix`;
+  const footballState = override.sport === "nfl" || override.sport === "college-football" ? override.state : undefined;
+  const start = footballState === "pregame" ? new Date(now.getTime() + 18 * 60_000) : footballState === "starting" ? new Date(now.getTime() - 5 * 60_000) : now;
+  const eventStatus = footballState === "halftime" || footballState === "overtime" || footballState === "live" ? "live" : footballState === "postponed" ? "postponed" : footballState === "suspended" ? "suspended" : footballState === "delayed" ? "delayed" : footballState === "final" ? "final" : "scheduled";
+  const stateDetail = footballState && footballState !== "scheduled" && footballState !== "pregame" && footballState !== "starting" ? footballState === "halftime" ? "Halftime" : footballState === "overtime" ? "Overtime" : footballState === "final" ? "Final" : footballState[0].toUpperCase() + footballState.slice(1) : undefined;
   return {
     id: `kiosk-test-${override.sport}`,
     sport: override.sport,
     title: override.sport === "nascar" ? `${label} 400` : title,
-    start: now,
-    status: override.state ?? "live",
-    statusDetail: session ? `${sessionLabel(session)} · TEST` : "Live · TEST",
+    start,
+    status: eventStatus,
+    ...(stateDetail ? { statusDetail: stateDetail } : { statusDetail: session ? `${sessionLabel(session)} · TEST` : "Live · TEST" }),
     ...(away ? { awayTeam: { ...away, score: 17 } } : {}),
     ...(home ? { homeTeam: { ...home, score: 24 } } : {}),
     venue: label,
@@ -141,6 +145,7 @@ export function createKioskSportsTestEvent(override: KioskSportsTestOverride, no
       ...(venue?.track ? { track: venue.track } : {}),
       ...(override.sport === "f1" ? { circuit: label } : {}),
       ...(override.football ? { footballState: override.football } : {}),
+      ...(footballState === "final" ? { finalizedAt: now.toISOString() } : {}),
     },
   };
 }

@@ -23,6 +23,7 @@ export function sportsRefreshMode(snapshot: SportsSnapshot | null, now = new Dat
   if (!snapshot) return "active";
   if (snapshot.live.length > 0) return "live";
   const nearLive = snapshot.upcoming.some((event) => {
+    if (["delayed", "suspended"].includes(event.status)) return true;
     if (!["scheduled", "pregame"].includes(event.status)) return false;
     const untilStart = event.start.getTime() - now.getTime();
     return (untilStart >= 0 && untilStart <= 60 * 60_000) || (untilStart < 0 && untilStart >= -KIOSK_KICKOFF_GRACE_MS);

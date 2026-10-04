@@ -69,7 +69,7 @@ export function favoriteFirstSections(events: SportsEvent[], preferences: Cosmic
   const unique = new Map<string, SportsEvent>();
   for (const event of events) unique.set(event.id, event);
   const ordered = [...unique.values()].sort((first, second) => {
-    const temporal = (value: SportsEvent) => value.status === "live" || value.status === "delayed" ? 0 : value.status === "final" || value.status === "cancelled" || value.status === "postponed" ? 2 : 1;
+    const temporal = (value: SportsEvent) => value.status === "live" || value.status === "delayed" || value.status === "suspended" ? 0 : value.status === "final" || value.status === "cancelled" || value.status === "postponed" ? 2 : 1;
     const firstTemporal = temporal(first); const secondTemporal = temporal(second);
     if (firstTemporal !== secondTemporal) return firstTemporal - secondTemporal;
     if (firstTemporal === 0) {
@@ -81,8 +81,8 @@ export function favoriteFirstSections(events: SportsEvent[], preferences: Cosmic
     return Number(isFavoriteEvent(second, preferences)) - Number(isFavoriteEvent(first, preferences));
   });
   return {
-    now: ordered.filter((event) => event.status === "live" || event.status === "delayed"),
-    next: ordered.filter((event) => event.status !== "live" && event.status !== "delayed" && event.status !== "final" && event.status !== "cancelled" && event.status !== "postponed"),
+    now: ordered.filter((event) => event.status === "live" || event.status === "delayed" || event.status === "suspended"),
+    next: ordered.filter((event) => event.status !== "live" && event.status !== "delayed" && event.status !== "suspended" && event.status !== "final" && event.status !== "cancelled" && event.status !== "postponed"),
     recent: ordered.filter((event) => event.status === "final" || event.status === "cancelled" || event.status === "postponed"),
   };
 }

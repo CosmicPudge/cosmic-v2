@@ -56,6 +56,7 @@ function preferredDuplicate(current: SportsEvent, incoming: SportsEvent) {
 
 const snapshotCache = new Map<string, { expiresAt: number; value: SportsSnapshot }>();
 const snapshotRequests = new Map<string, Promise<SportsSnapshot>>();
+const finalSeenAt = new Map<string, string>();
 const MAX_SNAPSHOT_CACHE_ENTRIES = 64;
 
 function snapshotCacheKey(preferences: CosmicUserPreferences): string {
@@ -145,8 +146,10 @@ async function loadSportsSnapshot(now: Date, preferences: CosmicUserPreferences)
           ...(event.metadata?.expectedEnd ? {} : event.end ? { expectedEnd: event.end.toISOString() } : {}),
           staleAfter: event.metadata?.staleAfter ?? new Date(now.getTime() + item.provider.cacheSeconds * 1_000).toISOString(),
           lastProviderRefresh: event.metadata?.lastProviderRefresh ?? now.toISOString(),
+          ...(event.status === "final" ? { finalizedAt: event.metadata?.finalizedAt ?? finalSeenAt.get(event.id) ?? now.toISOString() } : {}),
         },
       })));
+      for (const event of item.result.events) if (event.status === "final" && !finalSeenAt.has(event.id)) finalSeenAt.set(event.id, now.toISOString());
       if (item.result.standings?.length) standings[item.provider.sport] = item.result.standings;
       sources.push({ id: item.provider.id, sport: item.provider.sport, providerName: item.provider.providerName, official: item.provider.official, fallback: item.provider.fallback, status: item.provider.fallback ? "fallback" : "ok", capabilities: item.provider.capabilities, cacheSeconds: item.provider.cacheSeconds, ...(item.provider.sourceUrl ? { sourceUrl: item.provider.sourceUrl } : {}) });
       continue;
