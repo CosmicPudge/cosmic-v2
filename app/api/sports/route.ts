@@ -5,7 +5,9 @@ import { getAccountPreferences } from "@/services/settings/accountPreferences";
 import { referencePreferences } from "@/services/settings/preferences";
 import { isDatabaseConfigured } from "@/services/database/client";
 import { isDeveloperKioskRequest } from "@/services/kiosk/developerKiosk";
-import { eventMatchesKioskAutoScreenPreferences } from "@/services/sports/preferences";
+import { eventMatchesKioskAutoScreenPreferences, isTemporaryDevMinMiamiOverride } from "@/services/sports/preferences";
+
+let temporaryMinMiamiOverrideLogged = false;
 
 function isSportKind(value: string): value is SportKind {
   return value === "mlb" || value === "nfl" || value === "nba" || value === "mls" || value === "f1" || value === "nascar" || value === "college-football";
@@ -16,9 +18,19 @@ export async function GET(request: Request) {
   const account = developerKiosk ? null : (await requireAuthenticatedSession(request, { allowDevice: true, bootId: kioskBootId(request) })).account;
   const preferences = account && isDatabaseConfigured() ? await getAccountPreferences(account.id) : referencePreferences;
   const kioskEligibility = new URL(request.url).searchParams.get("kiosk") === "true";
+  const requestHost = new URL(request.url).hostname;
   const requestedSport = new URL(request.url).searchParams.get("sport");
   const snapshot = await getSportsSnapshot(new Date(), preferences);
-  const filter = (event: SportsEvent) => kioskEligibility ? eventMatchesKioskAutoScreenPreferences(event, preferences) : true;
+  const filter = (event: SportsEvent) => {
+    if (!kioskEligibility) return true;
+    const normalEligibility = eventMatchesKioskAutoScreenPreferences(event, preferences);
+    const temporaryOverride = developerKiosk && preferences.sports.enabledSports.includes("nfl") && isTemporaryDevMinMiamiOverride(event, requestHost);
+    if (temporaryOverride && !normalEligibility && !temporaryMinMiamiOverrideLogged) {
+      temporaryMinMiamiOverrideLogged = true;
+      console.info(`[football-test-override] event=${event.id} matchup=MIN-MIA eligible=true`);
+    }
+    return normalEligibility || temporaryOverride;
+  };
   const filteredSnapshot = kioskEligibility ? {
     ...snapshot,
     live: snapshot.live.filter(filter),

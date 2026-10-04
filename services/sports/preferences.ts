@@ -22,6 +22,18 @@ const TEAM_SPORTS: SportKind[] = ["mlb", "nfl", "college-football"];
 export const KIOSK_AUTO_SCREEN_SPORTS: SportKind[] = ["nfl", "college-football"];
 export const KIOSK_KICKOFF_GRACE_MS = 45 * 60_000;
 
+/** Temporary dev-only live test; remove after the MIN–MIA game is no longer needed. */
+export const TEMP_DEV_MIN_MIA_EVENT_ID = "espn-nfl:401872974";
+const TEMP_DEV_MIN_MIA_TEAM_IDS = new Set(["15", "16"]);
+
+export function isTemporaryDevMinMiamiOverride(event: SportsEvent, hostname: string): boolean {
+  const host = hostname.split(":")[0].toLowerCase();
+  if (!["dev.cosmicpudge.shop", "localhost", "127.0.0.1"].includes(host)) return false;
+  if (event.id !== TEMP_DEV_MIN_MIA_EVENT_ID || event.sport !== "nfl" || event.status !== "live") return false;
+  const teamIds = [event.homeTeam?.id, event.awayTeam?.id].filter((id): id is string => Boolean(id)).map(String);
+  return teamIds.length === 2 && teamIds.every((id) => TEMP_DEV_MIN_MIA_TEAM_IDS.has(id));
+}
+
 export function isTeamSport(sport: SportKind): boolean {
   return TEAM_SPORTS.includes(sport);
 }

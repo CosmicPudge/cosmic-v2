@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import type { SportsEvent } from "@/core/contracts/Sports";
 import { neutralPreferences } from "@/services/settings/preferences";
-import { eventMatchesKioskAutoScreenPreferences, eventMatchesKioskPreferences, favoriteFirstSections, isFavoriteEvent } from "./preferences";
+import { eventMatchesKioskAutoScreenPreferences, eventMatchesKioskPreferences, favoriteFirstSections, isFavoriteEvent, isTemporaryDevMinMiamiOverride, TEMP_DEV_MIN_MIA_EVENT_ID } from "./preferences";
 
 function event(id: string, status: SportsEvent["status"], start: string, overrides: Partial<SportsEvent> = {}): SportsEvent {
   return { id, sport: "nfl", title: id, start: new Date(start), status, source: "test", ...overrides };
@@ -93,4 +93,18 @@ test("kiosk team sports with no followed teams have no eligible events", () => {
   const game = event("usu", "scheduled", "2026-10-03T19:00:00Z", { sport: "college-football", homeTeam: { id: "328", name: "Utah State Aggies" }, awayTeam: { id: "68", name: "Boise State Broncos" } });
   assert.equal(eventMatchesKioskPreferences(game, preferences), false);
   assert.equal(eventMatchesKioskAutoScreenPreferences(game, preferences), false);
+});
+
+test("temporary dev override allows only the live MIN-MIA event", () => {
+  const target = event(TEMP_DEV_MIN_MIA_EVENT_ID, "live", "2026-10-04T22:05:00Z", { homeTeam: { id: "16", name: "Minnesota Vikings", abbreviation: "MIN" }, awayTeam: { id: "15", name: "Miami Dolphins", abbreviation: "MIA" } });
+  assert.equal(isTemporaryDevMinMiamiOverride(target, "dev.cosmicpudge.shop"), true);
+  assert.equal(isTemporaryDevMinMiamiOverride(target, "cosmicpudge.shop"), false);
+  assert.equal(isTemporaryDevMinMiamiOverride({ ...target, status: "final" }, "dev.cosmicpudge.shop"), false);
+  assert.equal(isTemporaryDevMinMiamiOverride({ ...target, id: "espn-nfl:future-minnesota" }, "dev.cosmicpudge.shop"), false);
+  assert.equal(isTemporaryDevMinMiamiOverride({ ...target, id: "espn-nfl:future-miami" }, "dev.cosmicpudge.shop"), false);
+});
+
+test("other non-favorite NFL games remain outside the temporary override", () => {
+  const other = event("espn-nfl:other-live", "live", "2026-10-04T22:05:00Z", { homeTeam: { id: "9", name: "Green Bay Packers" }, awayTeam: { id: "27", name: "Tampa Bay Buccaneers" } });
+  assert.equal(isTemporaryDevMinMiamiOverride(other, "dev.cosmicpudge.shop"), false);
 });
