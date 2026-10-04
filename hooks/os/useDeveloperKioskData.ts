@@ -9,6 +9,7 @@ import { readSchoolCompletionOverrides } from "@/services/school/completionOverr
 import { useConnectionHealth } from "@/services/kiosk/ConnectionHealthProvider";
 import { kioskApiUrl } from "@/services/kioskRequest";
 import { readKioskDeviceLocation } from "@/hooks/os/useKioskDeviceLocation";
+import { classifyKioskDataHealth } from "@/services/kiosk/dataHealth";
 
 export interface DeveloperKioskData {
   location: { lat: number; lon: number; label: string; source?: "current" | "last-known" | "fallback" | "unavailable"; stale?: boolean } | null;
@@ -98,9 +99,10 @@ export function useDeveloperKioskData({ enabled: requestedEnabled, poll = true }
         };
         if (currentRequestToken !== lastHealthReportToken) {
           lastHealthReportToken = currentRequestToken;
-          if (value.weather) recordSuccess("weather"); else recordFailure("weather", "unavailable");
-          if (value.calendar.connected) recordSuccess("calendar"); else recordFailure("calendar", value.calendar.diagnostics?.category ?? "provider-error");
-          if (value.school.connected) recordSuccess("school"); else recordFailure("school", value.school.diagnostics?.category ?? "provider-error");
+          const health = classifyKioskDataHealth(value);
+          if (health.weather) recordSuccess("weather"); else recordFailure("weather", "unavailable");
+          if (health.calendar) recordSuccess("calendar"); else recordFailure("calendar", value.calendar.diagnostics?.category ?? "provider-error");
+          if (health.school) recordSuccess("school"); else recordFailure("school", value.school.diagnostics?.category ?? "provider-error");
         }
         if (active) { setData(displayValue); window.dispatchEvent(new CustomEvent("cosmic:kiosk-data-updated")); }
       } catch (reason) {

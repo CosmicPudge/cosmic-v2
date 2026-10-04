@@ -48,7 +48,14 @@ function readPersisted(): ConnectionHealthMap {
 export function ConnectionHealthProvider({ children }: { children: React.ReactNode }) {
   const [health, setHealth] = useState<ConnectionHealthMap>(() => readPersisted());
   const update = useCallback((service: KioskHealthService, event: Parameters<typeof reduceConnectionHealth>[1]) => {
-    setHealth((current) => ({ ...current, [service]: reduceConnectionHealth(current[service], event) }));
+    setHealth((current) => {
+      const previous = current[service];
+      const next = reduceConnectionHealth(previous, event);
+      if (process.env.NODE_ENV !== "production" && previous.state !== next.state) {
+        console.info(`[kiosk-health] service=${service} event=${event.type} previous=${previous.state} next=${next.state} failures=${next.consecutiveFailures}`);
+      }
+      return { ...current, [service]: next };
+    });
   }, []);
   const recordAttempt = useCallback((service: KioskHealthService) => update(service, { type: "attempt", at: new Date().toISOString() }), [update]);
   const recordSuccess = useCallback((service: KioskHealthService) => {
