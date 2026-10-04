@@ -27,7 +27,8 @@ export function useSportsCelebration(event: SportsEvent, live: SportsLiveData | 
     if (!detected) return;
     setCelebration(detected);
     if (timerRef.current !== null) window.clearTimeout(timerRef.current);
-    timerRef.current = window.setTimeout(() => setCelebration(null), detected.kind === "home-run" ? 3_200 : 2_000);
+    const footballCelebration = ["touchdown", "extra-point", "field-goal", "two-point", "safety"].includes(detected.kind);
+    timerRef.current = window.setTimeout(() => setCelebration(null), footballCelebration ? 7_000 : detected.kind === "home-run" ? 3_200 : 2_000);
   }, [event, forcedKind, observation, visible]);
 
   useEffect(() => () => { if (timerRef.current !== null) window.clearTimeout(timerRef.current); }, []);

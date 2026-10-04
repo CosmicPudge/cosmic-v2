@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import type { SportsEvent } from "@/core/contracts/Sports";
 import type { FootballLiveData } from "@/core/contracts/sports/Football";
@@ -8,24 +8,52 @@ import type { CollegeFootballLiveData } from "@/services/sports/providers/colleg
 import { resolveSportsTeamIdentity } from "@/services/sports/identity";
 import { createFootballPresentation } from "./footballPresentation";
 import KioskFootballContextCards from "./KioskFootballContextCards";
+import { FOOTBALL_PENALTY_DISPLAY_MS } from "./footballAttention";
 
 type FootballView = ReturnType<typeof createFootballPresentation>;
 
 export default function KioskFootballView({ event, live }: { event: SportsEvent; live?: FootballLiveData | CollegeFootballLiveData }) {
   const view = createFootballPresentation(event, live);
-  const tone = view.attention === "flag" ? "kiosk-football-panel--flag" : view.attention !== "normal" ? "kiosk-football-panel--review" : "kiosk-football-panel--normal";
+  const penaltyVisible = useFootballPenaltyBanner(view.penaltyIdentity);
+  const effectiveAttention: FootballView["attention"] = view.attention !== "normal" ? view.attention : penaltyVisible ? "flag" : "normal";
+  const attentionView: FootballView = effectiveAttention === view.attention ? view : { ...view, attention: effectiveAttention, attentionLabel: "FLAG" };
+  const tone = effectiveAttention === "flag" ? "kiosk-football-panel--flag" : effectiveAttention !== "normal" ? "kiosk-football-panel--review" : "kiosk-football-panel--normal";
   const possessionText = view.situation?.possessionText ?? view.situation?.possessionTeamAbbreviation;
   return <div className="kiosk-sports-view kiosk-football-scene relative flex h-[100dvh] w-full items-center justify-center overflow-hidden px-[clamp(1rem,3vw,3rem)] py-[clamp(1rem,3vh,2.5rem)]" data-football-attention={view.attention} data-football-state={view.lifecycleState}>
     <section className={`kiosk-football-panel relative flex h-full w-full max-w-[1550px] flex-col overflow-hidden rounded-[clamp(1.5rem,3vw,2.75rem)] border backdrop-blur-md transition-colors duration-500 ${tone}`}>
       <header className="kiosk-football-topbar flex shrink-0 items-start justify-between border-b border-white/10 px-[clamp(1.25rem,3vw,2.5rem)] py-[clamp(.9rem,2vh,1.4rem)]"><div className="flex min-w-0 items-start gap-4"><span className="kiosk-football-state-dot mt-1 h-3 w-3 shrink-0 rounded-full" /><div className="min-w-0"><p className="kiosk-football-eyebrow text-[clamp(.7rem,1vw,.9rem)] font-bold uppercase tracking-[0.24em] text-white/90">{view.statusLabel} · {view.sportLabel}</p><h1 className="mt-1 max-w-[75vw] truncate text-[clamp(1.15rem,2vw,1.7rem)] font-semibold tracking-tight text-white">{event.title}</h1></div></div><p className="kiosk-football-brand text-right text-[clamp(.65rem,1vw,.85rem)] font-semibold uppercase tracking-[0.2em] text-white/70">COSMIC SPORTS</p></header>
-      {view.attention !== "normal" ? <AttentionBanner view={view} /> : null}
+      {effectiveAttention !== "normal" ? <AttentionBanner view={attentionView} /> : null}
       <div className="kiosk-football-main grid min-h-0 flex-1 grid-rows-[auto_1fr_auto] gap-[clamp(.8rem,2vh,1.5rem)] px-[clamp(1.25rem,4vw,4rem)] py-[clamp(1rem,3vh,2rem)]"><div className="kiosk-football-statusline flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-center"><span className="kiosk-football-status text-[clamp(1rem,1.8vw,1.45rem)] font-black uppercase tracking-[.12em] text-white">{view.countdownLabel ?? (view.quarterLabel ? `${view.quarterLabel}${view.clock ? ` · ${view.clock}` : ""}` : view.lifecycleState === "pregame" ? "PREGAME" : view.lifecycleState === "halftime" ? "HALFTIME" : view.lifecycleState === "overtime" ? "OVERTIME" : "GAME CONTEXT")}</span>{view.rankings.map((rank) => <span key={rank} className="kiosk-football-ranking text-[clamp(.85rem,1.2vw,1.05rem)] font-bold text-amber-100">{rank}</span>)}</div>
         <div className="kiosk-football-scoreboard grid min-h-0 grid-cols-[1fr_auto_1fr] items-center gap-[clamp(1rem,4vw,4rem)]"><ScoreTeam event={event} side="away" team={view.away} /><CenterSituation view={view} possessionText={possessionText} /><ScoreTeam event={event} side="home" team={view.home} /></div>
-        <div className="kiosk-football-lower grid gap-3 lg:grid-cols-[1fr_1.8fr_1fr]"><InfoCard label="LAST PLAY" value={view.latestPlay?.shortDescription ?? view.latestPlay?.description ?? "No play-by-play yet"} transitionKey={view.latestPlay?.id ?? view.latestPlay?.description} /><KioskFootballContextCards stats={view.stats} currentDrive={view.currentDrive} away={view.away} home={view.home} lifecycleState={view.lifecycleState} attention={view.attention} redZone={view.situation?.redZone} /><InfoCard label="VENUE / NETWORK" value={[view.venue, view.broadcast].filter(Boolean).join(" · ") || view.penaltyText || view.reviewText || "Live detail updating"} emphasis={view.attention !== "normal"} /></div>
+        <div className="kiosk-football-lower grid gap-3 lg:grid-cols-[1fr_1.8fr_1fr]"><InfoCard label="LAST PLAY" value={lastPlaySummary(view)} transitionKey={view.latestPlay?.id ?? view.latestPlay?.description} /><KioskFootballContextCards stats={view.stats} currentDrive={view.currentDrive} away={view.away} home={view.home} lifecycleState={view.lifecycleState} attention={effectiveAttention} redZone={view.situation?.redZone} /><InfoCard label="VENUE / NETWORK" value={[view.venue, view.broadcast].filter(Boolean).join(" · ") || view.penaltyText || view.reviewText || "Live detail updating"} emphasis={effectiveAttention !== "normal"} /></div>
       </div>
       <footer className="kiosk-football-footer flex shrink-0 items-center justify-between border-t border-white/10 px-[clamp(1.25rem,3vw,2.5rem)] py-3 text-[clamp(.6rem,1vw,.75rem)] font-semibold uppercase tracking-[0.16em] text-white/65"><span>{view.venue ?? "Football live center"}</span><span>{view.away.timeouts !== undefined || view.home.timeouts !== undefined ? `Timeouts ${view.away.timeouts ?? "—"} · ${view.home.timeouts ?? "—"}` : "Scoreboard updating"}</span></footer><div className="pointer-events-none absolute inset-0 rounded-[inherit] ring-1 ring-inset ring-white/10" />
     </section>
   </div>;
+}
+
+function useFootballPenaltyBanner(identity?: string) {
+  const [visibleIdentity, setVisibleIdentity] = useState<string | undefined>(undefined);
+  const handled = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    if (!identity) {
+      const clearTask = window.setTimeout(() => setVisibleIdentity(undefined), 0);
+      return () => window.clearTimeout(clearTask);
+    }
+    if (handled.current === identity) return;
+    handled.current = identity;
+    setVisibleIdentity(identity);
+    const timer = window.setTimeout(() => setVisibleIdentity(undefined), FOOTBALL_PENALTY_DISPLAY_MS);
+    return () => window.clearTimeout(timer);
+  }, [identity]);
+  return visibleIdentity === identity;
+}
+
+function lastPlaySummary(view: FootballView) {
+  const play = view.latestPlay;
+  if (!play) return "No play-by-play yet";
+  const detail = [play.shortDescription ?? play.description, play.yardsGained !== undefined ? `${play.yardsGained >= 0 ? "+" : ""}${play.yardsGained} yds` : undefined, play.downDistanceText].filter(Boolean).join(" · ");
+  return [detail, view.penaltyText, play.scoringPlay ? "SCORING PLAY" : undefined].filter(Boolean).join(" · ");
 }
 
 function AttentionBanner({ view }: { view: FootballView }) { return <div className="kiosk-football-attention border-b border-current/20 px-[clamp(1.25rem,4vw,4rem)] py-3 text-center"><p className="kiosk-football-attention-title text-[clamp(1.1rem,2.4vw,2rem)] font-black uppercase tracking-[.2em]">{view.attentionLabel}</p>{view.attention === "challenge" && view.attentionTeam ? <p className="mt-1 text-[clamp(.8rem,1.2vw,1rem)] font-semibold uppercase tracking-[.14em]">Challenge by {view.attentionTeam}</p> : null}{view.attention === "official-review" ? <p className="mt-1 text-[clamp(.8rem,1.2vw,1rem)]">Ruling on the field under review</p> : null}{view.reviewOutcome ? <p className="mt-1 text-[clamp(.8rem,1.2vw,1rem)] font-bold text-white">{view.reviewOutcome}</p> : null}</div>; }
@@ -34,7 +62,7 @@ function CenterSituation({ view, possessionText }: { view: FootballView; possess
 
 function FieldStrip({ view, possessionText }: { view: FootballView; possessionText?: string }) { const field = view.situation?.fieldPosition; const yard = field?.yardLine ?? view.situation?.ballYardLine; const first = view.situation?.firstDownYardLine; const display = field?.display ?? possessionText; return <div className="kiosk-football-field-strip w-full max-w-[19rem] rounded-xl border border-white/20 bg-emerald-950/55 p-2"><div className="flex justify-between text-[.55rem] font-black tracking-[.12em] text-white/80"><span>{view.away.abbreviation}</span><span>{view.home.abbreviation}</span></div><svg viewBox="0 0 220 30" className="mt-1 h-8 w-full" role="img" aria-label={display ? `Field position ${display}` : "Football field position"}><rect x="1" y="4" width="218" height="22" rx="3" fill="rgba(16,94,62,.75)" stroke="rgba(255,255,255,.35)" />{[22,44,66,88,110,132,154,176,198].map((x) => <line key={x} x1={x} x2={x} y1="5" y2="25" stroke="rgba(255,255,255,.28)" />)}{first !== undefined ? <line x1={Math.max(4, Math.min(216, first * 2.2))} x2={Math.max(4, Math.min(216, first * 2.2))} y1="5" y2="25" stroke="#facc15" strokeWidth="2" /> : null}{yard !== undefined ? <circle cx={Math.max(7, Math.min(213, yard * 2.2))} cy="15" r="4" fill="#fff" stroke="#111827" strokeWidth="2" /> : null}</svg><p className="mt-1 text-[.65rem] font-semibold text-white/80">{display ? `🏈 ${display}` : "Field position unavailable"}</p></div>; }
 
-function ScoreTeam({ event, side, team }: { event: SportsEvent; side: "home" | "away"; team: FootballView["home"] }) { const source = side === "home" ? event.homeTeam : event.awayTeam; const identity = resolveSportsTeamIdentity(event.sport, source); return <div className={`kiosk-football-team kiosk-football-team--${side} ${side === "home" ? "text-left" : "text-right"} min-w-0`}><div className={`mb-2 flex items-center gap-3 ${side === "home" ? "justify-start" : "justify-end"}`}><div className="kiosk-football-logo">{identity?.logoPath ? <img className="h-10 w-10 object-contain" src={identity.logoPath} alt="" draggable={false} onError={(event) => { event.currentTarget.style.display = "none"; }} /> : null}<span className="kiosk-football-monogram" aria-hidden="true">{team.abbreviation.slice(0, 3)}</span></div><div className="min-w-0"><p className="kiosk-football-team-name text-[clamp(1.2rem,3vw,2.6rem)] font-black uppercase tracking-[-.035em]" style={{ color: team.possession && team.color ? team.color : "#fff" }}>{team.name}</p><p className="kiosk-football-team-meta text-[clamp(.7rem,1vw,.9rem)] font-bold uppercase tracking-[.15em] text-white/75">{team.abbreviation}{team.record ? ` · ${team.record}` : ""}</p><Timeouts count={team.timeouts} /></div></div><ScoreValue eventId={event.id} side={side} score={team.score} /></div>; }
+function ScoreTeam({ event, side, team }: { event: SportsEvent; side: "home" | "away"; team: FootballView["home"] }) { const source = side === "home" ? event.homeTeam : event.awayTeam; const identity = resolveSportsTeamIdentity(event.sport, source); const [logoFailed, setLogoFailed] = useState(false); return <div className={`kiosk-football-team kiosk-football-team--${side} ${side === "home" ? "text-left" : "text-right"} min-w-0`}><div className={`mb-2 flex items-center gap-3 ${side === "home" ? "justify-start" : "justify-end"}`}><div className="kiosk-football-logo">{identity?.logoPath && !logoFailed ? <img className="h-10 w-10 object-contain" src={identity.logoPath} alt="" draggable={false} onError={() => setLogoFailed(true)} /> : <span className="kiosk-football-monogram" aria-hidden="true">{team.abbreviation.slice(0, 3)}</span>}</div><div className="min-w-0"><p className="kiosk-football-team-name text-[clamp(1.2rem,3vw,2.6rem)] font-black uppercase tracking-[-.035em]" style={{ color: team.possession && team.color ? team.color : "#fff" }}>{team.name}</p><p className="kiosk-football-team-meta text-[clamp(.7rem,1vw,.9rem)] font-bold uppercase tracking-[.15em] text-white/75">{team.abbreviation}{team.record ? ` · ${team.record}` : ""}</p><Timeouts count={team.timeouts} /></div></div><ScoreValue eventId={event.id} side={side} score={team.score} /></div>; }
 function Timeouts({ count }: { count?: number }) { if (count === undefined) return null; return <div className="kiosk-football-timeouts mt-1 flex gap-1" aria-label={`${count} timeouts remaining`}>{[0, 1, 2].map((index) => <span key={index} className={`h-2.5 w-2.5 rounded-full border ${index < count ? "border-white/80 bg-white/85" : "border-white/35 bg-white/10"}`} />)}</div>; }
 function ScoreValue({ eventId, side, score }: { eventId: string; side: "home" | "away"; score?: number }) { const node = useRef<HTMLSpanElement>(null); const previous = useRef<{ eventId: string; score?: number } | null>(null); useEffect(() => { const prior = previous.current; previous.current = { eventId, score }; if (!prior || prior.eventId !== eventId || prior.score === score || !node.current || score === undefined) return; node.current.classList.remove("kiosk-football-score--changed"); void node.current.offsetWidth; node.current.classList.add("kiosk-football-score--changed"); const timer = window.setTimeout(() => node.current?.classList.remove("kiosk-football-score--changed"), 500); return () => window.clearTimeout(timer); }, [eventId, score]); return <span ref={node} data-score-side={side} className="kiosk-football-score text-[clamp(4rem,11vw,8rem)] font-black leading-none tracking-[-.08em] text-white">{score ?? "—"}</span>; }
 function InfoCard({ label, value, emphasis = false, transitionKey }: { label: string; value: string; emphasis?: boolean; transitionKey?: string }) { return <AnimatedInfoCard transitionKey={transitionKey}><div className={`kiosk-football-info-card rounded-2xl border px-4 py-3 ${emphasis ? "kiosk-football-info-card--attention" : ""}`}><p className="kiosk-football-card-label text-[clamp(.65rem,1vw,.8rem)] font-black uppercase tracking-[.18em] text-white/80">{label}</p><p className="kiosk-football-card-value mt-1 line-clamp-2 text-[clamp(.85rem,1.2vw,1.05rem)] font-medium leading-snug text-white">{value}</p></div></AnimatedInfoCard>; }

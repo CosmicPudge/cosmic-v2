@@ -3,6 +3,7 @@ import test from "node:test";
 import type { SportsEvent } from "@/core/contracts/Sports";
 import type { BaseballLiveData } from "@/core/contracts/sports/Baseball";
 import { createSportsScoreObservation, detectSportsCelebration } from "./sportsCelebration";
+import type { FootballLiveData } from "@/core/contracts/sports/Football";
 
 const event = (overrides: Partial<SportsEvent> = {}): SportsEvent => ({
   id: "game-1", sport: "mlb", title: "Cleveland Guardians at Los Angeles Angels", start: new Date("2026-10-03T01:00:00Z"), status: "live", source: "test",
@@ -83,4 +84,25 @@ test("CFB score changes reuse the same celebration path", () => {
   assert.equal(celebration?.kind, "score");
   assert.equal(celebration?.teamId, "328");
   assert.equal(celebration?.primaryColor, "#0f2439");
+});
+
+test("football scoring play uses structured celebration wording", () => {
+  const game = event({ id: "nfl-score", sport: "nfl", homeTeam: { id: "tb", name: "Tampa Bay Buccaneers", abbreviation: "TB", score: 0 } });
+  const base: FootballLiveData = {
+    sport: "nfl", eventId: game.id, generatedAt: "a", stale: false, sources: [],
+    away: { team: game.awayTeam!, score: 0 }, home: { team: game.homeTeam!, score: 0 }, situation: {},
+  };
+  const previous = createSportsScoreObservation(game, base, 1_000);
+  const current = createSportsScoreObservation(game, { ...base, home: { ...base.home, score: 7 }, latestPlay: { id: "play-td", description: "Touchdown pass", scoringPlay: true, touchdown: true, type: "pass" } }, 2_000);
+  const celebration = detectSportsCelebration(previous, current, game);
+  assert.equal(celebration?.kind, "touchdown");
+  assert.equal(celebration?.label, "TOUCHDOWN");
+});
+
+test("nullified football scoring plays do not celebrate", () => {
+  const game = event({ id: "nfl-nullified", sport: "nfl" });
+  const base: FootballLiveData = { sport: "nfl", eventId: game.id, generatedAt: "a", stale: false, sources: [], away: { team: game.awayTeam!, score: 0 }, home: { team: game.homeTeam!, score: 0 }, situation: {} };
+  const previous = createSportsScoreObservation(game, base, 1_000);
+  const current = createSportsScoreObservation(game, { ...base, home: { ...base.home, score: 7 }, latestPlay: { id: "play-null", description: "Touchdown nullified by penalty", scoringPlay: true, touchdown: true } }, 2_000);
+  assert.equal(detectSportsCelebration(previous, current, game), null);
 });
