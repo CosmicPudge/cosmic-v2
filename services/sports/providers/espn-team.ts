@@ -58,8 +58,18 @@ export function normalizeEspnFootballEvents(payload: unknown, sport: Extract<Spo
     const venue = venueRecord ? string(venueRecord.fullName) : undefined;
     const seasonType = isRecord(event.seasonType) ? string(event.seasonType.name) : undefined;
     const conference = isRecord(competition.conference) ? string(competition.conference.name) : string(competition.conference);
+    const stableId = sport === "college-football" ? `espn:college-football:${id}` : `${providerId}:${id}`;
+    const statusRecord = isRecord(competition.status) ? competition.status : {};
+    const situation = isRecord(competition.situation) ? competition.situation : {};
+    const period = number(situation.period) ?? number(statusRecord.period);
+    const clock = string(situation.displayClock) ?? string(statusRecord.displayClock);
+    const possessionTeamId = string(situation.possession);
+    const down = number(situation.down);
+    const distance = number(situation.distance);
+    const downDistanceText = string(situation.downDistanceText);
+    const possessionText = string(situation.possessionText);
     return [{
-      id: `${providerId}:${id}`,
+      id: stableId,
       sport,
       title: `${awayTeam.name} at ${homeTeam.name}`,
       start,
@@ -74,6 +84,13 @@ export function normalizeEspnFootballEvents(payload: unknown, sport: Extract<Spo
         gamePk: id,
         ...(seasonType ? { seasonType } : {}),
         ...(conference ? { conference } : {}),
+        ...(period !== undefined ? { period } : {}),
+        ...(clock ? { clock } : {}),
+        ...(possessionTeamId ? { possessionTeamId } : {}),
+        ...(down !== undefined ? { down } : {}),
+        ...(distance !== undefined ? { distance } : {}),
+        ...(downDistanceText ? { downDistanceText } : {}),
+        ...(possessionText ? { possessionText } : {}),
       },
     }];
   });

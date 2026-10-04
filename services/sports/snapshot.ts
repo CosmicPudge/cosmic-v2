@@ -6,11 +6,52 @@ import { neutralPreferences } from "@/services/settings/preferences";
 import { recordCacheMetric } from "@/services/observability/metrics";
 
 function eventDedupeKey(event: SportsEvent): string {
+  if (event.sport === "college-football" && event.metadata?.gamePk) return `college-football:${event.metadata.gamePk}`;
   if ((event.sport === "nfl" || event.sport === "college-football") && event.homeTeam && event.awayTeam) {
     const teams = [event.homeTeam.id ?? event.homeTeam.name, event.awayTeam.id ?? event.awayTeam.name].sort().join("|");
     return `${event.sport}:${event.start.toISOString()}:${teams}`;
   }
   return event.id;
+}
+
+function eventStateRank(event: SportsEvent) {
+  if (event.status === "live") return 4;
+  if (event.status === "final") return 3;
+  if (["delayed", "postponed", "cancelled"].includes(event.status)) return 2;
+  return 1;
+}
+
+function eventRichness(event: SportsEvent) {
+  const metadata = event.metadata;
+  return [
+    event.homeTeam?.score !== undefined,
+    event.awayTeam?.score !== undefined,
+    metadata?.period !== undefined,
+    metadata?.clock !== undefined,
+    metadata?.possessionTeamId !== undefined,
+    metadata?.down !== undefined,
+    metadata?.distance !== undefined,
+    metadata?.downDistanceText !== undefined,
+    metadata?.possessionText !== undefined,
+    event.statusDetail !== undefined,
+    event.venue !== undefined,
+  ].filter(Boolean).length;
+}
+
+function preferredDuplicate(current: SportsEvent, incoming: SportsEvent) {
+  const stateDelta = eventStateRank(incoming) - eventStateRank(current);
+  if (stateDelta) return stateDelta > 0 ? incoming : current;
+  const currentRefresh = Date.parse(current.metadata?.lastProviderRefresh ?? "");
+  const incomingRefresh = Date.parse(incoming.metadata?.lastProviderRefresh ?? "");
+  if (Number.isFinite(currentRefresh) && Number.isFinite(incomingRefresh) && currentRefresh !== incomingRefresh) return incomingRefresh > currentRefresh ? incoming : current;
+  const richnessDelta = eventRichness(incoming) - eventRichness(current);
+  if (richnessDelta) return richnessDelta > 0 ? incoming : current;
+  if (incoming.sport === "college-football" && current.sport === "college-football") {
+    const incomingScoreboard = incoming.provider === "espn-college-football-scoreboard";
+    const currentScoreboard = current.provider === "espn-college-football-scoreboard";
+    if (incomingScoreboard !== currentScoreboard) return incomingScoreboard ? incoming : current;
+  }
+  return current;
 }
 
 const snapshotCache = new Map<string, { expiresAt: number; value: SportsSnapshot }>();
@@ -41,13 +82,13 @@ function trimSnapshotCache() {
 }
 
 export function dedupeSportsEvents(events: SportsEvent[]): SportsEvent[] {
-  const seen = new Set<string>();
-  return events.filter((event) => {
+  const merged = new Map<string, SportsEvent>();
+  for (const event of events) {
     const key = eventDedupeKey(event);
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
+    const current = merged.get(key);
+    merged.set(key, current ? preferredDuplicate(current, event) : event);
+  }
+  return [...merged.values()];
 }
 
 export async function getSportsSnapshot(now = new Date(), preferences: CosmicUserPreferences = neutralPreferences): Promise<SportsSnapshot> {

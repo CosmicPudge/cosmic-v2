@@ -35,6 +35,11 @@ export interface SportsEventMetadata {
   detail?: string;
   period?: number;
   clock?: string;
+  possessionTeamId?: string;
+  down?: number;
+  distance?: number;
+  downDistanceText?: string;
+  possessionText?: string;
   minute?: number;
   sessionKind?: "practice" | "qualifying" | "sprint" | "race";
   location?: string;
