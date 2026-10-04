@@ -24,6 +24,9 @@ export interface SportsTeam {
 
 export interface SportsEventMetadata {
   gamePk?: string;
+  venueId?: string;
+  providerVenueId?: string;
+  neutralSite?: boolean;
   competition?: string;
   conference?: string;
   seasonType?: string;

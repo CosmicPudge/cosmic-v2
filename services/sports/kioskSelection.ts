@@ -3,6 +3,7 @@ import { resolveSportsTeamIdentity } from "@/services/sports/identity";
 import { resolveF1DisplayState } from "@/services/sports/kioskDisplayState";
 import { resolveMlbVenue } from "@/services/sports/venues/mlb";
 import { KIOSK_AUTO_SCREEN_SPORTS, KIOSK_KICKOFF_GRACE_MS } from "@/services/sports/preferences";
+import { resolveFootballVenue } from "@/services/sports/venues/football";
 
 export type KioskTrackedSport = "nfl" | "f1" | "nascar" | "mlb" | "college-football";
 
@@ -135,7 +136,10 @@ function backgroundKey(event: SportsEvent): string {
   if (event.sport === "nascar") {
     return matchBackgroundKey(venue, NASCAR_TRACK_BACKGROUND_KEYS) ?? "nascar-generic";
   }
-  if (event.sport === "college-football") return "cfb-generic";
+  if (event.sport === "college-football") {
+    const footballVenue = resolveFootballVenue({ sport: "college-football", providerVenueId: event.metadata?.providerVenueId ?? event.metadata?.venueId, venue: event.venue, homeTeam: event.homeTeam, neutralSite: event.metadata?.neutralSite });
+    return footballVenue ? `cfb-${footballVenue.id.replace(/^cfb-/, "")}` : "cfb-generic";
+  }
   const mlbVenue = resolveMlbVenue({ venueId: (event.metadata as { venueId?: string } | undefined)?.venueId, homeTeamId: event.homeTeam?.id, homeTeamAbbreviation: event.homeTeam?.abbreviation, homeTeamName: event.homeTeam?.name, venue: event.venue });
   if (mlbVenue) return `mlb-${mlbVenue.slug}`;
   return "mlb-generic";

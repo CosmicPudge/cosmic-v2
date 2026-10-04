@@ -65,6 +65,10 @@ const VENUES: Record<KioskTestSport, Record<string, { label: string; team?: Spor
   "college-football": {
     usu: { label: "Maverik Stadium", team: { name: "Utah State Aggies", abbreviation: "USU" } },
     utah: { label: "Rice-Eccles Stadium", team: { name: "Utah Utes", abbreviation: "UTAH" } },
+    maverik: { label: "Maverik Stadium", team: { name: "Utah State Aggies", abbreviation: "USU" } },
+    albertsons: { label: "Albertsons Stadium", team: { name: "Boise State Broncos", abbreviation: "BSU" } },
+    "rose-bowl": { label: "Rose Bowl", country: "United States" },
+    "mercedes-benz": { label: "Mercedes-Benz Stadium", country: "United States" },
   },
 };
 

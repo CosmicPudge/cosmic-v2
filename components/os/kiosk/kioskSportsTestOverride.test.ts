@@ -58,7 +58,14 @@ test("CFB Utah State override resolves to the shared football scene", () => {
   assert.equal(override?.celebration, "score");
   assert.equal(event?.homeTeam?.name, "Utah State Aggies");
   assert.equal(event?.status, "live");
-  assert.equal(normalizeKioskSportsEvent(event!)?.backgroundKey, "cfb-generic");
+  assert.equal(normalizeKioskSportsEvent(event!)?.backgroundKey, "cfb-maverik-stadium");
+});
+
+test("CFB venue overrides distinguish Maverik, Albertsons, and neutral sites", () => {
+  const boise = parseKioskSportsTestOverride(new URLSearchParams("sport=cfb&venue=albertsons"), devHost, "/kiosk");
+  const roseBowl = parseKioskSportsTestOverride(new URLSearchParams("sport=cfb&venue=rose-bowl"), devHost, "/kiosk");
+  assert.equal(normalizeKioskSportsEvent(createKioskSportsTestEvent(boise!))?.backgroundKey, "cfb-albertsons-stadium");
+  assert.equal(normalizeKioskSportsEvent(createKioskSportsTestEvent(roseBowl!))?.backgroundKey, "cfb-rose-bowl");
 });
 
 test("football test override can exercise red-zone, flag, and review states", () => {

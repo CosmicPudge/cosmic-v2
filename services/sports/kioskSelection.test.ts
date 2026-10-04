@@ -141,7 +141,7 @@ test("venue-aware background keys cover each tracked sport", () => {
   assert.equal(normalizeKioskSportsEvent(event("f1", "f1", "2026-10-03T12:00:00Z", { venue: "Sepang International Circuit", metadata: { country: "Malaysia" } }))?.backgroundKey, "f1-malaysia");
   assert.equal(normalizeKioskSportsEvent(event("nascar", "nascar", "2026-10-03T12:00:00Z", { venue: "Daytona International Speedway" }))?.backgroundKey, "nascar-daytona");
   assert.equal(normalizeKioskSportsEvent(event("mlb", "mlb", "2026-10-03T12:00:00Z", { homeTeam: { name: "Los Angeles Angels" }, awayTeam: { name: "Seattle Mariners" } }))?.backgroundKey, "mlb-angel-stadium");
-  assert.equal(normalizeKioskSportsEvent(event("usu", "college-football", "2026-10-03T12:00:00Z", { homeTeam: { id: "328", name: "Utah State Aggies", abbreviation: "USU" }, awayTeam: { name: "Boise State Broncos", abbreviation: "BSU" } }))?.backgroundKey, "cfb-generic");
+  assert.equal(normalizeKioskSportsEvent(event("usu", "college-football", "2026-10-03T12:00:00Z", { homeTeam: { id: "328", name: "Utah State Aggies", abbreviation: "USU" }, awayTeam: { name: "Boise State Broncos", abbreviation: "BSU" } }))?.backgroundKey, "cfb-maverik-stadium");
 });
 
 test("NASCAR Las Vegas resolves to its dedicated track key and asset", () => {

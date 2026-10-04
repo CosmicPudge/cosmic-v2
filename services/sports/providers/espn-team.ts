@@ -56,6 +56,8 @@ export function normalizeEspnFootballEvents(payload: unknown, sport: Extract<Spo
     const { status, detail } = eventStatus(competition.status ?? event.status);
     const venueRecord = isRecord(competition.venue) ? competition.venue : undefined;
     const venue = venueRecord ? string(venueRecord.fullName) : undefined;
+    const venueId = venueRecord ? string(venueRecord.id) : undefined;
+    const neutralSite = competition.neutralSite === true || event.neutralSite === true;
     const seasonType = isRecord(event.seasonType) ? string(event.seasonType.name) : undefined;
     const conference = isRecord(competition.conference) ? string(competition.conference.name) : string(competition.conference);
     const stableId = sport === "college-football" ? `espn:college-football:${id}` : `${providerId}:${id}`;
@@ -82,6 +84,8 @@ export function normalizeEspnFootballEvents(payload: unknown, sport: Extract<Spo
       metadata: {
         competition: sport === "nfl" ? "NFL" : sport === "nba" ? "NBA" : "College Football",
         gamePk: id,
+        ...(venueId ? { venueId, providerVenueId: venueId } : {}),
+        ...(neutralSite ? { neutralSite: true } : {}),
         ...(seasonType ? { seasonType } : {}),
         ...(conference ? { conference } : {}),
         ...(period !== undefined ? { period } : {}),

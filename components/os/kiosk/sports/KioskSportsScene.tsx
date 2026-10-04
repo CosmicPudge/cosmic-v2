@@ -8,7 +8,7 @@ export function getKioskSportsScenePresentation(event: SportsEvent) {
   const normalized = normalizeKioskSportsEvent(event);
   const backgroundKey = normalized?.backgroundKey;
   const backgroundImage = selectKioskSportsBackground(backgroundKey);
-  const backgroundSource = backgroundKey?.endsWith("-generic") ? "generic-fallback" : backgroundKey ? "exact-venue" : "generic-fallback";
+  const backgroundSource = !backgroundKey || backgroundKey.endsWith("-generic") || backgroundImage === "/dashboard/sports/stadium.webp" ? "generic-fallback" : "exact-venue";
   return {
     backgroundKey,
     backgroundImage,

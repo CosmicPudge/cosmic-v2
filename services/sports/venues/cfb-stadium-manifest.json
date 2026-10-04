@@ -1,0 +1,6 @@
+[
+  { "school": "Utah State Aggies", "schoolId": "328", "venue": "Maverik Stadium", "venueId": "cfb-maverik-stadium", "aliases": ["Utah State Stadium", "Romney Stadium"], "imagePath": null, "source": "registry", "license": "TBD", "attribution": null, "assetStatus": "missing" },
+  { "school": "Boise State Broncos", "schoolId": "68", "venue": "Albertsons Stadium", "venueId": "cfb-albertsons-stadium", "aliases": ["Bronco Stadium", "Boise State Stadium"], "imagePath": null, "source": "registry", "license": "TBD", "attribution": null, "assetStatus": "missing" },
+  { "school": null, "schoolId": null, "venue": "Rose Bowl", "venueId": "cfb-rose-bowl", "aliases": ["Rose Bowl Stadium"], "imagePath": null, "source": "registry", "license": "TBD", "attribution": null, "assetStatus": "missing" },
+  { "school": null, "schoolId": null, "venue": "Mercedes-Benz Stadium", "venueId": "cfb-mercedes-benz-stadium", "aliases": ["Mercedes Benz Stadium"], "imagePath": null, "source": "registry", "license": "TBD", "attribution": null, "assetStatus": "missing" }
+]

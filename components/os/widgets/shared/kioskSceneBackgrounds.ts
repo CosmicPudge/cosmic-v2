@@ -1,6 +1,7 @@
 import type { SportsTeam } from "@/core/contracts/Sports";
 import { resolveSportsTeamIdentity } from "@/services/sports/identity";
 import { MLB_VENUES } from "@/services/sports/venues/mlb";
+import { FOOTBALL_VENUES } from "@/services/sports/venues/football";
 
 export type KioskSceneFamily = "school" | "sports" | "notifications" | "system";
 
@@ -78,6 +79,7 @@ const NASCAR_TRACK_ASSETS: Record<string, string> = {
 
 const MLB_STADIUM_ASSETS: Record<string, string> = Object.fromEntries(MLB_VENUES.map((venue) => [`mlb-${venue.slug}`, venue.imagePath])) as Record<string, string>;
 MLB_STADIUM_ASSETS["mlb-generic"] = GENERIC_MLB_STADIUM;
+const CFB_STADIUM_ASSETS: Record<string, string> = Object.fromEntries(FOOTBALL_VENUES.filter((venue) => venue.assetStatus === "complete" && venue.imagePath).map((venue) => [`cfb-${venue.id.replace(/^cfb-/, "")}`, venue.imagePath as string]));
 
 const SCENE_ASSETS: Record<KioskSceneFamily, Record<string, string>> = {
   school: {
@@ -127,6 +129,7 @@ export function selectKioskSportsBackground(backgroundKey?: string) {
   if (backgroundKey.startsWith("mlb-")) return MLB_STADIUM_ASSETS[backgroundKey] ?? GENERIC_MLB_STADIUM;
   if (backgroundKey.startsWith("f1-")) return F1_CIRCUIT_ASSETS[backgroundKey] ?? GENERIC_MOTORSPORT;
   if (backgroundKey.startsWith("nascar-")) return NASCAR_TRACK_ASSETS[backgroundKey] ?? GENERIC_MOTORSPORT;
-  if (backgroundKey === "cfb-generic" || backgroundKey.startsWith("cfb-")) return GENERIC_NFL_STADIUM;
+  if (backgroundKey === "cfb-generic") return GENERIC_NFL_STADIUM;
+  if (backgroundKey.startsWith("cfb-")) return CFB_STADIUM_ASSETS[backgroundKey] ?? GENERIC_NFL_STADIUM;
   return GENERIC_MOTORSPORT;
 }
