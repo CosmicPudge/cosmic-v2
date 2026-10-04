@@ -5,6 +5,7 @@ export interface SportsTeamIdentity {
   canonicalId: string;
   name: string;
   shortName: string;
+  schoolName?: string;
   abbreviation: string;
   conference?: string;
   division?: string;
@@ -37,7 +38,7 @@ export function resolveSportsTeamIdentity(sport: SportKind, team?: SportsTeam): 
   const normalized = team.name.trim().toLowerCase();
   if (sport === "college-football") {
     const catalog = CFB_TEAM_IDENTITY[team.id ?? ""];
-    if (catalog) return { canonicalId: team.id === "254" ? "utah" : team.id ?? catalog.providerTeamId, name: catalog.displayName, shortName: catalog.shortDisplayName ?? catalog.displayName, abbreviation: catalog.abbreviation ?? team.abbreviation ?? initialsForTeam(team), logoPath: catalog.logoPath ?? catalog.logoUrl, accent: catalog.color ? `#${catalog.color.replace(/^#/, "")}` : undefined };
+    if (catalog) return { canonicalId: team.id === "254" ? "utah" : team.id ?? catalog.providerTeamId, name: catalog.displayName, shortName: catalog.shortDisplayName ?? catalog.displayName, schoolName: catalog.school, abbreviation: catalog.abbreviation ?? team.abbreviation ?? initialsForTeam(team), logoPath: catalog.logoPath ?? catalog.logoUrl, accent: catalog.color ? `#${catalog.color.replace(/^#/, "")}` : undefined };
   }
   if (team.logo && /^https:\/\/(?:a\.espncdn\.com|site\.api\.espn\.com)\//.test(team.logo)) {
     return { canonicalId: team.id ?? normalized, name: team.name, shortName: team.name, abbreviation: team.abbreviation ?? initialsForTeam(team), logoPath: team.logo };

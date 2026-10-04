@@ -10,6 +10,20 @@ import { diffFootballState, hasFootballStateChange } from "@/services/sports/foo
 
 interface WireResponse { event: Omit<SportsEvent, "start" | "end"> & { start: string; end?: string }; live: SportsLiveData | null; lastUpdated: string; providerErrors: unknown[]; }
 function hydrate(value: WireResponse) { const { start, end, ...event } = value.event; return { ...value, event: { ...event, start: new Date(start), ...(end ? { end: new Date(end) } : {}) } }; }
+function mergeFootballDetail(previous: SportsLiveData | null | undefined, next: SportsLiveData | null): SportsLiveData | null {
+  if (!previous || !next || !["nfl", "college-football"].includes(next.sport) || previous.sport !== next.sport) return next;
+  const before = previous as unknown as Record<string, unknown>;
+  const after = next as unknown as Record<string, unknown>;
+  const mergeTeam = (key: "away" | "home") => {
+    const oldTeam = before[key] as Record<string, unknown> | undefined;
+    const newTeam = after[key] as Record<string, unknown> | undefined;
+    if (!oldTeam || !newTeam) return newTeam ?? oldTeam;
+    return { ...oldTeam, ...newTeam, team: { ...(oldTeam.team as Record<string, unknown> ?? {}), ...(newTeam.team as Record<string, unknown> ?? {}) } };
+  };
+  const oldSituation = before.situation as Record<string, unknown> | undefined;
+  const newSituation = after.situation as Record<string, unknown> | undefined;
+  return { ...previous, ...next, away: mergeTeam("away"), home: mergeTeam("home"), ...(oldSituation || newSituation ? { situation: { ...(oldSituation ?? {}), ...(newSituation ?? {}) } } : {}) } as SportsLiveData;
+}
 function detailLogAllowed() { if (typeof window === "undefined") return false; return window.location.hostname === "dev.cosmicpudge.shop" || window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"; }
 
 export function useSportsEvent(eventId: string, options: { enabled?: boolean; sport?: string } = {}) {
@@ -45,13 +59,14 @@ export function useSportsEvent(eventId: string, options: { enabled?: boolean; sp
       }
       const hydrated = hydrate(await response.json() as WireResponse);
       if (diagnostics) console.info(`[kiosk-sports-detail] event=${eventId} status=${response.status} detail=${Boolean(hydrated.live)} ${Object.entries(sportsDetailPresence(hydrated.live)).filter(([key]) => key !== "detail").map(([key, value]) => `${key}=${value}`).join(" ")}`);
-      const previous = dataRef.current;
       const footballResponse = options.sport === "nfl" || options.sport === "college-football";
-      const delta = footballResponse ? diffFootballState(previous?.live as Parameters<typeof diffFootballState>[0], hydrated.live as Parameters<typeof diffFootballState>[1]) : undefined;
-      const changed = !previous || !footballResponse || previous.event.id !== hydrated.event.id || Boolean(delta && hasFootballStateChange(delta));
-      dataRef.current = hydrated;
+      const previous = dataRef.current;
+      const merged = { ...hydrated, live: footballResponse ? mergeFootballDetail(previous?.live, hydrated.live) : hydrated.live };
+      const delta = footballResponse ? diffFootballState(previous?.live as Parameters<typeof diffFootballState>[0], merged.live as Parameters<typeof diffFootballState>[1]) : undefined;
+      const changed = !previous || !footballResponse || previous.event.id !== merged.event.id || Boolean(delta && hasFootballStateChange(delta));
+      dataRef.current = merged;
       if (diagnostics && footballResponse) console.info(`[kiosk-sports-detail] event=${eventId} durationMs=${Math.round(performance.now() - startedAt)} stateChanged=${changed} changedFields=${delta ? Object.entries(delta).filter(([, value]) => value).map(([key]) => key).join(",") || "none" : "unknown"}`);
-      if (changed) setData(hydrated);
+      if (changed) setData(merged);
       setErrorEvent(eventId);
       setError(null);
       setLoading(false);

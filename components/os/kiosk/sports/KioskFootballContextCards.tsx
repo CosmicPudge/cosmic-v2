@@ -6,7 +6,7 @@ import type { FootballDriveSummary, FootballGameStats, FootballPlayerLeader } fr
 import { footballStatRows } from "@/services/sports/football/stats";
 import { footballContextPriority, type FootballContextMode } from "./contextPriority";
 
-type Team = { name: string; abbreviation: string; score: number };
+type Team = { name: string; abbreviation: string; score?: number };
 type Card = { id: string; label: string; content: ReactNode };
 
 export default function KioskFootballContextCards({ stats, currentDrive, away, home, lifecycleState, attention, redZone }: { stats?: FootballGameStats; currentDrive?: FootballDriveSummary; away: Team; home: Team; lifecycleState: string; attention: string; redZone?: boolean }) {

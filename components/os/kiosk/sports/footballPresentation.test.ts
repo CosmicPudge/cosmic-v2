@@ -47,3 +47,19 @@ test("pregame exposes countdown, records, venue, and network without live clock"
   const view = createFootballPresentation({ ...event("college-football"), start: kickoff, status: "scheduled", broadcast: "ABC", venue: "Maverik Stadium" });
   assert.equal(view.lifecycleState, "pregame"); assert.match(view.statusLabel, /KICKOFF IN/); assert.equal(view.clock, undefined); assert.equal(view.broadcast, "ABC"); assert.equal(view.venue, "Maverik Stadium");
 });
+
+test("uses normalized CFB school names and does not invent unknown scores or ranks", () => {
+  const sourceEvent = event("college-football");
+  const testEvent: SportsEvent = { ...sourceEvent, awayTeam: { id: "68", name: "Boise State Broncos", abbreviation: "BOIS" }, homeTeam: { id: "328", name: "Utah State Aggies", abbreviation: "USU" } };
+  const view = createFootballPresentation(testEvent, {
+    sport: "college-football", state: "live", status: "3rd Quarter", period: 3, clock: "05:52",
+    away: { team: { id: "328", name: "Utah State Aggies", abbreviation: "USTA" } },
+    home: { team: { id: "68", name: "Boise State Broncos", abbreviation: "BOIS" }, score: 21 },
+    rankings: [{ team: "Utah State Aggies", rank: 99 }, { team: "Boise State Broncos", rank: 22 }],
+    situation: { possessionTeamId: "68", downDistanceText: "3rd & 4 at BSU 37", possessionText: "BSU 37" }, sources: [], generatedAt: "test", stale: false,
+  });
+  assert.equal(view.away.name, "Utah State"); assert.equal(view.home.name, "Boise State");
+  assert.equal(view.away.abbreviation, "USU"); assert.equal(view.home.abbreviation, "BSU");
+  assert.equal(view.away.score, undefined); assert.equal(view.home.score, 21);
+  assert.deepEqual(view.rankings, ["#22 Boise State Broncos"]);
+});

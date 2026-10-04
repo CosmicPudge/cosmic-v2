@@ -17,6 +17,22 @@ test("normalizes real ESPN college football summary fields without inventing det
   assert.equal(summary?.leaders, undefined);
 });
 
+test("keeps unknown scores unknown and rejects sentinel rankings", () => {
+  const summary = normalizeCollegeFootballSummary({
+    header: { competitions: [{ status: { type: { detail: "3rd Quarter", period: 3, displayClock: "05:52" } }, situation: { possession: { id: "68" }, down: 3, distance: 4, downDistanceText: "3rd & 4 at BSU 37", possessionText: "BSU 37" }, competitors: [
+      { homeAway: "away", team: { id: "328", displayName: "Utah State Aggies", abbreviation: "USU" }, curatedRank: { current: 99 } },
+      { homeAway: "home", score: "21", team: { id: "68", displayName: "Boise State Broncos", abbreviation: "BOIS" }, curatedRank: { current: 22 } },
+    ] }] },
+    plays: [{ id: "play-1", text: "Pass complete for 8 yards" }],
+  });
+  assert.equal(summary?.away.score, undefined);
+  assert.equal(summary?.home.score, 21);
+  assert.equal(summary?.situation?.possessionTeamId, "68");
+  assert.equal(summary?.situation?.fieldPosition?.display, "BSU 37");
+  assert.deepEqual(summary?.rankings, [{ team: "Boise State Broncos", rank: 22 }]);
+  assert.equal(summary?.normalizedPlays?.[0]?.id, "play-1");
+});
+
 test("normalizes CFB quarter, clock, possession, and down-distance when supplied", () => {
   const summary = normalizeCollegeFootballSummary({
     header: { competitions: [{ status: { type: { detail: "3rd Quarter", period: 3, displayClock: "08:42" } }, situation: { period: 3, displayClock: "08:42", possession: "328", down: 2, distance: 7, downDistanceText: "2nd & 7 at USU 35", possessionText: "USU 35" }, competitors: [

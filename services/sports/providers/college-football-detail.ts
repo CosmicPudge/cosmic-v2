@@ -16,8 +16,8 @@ export interface CollegeFootballLiveData {
   state?: "scheduled" | "live" | "halftime" | "end-period" | "overtime" | "final" | "delayed" | "suspended";
   period?: number;
   clock?: string;
-  away: { team: { id?: string; name: string; abbreviation?: string; record?: string }; score: number };
-  home: { team: { id?: string; name: string; abbreviation?: string; record?: string }; score: number };
+  away: { team: { id?: string; name: string; abbreviation?: string; record?: string }; score?: number };
+  home: { team: { id?: string; name: string; abbreviation?: string; record?: string }; score?: number };
   venue?: { name?: string; city?: string; state?: string };
   rankings?: Array<{ team: string; rank: number }>;
   teamStats?: FootballTeamStatBlock[];
@@ -48,13 +48,15 @@ function team(value: unknown) {
 }
 
 function normalizeFootballSituation(raw: Record<string, unknown>, home: ReturnType<typeof team>, away: ReturnType<typeof team>): FootballSituation | undefined {
-  const possession = string(raw.possession);
+  const possessionValue = isRecord(raw.possession) ? raw.possession.id ?? raw.possession.teamId : raw.possession;
+  const possession = string(possessionValue);
   const possessionTeamId = possession && (possession === home?.id || possession === away?.id) ? possession : undefined;
-  const possessionText = string(raw.possessionText) ?? string(raw.downDistanceText);
-  const parsed = parseFootballFieldPosition(possessionText);
+  const possessionText = string(raw.possessionText) ?? string(raw.fieldPosition) ?? string(raw.downDistanceText);
+  const fieldText = string(raw.fieldPosition) ?? possessionText;
+  const parsed = parseFootballFieldPosition(fieldText);
   const down = number(raw.down);
   const distance = number(raw.distance);
-  const hasSituation = possessionTeamId || down !== undefined || distance !== undefined || possessionText;
+  const hasSituation = possessionTeamId || down !== undefined || distance !== undefined || possessionText || string(raw.displayClock) || number(raw.period) !== undefined;
   if (!hasSituation) return undefined;
   return {
     quarter: number(raw.period),
@@ -62,8 +64,8 @@ function normalizeFootballSituation(raw: Record<string, unknown>, home: ReturnTy
     possessionTeamId,
     down,
     distance,
-    fieldPosition: { ...parsed, display: possessionText },
-    downDistanceText: string(raw.downDistanceText),
+    fieldPosition: { ...parsed, ...(fieldText ? { display: fieldText } : {}) },
+    downDistanceText: string(raw.downDistanceText) ?? string(raw.shortDownDistanceText),
     shortDownDistanceText: string(raw.shortDownDistanceText),
     possessionText,
     redZone: typeof raw.isRedZone === "boolean" ? raw.isRedZone : undefined,
@@ -125,8 +127,10 @@ export function normalizeCollegeFootballSummary(payload: unknown): CollegeFootba
   const home = competitors.find((item) => string(item.homeAway) === "home");
   const awayTeam = team(away?.team); const homeTeam = team(home?.team);
   if (!awayTeam || !homeTeam) return null;
-  const status = isRecord(competition.status) && isRecord(competition.status.type) ? competition.status.type : {};
+  const statusContainer = isRecord(competition.status) ? competition.status : {};
+  const status = isRecord(statusContainer.type) ? statusContainer.type : statusContainer;
   const situation = isRecord(competition.situation) ? competition.situation : {};
+  const mergedSituation = { ...statusContainer, ...situation, ...(isRecord(status.situation) ? status.situation : {}) };
   const venue = isRecord(competition.venue) ? competition.venue : {};
   const leaders = records(root.leaders).flatMap((group) => {
     const category = string(group.name) ?? string(group.displayName);
@@ -141,14 +145,14 @@ export function normalizeCollegeFootballSummary(payload: unknown): CollegeFootba
   const plays = normalizedPlays.map((play) => play.description);
   const scoringPlays = normalizedPlays.filter((play) => play.scoringPlay).map((play) => play.description);
   const scoringPlayDetails = normalizedPlays.filter((play) => play.scoringPlay).map((play): FootballScoringPlay => ({ id: play.id, period: play.period, clock: play.clock, teamId: play.teamId, description: play.description, type: play.type, ...(play.touchdown ? { points: 6 } : {}) }));
-  const normalizedSituation = normalizeFootballSituation(situation, homeTeam, awayTeam);
+  const normalizedSituation = normalizeFootballSituation(mergedSituation, homeTeam, awayTeam);
   const rawDrives = records(root.drives);
   const drives = rawDrives.flatMap((drive, index) => {
     const teamId = string(isRecord(drive.team) ? drive.team.id : drive.teamId);
     const description = string(drive.description) ?? string(drive.displayResult) ?? string(drive.result);
     return description || teamId ? [{ id: string(drive.id) ?? `cfb-drive-${index}`, teamId, teamAbbreviation: string(isRecord(drive.team) ? drive.team.abbreviation : undefined), description, result: string(drive.displayResult) ?? string(drive.result), plays: number(drive.plays), yards: number(drive.yards), scoringDrive: drive.isScore === true || drive.scoringDrive === true }] : [];
   });
-  const rankings = competitors.flatMap((item) => { const name = team(item.team)?.name; const rank = isRecord(item.curatedRank) ? number(item.curatedRank.current) : undefined; return name && rank !== undefined ? [{ team: name, rank }] : []; });
+  const rankings = competitors.flatMap((item) => { const name = team(item.team)?.name; const rank = isRecord(item.curatedRank) ? number(item.curatedRank.current) : undefined; return name && rank !== undefined && rank >= 1 && rank <= 25 ? [{ team: name, rank }] : []; });
   const teamStats = cfbTeamStats(root);
   const scoringByPeriod = cfbScoringByPeriod(competitors);
   const latestPlay = normalizedPlays.at(-1);
@@ -165,10 +169,10 @@ export function normalizeCollegeFootballSummary(payload: unknown): CollegeFootba
     status: statusText,
     statusText,
     state,
-    period: number(situation.period) ?? number(status.period),
-    clock: string(situation.displayClock) ?? string(status.displayClock),
-    away: { team: { ...awayTeam, ...(records(away?.records)[0] && string(records(away?.records)[0].summary) ? { record: string(records(away?.records)[0].summary) } : {}) }, score: number(away?.score) ?? 0 },
-    home: { team: { ...homeTeam, ...(records(home?.records)[0] && string(records(home?.records)[0].summary) ? { record: string(records(home?.records)[0].summary) } : {}) }, score: number(home?.score) ?? 0 },
+    period: number(mergedSituation.period) ?? number(status.period),
+    clock: string(mergedSituation.displayClock) ?? string(status.displayClock),
+    away: { team: { ...awayTeam, ...(records(away?.records)[0] && string(records(away?.records)[0].summary) ? { record: string(records(away?.records)[0].summary) } : {}) }, ...(number(away?.score) !== undefined ? { score: number(away?.score) } : {}) },
+    home: { team: { ...homeTeam, ...(records(home?.records)[0] && string(records(home?.records)[0].summary) ? { record: string(records(home?.records)[0].summary) } : {}) }, ...(number(home?.score) !== undefined ? { score: number(home?.score) } : {}) },
     ...(string(venue.fullName) || string(venue.address) ? { venue: { ...(string(venue.fullName) ? { name: string(venue.fullName) } : {}), ...(isRecord(venue.address) && string(venue.address.city) ? { city: string(venue.address.city) } : {}), ...(isRecord(venue.address) && string(venue.address.state) ? { state: string(venue.address.state) } : {}) } } : {}),
     ...(rankings.length ? { rankings } : {}), ...(leaders.length ? { leaders } : {}), ...(teamStats.length ? { teamStats } : {}), ...(scoringByPeriod.length ? { scoringByPeriod } : {}), ...(plays.length ? { plays } : {}), ...(scoringPlays.length ? { scoringPlays } : {}),
     ...(normalizedSituation ? { situation: normalizedSituation } : {}),
@@ -182,7 +186,7 @@ export function normalizeCollegeFootballSummary(payload: unknown): CollegeFootba
     generatedAt: new Date().toISOString(),
     stale: false,
     sources: [{ id: "espn-college-football-summary", sport: "college-football", name: "ESPN College Football Summary", official: false, status: "ok", capabilities: { schedule: false, liveScore: true, liveState: true, playByPlay: true, stats: true }, cacheSeconds: 5 }],
-    sourceAvailability: { score: true, period: Boolean(number(situation.period) ?? number(status.period)), clock: Boolean(string(situation.displayClock) ?? string(status.displayClock)), possession: Boolean(normalizedSituation?.possessionTeamId), downDistance: Boolean(normalizedSituation?.downDistanceText), ballPosition: Boolean(normalizedSituation?.fieldPosition?.display), lastPlay: Boolean(latestPlay), drive: Boolean(drives.length), rankings: rankings.length > 0, penalty: Boolean(penalty), review: Boolean(review) },
+    sourceAvailability: { score: number(away?.score) !== undefined || number(home?.score) !== undefined, period: Boolean(number(mergedSituation.period) ?? number(status.period)), clock: Boolean(string(mergedSituation.displayClock) ?? string(status.displayClock)), possession: Boolean(normalizedSituation?.possessionTeamId), downDistance: Boolean(normalizedSituation?.downDistanceText), ballPosition: Boolean(normalizedSituation?.fieldPosition?.display), lastPlay: Boolean(latestPlay), drive: Boolean(drives.length), rankings: rankings.length > 0, penalty: Boolean(penalty), review: Boolean(review) },
   };
 }
 

@@ -29,7 +29,8 @@ export type FootballPlayType =
 export interface FootballTeamState {
   team: SportsTeamRef;
 
-  score: number;
+  /** Undefined means the provider did not supply a score yet; zero is a real score. */
+  score?: number;
 
   record?: string;
 

@@ -48,7 +48,7 @@ export function resolveFootballFieldGeometry(
 
 export function parseFootballFieldPosition(display: string | undefined) {
   if (!display) return {};
-  const match = display.trim().match(/^([A-Za-z0-9]+)\s+(\d{1,2})$/);
+  const match = display.trim().match(/(?:at\s+)?([A-Za-z0-9]+)\s+(\d{1,2})$/i);
   if (!match) return {};
   const yardLine = Number(match[2]);
   return Number.isFinite(yardLine) ? { territory: match[1], yardLine } : {};

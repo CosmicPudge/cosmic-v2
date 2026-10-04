@@ -32,6 +32,12 @@ function upstreamId(eventId: string) {
   return eventId.split(":").at(-1) ?? eventId;
 }
 
+function footballDetailDiagnostics(value: unknown) {
+  if (!value || typeof value !== "object") return "detail=false";
+  const detail = value as { away?: { score?: unknown; team?: { id?: unknown } }; home?: { score?: unknown; team?: { id?: unknown } }; period?: unknown; clock?: unknown; situation?: { possessionTeamId?: unknown; down?: unknown; distance?: unknown; fieldPosition?: { display?: unknown }; downDistanceText?: unknown }; normalizedPlays?: unknown[]; latestPlay?: unknown; currentDrive?: unknown; venue?: { name?: unknown }; rankings?: unknown[]; stale?: unknown };
+  return [`detail=true`, `score=${detail.away?.score ?? "unknown"}-${detail.home?.score ?? "unknown"}`, `period=${detail.period ?? "unknown"}`, `clock=${detail.clock ?? "unknown"}`, `possession=${detail.situation?.possessionTeamId ?? "unknown"}`, `down=${detail.situation?.down ?? "unknown"}`, `distance=${detail.situation?.distance ?? "unknown"}`, `field=${detail.situation?.fieldPosition?.display ?? "unknown"}`, `lastPlay=${Boolean(detail.latestPlay || detail.normalizedPlays?.length)}`, `drive=${Boolean(detail.currentDrive)}`, `rankings=${detail.rankings?.length ?? 0}`, `venue=${detail.venue?.name ? "present" : "unknown"}`, `stale=${Boolean(detail.stale)}`].join(" ");
+}
+
 export async function GET(request: Request, { params }: { params: Promise<{ eventId: string }> }) {
   const eventId = decodeURIComponent((await params).eventId);
   const diagnostics = isDeveloperKioskRequest(request);
@@ -71,6 +77,6 @@ export async function GET(request: Request, { params }: { params: Promise<{ even
 
   const live = await detail;
   const presence = sportsDetailPresence(live);
-  log(`status=200 detail=${presence.detail} ${Object.entries(presence).filter(([key]) => key !== "detail").map(([key, value]) => `${key}=${value}`).join(" ")}`);
+  log(`status=200 providerId=${event.sport === "nfl" || event.sport === "college-football" ? upstreamId(event.id) : "n/a"} ${footballDetailDiagnostics(live)} detailPresence=${presence.detail} ${Object.entries(presence).filter(([key]) => key !== "detail").map(([key, value]) => `${key}=${value}`).join(" ")}`);
   return Response.json({ event, live, providerErrors: snapshot.providerErrors, lastUpdated: snapshot.lastUpdated }, { headers: { "Cache-Control": "no-store" } });
 }
