@@ -111,8 +111,10 @@ export function normalizeCollegeFootballSummary(payload: unknown): CollegeFootba
   const rankings = competitors.flatMap((item) => { const name = team(item.team)?.name; const rank = isRecord(item.curatedRank) ? number(item.curatedRank.current) : undefined; return name && rank !== undefined ? [{ team: name, rank }] : []; });
   const latestPlay = normalizedPlays.at(-1);
   const penalty = latestPlay?.penalty ? { text: latestPlay.description, teamId: latestPlay.teamId, ...(latestPlay.penaltyYards !== undefined ? { yards: latestPlay.penaltyYards } : {}) } : undefined;
-  const reviewValue = isRecord(competition.status) ? string(competition.status.detail) ?? string(competition.status.description) : undefined;
-  const review = reviewValue && /review|challenge/i.test(reviewValue) ? { text: reviewValue, active: !/final|complete|overturned|upheld/i.test(reviewValue) } : undefined;
+  const reviewRecord = isRecord(competition.review) ? competition.review : undefined;
+  const reviewValue = string(reviewRecord?.text) ?? string(reviewRecord?.description) ?? (isRecord(competition.status) ? string(competition.status.detail) ?? string(competition.status.description) : undefined);
+  const reviewTeam = isRecord(reviewRecord?.team) ? reviewRecord.team : undefined;
+  const review = reviewValue && /review|challenge/i.test(reviewValue) ? { text: reviewValue, active: !/final|complete|overturned|upheld|stands/i.test(reviewValue), kind: /official/i.test(reviewValue) ? "official-review" as const : "challenge" as const, ...(string(reviewTeam?.id) ? { teamId: string(reviewTeam?.id) } : {}), ...(string(reviewTeam?.displayName) || string(reviewTeam?.name) ? { teamName: string(reviewTeam?.displayName) ?? string(reviewTeam?.name) } : {}) } : undefined;
   return {
     status: string(status.detail) ?? string(status.description),
     period: number(situation.period) ?? number(status.period),

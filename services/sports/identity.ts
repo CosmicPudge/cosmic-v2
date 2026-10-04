@@ -13,9 +13,10 @@ export interface SportsTeamIdentity {
 }
 
 type RegistryEntry = SportsTeamIdentity & { aliases?: string[]; legacyIds?: string[] };
+const NFL_COLORS: Record<string, string> = { ARI: "#97233f", ATL: "#a71930", BAL: "#241773", BUF: "#00338d", CAR: "#0085ca", CHI: "#c83803", CIN: "#fb4f14", CLE: "#ff3c00", DAL: "#041e42", DEN: "#fb4f14", DET: "#0076b6", GB: "#203731", HOU: "#03202f", IND: "#002c5f", JAX: "#006778", KC: "#e31837", LV: "#a5acaf", LAC: "#0080c6", LAR: "#ffa300", MIA: "#008e97", MIN: "#4f2683", NE: "#c8102e", NO: "#d3bc8d", NYG: "#0b2265", NYJ: "#125740", PHI: "#a5acaf", PIT: "#ffb612", SF: "#aa0000", SEA: "#69be28", TB: "#d50a0a", TEN: "#4b92db", WSH: "#ffb612" };
 
 const nfl = (canonicalId: string, name: string, abbreviation: string, conference: string, division: string, aliases: string[] = []): RegistryEntry => ({
-  canonicalId, name, shortName: name.replace(/^(Arizona|Atlanta|Baltimore|Buffalo|Carolina|Chicago|Cincinnati|Cleveland|Dallas|Denver|Detroit|Green Bay|Houston|Indianapolis|Jacksonville|Kansas City|Las Vegas|Los Angeles|Miami|Minnesota|New England|New Orleans|New York|Philadelphia|Pittsburgh|San Francisco|Seattle|Tampa Bay|Tennessee|Washington)\s+/, ""), abbreviation, conference, division, aliases, logoPath: `/sports/nfl/logos/${abbreviation.toLowerCase()}.png`,
+  canonicalId, name, shortName: name.replace(/^(Arizona|Atlanta|Baltimore|Buffalo|Carolina|Chicago|Cincinnati|Cleveland|Dallas|Denver|Detroit|Green Bay|Houston|Indianapolis|Jacksonville|Kansas City|Las Vegas|Los Angeles|Miami|Minnesota|New England|New Orleans|New York|Philadelphia|Pittsburgh|San Francisco|Seattle|Tampa Bay|Tennessee|Washington)\s+/, ""), abbreviation, conference, division, aliases, accent: NFL_COLORS[abbreviation], logoPath: `/sports/nfl/logos/${abbreviation.toLowerCase()}.png`,
 });
 
 export const NFL_TEAM_REGISTRY: RegistryEntry[] = [

@@ -231,6 +231,9 @@ export interface FootballReviewState {
   text: string;
   outcome?: string;
   active?: boolean;
+  kind?: "challenge" | "official-review";
+  teamId?: string;
+  teamName?: string;
 }
 
 export interface FootballScoringPlay {

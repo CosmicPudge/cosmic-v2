@@ -23,5 +23,14 @@ test("football presentation exposes drive, penalty, and review attention data", 
     sport: "nfl", eventId: "x", generatedAt: new Date().toISOString(), stale: false, sources: [],
     away: { team: { id: "gb", name: "Green Bay Packers", abbreviation: "GB" }, score: 7, timeoutsRemaining: 2 }, home: { team: { id: "tb", name: "Tampa Bay Buccaneers", abbreviation: "TB" }, score: 10, timeoutsRemaining: 3 }, situation: { quarter: 2, clock: "04:20", downDistanceText: "3rd & 4", possessionTeamId: "gb" }, currentDrive: { description: "Green Bay drive · 6 plays, 42 yards" }, latestPlay: { description: "Holding, offense", penalty: true }, penalty: { text: "Holding, offense", yards: 10 }, review: { text: "Challenge under review", active: true },
   });
-  assert.equal(view.driveLabel, "Green Bay drive · 6 plays, 42 yards"); assert.equal(view.penaltyText, "Holding, offense"); assert.equal(view.reviewText, "Challenge under review"); assert.equal(view.away.timeouts, 2);
+  assert.equal(view.driveLabel, "Green Bay drive · 6 plays, 42 yards"); assert.equal(view.penaltyText, "Holding, offense · 10-yard penalty"); assert.equal(view.reviewText, "Challenge under review"); assert.equal(view.away.timeouts, 2);
+});
+
+test("attention state priority is review over flag and preserves possession color", () => {
+  const view = createFootballPresentation(event("college-football"), {
+    status: "live", period: 2, clock: "01:12", away: { team: { id: "68", name: "Boise State Broncos", abbreviation: "BSU" }, score: 14 }, home: { team: { id: "328", name: "Utah State Aggies", abbreviation: "USU" }, score: 17, possession: true },
+    situation: { quarter: 2, clock: "01:12", possessionTeamId: "328", possessionText: "USU 8", downDistanceText: "1st & Goal", redZone: true }, normalizedPlays: [{ description: "Holding, offense", type: "penalty", penalty: true }],
+    penalty: { text: "Holding, offense", teamId: "328", yards: 10 }, review: { text: "Challenge under review", kind: "challenge", teamName: "Boise State", active: true },
+  });
+  assert.equal(view.attention, "challenge"); assert.equal(view.attentionLabel, "COACH'S CHALLENGE"); assert.equal(view.attentionTeam, "Boise State"); assert.equal(view.home.possession, true); assert.equal(view.home.color, "#0f2439");
 });
