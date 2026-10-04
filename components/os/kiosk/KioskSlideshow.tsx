@@ -33,6 +33,7 @@ import { resolveKioskSwipeDirection, shouldResetKioskRotationAfterSwipe } from "
 import { createKioskSportsTestEvent, parseKioskSportsTestOverride } from "./kioskSportsTestOverride";
 import { KIOSK_MUSIC_PLAYBACK_STALE_MS, shouldPauseKioskForMusic } from "./kioskMusicRotation";
 import { normalizeKioskSportsEvent, selectKioskSportsEvent } from "@/services/sports/kioskSelection";
+import { FOOTBALL_FINAL_HOLD_MS } from "@/services/sports/football/lifecycle";
 import { musicRefreshMs, sportsRefreshMs } from "@/services/kiosk/refreshPolicy";
 import { useDeveloperKioskData } from "@/hooks/os/useDeveloperKioskData";
 import { useMusic } from "@/hooks/os/useMusic";
@@ -249,6 +250,28 @@ function KioskNormalSlideshow() {
   ]);
 
   const [dismissedSportsEventId, setDismissedSportsEventId] = useState<string | null>(null);
+  const finalDwellEventRef = useRef<string | null>(null);
+  const finalDwellTimerRef = useRef<number | null>(null);
+  const finalDwellEventId = sportsSelection?.lifecycleState === "final" ? sportsSelection.event.id : null;
+  useEffect(() => {
+    if (!finalDwellEventId) {
+      if (finalDwellTimerRef.current !== null) window.clearTimeout(finalDwellTimerRef.current);
+      finalDwellTimerRef.current = null;
+      finalDwellEventRef.current = null;
+      return;
+    }
+    if (finalDwellEventRef.current === finalDwellEventId) return;
+    if (finalDwellTimerRef.current !== null) window.clearTimeout(finalDwellTimerRef.current);
+    finalDwellEventRef.current = finalDwellEventId;
+    finalDwellTimerRef.current = window.setTimeout(() => {
+      setDismissedSportsEventId(finalDwellEventId);
+      finalDwellTimerRef.current = null;
+    }, FOOTBALL_FINAL_HOLD_MS);
+    return () => {
+      if (finalDwellTimerRef.current !== null) window.clearTimeout(finalDwellTimerRef.current);
+      finalDwellTimerRef.current = null;
+    };
+  }, [finalDwellEventId]);
   const sportsAttentionEvent = sportsSelection && sportsSelection.lifecycleState && sportsSelection.lifecycleState !== "upcoming" && sportsSelection.lifecycleState !== "postgame" && sportsSelection.event.id !== dismissedSportsEventId ? sportsSelection.event : null;
 
   const [currentIndex, setCurrentIndex] =
@@ -413,6 +436,8 @@ function KioskNormalSlideshow() {
     transitionTimeoutRef.current = null;
     if (sportsPresentationTransitionRef.current !== null) window.clearTimeout(sportsPresentationTransitionRef.current);
     sportsPresentationTransitionRef.current = null;
+    if (finalDwellTimerRef.current !== null) window.clearTimeout(finalDwellTimerRef.current);
+    finalDwellTimerRef.current = null;
     Object.values(musicSourceTimersRef.current).forEach((timer) => window.clearTimeout(timer));
     musicSourceTimersRef.current = {};
     transitionLockRef.current = false;

@@ -65,8 +65,8 @@ test("final football event is held briefly, then releases", () => {
   const finalAt = new Date("2026-10-03T23:00:00Z");
   const finished = event("usu-final", "college-football", finalAt.toISOString(), { status: "final", metadata: { finalizedAt: finalAt.toISOString() } });
   const next = event("packers-next", "nfl", "2026-10-04T17:00:00Z", { awayTeam: { id: "9", name: "Green Bay Packers" } });
-  assert.equal(selectKioskSportsEvent([finished, next], new Date("2026-10-03T23:03:00Z"))?.event.id, "usu-final");
-  assert.equal(selectKioskSportsEvent([finished, next], new Date("2026-10-03T23:05:01Z"))?.event.id, "packers-next");
+  assert.equal(selectKioskSportsEvent([finished, next], new Date("2026-10-03T23:00:14Z"))?.event.id, "usu-final");
+  assert.equal(selectKioskSportsEvent([finished, next], new Date("2026-10-03T23:00:16Z"))?.event.id, "packers-next");
 });
 
 test("NFL receives the same kickoff grace and delayed games are not inferred live", () => {

@@ -73,3 +73,15 @@ test("historical provider penalties do not become current FLAG attention", () =>
   assert.equal(view.attention, "normal");
   assert.equal(view.penaltyDisplay, undefined);
 });
+
+test("authoritative FINAL outranks an end-of-game penalty and review", () => {
+  const view = createFootballPresentation({ ...event("nfl"), status: "live", statusDetail: "Q4 · 0:00" }, {
+    sport: "nfl", eventId: "x", generatedAt: new Date().toISOString(), stale: false, sources: [], state: "final", statusText: "Final", period: 4, clock: "00:00",
+    away: { team: { id: "gb", name: "Green Bay Packers", abbreviation: "GB" }, score: 17 }, home: { team: { id: "tb", name: "Tampa Bay Buccaneers", abbreviation: "TB" }, score: 14 },
+    situation: { quarter: 4, clock: "00:00", possessionTeamId: "tb" }, latestPlay: { id: "end-play", description: "Defensive holding", penalty: true, type: "penalty" },
+    penalty: { text: "Defensive holding", teamId: "tb", yards: 5 }, review: { text: "Review", active: true },
+  });
+  assert.equal(view.lifecycleState, "final");
+  assert.equal(view.statusLabel, "FINAL");
+  assert.equal(view.attention, "normal");
+});

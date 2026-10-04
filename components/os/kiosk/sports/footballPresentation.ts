@@ -44,7 +44,8 @@ export function createFootballPresentation(event: SportsEvent, live?: FootballLi
   const penaltyDisplay = penalty ? normalizeFootballPenalty(penalty, latestPlay, penaltyTeam) : undefined;
   const formattedPenalty = formatFootballPenalty(penaltyDisplay);
   const penaltyText = formattedPenalty ? [formattedPenalty.headline, formattedPenalty.detail].filter(Boolean).join(" · ") : undefined;
-  const attention = review?.active ? review.kind ?? "official-review" : penalty ? "flag" : "normal";
+  const terminal = lifecycleState === "final" || lifecycleState === "postgame";
+  const attention = terminal ? "normal" : review?.active ? review.kind ?? "official-review" : penalty ? "flag" : "normal";
   const attentionLabel = attention === "challenge" ? "COACH'S CHALLENGE" : attention === "official-review" ? "OFFICIAL REVIEW" : attention === "flag" ? "FLAG" : undefined;
   const statusLabel = lifecycleState === "upcoming" || lifecycleState === "pregame" ? (lifecycleState === "pregame" ? footballCountdownLabel(event) : "UPCOMING") : lifecycleState === "starting" ? "STARTING · AWAITING LIVE UPDATE" : lifecycleState === "live" ? (status === "end-period" ? "END OF QUARTER" : "LIVE") : lifecycleState === "halftime" ? "HALFTIME" : lifecycleState === "overtime" ? "OVERTIME" : lifecycleState === "delayed" ? "DELAYED" : lifecycleState === "suspended" ? "SUSPENDED" : lifecycleState === "final" ? "FINAL" : "POSTGAME";
   const liveBroadcast = live && "broadcast" in live && live.broadcast && typeof live.broadcast === "object" && "network" in live.broadcast && typeof live.broadcast.network === "string" ? live.broadcast.network : undefined;

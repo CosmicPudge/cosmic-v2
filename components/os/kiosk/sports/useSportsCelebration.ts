@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { SportsEvent } from "@/core/contracts/Sports";
 import type { SportsLiveData } from "@/core/contracts/sports/Core";
 import { createSportsScoreObservation, createTestSportsCelebration, detectSportsCelebration, sportsCelebrationDurationMs, type ScoreCelebrationKind, type SportsCelebration } from "./sportsCelebration";
+import { resolveFootballLifecycle } from "@/services/sports/football/lifecycle";
 
 export function useSportsCelebration(event: SportsEvent, live: SportsLiveData | null | undefined, visible: boolean, forcedKind?: ScoreCelebrationKind) {
   const observation = useMemo(() => createSportsScoreObservation(event, live?.sport === "mlb" || live?.sport === "nfl" || event.sport === "college-football" ? live as Parameters<typeof createSportsScoreObservation>[1] : null), [event, live]);
@@ -19,6 +20,20 @@ export function useSportsCelebration(event: SportsEvent, live: SportsLiveData | 
       const clearTask = window.setTimeout(() => setCelebration(null), 0);
       return () => window.clearTimeout(clearTask);
     }
+    const football = event.sport === "nfl" || event.sport === "college-football";
+    const footballDetail = live ? { state: "state" in live ? live.state : undefined, statusText: "statusText" in live ? live.statusText : "status" in live ? live.status : undefined } : undefined;
+    const footballLifecycle = football ? resolveFootballLifecycle(event, footballDetail) : undefined;
+    const terminal = footballLifecycle === "final" || footballLifecycle === "postgame";
+    if (terminal) {
+      previousRef.current = observation;
+      forcedEventRef.current = event.id;
+      if (timerRef.current !== null) window.clearTimeout(timerRef.current);
+      timerRef.current = window.setTimeout(() => {
+        setCelebration(null);
+        timerRef.current = null;
+      }, 0);
+      return;
+    }
     const previous = previousRef.current;
     previousRef.current = observation;
     const canForce = Boolean(forcedKind && forcedEventRef.current !== event.id);
@@ -28,7 +43,7 @@ export function useSportsCelebration(event: SportsEvent, live: SportsLiveData | 
     setCelebration(detected);
     if (timerRef.current !== null) window.clearTimeout(timerRef.current);
     timerRef.current = window.setTimeout(() => setCelebration(null), sportsCelebrationDurationMs(detected.kind));
-  }, [event, forcedKind, observation, visible]);
+  }, [event, forcedKind, live, observation, visible]);
 
   useEffect(() => () => { if (timerRef.current !== null) window.clearTimeout(timerRef.current); }, []);
   return celebration;

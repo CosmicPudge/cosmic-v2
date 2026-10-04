@@ -16,8 +16,8 @@ export type FootballLifecycleState =
 
 /** Automatic football presentation begins 30 minutes before a followed kickoff. */
 export const FOOTBALL_PREGAME_WINDOW_MS = 30 * 60_000;
-/** Final stays on the kiosk for four minutes, then returns to slideshow selection. */
-export const FOOTBALL_FINAL_HOLD_MS = 4 * 60_000;
+/** Final stays on the kiosk briefly, then returns to slideshow selection. */
+export const FOOTBALL_FINAL_HOLD_MS = 15_000;
 
 function text(value?: unknown) { return typeof value === "string" ? value.toLowerCase() : ""; }
 

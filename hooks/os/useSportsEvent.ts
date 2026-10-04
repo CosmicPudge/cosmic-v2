@@ -77,7 +77,9 @@ export function useSportsEvent(eventId: string, options: { enabled?: boolean; sp
   useEffect(() => () => controllerRef.current?.abort(), [eventId]);
   const status: SportsEventStatus | undefined = data?.event.status;
   const football = options.sport === "nfl" || options.sport === "college-football";
-  const polling = football ? status === undefined ? 10_000 : footballDetailPollMs(footballDetailPollMode(status, data?.live && "state" in data.live ? data.live.state : data?.live && "status" in data.live ? data.live.status : undefined)) : status === undefined || status === "live" || status === "delayed" || status === "suspended" ? 10_000 : 60_000;
-  useVisiblePolling(async () => { try { await refresh(); } catch (reason) { if (reason instanceof DOMException && reason.name === "AbortError") return; setErrorEvent(eventId); setError(reason instanceof Error ? reason.message : "Sports event data is unavailable."); setLoading(false); } }, polling, { immediate: true, enabled: enabled && status !== "final" && status !== "cancelled" && status !== "postponed" });
+  const footballMode = football ? footballDetailPollMode(status, data?.live && "state" in data.live ? data.live.state : data?.live && "status" in data.live ? data.live.status : undefined) : undefined;
+  const polling = football ? status === undefined ? 10_000 : footballDetailPollMs(footballMode ?? "idle") : status === undefined || status === "live" || status === "delayed" || status === "suspended" ? 10_000 : 60_000;
+  const terminalFootball = footballMode === "final";
+  useVisiblePolling(async () => { try { await refresh(); } catch (reason) { if (reason instanceof DOMException && reason.name === "AbortError") return; setErrorEvent(eventId); setError(reason instanceof Error ? reason.message : "Sports event data is unavailable."); setLoading(false); } }, polling, { immediate: true, enabled: enabled && !terminalFootball && status !== "final" && status !== "cancelled" && status !== "postponed" });
   return { data: data?.event.id === eventId ? data : null, loading: loading || data?.event.id !== eventId, error: errorEvent === eventId ? error : null, refresh };
 }

@@ -2,10 +2,11 @@
 
 import { Fragment, type ReactNode } from "react";
 import type { FootballDriveSummary, FootballGameStats, FootballPlay, FootballSituation } from "@/core/contracts/sports/Football";
+import type { FootballLifecycleState } from "@/services/sports/football/lifecycle";
 
 type Team = { name: string; abbreviation: string; score?: number };
 
-export default function KioskFootballContextCards({ stats, currentDrive, latestPlay, penaltyText, situation, away, home }: {
+export default function KioskFootballContextCards({ stats, currentDrive, latestPlay, penaltyText, situation, away, home, lifecycleState }: {
   stats?: FootballGameStats;
   currentDrive?: FootballDriveSummary;
   latestPlay?: FootballPlay;
@@ -13,11 +14,12 @@ export default function KioskFootballContextCards({ stats, currentDrive, latestP
   situation?: FootballSituation;
   away: Team;
   home: Team;
+  lifecycleState: FootballLifecycleState;
 }) {
   return <div className="kiosk-football-context-grid grid min-h-0 gap-3 lg:grid-cols-[1fr_1.35fr_1fr]">
     <ScoringCard stats={stats} away={away} home={home} currentPeriodValue={situation?.quarter} />
     <LastPlayCard play={latestPlay} penaltyText={penaltyText} drive={currentDrive} />
-    <GameContextCard situation={situation} drive={currentDrive} />
+    <GameContextCard situation={situation} drive={currentDrive} away={away} home={home} lifecycleState={lifecycleState} />
   </div>;
 }
 
@@ -41,7 +43,9 @@ function LastPlayCard({ play, penaltyText, drive }: { play?: FootballPlay; penal
   return <Panel label="LAST PLAY"><div className="flex h-full flex-col justify-between gap-2"><div><div className="flex items-start justify-between gap-3"><p className="line-clamp-2 text-sm font-semibold leading-snug text-white">{cleanPlayDescription(play?.shortDescription ?? play?.description) ?? "Drive in progress"}</p>{age ? <span className="shrink-0 text-[.65rem] font-bold uppercase tracking-[.08em] text-sky-200/70">{age}</span> : null}</div>{penaltyText ? <p className="mt-1 line-clamp-2 text-sm font-bold text-amber-300">Penalty: {penaltyText}</p> : null}</div>{drive ? <p className="border-t border-white/15 pt-2 text-xs font-semibold text-white/65">Drive: {[drive.plays !== undefined ? `${drive.plays} plays` : undefined, drive.yards !== undefined ? `${drive.yards} yards` : undefined, drive.elapsedTime, drive.result].filter(Boolean).join(" · ") || "Updating"}</p> : null}</div></Panel>;
 }
 
-function GameContextCard({ situation, drive }: { situation?: FootballSituation; drive?: FootballDriveSummary }) {
+function GameContextCard({ situation, drive, away, home, lifecycleState }: { situation?: FootballSituation; drive?: FootballDriveSummary; away: Team; home: Team; lifecycleState: FootballLifecycleState }) {
+  const terminal = lifecycleState === "final" || lifecycleState === "postgame";
+  if (terminal) return <Panel label="FINAL CONTEXT"><div className="grid grid-cols-[minmax(5.5rem,1fr)_minmax(0,1.2fr)] gap-x-3 gap-y-1 text-sm"><ContextRow label="FINAL SCORE" value={`${away.abbreviation} ${away.score ?? "—"} · ${home.abbreviation} ${home.score ?? "—"}`} /><ContextRow label="LAST PLAY" value={drive?.result ?? "End of game"} /></div></Panel>;
   const ball = situation?.fieldPosition?.display ?? situation?.possessionText;
   const possession = situation?.possessionTeamAbbreviation ?? situation?.possessionText?.split(/\s+/)[0];
   return <Panel label="GAME CONTEXT"><div className="grid grid-cols-[minmax(5.5rem,1fr)_minmax(0,1.2fr)] gap-x-3 gap-y-1 text-sm"><ContextRow label="POSSESSION" value={possession} /><ContextRow label="BALL ON" value={ball} /><ContextRow label="DRIVE" value={drive ? [drive.plays !== undefined ? `${drive.plays} plays` : undefined, drive.yards !== undefined ? `${drive.yards} yards` : undefined].filter(Boolean).join(", ") : undefined} /><ContextRow label="TIME OF POSSESSION" value={drive?.elapsedTime} /><ContextRow label="RED ZONE" value={situation?.redZone === undefined ? undefined : situation.redZone ? "Yes" : "No"} /></div></Panel>;
