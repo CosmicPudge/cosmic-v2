@@ -18,7 +18,7 @@ export default function KioskFootballContextCards({ stats, currentDrive, away, h
   }, [attention, cards.length]);
   const card = cards[index % Math.max(cards.length, 1)] ?? cards[0];
   if (!card) return <InfoPanel label="GAME CONTEXT" value="Detailed context is not available yet." />;
-  return <div className="min-w-0 rounded-2xl border border-white/15 bg-black/25 px-4 py-3" aria-live="polite"><div className="flex items-center justify-between gap-3"><p className="text-[clamp(.65rem,1vw,.8rem)] font-black uppercase tracking-[.18em] text-white/80">{card.label}</p>{cards.length > 1 ? <p className="text-[.6rem] font-semibold uppercase tracking-[.14em] text-white/45">{index + 1} / {cards.length}</p> : null}</div><div className="mt-2 min-h-[3.2rem]">{card.content}</div></div>;
+  return <div className="kiosk-football-context-card min-w-0 rounded-2xl border border-white/15 bg-black/25 px-4 py-3" aria-live="polite"><div className="flex items-center justify-between gap-3"><p className="kiosk-football-card-label text-[clamp(.65rem,1vw,.8rem)] font-black uppercase tracking-[.18em] text-white/80">{card.label}</p>{cards.length > 1 ? <p className="text-[.6rem] font-semibold uppercase tracking-[.14em] text-white/45">{index + 1} / {cards.length}</p> : null}</div><div className="mt-2 min-h-[3.2rem]">{card.content}</div></div>;
 }
 
 function buildCards({ stats, currentDrive, away, home, lifecycleState }: { stats?: FootballGameStats; currentDrive?: FootballDriveSummary; away: Team; home: Team; lifecycleState: string }): Card[] {
