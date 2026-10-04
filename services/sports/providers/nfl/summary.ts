@@ -2,6 +2,7 @@ import type {
   FootballBroadcastInfo,
   FootballGameInfo,
   FootballPlayerStats,
+  FootballPeriodScore,
   FootballScoringPlay,
   FootballTeamStatBlock,
   FootballTeamState,
@@ -30,6 +31,8 @@ export interface NFLNormalizedSummary {
   playerStats?: FootballPlayerStats[];
 
   scoringPlays?: FootballScoringPlay[];
+
+  scoringByPeriod?: FootballPeriodScore[];
 
   raw: unknown;
 }
@@ -162,6 +165,14 @@ function getCompetitors(
   )
     ? competition.competitors
     : [];
+}
+
+function normalizeScoringByPeriod(header: any): FootballPeriodScore[] {
+  const competitors = getCompetitors(header);
+  type LineScoreRow = { side?: string; linescores: Array<Record<string, unknown>> };
+  const rows: LineScoreRow[] = competitors.map((competitor: any) => ({ side: competitor?.homeAway, linescores: Array.isArray(competitor?.linescores) ? competitor.linescores : [] }));
+  const count = Math.max(0, ...rows.map((row) => row.linescores.length));
+  return Array.from({ length: count }, (_, index) => ({ period: index + 1, ...(rows.find((row) => row.side === "away")?.linescores[index]?.value !== undefined ? { away: numberOrUndefined(rows.find((row) => row.side === "away")?.linescores[index]?.value) } : {}), ...(rows.find((row) => row.side === "home")?.linescores[index]?.value !== undefined ? { home: numberOrUndefined(rows.find((row) => row.side === "home")?.linescores[index]?.value) } : {}) }));
 }
 
 function normalizeTeamState(
@@ -1403,6 +1414,8 @@ export async function getNFLSummary(
       normalizeScoringPlays(
         data?.scoringPlays,
       ),
+
+    scoringByPeriod: normalizeScoringByPeriod(header),
 
     raw: data,
   };

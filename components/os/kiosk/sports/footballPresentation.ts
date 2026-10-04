@@ -1,8 +1,10 @@
 import type { SportsEvent } from "@/core/contracts/Sports";
-import type { FootballLiveData, FootballPlay, FootballSituation } from "@/core/contracts/sports/Football";
+import type { FootballDriveSummary, FootballLiveData, FootballPlay, FootballSituation } from "@/core/contracts/sports/Football";
 import type { CollegeFootballLiveData } from "@/services/sports/providers/college-football-detail";
 import { resolveSportsTeamIdentity } from "@/services/sports/identity";
 import { footballCountdownLabel, resolveFootballLifecycle, type FootballLifecycleState } from "@/services/sports/football/lifecycle";
+import { footballGameStats } from "@/services/sports/football/stats";
+import type { FootballGameStats } from "@/core/contracts/sports/Football";
 
 export type FootballLiveSource = FootballLiveData | CollegeFootballLiveData;
 export interface KioskFootballPresentation {
@@ -15,6 +17,8 @@ export interface KioskFootballPresentation {
   attentionTeam?: string;
   reviewOutcome?: string;
   broadcast?: string;
+  stats?: FootballGameStats;
+  currentDrive?: FootballDriveSummary;
   lifecycleState: FootballLifecycleState;
   countdownLabel?: string;
 }
@@ -40,7 +44,8 @@ export function createFootballPresentation(event: SportsEvent, live?: FootballLi
   const statusLabel = lifecycleState === "upcoming" || lifecycleState === "pregame" ? (lifecycleState === "pregame" ? footballCountdownLabel(event) : "UPCOMING") : lifecycleState === "starting" ? "STARTING · AWAITING LIVE UPDATE" : lifecycleState === "live" ? (status === "end-period" ? "END OF QUARTER" : "LIVE") : lifecycleState === "halftime" ? "HALFTIME" : lifecycleState === "overtime" ? "OVERTIME" : lifecycleState === "delayed" ? "DELAYED" : lifecycleState === "suspended" ? "SUSPENDED" : lifecycleState === "final" ? "FINAL" : "POSTGAME";
   const liveBroadcast = live && "broadcast" in live && live.broadcast && typeof live.broadcast === "object" && "network" in live.broadcast && typeof live.broadcast.network === "string" ? live.broadcast.network : undefined;
   const broadcast = liveBroadcast ?? event.broadcast;
-  return { sportLabel: event.sport === "college-football" ? "CFB" : "NFL", statusLabel, ...(lifecycleState === "pregame" ? { countdownLabel: footballCountdownLabel(event) } : {}), lifecycleState, ...(period !== undefined ? { quarterLabel: `Q${period}` } : {}), ...(clock && lifecycleState !== "halftime" && lifecycleState !== "pregame" ? { clock } : {}), away, home, rankings, situation, latestPlay, ...(currentDrive?.description || currentDrive?.result ? { driveLabel: currentDrive.description ?? currentDrive.result } : {}), ...(event.venue ? { venue: event.venue } : {}), ...(broadcast ? { broadcast } : {}), ...(penaltyText ? { penaltyText } : {}), ...(review ? { reviewText: review.text } : {}), attention, ...(attentionLabel ? { attentionLabel } : {}), ...(review?.teamName ? { attentionTeam: review.teamName } : {}), ...(review?.outcome ? { reviewOutcome: review.outcome } : {}) };
+  const stats = live && "stats" in live && live.stats ? live.stats : footballGameStats(live);
+  return { sportLabel: event.sport === "college-football" ? "CFB" : "NFL", statusLabel, ...(lifecycleState === "pregame" ? { countdownLabel: footballCountdownLabel(event) } : {}), lifecycleState, ...(period !== undefined ? { quarterLabel: `Q${period}` } : {}), ...(clock && lifecycleState !== "halftime" && lifecycleState !== "pregame" ? { clock } : {}), away, home, rankings, situation, latestPlay, ...(currentDrive ? { currentDrive } : {}), ...(currentDrive?.description || currentDrive?.result ? { driveLabel: currentDrive.description ?? currentDrive.result } : {}), ...(event.venue ? { venue: event.venue } : {}), ...(broadcast ? { broadcast } : {}), ...(stats ? { stats } : {}), ...(penaltyText ? { penaltyText } : {}), ...(review ? { reviewText: review.text } : {}), attention, ...(attentionLabel ? { attentionLabel } : {}), ...(review?.teamName ? { attentionTeam: review.teamName } : {}), ...(review?.outcome ? { reviewOutcome: review.outcome } : {}) };
 }
 
 function normalizeStatus(value?: string) {

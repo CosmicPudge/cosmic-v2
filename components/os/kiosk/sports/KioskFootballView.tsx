@@ -5,6 +5,7 @@ import type { FootballLiveData } from "@/core/contracts/sports/Football";
 import type { CollegeFootballLiveData } from "@/services/sports/providers/college-football-detail";
 import { resolveSportsTeamIdentity } from "@/services/sports/identity";
 import { createFootballPresentation } from "./footballPresentation";
+import KioskFootballContextCards from "./KioskFootballContextCards";
 
 type FootballView = ReturnType<typeof createFootballPresentation>;
 
@@ -18,7 +19,7 @@ export default function KioskFootballView({ event, live }: { event: SportsEvent;
       {view.attention !== "normal" ? <AttentionBanner view={view} /> : null}
       <div className="grid min-h-0 flex-1 grid-rows-[auto_1fr_auto] gap-[clamp(.8rem,2vh,1.5rem)] px-[clamp(1.25rem,4vw,4rem)] py-[clamp(1rem,3vh,2rem)]"><div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-center"><span className="text-[clamp(1rem,1.8vw,1.45rem)] font-black uppercase tracking-[.12em] text-white">{view.countdownLabel ?? (view.quarterLabel ? `${view.quarterLabel}${view.clock ? ` · ${view.clock}` : ""}` : view.lifecycleState === "pregame" ? "PREGAME" : view.lifecycleState === "halftime" ? "HALFTIME" : view.lifecycleState === "overtime" ? "OVERTIME" : "GAME CONTEXT")}</span>{view.rankings.map((rank) => <span key={rank} className="text-[clamp(.85rem,1.2vw,1.05rem)] font-bold text-amber-100">{rank}</span>)}</div>
         <div className="grid min-h-0 grid-cols-[1fr_auto_1fr] items-center gap-[clamp(1rem,4vw,4rem)]"><ScoreTeam event={event} side="away" team={view.away} /><CenterSituation view={view} possessionText={possessionText} /><ScoreTeam event={event} side="home" team={view.home} /></div>
-        <div className="grid gap-3 lg:grid-cols-[1.35fr_1fr_1fr]"><InfoCard label="LAST PLAY" value={view.latestPlay?.shortDescription ?? view.latestPlay?.description ?? "No play-by-play yet"} /><InfoCard label="CURRENT DRIVE" value={view.driveLabel ?? "Drive data unavailable"} /><InfoCard label="VENUE / NETWORK" value={[view.venue, view.broadcast].filter(Boolean).join(" · ") || view.penaltyText || view.reviewText || "Live detail updating"} emphasis={view.attention !== "normal"} /></div>
+        <div className="grid gap-3 lg:grid-cols-[1fr_1.8fr_1fr]"><InfoCard label="LAST PLAY" value={view.latestPlay?.shortDescription ?? view.latestPlay?.description ?? "No play-by-play yet"} /><KioskFootballContextCards stats={view.stats} currentDrive={view.currentDrive} away={view.away} home={view.home} lifecycleState={view.lifecycleState} attention={view.attention} /><InfoCard label="VENUE / NETWORK" value={[view.venue, view.broadcast].filter(Boolean).join(" · ") || view.penaltyText || view.reviewText || "Live detail updating"} emphasis={view.attention !== "normal"} /></div>
       </div>
       <footer className="flex shrink-0 items-center justify-between border-t border-white/10 px-[clamp(1.25rem,3vw,2.5rem)] py-3 text-[clamp(.6rem,1vw,.75rem)] font-semibold uppercase tracking-[0.16em] text-white/65"><span>{view.venue ?? "Football live center"}</span><span>{view.away.timeouts !== undefined || view.home.timeouts !== undefined ? `Timeouts ${view.away.timeouts ?? "—"} · ${view.home.timeouts ?? "—"}` : "Scoreboard updating"}</span></footer><div className="pointer-events-none absolute inset-0 rounded-[inherit] ring-1 ring-inset ring-white/10" />
     </section>

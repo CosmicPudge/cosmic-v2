@@ -446,6 +446,35 @@ export interface FootballPlayerStats {
   returns?: FootballReturnStats;
 }
 
+export type FootballLeaderCategory = "passing" | "rushing" | "receiving";
+
+export interface FootballPlayerLeader {
+  category: FootballLeaderCategory;
+  playerId?: string;
+  name: string;
+  teamId?: string;
+  teamAbbreviation?: string;
+  statLine: string;
+}
+
+export interface FootballPeriodScore {
+  period: number;
+  label?: string;
+  away?: number;
+  home?: number;
+}
+
+export interface FootballGameStats {
+  teamStats?: FootballTeamStatBlock[];
+  playerLeaders?: FootballPlayerLeader[];
+  recentDrives?: FootballDriveSummary[];
+  scoringByPeriod?: FootballPeriodScore[];
+  scoringPlays?: FootballScoringPlay[];
+  redZone?: FootballTeamStatBlock[];
+  winProbability?: FootballWinProbability;
+  stale?: boolean;
+}
+
 export interface FootballTeamStatBlock {
   teamId?: string;
 
@@ -580,6 +609,8 @@ export interface FootballLiveData
 
   scoringPlays?: FootballScoringPlay[];
 
+  scoringByPeriod?: FootballPeriodScore[];
+
   teamStats?: FootballTeamStatBlock[];
 
   playerStats?: FootballPlayerStats[];
@@ -591,6 +622,8 @@ export interface FootballLiveData
   weather?: FootballWeatherInfo;
 
   winProbability?: FootballWinProbability;
+
+  stats?: FootballGameStats;
 
   turnovers?: {
     home?: number;

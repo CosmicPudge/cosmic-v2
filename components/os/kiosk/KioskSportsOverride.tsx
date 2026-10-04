@@ -72,7 +72,25 @@ function createTestFootballLive(event: SportsEvent, state: string | null, lifecy
   const away = event.awayTeam ?? { id: "68", name: "Boise State Broncos", abbreviation: "BSU" };
   const home = event.homeTeam ?? { id: "328", name: "Utah State Aggies", abbreviation: "USU" };
   const situation = { quarter: 3, clock: "08:42", possessionTeamId: home.id, downDistanceText: state === "redzone" ? "1st & Goal" : "2nd & 7 at USU 35", possessionText: state === "redzone" ? "USU 8" : "USU 35", redZone: state === "redzone" };
-  return { sport: event.sport === "college-football" ? "college-football" : "nfl", eventId: event.id, generatedAt: new Date().toISOString(), stale: false, sources: [], status: lifecycle === "halftime" ? "Halftime" : lifecycle === "overtime" ? "Overtime" : lifecycle === "final" ? "Final" : "Live", ...(lifecycle === "halftime" ? { state: "halftime" as const } : lifecycle === "overtime" ? { state: "overtime" as const } : lifecycle === "final" ? { state: "final" as const } : lifecycle === "delayed" ? { state: "delayed" as const } : lifecycle === "suspended" ? { state: "suspended" as const } : { state: "live" as const }), away: { team: away, score: away.score ?? 17, timeoutsRemaining: 2 }, home: { team: home, score: home.score ?? 24, timeoutsRemaining: 3, possession: true }, situation, latestPlay: { description: state === "challenge" ? "Challenge under review" : state === "flag" ? "Holding, offense" : "Pass complete for 8 yards", shortDescription: state === "challenge" ? "Review" : state === "flag" ? "Penalty" : "Complete", penalty: state === "flag", type: state === "flag" ? "penalty" : "pass" }, ...(state === "flag" ? { penalty: { text: "Holding, offense", yards: 10 } } : {}), ...(state === "challenge" ? { review: { text: "Challenge under review", active: true } } : {}) } as FootballLiveData | CollegeFootballLiveData;
+  const stats = state === "stats" || lifecycle === "halftime" ? {
+    teamStats: [
+      { teamId: away.id, teamAbbreviation: away.abbreviation, stats: { totalYards: 184, passingYards: 112, rushingYards: 72, firstDowns: 10, turnovers: 1, thirdDownMade: 3, thirdDownAttempts: 7, fourthDownMade: 0, fourthDownAttempts: 1, penalties: 5, penaltyYards: 42, possessionTime: "26:14", redZoneMade: 1, redZoneAttempts: 2 } },
+      { teamId: home.id, teamAbbreviation: home.abbreviation, stats: { totalYards: 276, passingYards: 189, rushingYards: 87, firstDowns: 15, turnovers: 0, thirdDownMade: 5, thirdDownAttempts: 8, fourthDownMade: 1, fourthDownAttempts: 1, penalties: 3, penaltyYards: 25, possessionTime: "33:46", redZoneMade: 2, redZoneAttempts: 2 } },
+    ],
+    playerLeaders: [
+      { category: "passing" as const, name: "Jordan Keller", teamId: away.id, statLine: "14/21 · 186 YDS · 2 TD" },
+      { category: "rushing" as const, name: "Marcus Reed", teamId: home.id, statLine: "12 CAR · 74 YDS" },
+      { category: "receiving" as const, name: "Evan Brooks", teamId: away.id, statLine: "5 REC · 83 YDS · TD" },
+    ],
+    recentDrives: [
+      { teamId: away.id, teamAbbreviation: away.abbreviation, result: "Punt", plays: 3, yards: 8, elapsedTime: "1:22" },
+      { teamId: home.id, teamAbbreviation: home.abbreviation, result: "Touchdown", plays: 7, yards: 68, elapsedTime: "3:14" },
+      { teamId: away.id, teamAbbreviation: away.abbreviation, result: "Field Goal", plays: 9, yards: 51, elapsedTime: "4:03" },
+    ],
+    scoringByPeriod: [{ period: 1, away: 0, home: 7 }, { period: 2, away: 7, home: 7 }],
+    scoringPlays: [{ period: 2, clock: "12:48", teamId: home.id, teamAbbreviation: home.abbreviation, description: "18-yard touchdown pass", points: 7 }],
+  } : undefined;
+  return { sport: event.sport === "college-football" ? "college-football" : "nfl", eventId: event.id, generatedAt: new Date().toISOString(), stale: false, sources: [], status: lifecycle === "halftime" ? "Halftime" : lifecycle === "overtime" ? "Overtime" : lifecycle === "final" ? "Final" : "Live", ...(lifecycle === "halftime" ? { state: "halftime" as const } : lifecycle === "overtime" ? { state: "overtime" as const } : lifecycle === "final" ? { state: "final" as const } : lifecycle === "delayed" ? { state: "delayed" as const } : lifecycle === "suspended" ? { state: "suspended" as const } : { state: "live" as const }), away: { team: away, score: away.score ?? 17, timeoutsRemaining: 2 }, home: { team: home, score: home.score ?? 24, timeoutsRemaining: 3, possession: true }, situation, latestPlay: { description: state === "challenge" ? "Challenge under review" : state === "flag" ? "Holding, offense" : "Pass complete for 8 yards", shortDescription: state === "challenge" ? "Review" : state === "flag" ? "Penalty" : "Complete", penalty: state === "flag", type: state === "flag" ? "penalty" : "pass" }, ...(stats ? { stats } : {}), ...(state === "flag" ? { penalty: { text: "Holding, offense", yards: 10 } } : {}), ...(state === "challenge" ? { review: { text: "Challenge under review", active: true } } : {}) } as FootballLiveData | CollegeFootballLiveData;
 }
 
 function fixtureUniform(teamId: string, code: string | null): BaseballUniform | undefined {

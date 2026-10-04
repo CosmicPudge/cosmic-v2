@@ -394,6 +394,9 @@ export async function getNFLLiveData(
         scoringPlays:
             summary.scoringPlays,
 
+        scoringByPeriod:
+            summary.scoringByPeriod,
+
         teamStats:
             summary.teamStats,
 

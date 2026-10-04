@@ -1,5 +1,5 @@
 import { isRecord, number, records, string } from "./types";
-import type { FootballDriveSummary, FootballPlay, FootballScoringPlay, FootballSituation, FootballPenaltyState, FootballReviewState } from "@/core/contracts/sports/Football";
+import type { FootballDriveSummary, FootballGameStats, FootballPeriodScore, FootballPlay, FootballScoringPlay, FootballSituation, FootballPenaltyState, FootballReviewState, FootballTeamStatBlock } from "@/core/contracts/sports/Football";
 import type { SportsDataSource } from "@/core/contracts/sports/Core";
 import { parseFootballFieldPosition } from "@/services/sports/football/field";
 import { espnFootballSummaryUrl } from "./espnFootball/endpoints";
@@ -20,6 +20,9 @@ export interface CollegeFootballLiveData {
   home: { team: { id?: string; name: string; abbreviation?: string; record?: string }; score: number };
   venue?: { name?: string; city?: string; state?: string };
   rankings?: Array<{ team: string; rank: number }>;
+  teamStats?: FootballTeamStatBlock[];
+  scoringByPeriod?: FootballPeriodScore[];
+  stats?: FootballGameStats;
   leaders?: Array<{ category: string; name: string; value?: string }>;
   scoringPlays?: string[];
   plays?: string[];
@@ -65,6 +68,31 @@ function normalizeFootballSituation(raw: Record<string, unknown>, home: ReturnTy
     possessionText,
     redZone: typeof raw.isRedZone === "boolean" ? raw.isRedZone : undefined,
   };
+}
+
+function cfbTeamStats(root: Record<string, unknown>): FootballTeamStatBlock[] {
+  const boxscore = isRecord(root.boxscore) ? root.boxscore : {};
+  return records(boxscore.teams).flatMap((entry) => {
+    const teamRecord = isRecord(entry.team) ? entry.team : {};
+    const teamId = string(teamRecord.id);
+    const abbreviation = string(teamRecord.abbreviation);
+    const stats = records(entry.statistics);
+    const find = (...names: string[]) => {
+      const match = stats.find((item) => names.some((name) => `${string(item.name) ?? ""} ${string(item.displayName) ?? ""}`.toLowerCase().includes(name)));
+      return string(match?.displayValue) ?? (number(match?.value) !== undefined ? String(number(match?.value)) : undefined);
+    };
+    const numeric = (...names: string[]) => { const value = find(...names); return value ? Number.parseFloat(value.replace(/,/g, "")) : undefined; };
+    const fraction = (...names: string[]) => { const value = find(...names); const [made, attempts] = value?.split(/[/-]/) ?? []; return { made: made ? Number.parseFloat(made) : undefined, attempts: attempts ? Number.parseFloat(attempts) : undefined }; };
+    const third = fraction("third down", "3rd down"); const fourth = fraction("fourth down", "4th down"); const redZone = fraction("red zone");
+    const normalized = { firstDowns: numeric("first down"), totalYards: numeric("total yards"), passingYards: numeric("passing yards", "net passing"), rushingYards: numeric("rushing yards"), turnovers: numeric("turnovers"), penalties: numeric("penalt"), penaltyYards: numeric("penalt") && find("penalt")?.split(/[-,]/)[1] ? Number.parseFloat(find("penalt")!.split(/[-,]/)[1]) : undefined, thirdDownMade: third.made, thirdDownAttempts: third.attempts, fourthDownMade: fourth.made, fourthDownAttempts: fourth.attempts, possessionTime: find("possession") , redZoneMade: redZone.made, redZoneAttempts: redZone.attempts };
+    return teamId && Object.values(normalized).some((value) => value !== undefined) ? [{ teamId, ...(abbreviation ? { teamAbbreviation: abbreviation } : {}), stats: normalized }] : [];
+  });
+}
+
+function cfbScoringByPeriod(competitors: Record<string, unknown>[]): FootballPeriodScore[] {
+  const rows = competitors.map((competitor) => ({ side: string(competitor.homeAway), values: records(competitor.linescores) }));
+  const count = Math.max(0, ...rows.map((row) => row.values.length));
+  return Array.from({ length: count }, (_, index) => ({ period: index + 1, ...(number(rows.find((row) => row.side === "away")?.values[index]?.value) !== undefined ? { away: number(rows.find((row) => row.side === "away")?.values[index]?.value) } : {}), ...(number(rows.find((row) => row.side === "home")?.values[index]?.value) !== undefined ? { home: number(rows.find((row) => row.side === "home")?.values[index]?.value) } : {}) }));
 }
 
 function normalizeCollegePlay(raw: Record<string, unknown>, sequence: number): FootballPlay | undefined {
@@ -121,6 +149,8 @@ export function normalizeCollegeFootballSummary(payload: unknown): CollegeFootba
     return description || teamId ? [{ id: string(drive.id) ?? `cfb-drive-${index}`, teamId, teamAbbreviation: string(isRecord(drive.team) ? drive.team.abbreviation : undefined), description, result: string(drive.displayResult) ?? string(drive.result), plays: number(drive.plays), yards: number(drive.yards), scoringDrive: drive.isScore === true || drive.scoringDrive === true }] : [];
   });
   const rankings = competitors.flatMap((item) => { const name = team(item.team)?.name; const rank = isRecord(item.curatedRank) ? number(item.curatedRank.current) : undefined; return name && rank !== undefined ? [{ team: name, rank }] : []; });
+  const teamStats = cfbTeamStats(root);
+  const scoringByPeriod = cfbScoringByPeriod(competitors);
   const latestPlay = normalizedPlays.at(-1);
   const penalty = latestPlay?.penalty ? { text: latestPlay.description, teamId: latestPlay.teamId, ...(latestPlay.penaltyYards !== undefined ? { yards: latestPlay.penaltyYards } : {}) } : undefined;
   const reviewRecord = isRecord(competition.review) ? competition.review : undefined;
@@ -140,7 +170,7 @@ export function normalizeCollegeFootballSummary(payload: unknown): CollegeFootba
     away: { team: { ...awayTeam, ...(records(away?.records)[0] && string(records(away?.records)[0].summary) ? { record: string(records(away?.records)[0].summary) } : {}) }, score: number(away?.score) ?? 0 },
     home: { team: { ...homeTeam, ...(records(home?.records)[0] && string(records(home?.records)[0].summary) ? { record: string(records(home?.records)[0].summary) } : {}) }, score: number(home?.score) ?? 0 },
     ...(string(venue.fullName) || string(venue.address) ? { venue: { ...(string(venue.fullName) ? { name: string(venue.fullName) } : {}), ...(isRecord(venue.address) && string(venue.address.city) ? { city: string(venue.address.city) } : {}), ...(isRecord(venue.address) && string(venue.address.state) ? { state: string(venue.address.state) } : {}) } } : {}),
-    ...(rankings.length ? { rankings } : {}), ...(leaders.length ? { leaders } : {}), ...(plays.length ? { plays } : {}), ...(scoringPlays.length ? { scoringPlays } : {}),
+    ...(rankings.length ? { rankings } : {}), ...(leaders.length ? { leaders } : {}), ...(teamStats.length ? { teamStats } : {}), ...(scoringByPeriod.length ? { scoringByPeriod } : {}), ...(plays.length ? { plays } : {}), ...(scoringPlays.length ? { scoringPlays } : {}),
     ...(normalizedSituation ? { situation: normalizedSituation } : {}),
     ...(normalizedPlays.length ? { normalizedPlays } : {}),
     ...(scoringPlayDetails.length ? { scoringPlayDetails } : {}),
