@@ -73,6 +73,7 @@ export function useMusic({ refreshMs, enabled = true }: UseMusicOptions = {}) {
         setFailureCount(0);
         setRetryAfterMs(undefined);
         recordSuccess("music");
+        window.dispatchEvent(new CustomEvent("cosmic:music-updated"));
       } catch (cause) {
         if (cause instanceof DOMException && cause.name === "AbortError") return;
         const failure = cause as Error & { retryAfterMs?: number };
@@ -106,6 +107,14 @@ export function useMusic({ refreshMs, enabled = true }: UseMusicOptions = {}) {
   }, [enabled, refresh, refreshMs, scope.id]);
 
   useEffect(() => { const timer = window.setTimeout(() => { const cachedSnapshot = musicCache.get(scope.id) ?? null; setSnapshot(cachedSnapshot); setLoading(!cachedSnapshot); setRequestError(undefined); setLastSuccessfulRefreshAt(cachedSnapshot ? new Date().toISOString() : undefined); hasLoaded.current = false; }, 0); return () => window.clearTimeout(timer); }, [scope.id]);
+  useEffect(() => {
+    const syncCachedMusic = () => {
+      const next = musicCache.get(scope.id);
+      if (next) { setSnapshot(next); setLoading(false); setRequestError(undefined); hasLoaded.current = true; }
+    };
+    window.addEventListener("cosmic:music-updated", syncCachedMusic);
+    return () => window.removeEventListener("cosmic:music-updated", syncCachedMusic);
+  }, [scope.id]);
 
   const intervalMs = typeof refreshMs === "function" ? refreshMs(snapshot) : refreshMs;
   const effectiveIntervalMs = intervalMs === undefined ? undefined : Math.max(intervalMs, musicBackoffMs(failureCount, retryAfterMs));

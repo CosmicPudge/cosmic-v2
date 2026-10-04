@@ -22,6 +22,11 @@ export interface DeveloperKioskData {
   };
 }
 
+interface DeveloperKioskOptions {
+  enabled?: boolean;
+  poll?: boolean;
+}
+
 function normalizeKioskData(value: DeveloperKioskData): DeveloperKioskData {
   const calendarBuckets = buildKioskTimeBuckets(value.calendar.events);
   const overrides = readSchoolCompletionOverrides();
@@ -52,8 +57,8 @@ let request: Promise<DeveloperKioskData> | null = null;
 let requestToken = 0;
 let lastHealthReportToken = 0;
 
-export function useDeveloperKioskData() {
-  const enabled = typeof window !== "undefined" && window.location.pathname === "/kiosk";
+export function useDeveloperKioskData({ enabled: requestedEnabled, poll = true }: DeveloperKioskOptions = {}) {
+  const enabled = (requestedEnabled ?? true) && typeof window !== "undefined" && window.location.pathname === "/kiosk";
   const [data, setData] = useState<DeveloperKioskData | null>(enabled ? cached : null);
   const [loading, setLoading] = useState(enabled && !cached);
   const [error, setError] = useState<string | null>(null);
@@ -97,7 +102,7 @@ export function useDeveloperKioskData() {
           if (value.calendar.connected) recordSuccess("calendar"); else recordFailure("calendar", value.calendar.diagnostics?.category ?? "provider-error");
           if (value.school.connected) recordSuccess("school"); else recordFailure("school", value.school.diagnostics?.category ?? "provider-error");
         }
-        if (active) setData(displayValue);
+        if (active) { setData(displayValue); window.dispatchEvent(new CustomEvent("cosmic:kiosk-data-updated")); }
       } catch (reason) {
         if (requestToken !== lastHealthReportToken) {
           lastHealthReportToken = requestToken;
@@ -107,20 +112,22 @@ export function useDeveloperKioskData() {
       }
       finally { if (active) setLoading(false); }
     };
-    void load();
-    const timer = window.setInterval(() => { void load(); }, 30_000);
-    const completionChanged = () => { cached = null; void load(); };
-    const locationChanged = () => { cached = null; request = null; void load(); };
+    if (poll) void load();
+    const timer = poll ? window.setInterval(() => { void load(); }, 30_000) : undefined;
+    const completionChanged = () => { cached = null; if (poll) void load(); };
+    const locationChanged = () => { cached = null; request = null; if (poll) void load(); };
     window.addEventListener("cosmic:school-completion-changed", completionChanged);
     window.addEventListener("cosmic:kiosk-location-changed", locationChanged);
     window.addEventListener("cosmic:kiosk-location-moved", locationChanged);
-    const sessionRenewed = () => { void load(); };
+    const sessionRenewed = () => { if (poll) void load(); };
     window.addEventListener("cosmic:kiosk-session-renewed", sessionRenewed);
-    const retryWhenOnline = () => { void load(); };
-    const retryWhenVisible = () => { if (document.visibilityState === "visible") void load(); };
+    const syncCachedData = () => { if (cached && active) { setData(cached); setLoading(false); setError(null); } };
+    const retryWhenOnline = () => { if (poll) void load(); };
+    const retryWhenVisible = () => { if (poll && document.visibilityState === "visible") void load(); };
+    window.addEventListener("cosmic:kiosk-data-updated", syncCachedData);
     window.addEventListener("online", retryWhenOnline);
     document.addEventListener("visibilitychange", retryWhenVisible);
-    return () => { active = false; window.clearInterval(timer); window.removeEventListener("cosmic:school-completion-changed", completionChanged); window.removeEventListener("cosmic:kiosk-location-changed", locationChanged); window.removeEventListener("cosmic:kiosk-location-moved", locationChanged); window.removeEventListener("cosmic:kiosk-session-renewed", sessionRenewed); window.removeEventListener("online", retryWhenOnline); document.removeEventListener("visibilitychange", retryWhenVisible); };
-  }, [enabled, recordAttempt, recordFailure, recordSuccess]);
+    return () => { active = false; if (timer !== undefined) window.clearInterval(timer); window.removeEventListener("cosmic:school-completion-changed", completionChanged); window.removeEventListener("cosmic:kiosk-location-changed", locationChanged); window.removeEventListener("cosmic:kiosk-location-moved", locationChanged); window.removeEventListener("cosmic:kiosk-session-renewed", sessionRenewed); window.removeEventListener("cosmic:kiosk-data-updated", syncCachedData); window.removeEventListener("online", retryWhenOnline); document.removeEventListener("visibilitychange", retryWhenVisible); };
+  }, [enabled, poll, recordAttempt, recordFailure, recordSuccess]);
   return { data, loading, error };
 }

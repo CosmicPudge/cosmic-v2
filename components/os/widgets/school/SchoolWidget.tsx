@@ -20,7 +20,7 @@ import KioskSchoolScene from "./KioskSchoolScene";
 export default function SchoolWidget() {
   const { size, presentation } = useWidgetContext();
   const { data, loading, error, local } = useSchoolData();
-  const developer = useDeveloperKioskData();
+  const developer = useDeveloperKioskData({ poll: false });
   const activeTerm = local.data.terms.find((term) => term.active);
   const activeCourses = local.data.courses.filter((course) => !activeTerm || course.termId === activeTerm.id);
   const activeCourseIds = new Set(activeCourses.map((course) => course.id));

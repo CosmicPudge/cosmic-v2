@@ -1,12 +1,15 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import useKioskDeviceLocation from "@/hooks/os/useKioskDeviceLocation";
 import { DashboardReadinessProvider } from "@/components/dashboard/readiness/DashboardReadiness";
 import KioskAmbientFrame from "./KioskAmbientFrame";
 import KioskSlideshow from "./KioskSlideshow";
+import { KioskRuntimeProvider } from "./KioskRuntimeContext";
+import { ConnectionHealthProvider } from "@/services/kiosk/ConnectionHealthProvider";
 
 export default function StandaloneDesktopKiosk() {
+  const [runtimeReady, setRuntimeReady] = useState(false);
   useKioskDeviceLocation();
   useEffect(() => {
     document.documentElement.dataset.cosmicKiosk = "true";
@@ -47,6 +50,7 @@ export default function StandaloneDesktopKiosk() {
         log(`sessionEstablished=${session.ok && sessionBody?.authenticated === true && sessionBody.sessionType === "device"}`);
         if (session.ok && sessionBody?.authenticated === true && sessionBody.sessionType === "device") {
           retryDelay = 5_000;
+          setRuntimeReady(true);
           window.dispatchEvent(new CustomEvent("cosmic:kiosk-session-renewed"));
         }
         else scheduleRetry();
@@ -57,16 +61,20 @@ export default function StandaloneDesktopKiosk() {
         attemptInFlight = false;
       }
     };
-    const requestRenewal = () => { void attempt(); };
+    const requestRenewal = () => { setRuntimeReady(false); void attempt(); };
     window.addEventListener("cosmic:kiosk-auth-needed", requestRenewal);
     void attempt();
-    return () => { stopped = true; if (retryTimer !== undefined) window.clearTimeout(retryTimer); window.removeEventListener("cosmic:kiosk-auth-needed", requestRenewal); };
+    return () => { stopped = true; setRuntimeReady(false); if (retryTimer !== undefined) window.clearTimeout(retryTimer); window.removeEventListener("cosmic:kiosk-auth-needed", requestRenewal); };
   }, []);
   return (
     <div className="fixed inset-0 z-[100] h-[100dvh] w-[100dvw] overflow-hidden bg-[#02040e] text-white" data-desktop-kiosk>
-      <DashboardReadinessProvider criticalWidgetIds={[]}>
-        <KioskAmbientFrame><KioskSlideshow /></KioskAmbientFrame>
-      </DashboardReadinessProvider>
+      <KioskRuntimeProvider ready={runtimeReady}>
+        <ConnectionHealthProvider>
+          <DashboardReadinessProvider criticalWidgetIds={[]}>
+            <KioskAmbientFrame><KioskSlideshow /></KioskAmbientFrame>
+          </DashboardReadinessProvider>
+        </ConnectionHealthProvider>
+      </KioskRuntimeProvider>
       <span className="sr-only">Cosmic developer kiosk presentation.</span>
     </div>
   );

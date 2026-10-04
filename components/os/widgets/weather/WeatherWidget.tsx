@@ -28,7 +28,7 @@ export default function WeatherWidget() {
     loading,
     error,
   } = useWeather();
-  const developer = useDeveloperKioskData();
+  const developer = useDeveloperKioskData({ poll: false });
   const kioskWeather = developer.data?.weather ?? weather;
   useDashboardWidgetReadiness("weather", loading ? "loading" : error && !weather ? "degraded" : "ready");
   const developmentWeatherOverride = process.env.NODE_ENV !== "production" && presentation === "kiosk" && typeof window !== "undefined"

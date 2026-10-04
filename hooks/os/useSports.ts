@@ -8,7 +8,7 @@ import { kioskApiUrl } from "@/services/kioskRequest";
 import { sceneRefreshDiagnostics, sportsRefreshMode, sportsRefreshMs } from "@/services/kiosk/refreshPolicy";
 import { useConnectionHealth } from "@/services/kiosk/ConnectionHealthProvider";
 
-type SportsHookOptions = { sport?: SportKind; kioskEligibility?: boolean; refreshMs?: number | ((snapshot: SportsSnapshot | null) => number) };
+type SportsHookOptions = { sport?: SportKind; kioskEligibility?: boolean; refreshMs?: number | ((snapshot: SportsSnapshot | null) => number); enabled?: boolean };
 type SportsWireEvent = Omit<SportsEvent, "start" | "end"> & { start: string; end?: string };
 type SportsWireSnapshot = Omit<SportsSnapshot, "live" | "upcoming" | "recent" | "featured" | "lastUpdated"> & {
   live: SportsWireEvent[];
@@ -95,7 +95,7 @@ async function requestSnapshot(sport: SportKind | undefined, scopeId: string, ki
 }
 
 export function useSports(options: SportsHookOptions = {}) {
-  const { sport, kioskEligibility = false, refreshMs = (snapshot) => sportsRefreshMs(snapshot) } = options;
+  const { sport, kioskEligibility = false, refreshMs = (snapshot) => sportsRefreshMs(snapshot), enabled = true } = options;
   const scope = useCosmicScope();
   const { recordAttempt, recordSuccess, recordFailure } = useConnectionHealth();
   const cacheKey = `${scope.id}:${sport ?? "all"}:${kioskEligibility ? "kiosk" : "all"}`;
@@ -128,7 +128,7 @@ export function useSports(options: SportsHookOptions = {}) {
   }, [scope.id]);
 
   const intervalMs = typeof refreshMs === "function" ? refreshMs(data) : refreshMs;
-  useVisiblePolling(refresh, intervalMs, { immediate: data === null });
+  useVisiblePolling(refresh, intervalMs, { enabled, immediate: data === null });
 
   return { data, loading, error, refresh, refreshDiagnostics: sceneRefreshDiagnostics(lastSuccessfulRefreshAt, intervalMs, sportsRefreshMode(data)) };
 }

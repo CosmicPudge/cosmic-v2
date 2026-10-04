@@ -33,8 +33,10 @@ import { resolveKioskSwipeDirection, shouldResetKioskRotationAfterSwipe } from "
 import { createKioskSportsTestEvent, parseKioskSportsTestOverride } from "./kioskSportsTestOverride";
 import { KIOSK_MUSIC_PLAYBACK_STALE_MS, shouldPauseKioskForMusic } from "./kioskMusicRotation";
 import { normalizeKioskSportsEvent, selectKioskSportsEvent } from "@/services/sports/kioskSelection";
-import { sportsRefreshMs } from "@/services/kiosk/refreshPolicy";
-import { ConnectionHealthProvider } from "@/services/kiosk/ConnectionHealthProvider";
+import { musicRefreshMs, sportsRefreshMs } from "@/services/kiosk/refreshPolicy";
+import { useDeveloperKioskData } from "@/hooks/os/useDeveloperKioskData";
+import { useMusic } from "@/hooks/os/useMusic";
+import { useKioskRuntimeReady } from "./KioskRuntimeContext";
 
 const TEST_SPORTS: SportKind[] = [
   "nfl",
@@ -164,10 +166,12 @@ function KioskNormalSlideshow() {
   const { setPersistentClockHidden } = useKioskAmbientFrame();
   const { data: entitlements } = useEntitlements();
   const standaloneDeveloperKiosk = typeof window !== "undefined" && window.location.pathname === "/kiosk";
+  const kioskRuntimeReady = useKioskRuntimeReady();
   const manualSportsOverride = useMemo(() => parseKioskSportsTestOverride(searchParams, typeof window !== "undefined" ? window.location.hostname : "", typeof window !== "undefined" ? window.location.pathname : "") , [searchParams]);
 
   const { data: sportsData } = useSports({
     kioskEligibility: standaloneDeveloperKiosk,
+    enabled: kioskRuntimeReady,
     refreshMs: (snapshot) => sportsRefreshMs(snapshot),
   });
 
@@ -523,8 +527,8 @@ function KioskNormalSlideshow() {
 
   const control = { currentSlide: currentWidget.id, paused, pauseReason, pause, resume, togglePause, setMusicPlaying };
   return (
-    <ConnectionHealthProvider>
     <KioskSlideshowProvider value={control}>
+    <KioskRuntimeData enabled={kioskRuntimeReady} />
     <div
       className="kiosk-slideshow absolute inset-0 h-[100dvh] w-[100dvw] overflow-hidden"
       onPointerDown={handlePointerDown}
@@ -564,8 +568,23 @@ function KioskNormalSlideshow() {
       {manualSportsOverride ? <span className="pointer-events-none absolute bottom-5 right-5 z-30 rounded-full border border-amber-200/30 bg-black/45 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-amber-100/85 backdrop-blur-sm">TEST OVERRIDE</span> : null}
     </div>
     </KioskSlideshowProvider>
-    </ConnectionHealthProvider>
   );
+}
+
+function KioskRuntimeData({ enabled }: { enabled: boolean }) {
+  useDeveloperKioskData({ enabled, poll: true });
+  useMusic({ enabled, refreshMs: (snapshot) => musicRefreshMs(true, snapshot?.playback.playing === true) });
+  useEffect(() => {
+    if (process.env.NODE_ENV !== "production") {
+      const state = enabled ? "start" : "stop";
+      const reason = enabled ? "auth-established" : "auth-not-established";
+      console.info(`[kiosk-runtime] auth=${enabled ? "established" : "checking"} runtimeReady=${enabled}`);
+      console.info(`[kiosk-data] poller=${state} reason=${reason}`);
+      console.info(`[sports] poller=${state} reason=${reason}`);
+      console.info(`[music] poller=${state} reason=${reason}`);
+    }
+  }, [enabled]);
+  return null;
 }
 
 type DemoStep =

@@ -9,6 +9,7 @@ import KioskSlideshow from "./KioskSlideshow";
 import KioskAmbientFrame from "./KioskAmbientFrame";
 import KioskDeviceSetupGate from "./KioskDeviceSetupGate";
 import KioskRenderTest, { parseKioskRenderTestMode } from "./KioskRenderTest";
+import { ConnectionHealthProvider } from "@/services/kiosk/ConnectionHealthProvider";
 
 function authLog(message: string) {
   if (process.env.NODE_ENV !== "production") console.info(`[kiosk-auth] ${message}`);
@@ -48,11 +49,13 @@ export default function KioskAuthGate() {
     // Kiosk widgets need the readiness context, but kiosk presentation does not
     // gate mounting on dashboard-critical readiness.
     <KioskDeviceSetupGate deviceId={deviceId!}>
-      <DashboardReadinessProvider criticalWidgetIds={[]}>
-        <KioskAmbientFrame>
-          <KioskSlideshow />
-        </KioskAmbientFrame>
-      </DashboardReadinessProvider>
+      <ConnectionHealthProvider>
+        <DashboardReadinessProvider criticalWidgetIds={[]}>
+          <KioskAmbientFrame>
+            <KioskSlideshow />
+          </KioskAmbientFrame>
+        </DashboardReadinessProvider>
+      </ConnectionHealthProvider>
     </KioskDeviceSetupGate>
   );
 }

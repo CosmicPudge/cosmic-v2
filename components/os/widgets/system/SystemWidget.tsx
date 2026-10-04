@@ -17,7 +17,7 @@ export default function SystemWidget() {
   const { snapshot } = useSystem();
   const { health } = useConnectionHealth();
   const cosmicUpdate = useKioskUpdateStatus();
-  const { data: developerKiosk } = useDeveloperKioskData();
+  const { data: developerKiosk } = useDeveloperKioskData({ poll: false });
   const priority = !snapshot.network.online
     ? "Offline"
     : snapshot.power.effective === "reduced"

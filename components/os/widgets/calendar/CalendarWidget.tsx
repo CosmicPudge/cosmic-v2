@@ -25,7 +25,7 @@ export default function CalendarWidget() {
     loading,
     error,
   } = useCalendar({ enabled: typeof window === "undefined" || window.location.pathname !== "/kiosk" });
-  const developer = useDeveloperKioskData();
+  const developer = useDeveloperKioskData({ poll: false });
   const developerCalendar = developer.data ? {
     today: developer.data.calendar.todayEvents.map(hydrateDeveloperEvent),
     upcoming: developer.data.calendar.weekEvents.map(hydrateDeveloperEvent),
