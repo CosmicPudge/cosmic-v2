@@ -2,7 +2,7 @@ export async function getWeatherAlerts(
   lat: number,
   lon: number
 ) {
-  const response = await fetch(
+  const response = await fetchWithTimeout(
     `https://api.weather.gov/alerts/active?point=${lat},${lon}`,
     {
       next: { revalidate: 120 },
@@ -21,3 +21,4 @@ export async function getWeatherAlerts(
 
   return data.features;
 }
+import { fetchWithTimeout } from "@/services/kiosk/fetchWithTimeout";

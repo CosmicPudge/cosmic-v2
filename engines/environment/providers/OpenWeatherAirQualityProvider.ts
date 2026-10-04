@@ -6,7 +6,7 @@ export async function getOpenWeatherAirQuality(
 ) {
   const url = new URL("https://api.openweathermap.org/data/2.5/air_pollution");
   url.search = new URLSearchParams({ lat: String(lat), lon: String(lon), appid: API_KEY }).toString();
-  const response = await fetch(url, { redirect: "error", next: { revalidate: 300 } });
+  const response = await fetchWithTimeout(url, { redirect: "error", next: { revalidate: 300 } });
 
   if (!response.ok) {
     throw new Error("Failed to fetch air quality.");
@@ -30,3 +30,4 @@ export async function getOpenWeatherAirQuality(
     co: air.components.co,
   };
 }
+import { fetchWithTimeout } from "@/services/kiosk/fetchWithTimeout";

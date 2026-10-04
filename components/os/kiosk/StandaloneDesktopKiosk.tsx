@@ -22,6 +22,7 @@ export default function StandaloneDesktopKiosk() {
     let stopped = false;
     let retryTimer: number | undefined;
     let retryDelay = 5_000;
+    let attemptInFlight = false;
     const scheduleRetry = () => {
       if (stopped || retryTimer !== undefined) return;
       log("retry scheduled=true");
@@ -29,7 +30,8 @@ export default function StandaloneDesktopKiosk() {
       retryDelay = Math.min(60_000, retryDelay * 2);
     };
     const attempt = async () => {
-      if (stopped) return;
+      if (stopped || attemptInFlight) return;
+      attemptInFlight = true;
       log("helper-status attempted");
       try {
         const helper = await fetch("http://127.0.0.1:8765/v1/browser-handoff", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ bootId }), credentials: "omit", cache: "no-store" });
@@ -43,15 +45,22 @@ export default function StandaloneDesktopKiosk() {
         const session = await fetch(`/api/account/session?cosmic-kiosk=1&cosmic-boot=${encodeURIComponent(bootId)}`, { credentials: "include", cache: "no-store" });
         const sessionBody = await session.json().catch(() => null) as { authenticated?: boolean; sessionType?: string } | null;
         log(`sessionEstablished=${session.ok && sessionBody?.authenticated === true && sessionBody.sessionType === "device"}`);
-        if (session.ok && sessionBody?.authenticated === true && sessionBody.sessionType === "device") retryDelay = 5_000;
+        if (session.ok && sessionBody?.authenticated === true && sessionBody.sessionType === "device") {
+          retryDelay = 5_000;
+          window.dispatchEvent(new CustomEvent("cosmic:kiosk-session-renewed"));
+        }
         else scheduleRetry();
       } catch {
         log("helper-status failed category=unreachable");
         scheduleRetry();
+      } finally {
+        attemptInFlight = false;
       }
     };
+    const requestRenewal = () => { void attempt(); };
+    window.addEventListener("cosmic:kiosk-auth-needed", requestRenewal);
     void attempt();
-    return () => { stopped = true; if (retryTimer !== undefined) window.clearTimeout(retryTimer); };
+    return () => { stopped = true; if (retryTimer !== undefined) window.clearTimeout(retryTimer); window.removeEventListener("cosmic:kiosk-auth-needed", requestRenewal); };
   }, []);
   return (
     <div className="fixed inset-0 z-[100] h-[100dvh] w-[100dvw] overflow-hidden bg-[#02040e] text-white" data-desktop-kiosk>

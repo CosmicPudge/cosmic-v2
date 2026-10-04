@@ -1,4 +1,5 @@
 import type { CurrentWeather } from "../models/types";
+import { fetchWithTimeout } from "@/services/kiosk/fetchWithTimeout";
 
 const API_KEY = process.env.OPENWEATHER_API_KEY;
 type ForecastItem = { main: { temp_max: number; temp_min: number }; rain?: { [key: string]: number }; snow?: { [key: string]: number } };
@@ -19,7 +20,7 @@ export async function getOpenWeather(
   currentUrl.search = new URLSearchParams({ lat: String(lat), lon: String(lon), appid: API_KEY ?? "", units: "imperial" }).toString();
   // Current conditions are intentionally fresher than the forecast. The
   // forecast request below remains on the slower five-minute cache window.
-  const currentResponse = await fetch(currentUrl, { redirect: "error", next: { revalidate: 45 } });
+  const currentResponse = await fetchWithTimeout(currentUrl, { redirect: "error", next: { revalidate: 45 } });
 
   if (!currentResponse.ok) {
     throw new Error("Failed to fetch current weather.");
@@ -30,15 +31,16 @@ export async function getOpenWeather(
   // Forecast
   const forecastUrl = new URL("https://api.openweathermap.org/data/2.5/forecast");
   forecastUrl.search = new URLSearchParams({ lat: String(lat), lon: String(lon), appid: API_KEY ?? "", units: "imperial" }).toString();
-  const forecastResponse = await fetch(forecastUrl, { redirect: "error", next: { revalidate: 300 } });
-
-  if (!forecastResponse.ok) {
-    throw new Error("Failed to fetch forecast.");
+  let today: ForecastItem[] = [];
+  try {
+    const forecastResponse = await fetchWithTimeout(forecastUrl, { redirect: "error", next: { revalidate: 300 } });
+    if (forecastResponse.ok) {
+      const forecast = await forecastResponse.json() as { list?: ForecastItem[] };
+      today = Array.isArray(forecast.list) ? forecast.list.slice(0, 8) : [];
+    }
+  } catch {
+    // Current conditions remain usable when the slower forecast request fails.
   }
-
-  const forecast = await forecastResponse.json() as { list: ForecastItem[] };
-
-  const today = forecast.list.slice(0, 8);
 
   const precipitation24h = today.reduce(
     (total: number, item: ForecastItem) => {
@@ -51,21 +53,8 @@ export async function getOpenWeather(
     0
   );
 
-  const high = Math.round(
-    Math.max(
-      ...today.map(
-      (item: ForecastItem) => item.main.temp_max
-      )
-    )
-  );
-
-  const low = Math.round(
-    Math.min(
-      ...today.map(
-        (item: ForecastItem) => item.main.temp_min
-      )
-    )
-  );
+  const high = today.length ? Math.round(Math.max(...today.map((item: ForecastItem) => item.main.temp_max))) : Math.round(current.main.temp);
+  const low = today.length ? Math.round(Math.min(...today.map((item: ForecastItem) => item.main.temp_min))) : Math.round(current.main.temp);
 
   const sunrise = current.sys.sunrise;
   const sunset = current.sys.sunset;

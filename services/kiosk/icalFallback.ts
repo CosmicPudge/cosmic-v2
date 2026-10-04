@@ -5,6 +5,7 @@ import type { CalendarEvent } from "@/core/contracts";
 import { buildDashboard } from "@/components/school/data/engine/engine";
 import { parseCanvasCalendarWithDiagnostics } from "@/components/school/data/parser";
 import type { SchoolDashboardData } from "@/components/school/data/types";
+import { fetchWithTimeout } from "@/services/kiosk/fetchWithTimeout";
 
 export type KioskIcalFeedCategory = "connected" | "provider-error" | "parse-error";
 
@@ -73,7 +74,7 @@ export function parseKioskCalendarIcal(ics: string, calendarName: string, window
 }
 
 async function fetchText(url: string, fetchImpl: typeof fetch) {
-  const response = await fetchImpl(url, { cache: "no-store", headers: { Accept: "text/calendar" } });
+  const response = await fetchWithTimeout(url, { cache: "no-store", headers: { Accept: "text/calendar" } }, undefined, fetchImpl);
   if (!response.ok) throw new Error("Kiosk iCal feed unavailable.");
   return response.text();
 }

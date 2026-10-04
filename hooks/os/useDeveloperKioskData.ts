@@ -35,6 +35,18 @@ function normalizeKioskData(value: DeveloperKioskData): DeveloperKioskData {
   };
 }
 
+function mergeKioskData(previous: DeveloperKioskData | null, next: Partial<DeveloperKioskData>): DeveloperKioskData {
+  if (!previous) return next as DeveloperKioskData;
+  return {
+    ...previous,
+    ...next,
+    weather: next.weather ?? previous.weather,
+    calendar: next.calendar ? { ...previous.calendar, ...next.calendar } : previous.calendar,
+    school: next.school ? { ...previous.school, ...next.school } : previous.school,
+    refreshDiagnostics: next.refreshDiagnostics ? { ...previous.refreshDiagnostics, ...next.refreshDiagnostics } : previous.refreshDiagnostics,
+  };
+}
+
 let cached: DeveloperKioskData | null = null;
 let request: Promise<DeveloperKioskData> | null = null;
 let requestToken = 0;
@@ -58,10 +70,19 @@ export function useDeveloperKioskData() {
         const location = readKioskDeviceLocation();
         const locationAge = location?.resolvedAt ? Date.now() - Date.parse(location.resolvedAt) : Number.POSITIVE_INFINITY;
         const locationSource = location && locationAge >= 0 && locationAge <= 15 * 60_000 ? "current" : "last-known";
-        const locationQuery = location ? `?kioskLat=${encodeURIComponent(String(location.latitude))}&kioskLon=${encodeURIComponent(String(location.longitude))}&kioskLocationAt=${encodeURIComponent(location.resolvedAt ?? "")}&kioskLocationSource=${locationSource}` : "";
-        request ??= fetch(kioskApiUrl(`/api/kiosk/data${locationQuery}`), { cache: "no-store", credentials: "include" }).then(async (response) => {
-          if (!response.ok) throw new Error("Developer kiosk data is unavailable.");
-          return normalizeKioskData(await response.json() as DeveloperKioskData);
+        const params = new URLSearchParams({ "cosmic-kiosk": "1", "cosmic-boot": new URLSearchParams(window.location.search).get("cosmic-boot") ?? "" });
+        if (location) {
+          params.set("kioskLat", String(location.latitude));
+          params.set("kioskLon", String(location.longitude));
+          params.set("kioskLocationAt", location.resolvedAt ?? "");
+          params.set("kioskLocationSource", locationSource);
+        }
+        request ??= fetch(kioskApiUrl(`/api/kiosk/data?${params.toString()}`), { cache: "no-store", credentials: "include" }).then(async (response) => {
+          if (!response.ok) {
+            if (response.status === 401 || response.status === 403) window.dispatchEvent(new CustomEvent("cosmic:kiosk-auth-needed"));
+            throw new Error(response.status === 401 || response.status === 403 ? "Kiosk session renewal is required." : "Developer kiosk data is unavailable.");
+          }
+          return normalizeKioskData(mergeKioskData(prior, await response.json() as Partial<DeveloperKioskData>));
         }).then((value) => { cached = value; return value; }).finally(() => { request = null; });
         const value = await request;
         const displayValue: DeveloperKioskData = {
@@ -93,7 +114,13 @@ export function useDeveloperKioskData() {
     window.addEventListener("cosmic:school-completion-changed", completionChanged);
     window.addEventListener("cosmic:kiosk-location-changed", locationChanged);
     window.addEventListener("cosmic:kiosk-location-moved", locationChanged);
-    return () => { active = false; window.clearInterval(timer); window.removeEventListener("cosmic:school-completion-changed", completionChanged); window.removeEventListener("cosmic:kiosk-location-changed", locationChanged); window.removeEventListener("cosmic:kiosk-location-moved", locationChanged); };
+    const sessionRenewed = () => { void load(); };
+    window.addEventListener("cosmic:kiosk-session-renewed", sessionRenewed);
+    const retryWhenOnline = () => { void load(); };
+    const retryWhenVisible = () => { if (document.visibilityState === "visible") void load(); };
+    window.addEventListener("online", retryWhenOnline);
+    document.addEventListener("visibilitychange", retryWhenVisible);
+    return () => { active = false; window.clearInterval(timer); window.removeEventListener("cosmic:school-completion-changed", completionChanged); window.removeEventListener("cosmic:kiosk-location-changed", locationChanged); window.removeEventListener("cosmic:kiosk-location-moved", locationChanged); window.removeEventListener("cosmic:kiosk-session-renewed", sessionRenewed); window.removeEventListener("online", retryWhenOnline); document.removeEventListener("visibilitychange", retryWhenVisible); };
   }, [enabled, recordAttempt, recordFailure, recordSuccess]);
   return { data, loading, error };
 }
