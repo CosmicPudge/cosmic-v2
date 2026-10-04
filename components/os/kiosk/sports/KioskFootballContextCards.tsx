@@ -1,58 +1,52 @@
 "use client";
 
-import { Fragment, useEffect, useMemo, useState } from "react";
-import type { ReactNode } from "react";
-import type { FootballDriveSummary, FootballGameStats, FootballPlayerLeader } from "@/core/contracts/sports/Football";
-import { footballStatRows } from "@/services/sports/football/stats";
-import { footballContextPriority, type FootballContextMode } from "./contextPriority";
+import { Fragment, type ReactNode } from "react";
+import type { FootballDriveSummary, FootballGameStats, FootballPlay, FootballSituation } from "@/core/contracts/sports/Football";
 
 type Team = { name: string; abbreviation: string; score?: number };
-type Card = { id: string; label: string; content: ReactNode };
 
-export default function KioskFootballContextCards({ stats, currentDrive, away, home, lifecycleState, attention, redZone }: { stats?: FootballGameStats; currentDrive?: FootballDriveSummary; away: Team; home: Team; lifecycleState: string; attention: string; redZone?: boolean }) {
-  const mode = contextMode({ lifecycleState, attention, redZone });
-  const cards = useMemo(() => buildCards({ stats, currentDrive, away, home, mode }), [away, currentDrive, home, mode, stats]);
-  const [index, setIndex] = useState(0);
-  useEffect(() => {
-    if (cards.length <= 1 || attention !== "normal") return;
-    const timer = window.setInterval(() => setIndex((value) => (value + 1) % cards.length), 10_000);
-    return () => window.clearInterval(timer);
-  }, [attention, cards.length]);
-  const card = cards[index % Math.max(cards.length, 1)] ?? cards[0];
-  if (!card) return <InfoPanel label="GAME CONTEXT" value="Detailed context is not available yet." />;
-  return <div className="kiosk-football-context-card min-w-0 rounded-2xl border border-white/15 bg-black/25 px-4 py-3" aria-live="polite"><div className="flex items-center justify-between gap-3"><p className="kiosk-football-card-label text-[clamp(.65rem,1vw,.8rem)] font-black uppercase tracking-[.18em] text-white/80">{card.label}</p>{cards.length > 1 ? <p className="text-[.6rem] font-semibold uppercase tracking-[.14em] text-white/45">{index + 1} / {cards.length}</p> : null}</div><div className="mt-2 min-h-[3.2rem]">{card.content}</div></div>;
+export default function KioskFootballContextCards({ stats, currentDrive, latestPlay, penaltyText, situation, away, home }: {
+  stats?: FootballGameStats;
+  currentDrive?: FootballDriveSummary;
+  latestPlay?: FootballPlay;
+  penaltyText?: string;
+  situation?: FootballSituation;
+  away: Team;
+  home: Team;
+}) {
+  return <div className="kiosk-football-context-grid grid min-h-0 gap-3 lg:grid-cols-[1fr_1.35fr_1fr]">
+    <ScoringCard stats={stats} away={away} home={home} currentPeriodValue={situation?.quarter} />
+    <LastPlayCard play={latestPlay} penaltyText={penaltyText} drive={currentDrive} />
+    <GameContextCard situation={situation} drive={currentDrive} />
+  </div>;
 }
 
-function buildCards({ stats, currentDrive, away, home, mode }: { stats?: FootballGameStats; currentDrive?: FootballDriveSummary; away: Team; home: Team; mode: FootballContextMode }): Card[] {
-  const cards: Card[] = [];
-  const drive = currentDrive ?? stats?.recentDrives?.[0];
-  if (drive && (drive.plays !== undefined || drive.yards !== undefined || drive.elapsedTime || drive.result)) cards.push({ id: "drive", label: "CURRENT DRIVE", content: <p className="text-sm font-semibold text-white">{[drive.plays !== undefined ? `${drive.plays} plays` : undefined, drive.yards !== undefined ? `${drive.yards} yards` : undefined, drive.elapsedTime, drive.result].filter(Boolean).join(" · ")}</p> });
-  const rows = footballStatRows(stats?.teamStats);
-  if (rows.length) cards.push({ id: "team-stats", label: "TEAM STATS", content: <TeamStats rows={rows} teams={[away, home]} /> });
-  const leaders = stats?.playerLeaders ?? [];
-  if (leaders.length) cards.push({ id: "leaders", label: "PLAYER LEADERS", content: <Leaders leaders={leaders} /> });
-  const drives = (stats?.recentDrives ?? []).slice(0, 4).filter((item) => item !== drive);
-  if (drives.length) cards.push({ id: "recent-drives", label: "RECENT DRIVES", content: <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm font-semibold text-white">{drives.map((item, index) => <div key={item.id ?? `${item.teamAbbreviation}-${index}`} className="flex justify-between gap-2"><span className="text-white/65">{item.teamAbbreviation ?? "TEAM"}</span><span className="truncate">{shortDriveResult(item.result ?? item.description)}</span></div>)}</div> });
-  const scoring = stats?.scoringPlays?.slice(-4).reverse() ?? [];
-  if (scoring.length) cards.push({ id: "scoring", label: "SCORING SUMMARY", content: <div className="space-y-1 text-sm text-white">{scoring.map((play, index) => <p key={play.id ?? `${play.period}-${index}`}><span className="mr-2 font-bold text-amber-100">{play.period !== undefined ? `${play.period}Q` : "—"}</span>{play.teamAbbreviation ? `${play.teamAbbreviation} — ` : ""}{play.description}</p>)}</div> });
-  if (stats?.scoringByPeriod?.length) {
-    const periods = stats.scoringByPeriod.slice(0, 8);
-    cards.push({ id: "linescore", label: "SCORING BY QUARTER", content: <div className="overflow-x-auto"><div className="grid min-w-[22rem] gap-1 text-center text-xs font-semibold text-white" style={{ gridTemplateColumns: `minmax(3.5rem,1fr) repeat(${periods.length}, minmax(1.5rem,1fr)) minmax(1.8rem,1fr)` }}><span className="text-left text-white/55">TEAM</span>{periods.map((period) => <span key={period.period}>{period.label ?? `Q${period.period}`}</span>)}<span>T</span>{[[away, "away"], [home, "home"]].map(([team, side]) => <Fragment key={side as string}><span className="truncate text-left text-white/75">{(team as Team).abbreviation}</span>{periods.map((period) => <span key={`${side}-${period.period}`}>{period[side as "away" | "home"] ?? "—"}</span>)}<span>{(team as Team).score ?? "—"}</span></Fragment>)}</div></div> });
-  }
-  const order = new Map<string, number>(footballContextPriority(mode).map((id, index) => [id, index]));
-  cards.sort((left, right) => (order.get(left.id) ?? 99) - (order.get(right.id) ?? 99));
-  return cards;
+function Panel({ label, children }: { label: string; children: ReactNode }) {
+  return <section className="kiosk-football-context-card min-w-0 rounded-2xl border border-white/15 bg-black/25 px-4 py-3"><p className="kiosk-football-card-label text-[clamp(.65rem,1vw,.8rem)] font-black uppercase tracking-[.18em] text-amber-300">{label}</p><div className="mt-2 min-h-[4.5rem]">{children}</div></section>;
 }
 
-function contextMode({ lifecycleState, attention, redZone }: { lifecycleState: string; attention: string; redZone?: boolean }): FootballContextMode {
-  if (attention === "challenge" || attention === "official-review") return "review";
-  if (attention === "flag") return "flag";
-  if (lifecycleState === "halftime") return "halftime";
-  if (lifecycleState === "final" || lifecycleState === "postgame") return "final";
-  return redZone ? "red-zone" : "normal";
+function ScoringCard({ stats, away, home, currentPeriodValue }: { stats?: FootballGameStats; away: Team; home: Team; currentPeriodValue?: number }) {
+  const periods = stats?.scoringByPeriod?.slice(0, 8) ?? [];
+  if (!periods.length) return <Panel label="SCORING BY QUARTER"><p className="text-sm text-white/55">Scoring summary is not available yet.</p></Panel>;
+  return <Panel label="SCORING BY QUARTER"><div className="overflow-x-auto"><div className="grid min-w-[20rem] gap-y-2 text-center text-xs font-semibold text-white" style={{ gridTemplateColumns: `minmax(3rem,1fr) repeat(${periods.length}, minmax(1.45rem,1fr)) minmax(2rem,1fr)` }}><span className="text-left text-white/55">TEAM</span>{periods.map((period) => <span key={period.period} className={period.period === currentPeriod(periods, currentPeriodValue) ? "rounded bg-white/10" : ""}>{period.label ?? `Q${period.period}`}</span>)}<span>TOTAL</span><TeamLine team={away} side="away" periods={periods} /><TeamLine team={home} side="home" periods={periods} /></div></div></Panel>;
 }
 
-function TeamStats({ rows, teams }: { rows: ReturnType<typeof footballStatRows>; teams: Team[] }) { return <div className="grid grid-cols-[1fr_repeat(2,minmax(3rem,1fr))] gap-x-3 gap-y-1 text-xs font-semibold text-white"><span className="text-white/50">STAT</span>{teams.map((team) => <span key={team.abbreviation} className="text-center text-white/75">{team.abbreviation}</span>)}{rows.slice(0, 6).map((row) => <Fragment key={row.label}><span className="text-white/65">{row.label}</span>{row.values.slice(0, 2).map((value, index) => <span key={`${row.label}-${index}`} className="text-center">{value ?? "—"}</span>)}</Fragment>)}</div>; }
-function Leaders({ leaders }: { leaders: FootballPlayerLeader[] }) { return <div className="grid grid-cols-3 gap-3 text-xs text-white">{leaders.slice(0, 3).map((leader) => <div key={`${leader.category}-${leader.playerId ?? leader.name}`} className="min-w-0"><p className="text-[.6rem] font-black uppercase tracking-[.14em] text-amber-100/80">{leader.category}</p><p className="truncate font-bold">{leader.name}</p><p className="truncate text-white/70">{leader.statLine}</p></div>)}</div>; }
-function shortDriveResult(value?: string) { if (!value) return "—"; const lower = value.toLowerCase(); if (lower.includes("touchdown") || lower === "td") return "TD"; if (lower.includes("field goal")) return lower.includes("miss") ? "MISSED FG" : "FG"; if (lower.includes("intercept")) return "INT"; if (lower.includes("fumble")) return "FUMBLE"; if (lower.includes("punt")) return "PUNT"; if (lower.includes("downs")) return "DOWNS"; if (lower.includes("half")) return "END HALF"; return value; }
-function InfoPanel({ label, value }: { label: string; value: string }) { return <div className="rounded-2xl border border-white/15 bg-black/25 px-4 py-3"><p className="text-[clamp(.65rem,1vw,.8rem)] font-black uppercase tracking-[.18em] text-white/80">{label}</p><p className="mt-2 text-sm text-white/70">{value}</p></div>; }
+function TeamLine({ team, side, periods }: { team: Team; side: "away" | "home"; periods: NonNullable<FootballGameStats["scoringByPeriod"]> }) { return <><span className="flex items-center gap-2 truncate text-left text-white/85"><span className="kiosk-football-linescore-mark" aria-hidden="true">{team.abbreviation.slice(0, 1)}</span>{team.abbreviation}</span>{periods.map((period) => <span key={`${side}-${period.period}`}>{period[side] ?? "—"}</span>)}<span className="font-black">{team.score ?? "—"}</span></>; }
+
+function currentPeriod(periods: NonNullable<FootballGameStats["scoringByPeriod"]>, current?: number) { return current ?? periods.at(-1)?.period; }
+
+function LastPlayCard({ play, penaltyText, drive }: { play?: FootballPlay; penaltyText?: string; drive?: FootballDriveSummary }) {
+  if (!play && !drive) return <Panel label="LAST PLAY"><p className="text-sm text-white/55">Live play-by-play is not available yet.</p></Panel>;
+  const age = play?.wallclock ? relativeAge(play.wallclock) : undefined;
+  return <Panel label="LAST PLAY"><div className="flex h-full flex-col justify-between gap-2"><div><div className="flex items-start justify-between gap-3"><p className="line-clamp-2 text-sm font-semibold leading-snug text-white">{play?.shortDescription ?? play?.description ?? "Drive in progress"}</p>{age ? <span className="shrink-0 text-[.65rem] font-bold uppercase tracking-[.08em] text-sky-200/70">{age}</span> : null}</div>{penaltyText ? <p className="mt-1 line-clamp-2 text-sm font-bold text-amber-300">Penalty: {penaltyText}</p> : null}</div>{drive ? <p className="border-t border-white/15 pt-2 text-xs font-semibold text-white/65">Drive: {[drive.plays !== undefined ? `${drive.plays} plays` : undefined, drive.yards !== undefined ? `${drive.yards} yards` : undefined, drive.elapsedTime, drive.result].filter(Boolean).join(" · ") || "Updating"}</p> : null}</div></Panel>;
+}
+
+function GameContextCard({ situation, drive }: { situation?: FootballSituation; drive?: FootballDriveSummary }) {
+  const ball = situation?.fieldPosition?.display ?? situation?.possessionText;
+  const possession = situation?.possessionTeamAbbreviation ?? situation?.possessionText?.split(/\s+/)[0];
+  return <Panel label="GAME CONTEXT"><div className="grid grid-cols-[minmax(5.5rem,1fr)_minmax(0,1.2fr)] gap-x-3 gap-y-1 text-sm"><ContextRow label="POSSESSION" value={possession} /><ContextRow label="BALL ON" value={ball} /><ContextRow label="DRIVE" value={drive ? [drive.plays !== undefined ? `${drive.plays} plays` : undefined, drive.yards !== undefined ? `${drive.yards} yards` : undefined].filter(Boolean).join(", ") : undefined} /><ContextRow label="TIME OF POSSESSION" value={drive?.elapsedTime} /><ContextRow label="RED ZONE" value={situation?.redZone === undefined ? undefined : situation.redZone ? "Yes" : "No"} /></div></Panel>;
+}
+
+function ContextRow({ label, value }: { label: string; value?: string }) { return <Fragment><span className="text-[.65rem] font-bold uppercase tracking-[.08em] text-white/55">{label}</span><span className="truncate font-semibold text-white">{value ?? "—"}</span></Fragment>; }
+
+function relativeAge(value: string) { const timestamp = Date.parse(value); if (!Number.isFinite(timestamp)) return undefined; const seconds = Math.max(0, Math.round((Date.now() - timestamp) / 1000)); if (seconds < 60) return `${seconds}s ago`; return `${Math.floor(seconds / 60)}m ago`; }

@@ -1,5 +1,5 @@
 import type { SportsEvent } from "@/core/contracts/Sports";
-import type { FootballDriveSummary, FootballLiveData, FootballPlay, FootballSituation } from "@/core/contracts/sports/Football";
+import type { FootballDriveSummary, FootballLiveData, FootballPenaltyState, FootballPlay, FootballSituation } from "@/core/contracts/sports/Football";
 import type { CollegeFootballLiveData } from "@/services/sports/providers/college-football-detail";
 import { resolveSportsTeamIdentity } from "@/services/sports/identity";
 import { footballCountdownLabel, resolveFootballLifecycle, type FootballLifecycleState } from "@/services/sports/football/lifecycle";
@@ -12,7 +12,7 @@ export interface KioskFootballPresentation {
   sportLabel: "NFL" | "CFB"; statusLabel: string; quarterLabel?: string; clock?: string;
   away: { name: string; abbreviation: string; score?: number; record?: string; timeouts?: number; possession: boolean; color?: string };
   home: { name: string; abbreviation: string; score?: number; record?: string; timeouts?: number; possession: boolean; color?: string };
-  rankings: string[]; situation?: FootballSituation; latestPlay?: FootballPlay; driveLabel?: string; venue?: string; penaltyText?: string; reviewText?: string;
+  rankings: string[]; situation?: FootballSituation; latestPlay?: FootballPlay; driveLabel?: string; venue?: string; penalty?: FootballPenaltyState; penaltyText?: string; reviewText?: string;
   penaltyIdentity?: string;
   attention: "normal" | "flag" | "challenge" | "official-review";
   attentionLabel?: string;
@@ -48,7 +48,7 @@ export function createFootballPresentation(event: SportsEvent, live?: FootballLi
   const broadcast = liveBroadcast ?? event.broadcast;
   const stats = live && "stats" in live && live.stats ? live.stats : footballGameStats(live);
   const penaltyIdentity = penalty ? footballPlayIdentity(latestPlay?.penalty ? latestPlay : undefined, penalty) : undefined;
-  return { sportLabel: event.sport === "college-football" ? "CFB" : "NFL", statusLabel, ...(lifecycleState === "pregame" ? { countdownLabel: footballCountdownLabel(event) } : {}), lifecycleState, ...(period !== undefined ? { quarterLabel: `Q${period}` } : {}), ...(clock && lifecycleState !== "halftime" && lifecycleState !== "pregame" ? { clock } : {}), away, home, rankings, situation, latestPlay, ...(currentDrive ? { currentDrive } : {}), ...(currentDrive?.description || currentDrive?.result ? { driveLabel: currentDrive.description ?? currentDrive.result } : {}), ...(event.venue ? { venue: event.venue } : {}), ...(broadcast ? { broadcast } : {}), ...(stats ? { stats } : {}), ...(penaltyText ? { penaltyText } : {}), ...(penaltyIdentity ? { penaltyIdentity } : {}), ...(review ? { reviewText: review.text } : {}), attention, ...(attentionLabel ? { attentionLabel } : {}), ...(review?.teamName ? { attentionTeam: review.teamName } : {}), ...(review?.outcome ? { reviewOutcome: review.outcome } : {}) };
+  return { sportLabel: event.sport === "college-football" ? "CFB" : "NFL", statusLabel, ...(lifecycleState === "pregame" ? { countdownLabel: footballCountdownLabel(event) } : {}), lifecycleState, ...(period !== undefined ? { quarterLabel: `Q${period}` } : {}), ...(clock && lifecycleState !== "halftime" && lifecycleState !== "pregame" ? { clock } : {}), away, home, rankings, situation, latestPlay, ...(currentDrive ? { currentDrive } : {}), ...(currentDrive?.description || currentDrive?.result ? { driveLabel: currentDrive.description ?? currentDrive.result } : {}), ...(event.venue ? { venue: event.venue } : {}), ...(broadcast ? { broadcast } : {}), ...(stats ? { stats } : {}), ...(penalty ? { penalty } : {}), ...(penaltyText ? { penaltyText } : {}), ...(penaltyIdentity ? { penaltyIdentity } : {}), ...(review ? { reviewText: review.text } : {}), attention, ...(attentionLabel ? { attentionLabel } : {}), ...(review?.teamName ? { attentionTeam: review.teamName } : {}), ...(review?.outcome ? { reviewOutcome: review.outcome } : {}) };
 }
 
 function normalizeStatus(value?: string) {
