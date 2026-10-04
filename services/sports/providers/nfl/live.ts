@@ -259,6 +259,16 @@ export async function getNFLLiveData(
             ): value is string =>
                 Boolean(value),
         );
+    const latestPenalty = plays?.latestPlay?.penalty ? {
+        text: plays.latestPlay.description,
+        teamId: plays.latestPlay.teamId,
+        ...(plays.latestPlay.penaltyYards !== undefined ? { yards: plays.latestPlay.penaltyYards } : {}),
+        ...(plays.latestPlay.playerName ? { player: plays.latestPlay.playerName } : {}),
+        ...(plays.latestPlay.penaltyAccepted ? { accepted: true } : {}),
+        ...(plays.latestPlay.penaltyDeclined ? { declined: true } : {}),
+        ...(plays.latestPlay.penaltyOffsetting ? { offsetting: true } : {}),
+        active: true,
+    } : undefined;
 
     return {
         eventId:
@@ -413,7 +423,29 @@ export async function getNFLLiveData(
          * We'll add ESPN probability data as its own
          * provider once the base NFL pipeline is verified.
          */
-        winProbability:
+    winProbability:
             undefined,
+        ...(latestPenalty ? { penalty: latestPenalty } : {}),
+        providerGameId: String(eventId),
+        statusText: summary.game?.statusDetail ?? summary.game?.status,
+        state: footballState(summary.game?.statusDetail ?? summary.game?.status),
+        quarterLabel: situation.quarter !== undefined ? `Q${situation.quarter}` : undefined,
+        staleAfter: new Date(Date.now() + (situation.quarter ? 12_000 : 30_000)).toISOString(),
+        sourceAvailability: {
+            score: true, period: situation.quarter !== undefined, clock: Boolean(situation.clock), possession: Boolean(situation.possessionTeamId), downDistance: Boolean(situation.downDistanceText), ballPosition: Boolean(situation.fieldPosition?.display), lastPlay: Boolean(plays?.latestPlay), drive: Boolean(drives?.currentDrive), timeouts: homeTimeouts !== undefined || awayTimeouts !== undefined, records: Boolean(home.record || away.record), scoringPlays: Boolean(summary.scoringPlays?.length), redZone: situation.redZone !== undefined,
+        },
     };
+}
+
+function footballState(status?: string): "scheduled" | "live" | "halftime" | "end-period" | "overtime" | "final" | "delayed" | "suspended" | undefined {
+    if (!status) return undefined;
+    const value = status.toLowerCase();
+    if (value.includes("halftime")) return "halftime";
+    if (value.includes("overtime")) return "overtime";
+    if (value.includes("final")) return "final";
+    if (value.includes("delay")) return "delayed";
+    if (value.includes("suspend")) return "suspended";
+    if (value.includes("end of") || value.includes("end period")) return "end-period";
+    if (value.includes("scheduled") || value.includes("pre")) return "scheduled";
+    return "live";
 }

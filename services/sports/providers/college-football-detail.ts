@@ -1,9 +1,16 @@
 import { isRecord, number, records, string } from "./types";
 import type { FootballDriveSummary, FootballPlay, FootballScoringPlay, FootballSituation, FootballPenaltyState, FootballReviewState } from "@/core/contracts/sports/Football";
+import type { SportsDataSource } from "@/core/contracts/sports/Core";
 import { parseFootballFieldPosition } from "@/services/sports/football/field";
 import { espnFootballSummaryUrl } from "./espnFootball/endpoints";
 
 export interface CollegeFootballLiveData {
+  eventId?: string;
+  providerGameId?: string;
+  sport?: "college-football";
+  generatedAt?: string;
+  stale?: boolean;
+  sources?: SportsDataSource[];
   status?: string;
   period?: number;
   clock?: string;
@@ -21,6 +28,9 @@ export interface CollegeFootballLiveData {
   drives?: FootballDriveSummary[];
   penalty?: FootballPenaltyState;
   review?: FootballReviewState;
+  providerUpdatedAt?: string;
+  staleAfter?: string;
+  sourceAvailability?: Record<string, boolean>;
 }
 
 function team(value: unknown) {
@@ -100,7 +110,7 @@ export function normalizeCollegeFootballSummary(payload: unknown): CollegeFootba
   const normalizedPlays = rawPlays.flatMap((play, index) => normalizeCollegePlay(play, index) ? [normalizeCollegePlay(play, index) as FootballPlay] : []);
   const plays = normalizedPlays.map((play) => play.description);
   const scoringPlays = normalizedPlays.filter((play) => play.scoringPlay).map((play) => play.description);
-  const scoringPlayDetails = normalizedPlays.filter((play) => play.scoringPlay).map((play): FootballScoringPlay => ({ id: play.id, period: play.period, clock: play.clock, teamId: play.teamId, description: play.description, type: play.type }));
+  const scoringPlayDetails = normalizedPlays.filter((play) => play.scoringPlay).map((play): FootballScoringPlay => ({ id: play.id, period: play.period, clock: play.clock, teamId: play.teamId, description: play.description, type: play.type, ...(play.touchdown ? { points: 6 } : {}) }));
   const normalizedSituation = normalizeFootballSituation(situation, homeTeam, awayTeam);
   const rawDrives = records(root.drives);
   const drives = rawDrives.flatMap((drive, index) => {
@@ -114,7 +124,8 @@ export function normalizeCollegeFootballSummary(payload: unknown): CollegeFootba
   const reviewRecord = isRecord(competition.review) ? competition.review : undefined;
   const reviewValue = string(reviewRecord?.text) ?? string(reviewRecord?.description) ?? (isRecord(competition.status) ? string(competition.status.detail) ?? string(competition.status.description) : undefined);
   const reviewTeam = isRecord(reviewRecord?.team) ? reviewRecord.team : undefined;
-  const review = reviewValue && /review|challenge/i.test(reviewValue) ? { text: reviewValue, active: !/final|complete|overturned|upheld|stands/i.test(reviewValue), kind: /official/i.test(reviewValue) ? "official-review" as const : "challenge" as const, ...(string(reviewTeam?.id) ? { teamId: string(reviewTeam?.id) } : {}), ...(string(reviewTeam?.displayName) || string(reviewTeam?.name) ? { teamName: string(reviewTeam?.displayName) ?? string(reviewTeam?.name) } : {}) } : undefined;
+  const reviewOutcome = string(reviewRecord?.outcome) ?? string(reviewRecord?.result);
+  const review = reviewValue && /review|challenge/i.test(reviewValue) ? { text: reviewValue, active: !/final|complete|overturned|upheld|stands/i.test(reviewValue), kind: /official/i.test(reviewValue) ? "official-review" as const : "challenge" as const, ...(reviewOutcome ? { outcome: reviewOutcome } : {}), ...(string(reviewTeam?.id) ? { teamId: string(reviewTeam?.id) } : {}), ...(string(reviewTeam?.displayName) || string(reviewTeam?.name) ? { teamName: string(reviewTeam?.displayName) ?? string(reviewTeam?.name) } : {}) } : undefined;
   return {
     status: string(status.detail) ?? string(status.description),
     period: number(situation.period) ?? number(status.period),
@@ -128,6 +139,13 @@ export function normalizeCollegeFootballSummary(payload: unknown): CollegeFootba
     ...(scoringPlayDetails.length ? { scoringPlayDetails } : {}),
     ...(drives.length ? { drives, currentDrive: drives[drives.length - 1] } : {}),
     ...(penalty ? { penalty } : {}), ...(review ? { review } : {}),
+    eventId: string(header.id) ?? undefined,
+    providerGameId: string(header.id) ?? undefined,
+    sport: "college-football",
+    generatedAt: new Date().toISOString(),
+    stale: false,
+    sources: [{ id: "espn-college-football-summary", sport: "college-football", name: "ESPN College Football Summary", official: false, status: "ok", capabilities: { schedule: false, liveScore: true, liveState: true, playByPlay: true, stats: true }, cacheSeconds: 5 }],
+    sourceAvailability: { score: true, period: Boolean(number(situation.period) ?? number(status.period)), clock: Boolean(string(situation.displayClock) ?? string(status.displayClock)), possession: Boolean(normalizedSituation?.possessionTeamId), downDistance: Boolean(normalizedSituation?.downDistanceText), ballPosition: Boolean(normalizedSituation?.fieldPosition?.display), lastPlay: Boolean(latestPlay), drive: Boolean(drives.length), rankings: rankings.length > 0, penalty: Boolean(penalty), review: Boolean(review) },
   };
 }
 

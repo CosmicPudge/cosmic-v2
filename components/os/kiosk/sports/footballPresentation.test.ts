@@ -34,3 +34,10 @@ test("attention state priority is review over flag and preserves possession colo
   });
   assert.equal(view.attention, "challenge"); assert.equal(view.attentionLabel, "COACH'S CHALLENGE"); assert.equal(view.attentionTeam, "Boise State"); assert.equal(view.home.possession, true); assert.equal(view.home.color, "#0f2439");
 });
+
+test("zero scores remain numeric and halftime is not rendered as a running clock", () => {
+  const view = createFootballPresentation(event("nfl"), {
+    sport: "nfl", statusText: "Halftime", state: "halftime", eventId: "x", generatedAt: new Date().toISOString(), stale: false, sources: [], period: 2, clock: "00:00", away: { team: { name: "Green Bay Packers", abbreviation: "GB" }, score: 0 }, home: { team: { name: "Tampa Bay Buccaneers", abbreviation: "TB" }, score: 14 }, situation: { quarter: 2, clock: "00:00" },
+  });
+  assert.equal(view.away.score, 0); assert.equal(view.home.score, 14); assert.equal(view.statusLabel, "HALFTIME"); assert.equal(view.clock, undefined);
+});

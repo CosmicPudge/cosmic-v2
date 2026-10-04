@@ -30,3 +30,13 @@ test("normalizes CFB quarter, clock, possession, and down-distance when supplied
   assert.equal(summary?.situation?.downDistanceText, "2nd & 7 at USU 35");
   assert.equal(summary?.situation?.fieldPosition?.display, "USU 35");
 });
+
+test("normalizes bounded CFB detail availability and penalty state", () => {
+  const summary = normalizeCollegeFootballSummary({
+    header: { id: "401860898", competitions: [{ status: { type: { detail: "2nd Quarter", period: 2, displayClock: "14:40" } }, situation: { period: 2, displayClock: "14:40", possession: "328", down: 2, distance: 7, downDistanceText: "2nd & 7 at USU 35", possessionText: "USU 35" }, competitors: [
+      { homeAway: "away", score: "0", team: { id: "68", displayName: "Boise State Broncos", abbreviation: "BSU" } },
+      { homeAway: "home", score: "14", team: { id: "328", displayName: "Utah State Aggies", abbreviation: "USU" } },
+    ] } ] }, plays: [{ id: "p1", text: "Holding, offense", penalty: true, penaltyYards: 10 }],
+  });
+  assert.equal(summary?.eventId, "401860898"); assert.equal(summary?.sport, "college-football"); assert.equal(summary?.home.score, 14); assert.equal(summary?.penalty?.yards, 10); assert.equal(summary?.sourceAvailability?.possession, true); assert.equal(summary?.sourceAvailability?.lastPlay, true);
+});

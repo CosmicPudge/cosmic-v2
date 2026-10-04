@@ -219,12 +219,21 @@ export interface FootballPlay {
 
   /** Penalty yards when the provider supplies them. */
   penaltyYards?: number;
+  penaltyAccepted?: boolean;
+  penaltyDeclined?: boolean;
+  penaltyOffsetting?: boolean;
+  playerName?: string;
 }
 
 export interface FootballPenaltyState {
   text: string;
   teamId?: string;
   yards?: number;
+  player?: string;
+  accepted?: boolean;
+  declined?: boolean;
+  offsetting?: boolean;
+  active?: boolean;
 }
 
 export interface FootballReviewState {
@@ -248,6 +257,8 @@ export interface FootballScoringPlay {
   teamAbbreviation?: string;
 
   description: string;
+
+  points?: number;
 
   scoreAfter?: {
     home?: number;
@@ -537,6 +548,8 @@ export interface FootballGameInfo {
 export interface FootballLiveData
   extends SportsLiveDataBase {
   sport: "nfl";
+  period?: number;
+  clock?: string;
 
   game?: FootballGameInfo;
 
@@ -587,6 +600,12 @@ export interface FootballLiveData
   penalty?: FootballPenaltyState;
   review?: FootballReviewState;
   providerUpdatedAt?: string;
+  providerGameId?: string;
+  statusText?: string;
+  state?: "scheduled" | "live" | "halftime" | "end-period" | "overtime" | "final" | "delayed" | "suspended";
+  quarterLabel?: string;
+  staleAfter?: string;
+  sourceAvailability?: Record<string, boolean>;
 }
 
 /** Shared kiosk-facing football detail contract for NFL and CFB rendering. */
@@ -606,4 +625,10 @@ export interface FootballLiveDetail {
   penalty?: FootballPenaltyState;
   review?: FootballReviewState;
   providerUpdatedAt?: string;
+  providerGameId?: string;
+  statusText?: string;
+  state?: "scheduled" | "live" | "halftime" | "end-period" | "overtime" | "final" | "delayed" | "suspended";
+  quarterLabel?: string;
+  staleAfter?: string;
+  sourceAvailability?: Record<string, boolean>;
 }

@@ -14,6 +14,7 @@ export const dynamic = "force-dynamic";
 
 const snapshotCache = new Map<string, { expiresAt: number; value: ReturnType<typeof getSportsSnapshot> }>();
 const detailCache = new Map<string, { expiresAt: number; value: Promise<unknown> }>();
+const lastGoodFootballDetail = new Map<string, { value: unknown; fetchedAt: string }>();
 
 function cachedSnapshot(key: string, preferences: Parameters<typeof getSportsSnapshot>[1]) {
   const cached = snapshotCache.get(key);
@@ -57,7 +58,14 @@ export async function GET(request: Request, { params }: { params: Promise<{ even
           : event.sport === "college-football" && (["pregame", "live", "delayed", "final"].includes(event.status) || footballStarting)
             ? getCollegeFootballLiveData(upstreamId(event.id))
           : Promise.resolve(null);
-    detail = requestDetail.catch(() => null);
+    detail = requestDetail.then((value) => {
+      if (value && (event.sport === "nfl" || event.sport === "college-football")) lastGoodFootballDetail.set(event.id, { value, fetchedAt: new Date().toISOString() });
+      return value;
+    }).catch(() => {
+      const previous = lastGoodFootballDetail.get(event.id);
+      if (!previous) return null;
+      return typeof previous.value === "object" && previous.value !== null ? { ...(previous.value as Record<string, unknown>), stale: true, detailUpdatedAt: previous.fetchedAt } : previous.value;
+    });
     detailCache.set(cacheKey, { value: detail, expiresAt: Date.now() + (event.status === "live" || event.status === "delayed" || footballStarting ? 1_500 : 15_000) });
   }
 
