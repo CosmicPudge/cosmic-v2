@@ -4,12 +4,14 @@ import { Fragment, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import type { FootballDriveSummary, FootballGameStats, FootballPlayerLeader } from "@/core/contracts/sports/Football";
 import { footballStatRows } from "@/services/sports/football/stats";
+import { footballContextPriority, type FootballContextMode } from "./contextPriority";
 
 type Team = { name: string; abbreviation: string; score: number };
 type Card = { id: string; label: string; content: ReactNode };
 
-export default function KioskFootballContextCards({ stats, currentDrive, away, home, lifecycleState, attention }: { stats?: FootballGameStats; currentDrive?: FootballDriveSummary; away: Team; home: Team; lifecycleState: string; attention: string }) {
-  const cards = useMemo(() => buildCards({ stats, currentDrive, away, home, lifecycleState }), [away, currentDrive, home, lifecycleState, stats]);
+export default function KioskFootballContextCards({ stats, currentDrive, away, home, lifecycleState, attention, redZone }: { stats?: FootballGameStats; currentDrive?: FootballDriveSummary; away: Team; home: Team; lifecycleState: string; attention: string; redZone?: boolean }) {
+  const mode = contextMode({ lifecycleState, attention, redZone });
+  const cards = useMemo(() => buildCards({ stats, currentDrive, away, home, mode }), [away, currentDrive, home, mode, stats]);
   const [index, setIndex] = useState(0);
   useEffect(() => {
     if (cards.length <= 1 || attention !== "normal") return;
@@ -21,7 +23,7 @@ export default function KioskFootballContextCards({ stats, currentDrive, away, h
   return <div className="kiosk-football-context-card min-w-0 rounded-2xl border border-white/15 bg-black/25 px-4 py-3" aria-live="polite"><div className="flex items-center justify-between gap-3"><p className="kiosk-football-card-label text-[clamp(.65rem,1vw,.8rem)] font-black uppercase tracking-[.18em] text-white/80">{card.label}</p>{cards.length > 1 ? <p className="text-[.6rem] font-semibold uppercase tracking-[.14em] text-white/45">{index + 1} / {cards.length}</p> : null}</div><div className="mt-2 min-h-[3.2rem]">{card.content}</div></div>;
 }
 
-function buildCards({ stats, currentDrive, away, home, lifecycleState }: { stats?: FootballGameStats; currentDrive?: FootballDriveSummary; away: Team; home: Team; lifecycleState: string }): Card[] {
+function buildCards({ stats, currentDrive, away, home, mode }: { stats?: FootballGameStats; currentDrive?: FootballDriveSummary; away: Team; home: Team; mode: FootballContextMode }): Card[] {
   const cards: Card[] = [];
   const drive = currentDrive ?? stats?.recentDrives?.[0];
   if (drive && (drive.plays !== undefined || drive.yards !== undefined || drive.elapsedTime || drive.result)) cards.push({ id: "drive", label: "CURRENT DRIVE", content: <p className="text-sm font-semibold text-white">{[drive.plays !== undefined ? `${drive.plays} plays` : undefined, drive.yards !== undefined ? `${drive.yards} yards` : undefined, drive.elapsedTime, drive.result].filter(Boolean).join(" · ")}</p> });
@@ -34,11 +36,17 @@ function buildCards({ stats, currentDrive, away, home, lifecycleState }: { stats
   const scoring = stats?.scoringPlays?.slice(-4).reverse() ?? [];
   if (scoring.length) cards.push({ id: "scoring", label: "SCORING SUMMARY", content: <div className="space-y-1 text-sm text-white">{scoring.map((play, index) => <p key={play.id ?? `${play.period}-${index}`}><span className="mr-2 font-bold text-amber-100">{play.period !== undefined ? `${play.period}Q` : "—"}</span>{play.teamAbbreviation ? `${play.teamAbbreviation} — ` : ""}{play.description}</p>)}</div> });
   if (stats?.scoringByPeriod?.length) cards.push({ id: "linescore", label: "SCORING BY QUARTER", content: <div className="grid grid-cols-[1fr_repeat(5,minmax(1.5rem,1fr))] gap-1 text-center text-xs font-semibold text-white"><span className="text-left text-white/55">TEAM</span>{stats.scoringByPeriod.slice(0, 5).map((period) => <span key={period.period}>{period.label ?? `Q${period.period}`}</span>)}<span>T</span>{[[away, "away"], [home, "home"]].map(([team, side]) => <Fragment key={side as string}><span className="truncate text-left text-white/75">{(team as Team).abbreviation}</span>{stats.scoringByPeriod!.slice(0, 5).map((period) => <span key={`${side}-${period.period}`}>{period[side as "away" | "home"] ?? "—"}</span>)}<span>{(team as Team).score}</span></Fragment>)}</div> });
-  if (lifecycleState === "halftime") {
-    const order = ["team-stats", "leaders", "linescore", "scoring", "drive", "recent-drives"];
-    cards.sort((left, right) => order.indexOf(left.id) - order.indexOf(right.id));
-  }
+  const order = new Map<string, number>(footballContextPriority(mode).map((id, index) => [id, index]));
+  cards.sort((left, right) => (order.get(left.id) ?? 99) - (order.get(right.id) ?? 99));
   return cards;
+}
+
+function contextMode({ lifecycleState, attention, redZone }: { lifecycleState: string; attention: string; redZone?: boolean }): FootballContextMode {
+  if (attention === "challenge" || attention === "official-review") return "review";
+  if (attention === "flag") return "flag";
+  if (lifecycleState === "halftime") return "halftime";
+  if (lifecycleState === "final" || lifecycleState === "postgame") return "final";
+  return redZone ? "red-zone" : "normal";
 }
 
 function TeamStats({ rows, teams }: { rows: ReturnType<typeof footballStatRows>; teams: Team[] }) { return <div className="grid grid-cols-[1fr_repeat(2,minmax(3rem,1fr))] gap-x-3 gap-y-1 text-xs font-semibold text-white"><span className="text-white/50">STAT</span>{teams.map((team) => <span key={team.abbreviation} className="text-center text-white/75">{team.abbreviation}</span>)}{rows.slice(0, 6).map((row) => <Fragment key={row.label}><span className="text-white/65">{row.label}</span>{row.values.slice(0, 2).map((value, index) => <span key={`${row.label}-${index}`} className="text-center">{value ?? "—"}</span>)}</Fragment>)}</div>; }
