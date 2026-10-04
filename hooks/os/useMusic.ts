@@ -6,7 +6,7 @@ import type { MusicSnapshot } from "@/core/contracts/Music";
 import { useVisiblePolling } from "@/hooks/useVisiblePolling";
 import { useCosmicScope } from "@/services/storage/scope";
 import { kioskApiUrl } from "@/services/kioskRequest";
-import { KIOSK_REFRESH_MS, sceneRefreshDiagnostics } from "@/services/kiosk/refreshPolicy";
+import { KIOSK_REFRESH_MS, musicBackoffMs, sceneRefreshDiagnostics } from "@/services/kiosk/refreshPolicy";
 import { useConnectionHealth } from "@/services/kiosk/ConnectionHealthProvider";
 
 interface UseMusicOptions {
@@ -34,6 +34,8 @@ export function useMusic({ refreshMs, enabled = true }: UseMusicOptions = {}) {
   const [actionError, setActionError] = useState<string>();
   const [actionLoading, setActionLoading] = useState(false);
   const [lastSuccessfulRefreshAt, setLastSuccessfulRefreshAt] = useState<string>();
+  const [failureCount, setFailureCount] = useState(0);
+  const [retryAfterMs, setRetryAfterMs] = useState<number>();
 
   const refresh = useCallback(async () => {
     if (refreshPromiseRef.current) return refreshPromiseRef.current;
@@ -53,7 +55,11 @@ export function useMusic({ refreshMs, enabled = true }: UseMusicOptions = {}) {
         const response = await fetch(kioskApiUrl("/api/music"), { credentials: "include", cache: "no-store" });
 
         if (!response.ok) {
-          throw new Error("Music is unavailable.");
+          const retryAfter = response.headers.get("Retry-After");
+          const retryAfterValue = retryAfter && /^\d+(?:\.\d+)?$/.test(retryAfter) ? Number(retryAfter) * 1000 : undefined;
+          const failure = new Error("Music is unavailable.") as Error & { retryAfterMs?: number };
+          failure.retryAfterMs = retryAfterValue;
+          throw failure;
         }
 
         const next = await response.json() as MusicSnapshot;
@@ -64,8 +70,14 @@ export function useMusic({ refreshMs, enabled = true }: UseMusicOptions = {}) {
         musicCache.set(scope.id, next);
         setLastSuccessfulRefreshAt(new Date().toISOString());
         setRequestError(undefined);
+        setFailureCount(0);
+        setRetryAfterMs(undefined);
         recordSuccess("music");
       } catch (cause) {
+        if (cause instanceof DOMException && cause.name === "AbortError") return;
+        const failure = cause as Error & { retryAfterMs?: number };
+        setFailureCount((count) => count + 1);
+        setRetryAfterMs(failure.retryAfterMs);
         recordFailure("music", "provider-error");
         setRequestError(cause instanceof Error ? cause.message : "Music is unavailable.");
       } finally {
@@ -96,7 +108,8 @@ export function useMusic({ refreshMs, enabled = true }: UseMusicOptions = {}) {
   useEffect(() => { const timer = window.setTimeout(() => { const cachedSnapshot = musicCache.get(scope.id) ?? null; setSnapshot(cachedSnapshot); setLoading(!cachedSnapshot); setRequestError(undefined); setLastSuccessfulRefreshAt(cachedSnapshot ? new Date().toISOString() : undefined); hasLoaded.current = false; }, 0); return () => window.clearTimeout(timer); }, [scope.id]);
 
   const intervalMs = typeof refreshMs === "function" ? refreshMs(snapshot) : refreshMs;
-  useVisiblePolling(refresh, intervalMs ?? 0, { enabled: enabled && intervalMs !== undefined });
+  const effectiveIntervalMs = intervalMs === undefined ? undefined : Math.max(intervalMs, musicBackoffMs(failureCount, retryAfterMs));
+  useVisiblePolling(refresh, effectiveIntervalMs ?? 0, { enabled: enabled && effectiveIntervalMs !== undefined });
 
   useEffect(() => {
     if (process.env.NODE_ENV !== "production") console.info(`[use-music] hook-state trackPresent=${Boolean(snapshot?.playback.track)} trackIdSuffix=${snapshot?.playback.track?.id?.slice(-4) ?? "none"} title=${JSON.stringify(snapshot?.playback.track?.title ?? null)}`);
@@ -142,7 +155,7 @@ export function useMusic({ refreshMs, enabled = true }: UseMusicOptions = {}) {
     providerError,
     actionError,
     refresh,
-    refreshDiagnostics: sceneRefreshDiagnostics(lastSuccessfulRefreshAt, intervalMs ?? KIOSK_REFRESH_MS.musicIdle, intervalMs !== undefined && intervalMs <= KIOSK_REFRESH_MS.musicActive ? "active" : "idle"),
+    refreshDiagnostics: sceneRefreshDiagnostics(lastSuccessfulRefreshAt, effectiveIntervalMs ?? KIOSK_REFRESH_MS.musicIdle, effectiveIntervalMs !== undefined && effectiveIntervalMs <= KIOSK_REFRESH_MS.musicActive ? "live" : "active"),
     actionLoading,
     configured: isMusicConfigured(snapshot),
     connected: snapshot?.connected ?? false,

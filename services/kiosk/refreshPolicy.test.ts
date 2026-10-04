@@ -1,15 +1,19 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { SportsSnapshot } from "@/core/contracts/Sports";
-import { KIOSK_REFRESH_MS, musicRefreshMs, sportsRefreshMs, sportsRefreshMode } from "./refreshPolicy";
+import { KIOSK_REFRESH_MS, musicBackoffMs, musicRefreshMs, sportsRefreshMs, sportsRefreshMode } from "./refreshPolicy";
 
 const empty = (now: Date): SportsSnapshot => ({ live: [], upcoming: [], recent: [], featured: [], standings: {}, providerErrors: [], sources: [], lastUpdated: now });
 const event = (start: Date, sport: "f1" | "college-football" = "f1", status: "scheduled" | "delayed" = "scheduled") => ({ id: "event", sport, title: "Event", start, status, source: "test" });
 
-test("music uses fast active and playing intervals, slower idle interval", () => {
-  assert.equal(musicRefreshMs(true, false), 2_500);
-  assert.equal(musicRefreshMs(false, true), 2_500);
-  assert.equal(musicRefreshMs(false, false), 10_000);
+test("music uses 500ms playing, slower paused, and idle intervals", () => {
+  assert.equal(musicRefreshMs(true, false), KIOSK_REFRESH_MS.musicPaused);
+  assert.equal(musicRefreshMs(false, true), KIOSK_REFRESH_MS.musicActive);
+  assert.equal(musicRefreshMs(false, false), KIOSK_REFRESH_MS.musicIdle);
+  assert.equal(KIOSK_REFRESH_MS.musicActive, 500);
+  assert.equal(musicBackoffMs(1), 2_000);
+  assert.equal(musicBackoffMs(3), 8_000);
+  assert.equal(musicBackoffMs(1, 90_000), 60_000);
 });
 
 test("sports refreshes live events within ten seconds and near-start events within thirty", () => {

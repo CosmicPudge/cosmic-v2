@@ -453,6 +453,7 @@ function KioskNormalSlideshow() {
 
   const handlePointerDown = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
     if (widgets.length <= 1 || (event.pointerType === "mouse" && event.button !== 0)) return;
+    event.preventDefault();
     gestureRef.current = {
       pointerId: event.pointerId,
       startX: event.clientX,
@@ -530,7 +531,8 @@ function KioskNormalSlideshow() {
       onPointerMove={handlePointerMove}
       onPointerUp={finishPointerGesture}
       onPointerCancel={finishPointerGesture}
-      style={{ touchAction: "pan-y" }}
+      style={{ touchAction: "pan-y", userSelect: "none", WebkitUserSelect: "none", WebkitTouchCallout: "none" }}
+      onDragStart={(event) => event.preventDefault()}
       aria-label="Cosmic kiosk slideshow"
     >
       <div className={`kiosk-sports-transition-layer kiosk-sports-transition-normal ${sportsPresentation ? `kiosk-sports-transition-normal-${sportsPresentation.phase}` : ""}`}>

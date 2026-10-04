@@ -52,6 +52,7 @@ export function useDeveloperKioskData() {
     const load = async () => {
       try {
         recordAttempt("weather"); recordAttempt("calendar"); recordAttempt("school");
+        const prior = cached;
         if (!request) requestToken += 1;
         const currentRequestToken = requestToken;
         const location = readKioskDeviceLocation();
@@ -63,24 +64,30 @@ export function useDeveloperKioskData() {
           return normalizeKioskData(await response.json() as DeveloperKioskData);
         }).then((value) => { cached = value; return value; }).finally(() => { request = null; });
         const value = await request;
+        const displayValue: DeveloperKioskData = {
+          ...value,
+          weather: value.weather ?? prior?.weather ?? null,
+          calendar: value.calendar.connected || !prior?.calendar.connected ? value.calendar : { ...prior.calendar, error: value.calendar.error, diagnostics: value.calendar.diagnostics },
+          school: value.school.connected || !prior?.school.connected ? value.school : { ...prior.school, error: value.school.error, diagnostics: value.school.diagnostics },
+        };
         if (currentRequestToken !== lastHealthReportToken) {
           lastHealthReportToken = currentRequestToken;
           if (value.weather) recordSuccess("weather"); else recordFailure("weather", "unavailable");
           if (value.calendar.connected) recordSuccess("calendar"); else recordFailure("calendar", value.calendar.diagnostics?.category ?? "provider-error");
           if (value.school.connected) recordSuccess("school"); else recordFailure("school", value.school.diagnostics?.category ?? "provider-error");
         }
-        if (active) setData(value);
+        if (active) setData(displayValue);
       } catch (reason) {
         if (requestToken !== lastHealthReportToken) {
           lastHealthReportToken = requestToken;
           recordFailure("weather", "request-error"); recordFailure("calendar", "request-error"); recordFailure("school", "request-error");
         }
-        if (active) setError(reason instanceof Error ? reason.message : "Developer kiosk data is unavailable.");
+        if (active) { setData(cached); setError(reason instanceof Error ? reason.message : "Developer kiosk data is unavailable."); }
       }
       finally { if (active) setLoading(false); }
     };
     void load();
-    const timer = window.setInterval(() => { cached = null; void load(); }, 30_000);
+    const timer = window.setInterval(() => { void load(); }, 30_000);
     const completionChanged = () => { cached = null; void load(); };
     const locationChanged = () => { cached = null; request = null; void load(); };
     window.addEventListener("cosmic:school-completion-changed", completionChanged);

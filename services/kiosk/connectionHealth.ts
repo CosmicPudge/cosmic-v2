@@ -8,6 +8,7 @@ export interface ConnectionHealth {
   lastAttemptAt?: string;
   lostAt?: string;
   recoveredAt?: string;
+  lastFailureAt?: string;
   consecutiveFailures: number;
   staleAgeMs?: number;
   lastErrorCategory?: string;
@@ -18,11 +19,13 @@ export type ConnectionHealthEvent =
   | { type: "attempt"; at: string }
   | { type: "success"; at: string }
   | { type: "failure"; at: string; category?: string }
+  | { type: "cancelled"; at: string; category?: string }
   | { type: "offline"; at: string }
   | { type: "online"; at: string };
 
 const emptyHealth: ConnectionHealth = { state: "reconnecting", consecutiveFailures: 0 };
 const STALE_AFTER_MS = 5 * 60_000;
+const DISCONNECT_AFTER_FAILURES = 3;
 
 export function createInitialConnectionHealth(): ConnectionHealthMap {
   return Object.fromEntries(KIOSK_HEALTH_SERVICES.map((service) => [service, { ...emptyHealth }])) as ConnectionHealthMap;
@@ -32,6 +35,7 @@ export function reduceConnectionHealth(current: ConnectionHealth, event: Connect
   if (event.type === "attempt") {
     return { ...current, lastAttemptAt: event.at, state: current.lostAt || current.state === "stale" ? "reconnecting" : current.state };
   }
+  if (event.type === "cancelled") return { ...current, lastAttemptAt: event.at };
   if (event.type === "success") {
     return {
       ...current,
@@ -48,11 +52,15 @@ export function reduceConnectionHealth(current: ConnectionHealth, event: Connect
   if (event.type === "online") {
     return { ...current, state: current.lostAt ? "reconnecting" : current.state, lastAttemptAt: event.at };
   }
+  if (event.type === "failure" && current.consecutiveFailures + 1 < DISCONNECT_AFTER_FAILURES) {
+    return { ...current, state: "reconnecting", lastAttemptAt: event.at, lastFailureAt: event.at, consecutiveFailures: current.consecutiveFailures + 1, lastErrorCategory: event.category };
+  }
   const lostAt = current.lostAt ?? event.at;
   return {
     ...current,
-    state: event.type === "offline" ? "disconnected" : "disconnected",
+    state: "disconnected",
     lastAttemptAt: event.at,
+    lastFailureAt: event.at,
     lostAt,
     consecutiveFailures: current.consecutiveFailures + 1,
     lastErrorCategory: event.type === "failure" ? event.category : "network-offline",

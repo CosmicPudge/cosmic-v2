@@ -4,7 +4,8 @@ import { KIOSK_KICKOFF_GRACE_MS } from "@/services/sports/preferences";
 export type KioskRefreshMode = "idle" | "active" | "near-live" | "live";
 
 export const KIOSK_REFRESH_MS = {
-  musicActive: 2_500,
+  musicActive: 500,
+  musicPaused: 3_000,
   musicIdle: 10_000,
   sportsLive: 10_000,
   sportsNearLive: 20_000,
@@ -16,7 +17,13 @@ export const KIOSK_REFRESH_MS = {
 } as const;
 
 export function musicRefreshMs(active: boolean, playing: boolean) {
-  return active || playing ? KIOSK_REFRESH_MS.musicActive : KIOSK_REFRESH_MS.musicIdle;
+  if (playing) return KIOSK_REFRESH_MS.musicActive;
+  return active ? KIOSK_REFRESH_MS.musicPaused : KIOSK_REFRESH_MS.musicIdle;
+}
+
+export function musicBackoffMs(failureCount: number, retryAfterMs?: number) {
+  if (retryAfterMs !== undefined && Number.isFinite(retryAfterMs)) return Math.min(60_000, Math.max(2_000, retryAfterMs));
+  return Math.min(60_000, 2_000 * 2 ** Math.max(0, Math.min(5, failureCount - 1)));
 }
 
 export function sportsRefreshMode(snapshot: SportsSnapshot | null, now = new Date()): KioskRefreshMode {
