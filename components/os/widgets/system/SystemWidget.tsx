@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
+import { useEffect } from "react";
 
 import { useSystem } from "@/components/os/system/SystemProvider";
 import { formatBytes } from "@/services/system/browser";
@@ -11,11 +12,15 @@ import { useConnectionHealth } from "@/services/kiosk/ConnectionHealthProvider";
 import { formatKioskHealthTime, KIOSK_HEALTH_SERVICES } from "@/services/kiosk/connectionHealth";
 import { useKioskUpdateStatus } from "@/hooks/os/useKioskUpdateStatus";
 import { useDeveloperKioskData } from "@/hooks/os/useDeveloperKioskData";
+import { traceKioskHealth } from "@/services/kiosk/healthTrace";
 
 export default function SystemWidget() {
   const { size, presentation } = useWidgetContext();
   const { snapshot } = useSystem();
   const { health } = useConnectionHealth();
+  useEffect(() => {
+    for (const service of KIOSK_HEALTH_SERVICES) traceKioskHealth(service, "system-consumer", { status: health[service].state });
+  }, [health]);
   const cosmicUpdate = useKioskUpdateStatus();
   const { data: developerKiosk } = useDeveloperKioskData({ poll: false });
   const priority = !snapshot.network.online

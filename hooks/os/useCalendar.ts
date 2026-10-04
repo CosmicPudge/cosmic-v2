@@ -12,6 +12,8 @@ import { usePersonalCapabilities } from "@/hooks/os/usePersonalCapabilities";
 import { useSchoolData } from "@/components/school/hooks/useSchoolData";
 import { mergeSchoolCalendarSnapshot } from "@/services/calendar/schoolAdapter";
 import { useCosmicScope } from "@/services/storage/scope";
+import { useConnectionHealth } from "@/services/kiosk/ConnectionHealthProvider";
+import { traceKioskHealth } from "@/services/kiosk/healthTrace";
 
 interface CalendarResponse {
   today: Array<Omit<CalendarEvent, "start" | "end"> & {
@@ -110,6 +112,7 @@ interface UseCalendarOptions {
 }
 
 export default function useCalendar({ refreshMs = DEFAULT_REFRESH_INTERVAL_MS, enabled = true }: UseCalendarOptions = {}) {
+  const { recordSuccess, recordFailure } = useConnectionHealth();
   const scope = useCosmicScope();
   const entitlements = usePersonalCapabilities();
   const school = useSchoolData({ enabled: entitlements.features["school.basic"] });
@@ -141,6 +144,8 @@ export default function useCalendar({ refreshMs = DEFAULT_REFRESH_INTERVAL_MS, e
 
         if (!cancelled) {
           setCalendar(snapshot);
+          recordSuccess("calendar");
+          traceKioskHealth("calendar", "direct-response", { result: "success" });
         }
       } catch (err) {
         if (!cancelled) {
@@ -149,6 +154,7 @@ export default function useCalendar({ refreshMs = DEFAULT_REFRESH_INTERVAL_MS, e
               ? err.message
               : "Unknown calendar error"
           );
+          recordFailure("calendar", "provider-error");
         }
       } finally {
         if (
@@ -165,7 +171,7 @@ export default function useCalendar({ refreshMs = DEFAULT_REFRESH_INTERVAL_MS, e
     return () => {
       cancelled = true;
     };
-  }, [enabled, school.snapshot, scope.id]);
+  }, [enabled, recordFailure, recordSuccess, school.snapshot, scope.id]);
 
   const refresh = useCallback(async () => {
     if (!enabled) return;

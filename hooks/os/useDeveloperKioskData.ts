@@ -10,6 +10,7 @@ import { useConnectionHealth } from "@/services/kiosk/ConnectionHealthProvider";
 import { kioskApiUrl } from "@/services/kioskRequest";
 import { readKioskDeviceLocation } from "@/hooks/os/useKioskDeviceLocation";
 import { classifyKioskDataHealth } from "@/services/kiosk/dataHealth";
+import { traceKioskHealth } from "@/services/kiosk/healthTrace";
 
 export interface DeveloperKioskData {
   location: { lat: number; lon: number; label: string; source?: "current" | "last-known" | "fallback" | "unavailable"; stale?: boolean } | null;
@@ -88,7 +89,9 @@ export function useDeveloperKioskData({ enabled: requestedEnabled, poll = true }
             if (response.status === 401 || response.status === 403) window.dispatchEvent(new CustomEvent("cosmic:kiosk-auth-needed"));
             throw new Error(response.status === 401 || response.status === 403 ? "Kiosk session renewal is required." : "Developer kiosk data is unavailable.");
           }
-          return normalizeKioskData(mergeKioskData(prior, await response.json() as Partial<DeveloperKioskData>));
+          const body = await response.json() as Partial<DeveloperKioskData>;
+          for (const service of ["weather", "calendar", "school"] as const) traceKioskHealth(service, "response", { present: body[service] !== undefined });
+          return normalizeKioskData(mergeKioskData(prior, body));
         }).then((value) => { cached = value; return value; }).finally(() => { request = null; });
         const value = await request;
         const displayValue: DeveloperKioskData = {
@@ -100,6 +103,7 @@ export function useDeveloperKioskData({ enabled: requestedEnabled, poll = true }
         if (currentRequestToken !== lastHealthReportToken) {
           lastHealthReportToken = currentRequestToken;
           const health = classifyKioskDataHealth(value);
+          for (const service of ["weather", "calendar", "school"] as const) traceKioskHealth(service, "classify", { result: health[service] ? "success" : "failure" });
           if (health.weather) recordSuccess("weather"); else recordFailure("weather", "unavailable");
           if (health.calendar) recordSuccess("calendar"); else recordFailure("calendar", value.calendar.diagnostics?.category ?? "provider-error");
           if (health.school) recordSuccess("school"); else recordFailure("school", value.school.diagnostics?.category ?? "provider-error");

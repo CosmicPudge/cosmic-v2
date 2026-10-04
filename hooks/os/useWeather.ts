@@ -6,12 +6,15 @@ import { WeatherEngine } from "@/engines/weather";
 import useLocation from "@/hooks/os/useLocation";
 
 import type { WeatherData } from "@/engines/environment";
+import { useConnectionHealth } from "@/services/kiosk/ConnectionHealthProvider";
+import { traceKioskHealth } from "@/services/kiosk/healthTrace";
 
 function weatherLog(message: string) {
   if (process.env.NODE_ENV !== "production") console.info(`[weather] ${message}`);
 }
 
 export default function useWeather() {
+  const { recordSuccess, recordFailure } = useConnectionHealth();
   const location = useLocation();
   const weatherEngine = useRef<WeatherEngine | null>(null);
 
@@ -41,6 +44,8 @@ export default function useWeather() {
       const snapshot = await weatherEngine.current.getSnapshot();
       if (!active) return;
       setWeather(snapshot);
+      recordSuccess("weather");
+      traceKioskHealth("weather", "direct-response", { result: "success" });
       weatherLog("request-success");
     } catch (err) {
       if (!active) return;
@@ -52,6 +57,7 @@ export default function useWeather() {
       setError(
         err instanceof Error ? err.message : "Unknown weather error"
       );
+      recordFailure("weather", "provider-error");
       weatherLog(`request-error=${message}`);
     } finally {
       window.clearTimeout(timeout);
@@ -67,7 +73,7 @@ export default function useWeather() {
     void load();
   }, 0);
   return () => { active = false; window.clearTimeout(start); window.clearTimeout(timeout); controller.abort(); };
-}, [location]);
+}, [location, recordFailure, recordSuccess]);
 
   useEffect(() => {
     const state = loading ? "loading" : weather ? (error ? "stale" : "ready") : error ? "error" : "empty";

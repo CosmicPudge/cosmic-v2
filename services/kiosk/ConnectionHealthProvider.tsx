@@ -9,6 +9,7 @@ import {
   type ConnectionHealthMap,
   type KioskHealthService,
 } from "./connectionHealth";
+import { traceKioskHealth } from "./healthTrace";
 
 const STORAGE_KEY = "cosmic:kiosk-connection-health:v1";
 const MAX_PERSISTED_AGE_MS = 7 * 24 * 60 * 60_000;
@@ -27,6 +28,7 @@ const EMPTY_HEALTH_CONTEXT: ConnectionHealthContextValue = {
   recordSuccess: () => undefined,
   recordFailure: () => undefined,
 };
+let providerInstanceSequence = 0;
 
 function readPersisted(): ConnectionHealthMap {
   if (typeof window === "undefined") return createInitialConnectionHealth();
@@ -46,11 +48,18 @@ function readPersisted(): ConnectionHealthMap {
 }
 
 export function ConnectionHealthProvider({ children }: { children: React.ReactNode }) {
+  const [instanceId] = useState(() => ++providerInstanceSequence);
   const [health, setHealth] = useState<ConnectionHealthMap>(() => readPersisted());
+  useEffect(() => {
+    if (process.env.NODE_ENV !== "production") console.info(`[kiosk-health-provider] instance=${instanceId} mounted`);
+    return () => { if (process.env.NODE_ENV !== "production") console.info(`[kiosk-health-provider] instance=${instanceId} unmounted`); };
+  }, [instanceId]);
   const update = useCallback((service: KioskHealthService, event: Parameters<typeof reduceConnectionHealth>[1]) => {
     setHealth((current) => {
       const previous = current[service];
+      traceKioskHealth(service, "provider-before", { status: previous.state, failures: previous.consecutiveFailures });
       const next = reduceConnectionHealth(previous, event);
+      traceKioskHealth(service, "provider-after", { status: next.state, failures: next.consecutiveFailures });
       if (process.env.NODE_ENV !== "production" && previous.state !== next.state) {
         console.info(`[kiosk-health] service=${service} event=${event.type} previous=${previous.state} next=${next.state} failures=${next.consecutiveFailures}`);
       }
@@ -60,6 +69,7 @@ export function ConnectionHealthProvider({ children }: { children: React.ReactNo
   const recordAttempt = useCallback((service: KioskHealthService) => update(service, { type: "attempt", at: new Date().toISOString() }), [update]);
   const recordSuccess = useCallback((service: KioskHealthService) => {
     const at = new Date().toISOString();
+    traceKioskHealth(service, "update-request", { event: "success" });
     update(service, { type: "success", at });
     if (service !== "network") update("network", { type: "success", at });
   }, [update]);

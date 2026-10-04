@@ -14,10 +14,13 @@ import type { SchoolSnapshot } from "@/services/school/domain";
 import type { RecommendationNarration } from "@/services/school/planning/recommendationNarrator";
 import { resolveSchoolPlanningAssignments } from "@/services/school/courseResolution";
 import { shouldLoadAccountBackedSchoolData } from "@/services/school/dataLoadPolicy";
+import { useConnectionHealth } from "@/services/kiosk/ConnectionHealthProvider";
+import { traceKioskHealth } from "@/services/kiosk/healthTrace";
 
 interface UseSchoolDataOptions { enabled?: boolean }
 
 export function useSchoolData({ enabled = true }: UseSchoolDataOptions = {}) {
+  const { recordSuccess, recordFailure } = useConnectionHealth();
   const local = useLocalSchoolRepository({ enabled });
   const accountBacked = shouldLoadAccountBackedSchoolData(local.scope.kind);
   const [data, setData] = useState<SchoolDashboardData | null>(null);
@@ -51,12 +54,15 @@ export function useSchoolData({ enabled = true }: UseSchoolDataOptions = {}) {
         setSnapshot(hydratedServerSnapshot ? { ...normalizedSnapshot, ...hydratedServerSnapshot } : normalizedSnapshot);
         setRecommendationNarration(body.recommendationNarration ?? null);
         setError(body.error);
+        recordSuccess("school");
+        traceKioskHealth("school", "direct-response", { result: "success" });
       } catch (err) {
         setError(
           err instanceof Error
             ? err.message
             : "Unknown error"
         );
+        recordFailure("school", "provider-error");
       } finally {
         setLoading(false);
       }
@@ -66,7 +72,7 @@ export function useSchoolData({ enabled = true }: UseSchoolDataOptions = {}) {
     const refresh = () => void load();
     window.addEventListener("cosmic:school-refresh", refresh);
     return () => window.removeEventListener("cosmic:school-refresh", refresh);
-  }, [accountBacked, enabled]);
+  }, [accountBacked, enabled, recordFailure, recordSuccess]);
 
   const baseSnapshot = useMemo(() => !enabled || !accountBacked ? null : snapshot ?? (data ? buildSchoolSnapshot(data) : null), [accountBacked, data, enabled, snapshot]);
   const normalizedSnapshot = useMemo(() => {
