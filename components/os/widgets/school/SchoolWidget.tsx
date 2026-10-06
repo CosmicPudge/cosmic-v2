@@ -16,10 +16,11 @@ import SchoolSchedule from "./SchoolSchedule";
 import SchoolFooter from "./SchoolFooter";
 import { useDeveloperKioskData } from "@/hooks/os/useDeveloperKioskData";
 import KioskSchoolScene from "./KioskSchoolScene";
+import { shouldLoadDashboardWidgetProvider } from "@/services/kiosk/widgetDataPolicy";
 
 export default function SchoolWidget() {
   const { size, presentation } = useWidgetContext();
-  const { data, loading, error, local } = useSchoolData();
+  const { data, loading, error, local } = useSchoolData({ enabled: shouldLoadDashboardWidgetProvider(presentation) });
   const developer = useDeveloperKioskData({ poll: false });
   const activeTerm = local.data.terms.find((term) => term.active);
   const activeCourses = local.data.courses.filter((course) => !activeTerm || course.termId === activeTerm.id);

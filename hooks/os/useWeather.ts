@@ -13,21 +13,22 @@ function weatherLog(message: string) {
   if (process.env.NODE_ENV !== "production") console.info(`[weather] ${message}`);
 }
 
-export default function useWeather() {
+export default function useWeather({ enabled = true }: { enabled?: boolean } = {}) {
   const { recordSuccess, recordFailure } = useConnectionHealth();
-  const location = useLocation();
+  const location = useLocation({ enabled });
   const weatherEngine = useRef<WeatherEngine | null>(null);
 
   const [weather, setWeather] =
-    useState<WeatherData | null>(null);
+    useState<WeatherData | null>(() => null);
 
   const [loading, setLoading] =
-    useState(true);
+    useState(enabled);
 
   const [error, setError] =
     useState<string | null>(null);
 
   useEffect(() => {
+  if (!enabled) return;
   if (!location) { const timer = window.setTimeout(() => { setLoading(false); setWeather(null); }, 0); return () => window.clearTimeout(timer); }
 
   const { lat, lon } = location;
@@ -73,7 +74,7 @@ export default function useWeather() {
     void load();
   }, 0);
   return () => { active = false; window.clearTimeout(start); window.clearTimeout(timeout); controller.abort(); };
-}, [location, recordFailure, recordSuccess]);
+}, [enabled, location, recordFailure, recordSuccess]);
 
   useEffect(() => {
     const state = loading ? "loading" : weather ? (error ? "stale" : "ready") : error ? "error" : "empty";

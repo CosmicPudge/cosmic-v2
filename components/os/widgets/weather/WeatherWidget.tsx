@@ -20,6 +20,7 @@ import { resolveWeatherKioskScene } from "./weatherScene";
 import KioskSceneIdentity from "../shared/KioskSceneIdentity";
 import { useDeveloperKioskData } from "@/hooks/os/useDeveloperKioskData";
 import KioskConnectionStatus from "@/components/os/widgets/shared/KioskConnectionStatus";
+import { shouldLoadDashboardWidgetProvider } from "@/services/kiosk/widgetDataPolicy";
 
 export default function WeatherWidget() {
   const { size, presentation } = useWidgetContext();
@@ -27,7 +28,7 @@ export default function WeatherWidget() {
     weather,
     loading,
     error,
-  } = useWeather();
+  } = useWeather({ enabled: shouldLoadDashboardWidgetProvider(presentation) });
   const developer = useDeveloperKioskData({ poll: false });
   const kioskWeather = developer.data?.weather ?? weather;
   useDashboardWidgetReadiness("weather", loading ? "loading" : error && !weather ? "degraded" : "ready");

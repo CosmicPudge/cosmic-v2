@@ -115,7 +115,7 @@ export default function useCalendar({ refreshMs = DEFAULT_REFRESH_INTERVAL_MS, e
   const { recordSuccess, recordFailure } = useConnectionHealth();
   const scope = useCosmicScope();
   const entitlements = usePersonalCapabilities();
-  const school = useSchoolData({ enabled: entitlements.features["school.basic"] });
+  const school = useSchoolData({ enabled: enabled && entitlements.features["school.basic"] });
   const [calendar, setCalendar] =
     useState<CalendarSnapshot | null>(() => cachedCalendarSnapshot(scope.id));
 

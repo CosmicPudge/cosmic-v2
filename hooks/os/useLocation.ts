@@ -37,12 +37,13 @@ function resolveFallback(scopeId: string) {
   return null;
 }
 
-export default function useLocation() {
+export default function useLocation({ enabled = true }: { enabled?: boolean } = {}) {
   const scope = useCosmicScope();
   const [location, setLocation] =
     useState<UserLocation | null>(null);
 
   useEffect(() => {
+    if (!enabled) return;
     const kiosk = typeof window !== "undefined" && ["/os/kiosk", "/kiosk"].includes(window.location.pathname);
     if (kiosk) {
       let active = true;
@@ -97,7 +98,7 @@ export default function useLocation() {
         maximumAge: 300000, // 5 minutes
       }
     );
-  }, [scope.id]);
+  }, [enabled, scope.id]);
 
   return location;
 }

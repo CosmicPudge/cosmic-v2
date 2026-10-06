@@ -49,7 +49,10 @@ function mergeKioskData(previous: DeveloperKioskData | null, next: Partial<Devel
   return {
     ...previous,
     ...next,
-    weather: next.weather ?? previous.weather,
+    // A successful aggregate response may explicitly report null weather.
+    // Keep that failure visible to health classification; the display fallback
+    // below is responsible for showing the last usable weather snapshot.
+    weather: next.weather !== undefined ? next.weather : previous.weather,
     calendar: next.calendar ? { ...previous.calendar, ...next.calendar } : previous.calendar,
     school: next.school ? { ...previous.school, ...next.school } : previous.school,
     refreshDiagnostics: next.refreshDiagnostics ? { ...previous.refreshDiagnostics, ...next.refreshDiagnostics } : previous.refreshDiagnostics,
@@ -105,6 +108,7 @@ export function useDeveloperKioskData({ enabled: requestedEnabled, poll = true }
         };
         if (currentRequestToken !== lastHealthReportToken) {
           lastHealthReportToken = currentRequestToken;
+          // Health must describe this response, not a stale display fallback merged into it.
           const health = classifyKioskDataHealth(value);
           for (const service of ["weather", "calendar", "school"] as const) traceKioskHealth(service, "classify", { result: health[service] ? "success" : "failure" });
           if (health.weather) recordSuccess("weather");
@@ -115,7 +119,7 @@ export function useDeveloperKioskData({ enabled: requestedEnabled, poll = true }
       } catch (reason) {
         if (requestToken !== lastHealthReportToken) {
           lastHealthReportToken = requestToken;
-          recordFailure("calendar", "request-error"); recordFailure("school", "request-error");
+          recordFailure("weather", "request-error"); recordFailure("calendar", "request-error"); recordFailure("school", "request-error");
         }
         if (active) { setData(cached); setError(reason instanceof Error ? reason.message : "Developer kiosk data is unavailable."); }
       }
