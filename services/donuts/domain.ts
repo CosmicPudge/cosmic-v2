@@ -20,6 +20,13 @@ export const PRODUCTION_STAGES: ProductionStage[] = [
   "Out for delivery", "Delivered",
 ];
 
+export const TRACKING_MILESTONES = [
+  { id: "accepted", label: "Accepted", stage: "Accepted" as ProductionStage },
+  { id: "making", label: "Making your donuts", stage: "Setting" as ProductionStage },
+  { id: "out-for-delivery", label: "Out for delivery", stage: "Out for delivery" as ProductionStage },
+  { id: "delivered", label: "Delivered", stage: "Delivered" as ProductionStage },
+] as const;
+
 export function formatPhoneInput(value: string): string {
   const digits = value.replace(/\D/g, "").replace(/^1(?=\d{10}$)/, "").slice(0, 10);
   if (digits.length <= 3) return digits;
@@ -44,6 +51,7 @@ function denverParts(date: Date): { year: number; month: number; day: number; ho
 
 /** Development placeholder: Thursday at 3:00 p.m. Denver time before the selected weekend. */
 export function isCutoffOpen(selectedDate: string, now: Date, cutoffHour = 15): boolean {
+  if (!isCalendarDate(selectedDate)) return false;
   const [year, month, day] = selectedDate.split("-").map(Number);
   const selected = new Date(Date.UTC(year, month - 1, day));
   const selectedWeekday = selected.getUTCDay();
@@ -63,7 +71,40 @@ export function canAdvanceStage(current: ProductionStage, next: ProductionStage)
 }
 
 export function hasCapacity(ordered: number, requested: number, capacity: number): boolean {
-  return capacity >= 0 && requested > 0 && ordered + requested <= capacity;
+  return isNonNegativeInteger(ordered) && isPositiveInteger(requested) && isNonNegativeInteger(capacity) && ordered + requested <= capacity;
 }
 
-export function batchKey(date: string, window: string): string { return `${date}:${window}`; }
+export function batchKey(date: string): string { return date; }
+
+export function isNonNegativeInteger(value: unknown): value is number {
+  return typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
+}
+
+export function isPositiveInteger(value: unknown): value is number {
+  return isNonNegativeInteger(value) && value > 0;
+}
+
+export function isCalendarDate(value: unknown): value is string {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const [year, month, day] = value.split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day;
+}
+
+export function isProductionStage(value: unknown): value is ProductionStage {
+  return typeof value === "string" && PRODUCTION_STAGES.includes(value as ProductionStage);
+}
+
+export type OrderQuantityMap = Record<string, number>;
+
+export function validateOrderQuantities(quantities: unknown): OrderQuantityMap {
+  if (!quantities || typeof quantities !== "object" || Array.isArray(quantities)) throw new Error("Quantities must be an object.");
+  const entries = Object.entries(quantities as Record<string, unknown>);
+  if (!entries.length) throw new Error("At least one donut is required.");
+  const output: OrderQuantityMap = {};
+  for (const [productId, quantity] of entries) {
+    if (!productId || !isPositiveInteger(quantity)) throw new Error("Each requested quantity must be a positive integer.");
+    output[productId] = quantity;
+  }
+  return output;
+}
