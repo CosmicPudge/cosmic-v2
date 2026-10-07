@@ -1,50 +1,56 @@
 "use client";
 
-import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
-import { useCosmicTransition } from "@/components/os/transition";
+import type { ReactNode } from "react";
+
+interface AppHeaderTab {
+  id: string;
+  label: string;
+  active?: boolean;
+  onSelect?: () => void;
+}
 
 interface AppHeaderProps {
   title: string;
   subtitle?: string;
+  eyebrow?: string;
+  rightContent?: ReactNode;
+  tabs?: AppHeaderTab[];
 }
-
 
 export default function AppHeader({
   title,
   subtitle,
+  eyebrow,
+  rightContent,
+  tabs,
 }: AppHeaderProps) {
-
-    const { prefetch } = useCosmicTransition();
-    
   return (
-    <header className="cosmic-app-header mb-5 flex items-end justify-between gap-4 sm:mb-7">
-
-      <div>
-
-        <Link
-  href="/os"
-  onMouseEnter={() => prefetch("/os")}
-  onFocus={() => prefetch("/os")}
-className="cosmic-inline-link mb-3 inline-flex items-center gap-2 text-xs uppercase tracking-[0.14em] transition"
->
-  <ArrowLeft size={18} />
-  Dashboard
-</Link>
-
-        <p className="cosmic-kicker">Cosmic OS · module interface</p>
-        <h1 className="mt-3 text-[clamp(2.5rem,7vw,5rem)] font-light leading-none tracking-[0.12em] text-white">
-          {title}
-        </h1>
-
-        {subtitle && (
-          <p className="mt-3 max-w-2xl text-sm uppercase tracking-[0.18em] text-white/55 sm:text-base">
-            {subtitle}
-          </p>
-        )}
-
+    <header className="cosmos-page-header">
+      <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
+        <div className="min-w-0">
+          {eyebrow && <p className="cosmos-eyebrow">{eyebrow}</p>}
+          <h1 className="cosmos-page-title">{title}</h1>
+          {subtitle && <p className="cosmos-page-subtitle">{subtitle}</p>}
+        </div>
+        {rightContent && <div className="shrink-0">{rightContent}</div>}
       </div>
 
+      {tabs && tabs.length > 0 && (
+        <div className="cosmos-page-tabs" role="tablist" aria-label={`${title} sections`}>
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              role="tab"
+              aria-selected={tab.active === true}
+              onClick={tab.onSelect}
+              className={`cosmos-page-tab ${tab.active ? "cosmos-page-tab-active" : ""}`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      )}
     </header>
   );
 }
