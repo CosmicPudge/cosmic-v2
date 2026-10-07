@@ -16,16 +16,11 @@ import {
 import AppHeader from "@/components/os/app/AppHeader";
 import CosmicCard from "@/design-system/components/CosmicCard";
 import StatusChip from "@/components/os/ui/StatusChip";
+import SchoolTabs from "@/components/school/SchoolTabs";
 import Skeleton from "@/components/os/ui/Skeleton";
 import { useSchool } from "@/components/school/context/SchoolDataContext";
 
-const tabs = [
-  { id: "overview", label: "Overview", href: "/school" },
-  { id: "courses", label: "Courses", href: "/school/courses" },
-  { id: "assignments", label: "Assignments", href: "/school/assignments" },
-  { id: "calendar", label: "Calendar", href: "/school/calendar" },
-  { id: "analytics", label: "Analytics", href: "/school/analytics" },
-] as const;
+
 
 function formatTime(date: Date) {
   return date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
@@ -142,18 +137,7 @@ export default function CosmosSchoolOverview({ preview = false }: { preview?: bo
         }
       />
 
-      <nav aria-label="School sections" className="mb-6 flex flex-wrap gap-2 px-1">
-        {tabs.map((tab) => (
-          <Link
-            key={tab.id}
-            href={tab.href}
-            aria-current={tab.id === "overview" ? "page" : undefined}
-            className={`rounded-xl border px-3 py-2 text-sm font-medium transition focus-visible:outline-2 focus-visible:outline-cyan-200 ${tab.id === "overview" ? "border-violet-300/25 bg-violet-400/10 text-white" : "border-white/8 bg-white/[0.025] text-white/50 hover:bg-white/[0.05] hover:text-white"}`}
-          >
-            {tab.label}
-          </Link>
-        ))}
-      </nav>
+      <SchoolTabs />
 
       {error ? (
         <div role="status" className="mb-5 rounded-xl border border-amber-300/15 bg-amber-400/[0.05] px-4 py-3 text-sm text-amber-50/75">
