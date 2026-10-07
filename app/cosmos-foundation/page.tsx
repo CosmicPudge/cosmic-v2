@@ -114,7 +114,7 @@ export default function CosmosFoundationPreviewPage() {
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/40">How to use this screen</p>
             <h2 className="mt-2 text-xl font-semibold">Milestone 0 visual QA sandbox</h2>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-white/55">
-              As shared components change, this page updates with them. Resize the browser, open the mobile menu, use search, click navigation, and compare glass surfaces here before Milestone 0 is considered complete.
+              As shared components change, this page updates with them. Resize the browser, open the mobile menu, use search, click navigation, and compare glass surfaces here. Milestone 0 cannot close until both this foundation preview and the progress tracker are live, working, and at 100%.
             </p>
           </CosmicCard>
         </div>
