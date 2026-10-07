@@ -1,0 +1,28 @@
+import fs from "node:fs";
+const read = (path) => fs.readFileSync(path, "utf8");
+const exists = (path) => fs.existsSync(path);
+const checks = [];
+function check(label, pass) { checks.push([label, Boolean(pass)]); if (!pass) process.exitCode = 1; }
+const school = read("components/school/CosmosSchoolOverview.tsx");
+const page = read("app/school/page.tsx");
+const progress = read("app/cosmos-progress/page.tsx");
+const tabs = read("components/school/SchoolTabs.tsx");
+check("School overview component exists", exists("components/school/CosmosSchoolOverview.tsx"));
+check("School preview route exists", exists("app/cosmos-school/page.tsx"));
+check("School page mounts CosmosSchoolOverview", page.includes("<CosmosSchoolOverview />"));
+check("School overview uses shared AppHeader", school.includes("<AppHeader"));
+check("School tabs exist", ["Overview","Courses","Assignments","Calendar","Analytics"].every((label) => tabs.includes(`label: "${label}"`)) && school.includes("<SchoolTabs />"));
+check("Current GPA metric exists", school.includes('label="Current GPA"'));
+check("Next class metric exists", school.includes('label="Next class"'));
+check("Due soon metric exists", school.includes('label="Due soon"'));
+check("Credits metric exists", school.includes('label="Credits"'));
+check("Today classes panel exists", school.includes("Today&apos;s classes"));
+check("Upcoming assignments panel exists", school.includes("Upcoming assignments"));
+check("Weekly workload exists", school.includes("Weekly workload"));
+check("Current courses panel exists", school.includes("Current courses"));
+check("Announcements panel exists", school.includes("Latest updates"));
+check("Analytics baseline route exists", exists("app/school/analytics/page.tsx"));
+check("Milestone 2 tracker is active", progress.includes("milestone ?? 2") && progress.includes("schoolChecks"));
+const failed = checks.filter(([, pass]) => !pass);
+for (const [label, pass] of checks) console.log((pass ? "PASS" : "FAIL") + "  " + label);
+console.log("\n" + (checks.length - failed.length) + "/" + checks.length + " School structure checks passed.");

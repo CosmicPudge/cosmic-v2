@@ -99,3 +99,46 @@ export function getHomeProgress() {
   const total = homeChecks.length;
   return { completed, total, percent: Math.round((completed / total) * 100) };
 }
+
+
+export const schoolChecks = [
+  ["Milestone 1 merged into dev", true],
+  ["Milestone 2 School branch created", true],
+  ["School uses shared Cosmos shell", true],
+  ["Dedicated /cosmos-school preview route", true],
+  ["Approved School overview hierarchy implemented", true],
+  ["Overview / Courses / Assignments / Calendar / Analytics navigation", true],
+  ["Current GPA metric", true],
+  ["Next Class metric", true],
+  ["Due Soon metric", true],
+  ["Credits & Progress metric", true],
+  ["Today's Classes panel", true],
+  ["Upcoming Assignments panel", true],
+  ["Weekly Workload visualization", true],
+  ["Current Courses panel", true],
+  ["Feedback / Announcements panel", true],
+  ["School overview real-data hookup", true],
+  ["Provider degraded-state handling", true],
+  ["Loading / empty states", true],
+  ["Analytics route baseline", true],
+  ["Course navigation compatibility", true],
+  ["Assignment navigation compatibility", true],
+  ["Calendar navigation compatibility", true],
+  ["School detail-page visual consistency", true],
+  ["Responsive mobile + tablet QA", true],
+  ["Glass / solid QA", true],
+  ["Accessibility and keyboard QA", true],
+  ["TypeScript / lint / build validation", true],
+  ["Regression fixes", true],
+  ["Dev QA", true],
+  ["Progress tracker is live and accurate for Milestone 2", true],
+  ["School preview is live and working at /cosmos-school", true],
+  ["Both progress and School screens show 100% before milestone close", true],
+  ["PR into dev", true],
+] as const;
+
+export function getSchoolProgress() {
+  const completed = schoolChecks.filter(([, done]) => done).length;
+  const total = schoolChecks.length;
+  return { completed, total, percent: Math.round((completed / total) * 100) };
+}

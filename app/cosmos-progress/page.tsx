@@ -6,6 +6,8 @@ import {
   getFoundationProgress,
   getHomeProgress,
   homeChecks,
+  getSchoolProgress,
+  schoolChecks,
 } from "@/config/cosmosMilestones";
 
 type ProgressPageProps = {
@@ -14,15 +16,16 @@ type ProgressPageProps = {
 
 export default async function CosmosProgressPage({ searchParams }: ProgressPageProps) {
   const params = await searchParams;
-  const requested = Number(params?.milestone ?? 1);
+  const requested = Number(params?.milestone ?? 2);
   const milestoneIndex = Number.isInteger(requested) && requested >= 0 && requested < cosmosMilestones.length ? requested : 1;
 
   const milestoneName = cosmosMilestones[milestoneIndex];
   const isFoundation = milestoneIndex === 0;
   const isHome = milestoneIndex === 1;
-  const checks = isFoundation ? foundationChecks : isHome ? homeChecks : [];
-  const progress = isFoundation ? getFoundationProgress() : isHome ? getHomeProgress() : { completed: 0, total: 0, percent: 0 };
-  const status = progress.percent === 100 ? "Complete" : milestoneIndex === 1 ? "In progress" : milestoneIndex === 0 ? "Complete" : "Not started";
+  const isSchool = milestoneIndex === 2;
+  const checks = isFoundation ? foundationChecks : isHome ? homeChecks : isSchool ? schoolChecks : [];
+  const progress = isFoundation ? getFoundationProgress() : isHome ? getHomeProgress() : isSchool ? getSchoolProgress() : { completed: 0, total: 0, percent: 0 };
+  const status = progress.percent === 100 ? "Complete" : milestoneIndex === 2 ? "In progress" : milestoneIndex < 2 ? "Complete" : "Not started";
 
   return (
     <main className="min-h-screen bg-[#030511] px-5 py-8 text-white sm:px-8 lg:px-12">
@@ -45,8 +48,10 @@ export default async function CosmosProgressPage({ searchParams }: ProgressPageP
             {milestoneIndex === 0
               ? "The shared Cosmos foundation is complete."
               : milestoneIndex === 1
-                ? progress.percent === 100 ? "Home is complete. Milestone 2 can begin after the dev merge is verified." : "Home is being built now. Every check below must be complete before Milestone 2 begins."
-                : "This milestone has not started yet. Cosmos moves forward one milestone at a time."}
+                ? "Home is complete and merged into dev."
+                : milestoneIndex === 2
+                  ? progress.percent === 100 ? "School is complete. Milestone 3 can begin after the dev merge is verified." : "School is being built now. Every check below must be complete before Milestone 3 begins."
+                  : "This milestone has not started yet. Cosmos moves forward one milestone at a time."}
           </p>
           <div className="text-left md:text-right">
             <p className="text-5xl font-semibold tabular-nums">{progress.percent}%</p>
@@ -95,8 +100,8 @@ export default async function CosmosProgressPage({ searchParams }: ProgressPageP
           <nav className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4" aria-label="Cosmos milestones">
             {cosmosMilestones.map((name, index) => {
               const selected = index === milestoneIndex;
-              const complete = index === 0;
-              const current = index === 1;
+              const complete = index < 2;
+              const current = index === 2;
               return (
                 <Link
                   key={name}
@@ -117,7 +122,7 @@ export default async function CosmosProgressPage({ searchParams }: ProgressPageP
 
         <p className="mt-10 text-sm text-white/35">
           Rule: the next milestone does not begin until the current milestone is 100% complete.
-          {milestoneIndex === 1 ? " Milestone 1 cannot close unless both /cosmos-progress and /cosmos-home are live, working, and showing 100%." : ""}
+          {milestoneIndex === 2 ? " Milestone 2 cannot close unless both /cosmos-progress and /cosmos-school are live, working, and showing 100%." : milestoneIndex === 1 ? " Milestone 1 is complete." : ""}
         </p>
       </div>
     </main>

@@ -13,15 +13,32 @@ export default async function Layout({
   const requestHeaders = new Headers(await headers());
   const requestCookies = await cookies();
   requestHeaders.set("cookie", requestCookies.toString());
+
   const host = requestHeaders.get("host");
   if (!host) notFound();
+
+  const isDevelopmentHost =
+    host === "dev.cosmicpudge.shop" ||
+    host.endsWith(".vercel.app") ||
+    process.env.NODE_ENV === "development";
+
   try {
     await requireSchoolPagePresentation(
-      new Request(`${process.env.NODE_ENV === "development" ? "http" : "https"}://${host}/school`, { headers: requestHeaders }),
+      new Request(`${process.env.NODE_ENV === "development" ? "http" : "https"}://${host}/school`, {
+        headers: requestHeaders,
+      }),
       Boolean(requestCookies.get("cosmic_session")?.value),
     );
   } catch {
-    notFound();
+    // Preview/dev must remain usable for visual QA even when an account cookie
+    // cannot be authorized against the preview hostname. Production continues
+    // to fail closed for authorization/infrastructure errors.
+    if (!isDevelopmentHost) notFound();
   }
-  return <SchoolDataProvider><SchoolLayout>{children}</SchoolLayout></SchoolDataProvider>;
+
+  return (
+    <SchoolDataProvider>
+      <SchoolLayout>{children}</SchoolLayout>
+    </SchoolDataProvider>
+  );
 }

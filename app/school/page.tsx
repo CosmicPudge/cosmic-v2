@@ -1,5 +1,5 @@
-import { AcademicCommandCenterHome } from "@/components/school/AcademicCommandCenterHome";
+import CosmosSchoolOverview from "@/components/school/CosmosSchoolOverview";
 
 export default function SchoolPage() {
-  return <AcademicCommandCenterHome />;
+  return <CosmosSchoolOverview />;
 }
