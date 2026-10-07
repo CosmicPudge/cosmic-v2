@@ -9,6 +9,7 @@
     "start": "next start",
     "lint": "eslint",
     "qa:cosmos-foundation": "node scripts/qa-cosmos-foundation.mjs",
+    "qa:cosmos-home": "node scripts/qa-cosmos-home.mjs",
     "sync:phone-glasses": "node scripts/sync-phone-glasses.mjs",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
