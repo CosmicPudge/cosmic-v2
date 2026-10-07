@@ -43,7 +43,7 @@ export const foundationChecks = [
   ["Dev QA", true],
   ["Progress tracker is live and accurate at /cosmos-progress", true],
   ["Foundation preview is live and working at /cosmos-foundation", true],
-  ["Both progress and foundation screens show 100% before milestone close", false],
+  ["Both progress and foundation screens show 100% before milestone close", true],
   ["PR into dev", true],
 ] as const;
 
