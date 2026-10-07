@@ -7,6 +7,8 @@ import AppContent from "@/components/os/app/AppContent";
 import CosmicCard from "@/design-system/components/CosmicCard";
 import StatusChip from "@/components/os/ui/StatusChip";
 import ProgressBar from "@/components/os/ui/ProgressBar";
+import CosmosState from "@/components/os/ui/CosmosState";
+import { getFoundationProgress } from "@/config/cosmosMilestones";
 
 const demoCards = [
   { title: "School", value: "3.42 GPA", detail: "2 assignments due soon", icon: GraduationCap },
@@ -18,6 +20,7 @@ const demoCards = [
 ];
 
 export default function CosmosFoundationPreviewPage() {
+  const { completed, total, percent } = getFoundationProgress();
   return (
     <AppShell>
       <AppHeader
@@ -69,7 +72,7 @@ export default function CosmosFoundationPreviewPage() {
                 <StatusChip variant="primary">In progress</StatusChip>
               </div>
               <div className="mt-6">
-                <ProgressBar value={54} showValue animated={false} />
+                <ProgressBar value={percent} showValue animated={false} label={`Milestone 0 · ${completed}/${total} checks`} />
               </div>
               <div className="mt-6 grid gap-3 sm:grid-cols-3">
                 <div className="rounded-xl border border-white/8 bg-white/[0.025] p-4">
@@ -110,11 +113,17 @@ export default function CosmosFoundationPreviewPage() {
             </CosmicCard>
           </section>
 
+          <section className="grid gap-3 lg:grid-cols-3">
+            <CosmosState kind="loading" title="Loading state" message="Shared loading treatment used across Cosmos modules." />
+            <CosmosState kind="empty" title="Empty state" message="A calm default when a module has no data yet." />
+            <CosmosState kind="error" title="Error state" message="A consistent recoverable error pattern for failed modules." />
+          </section>
+
           <CosmicCard className="p-5 sm:p-6">
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/40">How to use this screen</p>
             <h2 className="mt-2 text-xl font-semibold">Milestone 0 visual QA sandbox</h2>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-white/55">
-              As shared components change, this page updates with them. Resize the browser, open the mobile menu, use search, click navigation, and compare glass surfaces here. Milestone 0 cannot close until both this foundation preview and the progress tracker are live, working, and at 100%.
+              As shared components change, this page updates with them. Resize the browser, open the mobile menu, use search, click navigation, and compare glass surfaces here. Milestone 0 cannot close until both this foundation preview and the progress tracker are live, working, and at 100%. Current shared progress: ${percent}%.
             </p>
           </CosmicCard>
         </div>
