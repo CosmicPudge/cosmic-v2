@@ -170,16 +170,55 @@ export function useHomeSummaries() {
     };
   }, [music.connected, music.error, music.loading, music.playback]);
 
+  const tasksSummary = useMemo<HomeSummary>(() => {
+    if ((school.loading && !school.data) || projects.loading) return { value: "Loading", detail: "Gathering actionable work", state: "loading" };
+    const schoolTasks = school.data?.assignments.filter((item) => !item.completed) ?? [];
+    const projectTasks = projects.data.tasks.filter((task) => !task.completed);
+    const total = schoolTasks.length + projectTasks.length;
+    const highPriority = schoolTasks.filter((item) => item.priority === "high").length + projectTasks.filter((item) => item.priority === "high").length;
+    const dueSoon = schoolTasks.filter((item) => dueWithin(item.due, 7, now)).length + projectTasks.filter((item) => {
+      if (!item.dueDate) return false;
+      const due = new Date(item.dueDate + "T12:00:00");
+      return !Number.isNaN(due.getTime()) && dueWithin(due, 7, now);
+    }).length;
+    if (!total) return { value: "All clear", detail: "No open school or project tasks", state: "empty" };
+    return {
+      value: `${total} open`,
+      detail: `${highPriority} high priority · ${dueSoon} due this week`,
+      state: "ready",
+    };
+  }, [now, projects.data.tasks, projects.loading, school.data, school.loading]);
+
+  const healthSummary = useMemo<HomeSummary>(() => {
+    if (calendar.loading && !calendar.calendar) return { value: "Loading", detail: "Checking your training schedule", state: "loading" };
+    if (calendar.error && !calendar.calendar) return { value: "Unavailable", detail: calendar.error, state: "error" };
+    if (!calendar.calendar) return { value: "No schedule", detail: "Health will use scheduled workouts until its full module is built", state: "empty" };
+
+    const keywords = /\b(pt|workout|gym|run|running|fitness|pfa|pfra|lift|lifting|training)\b/i;
+    const events = [...calendar.calendar.today, ...calendar.calendar.upcoming]
+      .filter((event, index, list) => list.findIndex((candidate) => candidate.id === event.id) === index)
+      .filter((event) => (event.category === "personal" || !event.category) && keywords.test(event.title))
+      .filter((event) => event.end.getTime() >= now)
+      .sort((a, b) => a.start.getTime() - b.start.getTime());
+    const nextWorkout = events[0];
+    if (!nextWorkout) return { value: "No workout scheduled", detail: "Open Calendar or Health when you want to plan training", state: "empty" };
+    return {
+      value: nextWorkout.start.toDateString() === new Date(now).toDateString() ? "Workout today" : "Workout upcoming",
+      detail: `${nextWorkout.title} · ${timeLabel(nextWorkout.start)}`,
+      state: "ready",
+    };
+  }, [calendar.calendar, calendar.error, calendar.loading, now]);
+
   return {
     school: schoolSummary,
     calendar: calendarSummary,
+    tasks: tasksSummary,
     finance: financeSummary,
+    health: healthSummary,
     garage: garageSummary,
     sports: sportsSummary,
     projects: projectsSummary,
     notes: notesSummary,
     media: mediaSummary,
-    tasks: { value: "Not connected yet", detail: "Task data arrives with the Tasks milestone", state: "empty" } satisfies HomeSummary,
-    health: { value: "Not connected yet", detail: "Health data arrives with the Health milestone", state: "empty" } satisfies HomeSummary,
   };
 }
