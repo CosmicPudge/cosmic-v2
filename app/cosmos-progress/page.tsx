@@ -1,56 +1,7 @@
-const milestones = [
-  "Shared Foundation",
-  "Home",
-  "School",
-  "Calendar",
-  "Tasks",
-  "Projects",
-  "Notes / Brain",
-  "Finance",
-  "Health",
-  "Garage",
-  "Sports",
-  "Media",
-  "Cosmic AI",
-  "Devices / Kiosk",
-  "Settings",
-  "Final Integration + Polish",
-];
-
-const foundation = [
-  ["Canonical 14-page navigation", true],
-  ["Desktop sidebar", true],
-  ["Responsive mobile navigation", true],
-  ["Cosmos branding", true],
-  ["Global top bar", true],
-  ["Shared page header pattern", true],
-  ["Clear-glass visual system", true],
-  ["Glass / solid surface mode", true],
-  ["Shared card surface", true],
-  ["Home shell uses shared chrome", true],
-  ["Placeholder routes for new pages", true],
-  ["PWA branding", true],
-  ["Responsive / focus / reduced-motion baseline", true],
-  ["Shared buttons, status, progress, loading, empty, error styling", false],
-  ["Live weather in top bar", false],
-  ["Existing-page shell compatibility", false],
-  ["School compatibility", false],
-  ["Kiosk regression check", false],
-  ["Mobile + tablet QA", false],
-  ["Glass / solid QA", false],
-  ["TypeScript / lint / build validation", false],
-  ["Regression fixes", false],
-  ["Dev QA", false],
-  ["Progress tracker is live and accurate at /cosmos-progress", true],
-  ["Foundation preview is live and working at /cosmos-foundation", true],
-  ["Both progress and foundation screens show 100% before milestone close", false],
-  ["PR into dev", false],
-] as const;
+import { cosmosMilestones, foundationChecks, getFoundationProgress } from "@/config/cosmosMilestones";
 
 export default function CosmosProgressPage() {
-  const completed = foundation.filter(([, done]) => done).length;
-  const total = foundation.length;
-  const percent = Math.round((completed / total) * 100);
+  const { completed, total, percent } = getFoundationProgress();
 
   return (
     <main className="min-h-screen bg-[#030511] px-5 py-8 text-white sm:px-8 lg:px-12">
@@ -72,7 +23,7 @@ export default function CosmosProgressPage() {
         </div>
 
         <section className="mt-8 grid gap-3 md:grid-cols-2">
-          {foundation.map(([label, done]) => (
+          {foundationChecks.map(([label, done]) => (
             <div key={label} className={`rounded-2xl border p-4 ${done ? "border-emerald-300/20 bg-emerald-400/[0.06]" : "border-white/10 bg-white/[0.035]"}`}>
               <div className="flex items-center gap-3">
                 <span className={`grid h-7 w-7 shrink-0 place-items-center rounded-full text-sm font-bold ${done ? "bg-emerald-400/15 text-emerald-200" : "bg-white/8 text-white/35"}`}>
@@ -87,7 +38,7 @@ export default function CosmosProgressPage() {
         <section className="mt-10">
           <h2 className="text-lg font-semibold">All milestones</h2>
           <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-            {milestones.map((name, index) => (
+            {cosmosMilestones.map((name, index) => (
               <div key={name} className={`rounded-xl border px-3 py-3 text-sm ${index === 0 ? "border-violet-300/30 bg-violet-400/10 text-white" : "border-white/8 bg-white/[0.02] text-white/35"}`}>
                 <span className="mr-2 text-xs tabular-nums text-white/30">{index}</span>
                 {name}
