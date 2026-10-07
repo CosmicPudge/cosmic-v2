@@ -59,7 +59,7 @@ function stateLabel(state: HomeSummary["state"]) {
 function SummaryCardView({ card, summary }: { card: SummaryCard; summary: HomeSummary }) {
   const Icon = card.icon;
   return (
-    <Link href={card.href} className={`group block min-w-0 ${card.className ?? ""}`}>
+    <Link href={card.href} aria-label={`Open ${card.title}`} className={`group block min-w-0 rounded-2xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-200 ${card.className ?? ""}`}>
       <CosmicCard interactive className="h-full p-5 sm:p-6">
         <div className="flex h-full min-h-[150px] flex-col">
           <div className="flex items-start justify-between gap-4">
