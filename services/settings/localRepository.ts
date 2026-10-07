@@ -7,6 +7,7 @@ import type {
   BackgroundIntensity,
   BackgroundMotion,
   CosmicSettingsLocalData,
+  CosmosSurfaceStyle,
 } from "@/core/contracts/Settings";
 import type { DeviceProfileOverride, PerformanceMode } from "@/core/contracts/System";
 import type { CosmicProfileId, CosmicUserPreferences } from "@/core/contracts/Settings";
@@ -23,7 +24,7 @@ export const defaultSettingsData: CosmicSettingsLocalData = {
   profileId: "neutral",
   preferences: clonePreferences(neutralPreferences),
   profiles: { neutral: clonePreferences(neutralPreferences), reference: clonePreferences(referencePreferences) },
-  appearance: { reducedEffects: false },
+  appearance: { reducedEffects: false, surfaceStyle: "glass" },
   background: { intensity: "normal", motion: "normal" },
   ambient: { enabled: true, idleMinutes: 5 },
   system: { performanceMode: "automatic", deviceProfileOverride: "automatic" },
@@ -38,6 +39,10 @@ export const referenceSettingsData: CosmicSettingsLocalData = {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isSurfaceStyle(value: unknown): value is CosmosSurfaceStyle {
+  return value === "glass" || value === "solid";
 }
 
 function isIntensity(value: unknown): value is BackgroundIntensity {
@@ -83,7 +88,7 @@ export function validateSettingsSnapshot(value: unknown): CosmicSettingsLocalDat
     profileId,
     preferences: preferences ?? preferencesForProfile(profileId),
     profiles,
-    appearance: { reducedEffects: appearance.reducedEffects },
+    appearance: { reducedEffects: appearance.reducedEffects, surfaceStyle: isSurfaceStyle(appearance.surfaceStyle) ? appearance.surfaceStyle : "glass" },
     background: { intensity: background.intensity, motion: background.motion },
     ambient: { enabled: ambient.enabled, idleMinutes: ambient.idleMinutes },
     system: normalizedSystem,
@@ -192,7 +197,8 @@ export function useSettingsRepository() {
     data,
     ready,
     sync,
-    setReducedEffects: (reducedEffects: boolean) => update((current) => ({ ...current, appearance: { reducedEffects } })),
+    setReducedEffects: (reducedEffects: boolean) => update((current) => ({ ...current, appearance: { ...current.appearance, reducedEffects } })),
+    setSurfaceStyle: (surfaceStyle: CosmosSurfaceStyle) => update((current) => ({ ...current, appearance: { ...current.appearance, surfaceStyle } })),
     setBackgroundIntensity: (intensity: BackgroundIntensity) => update((current) => ({ ...current, background: { ...current.background, intensity } })),
     setBackgroundMotion: (motion: BackgroundMotion) => update((current) => ({ ...current, background: { ...current.background, motion } })),
     setAmbientEnabled: (enabled: boolean) => update((current) => ({
