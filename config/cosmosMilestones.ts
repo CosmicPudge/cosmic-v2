@@ -52,3 +52,50 @@ export function getFoundationProgress() {
   const total = foundationChecks.length;
   return { completed, total, percent: Math.round((completed / total) * 100) };
 }
+
+
+export const homeChecks = [
+  ["Milestone 0 merged into dev", true],
+  ["Milestone 1 Home branch created", true],
+  ["/os uses shared Cosmos shell", true],
+  ["Dedicated /cosmos-home preview route", true],
+  ["Approved Home hierarchy implemented", true],
+  ["Responsive summary grid baseline", true],
+  ["School summary card", true],
+  ["Calendar summary card", true],
+  ["Tasks summary card", true],
+  ["Finance Safe to Spend summary card", true],
+  ["Health summary card", true],
+  ["Garage summary card", true],
+  ["Sports summary card", true],
+  ["Projects summary card", true],
+  ["Notes summary card", true],
+  ["Media summary card", true],
+  ["Home cards click through to specialist pages", true],
+  ["Home remains summary-first, not interaction-dense", true],
+  ["Shared loading / empty / error states", true],
+  ["School real-data hookup", true],
+  ["Calendar real-data hookup", true],
+  ["Tasks real-data hookup", true],
+  ["Finance real-data hookup", true],
+  ["Health real-data hookup", true],
+  ["Garage real-data hookup", true],
+  ["Sports real-data hookup", true],
+  ["Projects / Notes / Media real-data hookup", true],
+  ["Accessibility and keyboard QA", true],
+  ["Mobile + tablet QA", true],
+  ["Glass / solid QA", true],
+  ["TypeScript / lint / build validation", true],
+  ["Regression fixes", true],
+  ["Dev QA", true],
+  ["Progress tracker is live and accurate for Milestone 1", true],
+  ["Home preview is live and working at /cosmos-home", true],
+  ["Both progress and Home screens show 100% before milestone close", true],
+  ["PR into dev", true],
+] as const;
+
+export function getHomeProgress() {
+  const completed = homeChecks.filter(([, done]) => done).length;
+  const total = homeChecks.length;
+  return { completed, total, percent: Math.round((completed / total) * 100) };
+}
