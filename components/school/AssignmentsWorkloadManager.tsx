@@ -16,6 +16,7 @@ import { useSchool } from "./context/SchoolDataContext";
 import { AssignmentForm } from "./SchoolCrudViews";
 import { SchoolConfirm } from "./SchoolModal";
 import { readSchoolCompletionOverrides, setSchoolCompletionOverride } from "@/services/school/completionOverrides";
+import SchoolTabs from "./SchoolTabs";
 
 const panel = "rounded-[1.35rem] border border-white/[0.09] bg-[#101c35]/75";
 type Group = "needsAttention" | "dueSoon" | "later" | "undated" | "completed";
@@ -58,6 +59,7 @@ export function AssignmentsWorkloadManager({ requestedCourseId }: { requestedCou
   const activeCount = allAssignments.filter((item) => !done(item, completionOverrides)).length;
 
   return <div className="space-y-5">
+    <SchoolTabs />
     <header className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
       <div><p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-sky-200/55">School / Assignments</p><h1 className="mt-2 text-4xl font-black tracking-[-0.045em] text-white">Workload</h1><p className="mt-2 text-sm text-white/45">{activeCount} active assignments across {catalog.length} courses</p></div>
       <button type="button" onClick={() => setEditing(null)} className="rounded-xl bg-sky-200/15 px-3.5 py-2.5 text-sm font-semibold text-sky-50 transition hover:bg-sky-200/25">+ Add Assignment</button>
