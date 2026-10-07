@@ -38,6 +38,11 @@ test("production hosts cannot activate the diagnostics view", () => {
 test("diagnostics mode avoids normal slideshow pollers and timers", () => {
   assert.match(standaloneSource, /renderState === "normal" \? <ConnectionHealthProvider>/);
   assert.match(standaloneSource, /renderState === "diagnostics" \? <KioskDiagnosticsView \/>/);
-  assert.match(diagnosticsSource, /credentials: "include"/);
+  assert.match(diagnosticsSource, /credentials: "same-origin"/);
   assert.equal(diagnosticsSource.includes("setInterval"), false);
+});
+
+test("diagnostics bootstrap requires a boot-bound authenticated device session", () => {
+  assert.match(standaloneSource, /sessionBody\.sessionType === "device"/);
+  assert.match(standaloneSource, /sessionBody\.authenticatedBootId === bootId/);
 });

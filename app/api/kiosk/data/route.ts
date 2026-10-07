@@ -1,19 +1,17 @@
-import { getDeveloperKioskData, isDeveloperKioskRequest } from "@/services/kiosk/developerKiosk";
-import { getCurrentCosmicSession, kioskBootId } from "@/services/auth/server";
+import { getDeveloperKioskData } from "@/services/kiosk/developerKiosk";
+import { getDeveloperKioskSession } from "@/services/kiosk/auth";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
-  if (!isDeveloperKioskRequest(request)) return Response.json({ error: "Not found" }, { status: 404 });
+  const auth = await getDeveloperKioskSession(request);
+  if (auth.status === "not-found") return Response.json({ error: "Not found" }, { status: 404 });
   const startedAt = Date.now();
-  let session: Awaited<ReturnType<typeof getCurrentCosmicSession>>;
-  try {
-    session = await getCurrentCosmicSession(request, { allowUser: false, allowDevice: true, bootId: kioskBootId(request) });
-  } catch {
+  if (auth.status === "unavailable") {
     if (process.env.NODE_ENV !== "production") console.info(`[kiosk-data] status=503 auth=unavailable category=auth-error durationMs=${Date.now() - startedAt}`);
     return Response.json({ error: "Kiosk authentication is temporarily unavailable.", category: "auth-error" }, { status: 503, headers: { "Cache-Control": "no-store" } });
   }
-  if (!session) {
+  if (auth.status === "unauthorized") {
     if (process.env.NODE_ENV !== "production") console.info(`[kiosk-data] status=401 auth=session_expired durationMs=${Date.now() - startedAt}`);
     return Response.json({ error: "Authentication required.", category: "session-expired" }, { status: 401, headers: { "Cache-Control": "no-store" } });
   }

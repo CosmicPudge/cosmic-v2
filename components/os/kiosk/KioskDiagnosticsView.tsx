@@ -23,7 +23,7 @@ export default function KioskDiagnosticsView() {
     const bootId = new URLSearchParams(window.location.search).get("cosmic-boot")?.trim();
     if (bootId) params.set("cosmic-boot", bootId);
     let active = true;
-    void fetch(kioskApiUrl(`/api/kiosk/diagnostics?${params.toString()}`), { cache: "no-store", credentials: "include" })
+    void fetch(kioskApiUrl(`/api/kiosk/diagnostics?${params.toString()}`), { cache: "no-store", credentials: "same-origin" })
       .then(async (response) => {
         if (!response.ok) throw new Error(response.status === 401 ? "Kiosk session authentication is required." : "Diagnostics are temporarily unavailable.");
         return response.json() as Promise<DiagnosticsResponse>;

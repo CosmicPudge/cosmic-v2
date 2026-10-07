@@ -70,9 +70,10 @@ export default function StandaloneDesktopKiosk() {
         log(`redeem status=${redemption.status}`);
         if (!redemption.ok) { log("sessionEstablished=false"); scheduleRetry(); return; }
         const session = await fetch(`/api/account/session?cosmic-kiosk=1&cosmic-boot=${encodeURIComponent(bootId)}`, { credentials: "include", cache: "no-store" });
-        const sessionBody = await session.json().catch(() => null) as { authenticated?: boolean; sessionType?: string } | null;
-        log(`sessionEstablished=${session.ok && sessionBody?.authenticated === true && sessionBody.sessionType === "device"}`);
-        if (session.ok && sessionBody?.authenticated === true && sessionBody.sessionType === "device") {
+        const sessionBody = await session.json().catch(() => null) as { authenticated?: boolean; sessionType?: string; authenticatedBootId?: string } | null;
+        const sessionEstablished = session.ok && sessionBody?.authenticated === true && sessionBody.sessionType === "device" && sessionBody.authenticatedBootId === bootId;
+        log(`sessionEstablished=${sessionEstablished} bootMatch=${sessionBody?.authenticatedBootId === bootId}`);
+        if (sessionEstablished) {
           retryDelay = 5_000;
           setRuntimeReady(true);
           window.dispatchEvent(new CustomEvent("cosmic:kiosk-session-renewed"));

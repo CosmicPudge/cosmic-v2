@@ -1,5 +1,5 @@
-import { getCurrentCosmicSession, kioskBootId } from "@/services/auth/server";
-import { getDeveloperKioskData, isDeveloperKioskRequest } from "@/services/kiosk/developerKiosk";
+import { getDeveloperKioskData } from "@/services/kiosk/developerKiosk";
+import { getDeveloperKioskSession } from "@/services/kiosk/auth";
 import { createKioskDiagnostics } from "@/services/kiosk/diagnostics";
 
 export const runtime = "nodejs";
@@ -7,9 +7,10 @@ export const dynamic = "force-dynamic";
 
 /** TEMPORARY DEV KIOSK DIAGNOSTICS. Remove after provider troubleshooting. */
 export async function GET(request: Request) {
-  if (!isDeveloperKioskRequest(request)) return Response.json({ error: "Not found" }, { status: 404 });
-  const session = await getCurrentCosmicSession(request, { allowUser: false, allowDevice: true, bootId: kioskBootId(request) });
-  if (!session) return Response.json({ error: "Authentication required." }, { status: 401, headers: { "Cache-Control": "no-store" } });
+  const auth = await getDeveloperKioskSession(request);
+  if (auth.status === "not-found") return Response.json({ error: "Not found" }, { status: 404 });
+  if (auth.status === "unavailable") return Response.json({ error: "Kiosk authentication is temporarily unavailable." }, { status: 503, headers: { "Cache-Control": "no-store" } });
+  if (auth.status === "unauthorized") return Response.json({ error: "Authentication required." }, { status: 401, headers: { "Cache-Control": "no-store" } });
 
   const diagnostics = createKioskDiagnostics();
   await getDeveloperKioskData(request, diagnostics);
