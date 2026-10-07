@@ -10,8 +10,8 @@ type AuthDiagnostics = { cookiePresent: boolean; sessionLookup: "hit" | "miss" |
 type AuthStatusResponse = Omit<AuthDiagnostics, "bootQueryPresent" | "expired"> & { bootQueryPresent: boolean; expired: boolean };
 type DiagnosticsErrorResponse = { error: string; auth?: AuthDiagnostics };
 
-function Status({ label, value }: { label: string; value: string }) {
-  return <div className="flex items-center justify-between gap-6 border-b border-white/[.08] py-3 last:border-0"><dt className="text-sm text-white/55">{label}</dt><dd className="text-right text-sm font-medium text-cyan-100/85">{value}</dd></div>;
+function Status({ label, value, emphasis = false }: { label: string; value: string; emphasis?: boolean }) {
+  return <div className="flex min-w-0 items-center justify-between gap-2 border-b border-white/[.08] py-0.5 last:border-0"><dt className="truncate text-[10px] leading-4 text-white/55">{label}</dt><dd className={`truncate text-right text-[10px] font-semibold uppercase leading-4 ${emphasis ? "text-amber-100" : "text-cyan-100/85"}`}>{value}</dd></div>;
 }
 
 function yesNo(value: boolean) {
@@ -31,7 +31,11 @@ function diagnosticsErrorCategory(reason: unknown): "timeout" | "aborted" | "net
 }
 
 function AuthStatusPanel({ auth }: { auth: AuthStatusResponse }) {
-  return <><p className="text-xs uppercase tracking-[.3em] text-amber-100/60">Authentication</p><h1 className="mt-3 text-3xl font-semibold text-white">Kiosk session authentication</h1><dl className="mt-8 max-w-xl rounded-2xl border border-amber-100/10 bg-white/[.04] p-5"><Status label="Cookie" value={auth.cookiePresent ? "PRESENT" : "MISSING"} /><Status label="Session lookup" value={auth.sessionLookup.toUpperCase()} /><Status label="Session type" value={auth.sessionKind.toUpperCase()} /><Status label="Boot query" value={auth.bootQueryPresent ? "PRESENT" : "MISSING"} /><Status label="Boot bound" value={yesNo(auth.bootBound).toUpperCase()} /><Status label="Boot match" value={yesNo(auth.bootMatch).toUpperCase()} /><Status label="Expired" value={yesNo(auth.expired).toUpperCase()} /><Status label="Result" value={auth.authResult.replaceAll("-", " ").toUpperCase()} /></dl></>;
+  return <header className="shrink-0"><div className="flex items-center justify-between gap-3"><p className="text-[11px] font-semibold uppercase tracking-[.24em] text-cyan-100/70">Runtime diagnostics</p><p className="text-[9px] uppercase tracking-[.2em] text-white/35">800 × 480 kiosk</p></div><dl className="mt-1 grid grid-cols-4 gap-1 rounded-md border border-white/10 bg-white/[.04] px-2 py-1"><Status label="Auth" value={auth.authResult === "ok" ? "OK" : auth.authResult.replaceAll("-", " ")} emphasis={auth.authResult !== "ok"} /><Status label="Cookie" value={auth.cookiePresent ? "PRESENT" : "MISSING"} /><Status label="Session" value={auth.sessionKind} /><Status label="Boot" value={auth.bootMatch ? "MATCH" : auth.bootQueryPresent ? "MISMATCH" : "MISSING"} emphasis={!auth.bootMatch} /></dl></header>;
+}
+
+function DiagnosticSection({ title, children }: { title: string; children: React.ReactNode }) {
+  return <section className="min-h-0 overflow-hidden rounded-md border border-white/10 bg-white/[.04] px-2 py-1.5"><h2 className="mb-1 text-[10px] font-semibold uppercase tracking-[.2em] text-white/75">{title}</h2><dl>{children}</dl></section>;
 }
 
 export default function KioskDiagnosticsView() {
@@ -98,16 +102,14 @@ export default function KioskDiagnosticsView() {
   if (!payload) return <DiagnosticsShell>{authStatus ? <AuthStatusPanel auth={authStatus} /> : <p className="text-sm text-white/55">Loading kiosk authentication status…</p>}</DiagnosticsShell>;
 
   return <DiagnosticsShell>
-    <p className="text-xs uppercase tracking-[.3em] text-cyan-100/55">Authenticated developer kiosk</p>
-    <h1 className="mt-3 text-3xl font-semibold text-white">Runtime diagnostics</h1>
-    <p className="mt-2 text-sm text-white/45">Provider readiness only. Secrets, coordinates, identifiers, and private content are withheld.</p>
-    <div className="mt-8 grid gap-5 md:grid-cols-2">
-      <section className="rounded-2xl border border-white/10 bg-white/[.04] p-5"><h2 className="font-semibold text-white">Weather</h2><dl className="mt-3"><Status label="API key configured" value={yesNo(payload.weather.apiKeyConfigured)} /><Status label="Browser location provided" value={yesNo(payload.weather.browserLocationProvided)} /><Status label="Stored location available" value={yesNo(payload.weather.storedLocationAvailable)} /><Status label="Server fallback configured" value={yesNo(payload.weather.serverFallbackConfigured)} /><Status label="Location source" value={payload.weather.locationSource} /><Status label="Provider attempted" value={yesNo(payload.weather.providerAttempted)} /><Status label="Provider result" value={payload.weather.providerResult} /><Status label="Aggregate weather" value={yesNo(payload.weather.aggregateHasWeather)} /></dl></section>
-      <section className="rounded-2xl border border-white/10 bg-white/[.04] p-5"><h2 className="font-semibold text-white">School</h2><dl className="mt-3"><Status label="Kiosk account configured" value={yesNo(payload.school.accountConfigured)} /><Status label="Account lookup attempted" value={yesNo(payload.school.accountLookupAttempted)} /><Status label="Account matched" value={yesNo(payload.school.accountMatched)} /><Status label="Provider" value={payload.school.provider} /><Status label="Provider configured" value={yesNo(payload.school.providerConfigured)} /><Status label="Credential available" value={yesNo(payload.school.credentialAvailable)} /><Status label="Provider attempted" value={yesNo(payload.school.providerAttempted)} /><Status label="Provider result" value={payload.school.providerResult} /><Status label="Canvas fallback configured" value={yesNo(payload.school.fallbackConfigured)} /><Status label="Aggregate data" value={yesNo(payload.school.aggregateHasData)} /></dl></section>
+    {authStatus ? <AuthStatusPanel auth={authStatus} /> : null}
+    <div className="mt-2 grid min-h-0 flex-1 grid-cols-2 gap-2">
+      <DiagnosticSection title="Weather"><Status label="API key" value={yesNo(payload.weather.apiKeyConfigured)} /><Status label="Browser location" value={yesNo(payload.weather.browserLocationProvided)} /><Status label="Stored location" value={yesNo(payload.weather.storedLocationAvailable)} /><Status label="Server fallback" value={yesNo(payload.weather.serverFallbackConfigured)} /><Status label="Location source" value={payload.weather.locationSource} /><Status label="Provider attempted" value={yesNo(payload.weather.providerAttempted)} /><Status label="Provider result" value={payload.weather.providerResult} emphasis={payload.weather.providerResult !== "ok"} /><Status label="Provider status" value={payload.weather.httpStatus ? String(payload.weather.httpStatus) : payload.weather.providerResult} emphasis={payload.weather.providerResult !== "ok"} /></DiagnosticSection>
+      <DiagnosticSection title="School"><Status label="Kiosk account" value={yesNo(payload.school.accountConfigured)} /><Status label="Account lookup" value={yesNo(payload.school.accountLookupAttempted)} /><Status label="Account matched" value={yesNo(payload.school.accountMatched)} /><Status label="Provider" value={payload.school.provider} /><Status label="Provider configured" value={yesNo(payload.school.providerConfigured)} /><Status label="Credential available" value={yesNo(payload.school.credentialAvailable)} /><Status label="Provider attempted" value={yesNo(payload.school.providerAttempted)} /><Status label="Provider result" value={payload.school.providerResult} emphasis={payload.school.providerResult !== "ok"} /><Status label="Provider status" value={payload.school.providerResult} emphasis={payload.school.providerResult !== "ok"} /></DiagnosticSection>
     </div>
   </DiagnosticsShell>;
 }
 
 function DiagnosticsShell({ children }: { children: React.ReactNode }) {
-  return <main className="grid min-h-[100dvh] place-items-center overflow-auto bg-[#02040e] p-6 text-white"><div className="w-full max-w-4xl">{children}</div></main>;
+  return <main className="h-[100dvh] w-[100dvw] overflow-hidden bg-[#02040e] p-2 text-white"><div className="mx-auto flex h-full w-full max-w-4xl min-w-0 flex-col">{children}</div></main>;
 }

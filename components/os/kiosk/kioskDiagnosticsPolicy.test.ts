@@ -42,16 +42,50 @@ test("diagnostics mode avoids normal slideshow pollers and timers", () => {
   assert.equal(diagnosticsSource.includes("setInterval"), false);
 });
 
+test("diagnostics fits the 800x480 kiosk without a scroll container", () => {
+  assert.match(diagnosticsSource, /h-\[100dvh\]/);
+  assert.match(diagnosticsSource, /w-\[100dvw\]/);
+  assert.match(diagnosticsSource, /overflow-hidden/);
+  assert.doesNotMatch(diagnosticsSource, /overflow-auto|overflow-y-auto|overflow-scroll/);
+  assert.match(diagnosticsSource, /title="?Weather|title="?School|title: "Weather"/);
+  assert.match(diagnosticsSource, /label="Provider result"/g);
+  assert.match(diagnosticsSource, /label="Auth"/);
+  assert.match(diagnosticsSource, /label="Cookie"/);
+  assert.match(diagnosticsSource, /label="Session"/);
+  assert.match(diagnosticsSource, /label="Boot"/);
+});
+
+test("diagnostics exposes the compact weather and school field set", () => {
+  for (const label of [
+    "API key",
+    "Browser location",
+    "Stored location",
+    "Server fallback",
+    "Location source",
+    "Provider attempted",
+    "Provider status",
+    "Kiosk account",
+    "Account lookup",
+    "Account matched",
+    "Provider",
+    "Provider configured",
+    "Credential available",
+  ]) {
+    assert.match(diagnosticsSource, new RegExp(`label=\\"${label}\\"`));
+  }
+  assert.doesNotMatch(diagnosticsSource, /coordinates|Canvas URL|assignment data/);
+});
+
 test("diagnostics UI renders safe authentication failure metadata", () => {
   assert.match(diagnosticsSource, /Cookie/);
-  assert.match(diagnosticsSource, /Session lookup/);
-  assert.match(diagnosticsSource, /Boot match/);
+  assert.match(diagnosticsSource, /Session/);
+  assert.match(diagnosticsSource, /Boot/);
   assert.match(diagnosticsSource, /response\.status === 401/);
   assert.match(diagnosticsSource, /"auth" in body && body\.auth/);
   assert.match(diagnosticsSource, /\/api\/kiosk\/auth-status/);
   assert.match(diagnosticsSource, /authResult !== "ok"/);
-  assert.match(diagnosticsSource, /Boot query/);
-  assert.match(diagnosticsSource, /Expired/);
+  assert.match(diagnosticsSource, /bootQueryPresent/);
+  assert.match(diagnosticsSource, /expired/);
   assert.doesNotMatch(diagnosticsSource, /sessionId|deviceId|accountId/);
 });
 
