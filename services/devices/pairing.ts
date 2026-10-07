@@ -52,7 +52,7 @@ export async function createDevicePairing(bootId: string, existingDeviceId?: str
       if (result.status === "identity_missing") return result;
       const row = result.row;
       const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://cosmicpudge.shop";
-      pairLog(`created id=${row.id} status=pending boot=${bootId}`);
+      pairLog("created status=pending");
       return { status: "created", deviceCode, userCode: formatUserCode(row.userCode), deviceNumber: result.publicNumber, verificationUrl: `${baseUrl}/activate?code=${encodeURIComponent(formatUserCode(row.userCode))}`, expiresAt: row.expiresAt.toISOString(), pollInterval: DEVICE_POLL_INTERVAL_SECONDS };
     } catch (error) {
       if (attempt === 4) throw error;
@@ -72,7 +72,7 @@ export async function getPairingStatus(deviceCode: string) {
   }
   if (row.status === "pending") await database.update(devicePairings).set({ lastPolledAt: now }).where(eq(devicePairings.id, row.id));
   const status = row.status === "approved" ? "approved" as const : row.status === "denied" ? "denied" as const : row.status === "consumed" ? "expired" as const : "pending" as const;
-  pairLog(`poll id=${row.id} status=${status}`);
+  pairLog(`poll status=${status}`);
   return { status };
 }
 
@@ -97,7 +97,7 @@ export async function approveDevicePairing(userCodeInput: string, userId: string
       const challenge = initialEnrollmentChallenge(updated.id);
       await tx.insert(deviceEnrollmentGrants).values({ id: `enroll_${randomUUID()}`, deviceId, challengeHash: hash(challenge), grantHash: hash(updated.id), userId, expiresAt: new Date(Date.now() + DEVICE_ENROLLMENT_TTL_MS), approvedAt: new Date() });
     }
-    pairLog(`approved id=${updated.id} status=approved`);
+    pairLog("approved status=approved");
     return { deviceId: updated.deviceId! };
   });
 }
@@ -119,7 +119,7 @@ export async function consumeApprovedPairing(deviceCode: string) {
       step = "consume-check";
       const [pairing] = await tx.select().from(devicePairings).where(and(eq(devicePairings.deviceCodeHash, hash(deviceCode)), eq(devicePairings.status, "approved"), gt(devicePairings.expiresAt, new Date()), isNull(devicePairings.consumedAt))).for("update").limit(1);
       if (!pairing?.userId) return null;
-      pairLog(`consume-start id=${pairing.id}`);
+      pairLog("consume-start");
       pairLog("consume-check-expiry ok=true");
       step = "device";
       if (!pairing.deviceId) return null;
@@ -127,17 +127,17 @@ export async function consumeApprovedPairing(deviceCode: string) {
       if (!existingDevice) return null;
       const deviceId = existingDevice.id;
       await tx.update(devices).set({ lastSeenAt: new Date(), credentialRevokedAt: null, ownershipStatus: "owned", revokedAt: null }).where(eq(devices.id, deviceId));
-      pairLog(`consume-device deviceId=${deviceId}`);
+      pairLog("consume-device");
       step = "session-create";
       pairLog("consume-session-create start");
       const sessionId = `session_${randomUUID()}`;
       await tx.insert(sessions).values({ id: sessionId, userId: pairing.userId, sessionTokenHash: hashSessionToken(token), expiresAt, sessionType: "device", deviceId, authenticatedBootId: pairing.bootId, userAgent: "Cosmic Display" });
-      pairLog(`[pair-consume] pairingId=${pairing.id} deviceId=${deviceId} sessionCreated=true sessionType=device authenticatedBootId=${pairing.bootId}`);
+      pairLog("session-created sessionType=device bootBound=true");
       pairLog("consume-session-create success");
       step = "mark-consumed";
       const [consumed] = await tx.update(devicePairings).set({ status: "consumed", consumedAt: new Date() }).where(and(eq(devicePairings.id, pairing.id), eq(devicePairings.status, "approved"), isNull(devicePairings.consumedAt))).returning({ id: devicePairings.id, consumedAt: devicePairings.consumedAt });
       if (!consumed) throw new Error("Pairing could not be marked consumed.");
-      pairLog(`[pair-consume] pairingId=${consumed.id} pairingConsumed=${Boolean(consumed.consumedAt)}`);
+      pairLog(`pairing-consumed=${Boolean(consumed.consumedAt)}`);
       const [device] = await tx.select({ publicNumber: devices.publicNumber }).from(devices).where(eq(devices.id, deviceId)).limit(1);
       const [initialGrant] = await tx.select({ id: deviceEnrollmentGrants.id }).from(deviceEnrollmentGrants).where(and(eq(deviceEnrollmentGrants.deviceId, deviceId), eq(deviceEnrollmentGrants.challengeHash, hash(initialEnrollmentChallenge(pairing.id))), eq(deviceEnrollmentGrants.grantHash, hash(pairing.id)), eq(deviceEnrollmentGrants.userId, pairing.userId), isNotNull(deviceEnrollmentGrants.approvedAt), isNull(deviceEnrollmentGrants.consumedAt), gt(deviceEnrollmentGrants.expiresAt, new Date()))).limit(1);
       return { token, expiresAt: expiresAt.toISOString(), deviceId, deviceNumber: device?.publicNumber ?? "", initialEnrollmentRequired: Boolean(initialGrant) };

@@ -1,9 +1,12 @@
 import { getDeveloperKioskData } from "@/services/kiosk/developerKiosk";
-import { getDeveloperKioskSession } from "@/services/kiosk/auth";
+import { getDeveloperKioskSession, inspectDeveloperKioskSession, logDeveloperKioskAuth } from "@/services/kiosk/auth";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
+  if (process.env.NODE_ENV !== "production" || process.env.VERCEL_ENV === "preview") {
+    try { logDeveloperKioskAuth("data", await inspectDeveloperKioskSession(request)); } catch { /* Safe debug logging must never affect auth. */ }
+  }
   const auth = await getDeveloperKioskSession(request);
   if (auth.status === "not-found") return Response.json({ error: "Not found" }, { status: 404 });
   const startedAt = Date.now();
