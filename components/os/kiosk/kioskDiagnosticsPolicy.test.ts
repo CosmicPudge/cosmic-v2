@@ -42,6 +42,15 @@ test("diagnostics mode avoids normal slideshow pollers and timers", () => {
   assert.equal(diagnosticsSource.includes("setInterval"), false);
 });
 
+test("diagnostics UI renders safe authentication failure metadata", () => {
+  assert.match(diagnosticsSource, /Cookie/);
+  assert.match(diagnosticsSource, /Session lookup/);
+  assert.match(diagnosticsSource, /Boot match/);
+  assert.match(diagnosticsSource, /response\.status === 401/);
+  assert.match(diagnosticsSource, /body\?\.auth/);
+  assert.doesNotMatch(diagnosticsSource, /sessionId|deviceId|accountId/);
+});
+
 test("diagnostics bootstrap requires a boot-bound authenticated device session", () => {
   assert.match(standaloneSource, /sessionBody\.sessionType === "device"/);
   assert.match(standaloneSource, /sessionBody\.authenticatedBootId === bootId/);

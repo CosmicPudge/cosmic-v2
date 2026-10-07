@@ -37,6 +37,13 @@ test("auth policy rejects missing, expired/missing, wrong-kind, and boot-mismatc
   assert.equal(classifyKioskAuth({ cookiePresent: true, sessionFound: true, sessionKind: "user", bootBound: false, bootMatch: false }).authResult, "wrong-kind");
   assert.equal(classifyKioskAuth({ cookiePresent: true, sessionFound: true, sessionKind: "device", bootBound: true, bootMatch: false }).authResult, "boot-mismatch");
   assert.equal(classifyKioskAuth({ cookiePresent: true, sessionFound: true, sessionKind: "device", bootBound: true, bootMatch: true }).authResult, "ok");
+  assert.equal(classifyKioskAuth({ cookiePresent: true, sessionFound: true, sessionKind: "device", bootBound: true, bootMatch: true, sessionExpired: true }).authResult, "expired");
+});
+
+test("diagnostics exposes only safe auth metadata on its gated 401 path", () => {
+  assert.match(diagnosticsRoute, /auth: auth\.diagnostics/);
+  assert.match(diagnosticsRoute, /status: 401/);
+  assert.doesNotMatch(diagnosticsRoute, /token|sessionId|deviceId|accountId|bootId/i);
 });
 
 test("auth debug logging contains only safe status fields", () => {

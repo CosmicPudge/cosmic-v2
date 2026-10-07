@@ -13,6 +13,8 @@ export interface AuthSessionRecord extends CosmicSession {
   userAgent?: string;
 }
 
+export type AuthSessionLookup = { status: "miss" } | { status: "expired" | "hit"; session: AuthSessionRecord };
+
 export interface PasswordResetTokenRecord {
   id: string;
   userId: string;
@@ -48,6 +50,7 @@ export interface AuthRepository {
   createUser(input: { id: string; email: string; displayName?: string; passwordHash?: string | null; passwordSalt?: string | null }): Promise<AuthUserRecord>;
   createSession(input: CreateSessionInput): Promise<AuthSessionRecord>;
   findSession(tokenHash: string): Promise<AuthSessionRecord | null>;
+  findSessionLookup(tokenHash: string): Promise<AuthSessionLookup>;
   revokeSession(tokenHash: string): Promise<void>;
   revokeAllSessions(userId: string): Promise<void>;
   deleteUser(userId: string): Promise<void>;
