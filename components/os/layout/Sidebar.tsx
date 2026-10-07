@@ -24,9 +24,6 @@ export default function Sidebar({ variant = "side" }: { variant?: "side" | "top"
     boot?.complete("sidebar");
   }, [boot]);
 
-  useEffect(() => {
-    setOpen(false);
-  }, [pathname]);
 
   useEffect(() => {
     if (!open) return;
@@ -49,6 +46,7 @@ export default function Sidebar({ variant = "side" }: { variant?: "side" | "top"
             title={item.description}
             onMouseEnter={() => prefetch(item.route)}
             onFocus={() => prefetch(item.route)}
+            onClick={() => setOpen(false)}
             className={`cosmos-nav-item ${active ? "cosmos-nav-item-active" : ""}`}
           >
             <CosmicIcon
