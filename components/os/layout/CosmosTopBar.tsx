@@ -4,10 +4,13 @@ import Link from "next/link";
 import { Bell, CloudSun, Search } from "lucide-react";
 
 import LiveClock from "@/components/os/ui/LiveClock";
+import WeatherIcon from "@/components/os/ui/WeatherIcon";
 import { useSearchRuntime } from "@/components/apps/search/SearchProvider";
+import useWeather from "@/hooks/os/useWeather";
 
 export default function CosmosTopBar() {
   const { openSearch } = useSearchRuntime();
+  const { weather, loading: weatherLoading } = useWeather();
 
   return (
     <header className="cosmos-topbar" aria-label="Cosmos toolbar">
@@ -25,9 +28,10 @@ export default function CosmosTopBar() {
       </button>
 
       <div className="ml-auto flex items-center gap-2 sm:gap-3">
-        <Link href="/weather" className="cosmos-topbar-chip" title="Open weather">
-          <CloudSun size={17} />
-          <span className="hidden xl:inline">Weather</span>
+        <Link href="/weather" className="cosmos-topbar-chip" title="Open weather" aria-label={weather ? `Weather in ${weather.city}: ${weather.temp} degrees` : "Open weather"}>
+          {weather ? <WeatherIcon icon={weather.icon} className="!text-[1.05rem] leading-none" /> : <CloudSun size={17} />}
+          <span className="tabular-nums">{weatherLoading && !weather ? "—°" : weather ? `${Math.round(weather.temp)}°` : "Weather"}</span>
+          {weather?.city && <span className="hidden max-w-24 truncate text-white/45 xl:inline">{weather.city}</span>}
         </Link>
         <div className="cosmos-topbar-chip hidden sm:flex" aria-label="Current date and time">
           <LiveClock className="text-xs text-white/78" />
