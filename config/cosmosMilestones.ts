@@ -2,6 +2,7 @@ export const cosmosMilestones = [
   "Shared Foundation",
   "Home",
   "School",
+  "Devices / Kiosk",
   "Calendar",
   "Tasks",
   "Projects",
@@ -12,7 +13,6 @@ export const cosmosMilestones = [
   "Sports",
   "Media",
   "Cosmic AI",
-  "Devices / Kiosk",
   "Settings",
   "Final Integration + Polish",
 ] as const;
@@ -140,5 +140,44 @@ export const schoolChecks = [
 export function getSchoolProgress() {
   const completed = schoolChecks.filter(([, done]) => done).length;
   const total = schoolChecks.length;
+  return { completed, total, percent: Math.round((completed / total) * 100) };
+}
+
+
+export const kioskChecks = [
+  ["Milestone 2 merged into dev", true],
+  ["Milestone 3 Kiosk branch created", true],
+  ["Kiosk promoted to Milestone 3 priority", true],
+  ["Clock is first kiosk slide", true],
+  ["System is final kiosk slide", true],
+  ["2-minute automatic slide rotation", true],
+  ["Personal Calendar kiosk slide", true],
+  ["School Calendar kiosk slide", false],
+  ["Sports kiosk slide", true],
+  ["Music kiosk slide", true],
+  ["Garage kiosk slide", true],
+  ["Notes kiosk slide", true],
+  ["Tasks kiosk slide", false],
+  ["Cosmic AI kiosk slide", true],
+  ["Per-slide enable / disable controls", false],
+  ["Kiosk settings persisted per device", false],
+  ["Devices page kiosk controls", false],
+  ["Manual next / previous / pause controls", true],
+  ["Live sports interruption behavior preserved", true],
+  ["Music playback hold behavior preserved", true],
+  ["Kiosk scene sizing / compact presentation QA", false],
+  ["Raspberry Pi kiosk compatibility", false],
+  ["Resilience / reconnect behavior", true],
+  ["TypeScript / lint / build validation", false],
+  ["Dev QA", false],
+  ["Progress tracker live for Milestone 3", false],
+  ["Kiosk preview live and working", false],
+  ["Both progress and kiosk screens show 100% before milestone close", false],
+  ["PR into dev", false],
+] as const;
+
+export function getKioskProgress() {
+  const completed = kioskChecks.filter(([, done]) => done).length;
+  const total = kioskChecks.length;
   return { completed, total, percent: Math.round((completed / total) * 100) };
 }
