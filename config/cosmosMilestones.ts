@@ -85,13 +85,13 @@ export const homeChecks = [
   ["Accessibility and keyboard QA", true],
   ["Mobile + tablet QA", true],
   ["Glass / solid QA", true],
-  ["TypeScript / lint / build validation", false],
+  ["TypeScript / lint / build validation", true],
   ["Regression fixes", true],
-  ["Dev QA", false],
-  ["Progress tracker is live and accurate for Milestone 1", false],
-  ["Home preview is live and working at /cosmos-home", false],
-  ["Both progress and Home screens show 100% before milestone close", false],
-  ["PR into dev", false],
+  ["Dev QA", true],
+  ["Progress tracker is live and accurate for Milestone 1", true],
+  ["Home preview is live and working at /cosmos-home", true],
+  ["Both progress and Home screens show 100% before milestone close", true],
+  ["PR into dev", true],
 ] as const;
 
 export function getHomeProgress() {
