@@ -98,6 +98,7 @@ export interface SchoolServerData {
   canvasIcalConfigured?: boolean;
   canvasIcalAttempted?: boolean;
   canvasIcalSucceeded?: boolean;
+  credentialAvailable?: boolean;
 }
 
 /** Server-side School boundary. Consumers receive normalized data only. */
@@ -144,6 +145,7 @@ export async function getSchoolSnapshotForAccount(accountId: string): Promise<Sc
 export async function getDeveloperKioskSchoolData(accountId: string): Promise<SchoolServerData> {
   const feedUrl = process.env.COSMIC_KIOSK_CANVAS_ICAL_URL?.trim();
   let providerResult: SchoolServerData | undefined;
+  let credentialAvailable = false;
   const resolution = await resolveDeveloperKioskSchoolSources({
     canvasIcalConfigured: Boolean(feedUrl),
     accountProvider: async () => {
@@ -152,13 +154,14 @@ export async function getDeveloperKioskSchoolData(accountId: string): Promise<Sc
       catch { existing = { data: buildDashboard([]), snapshot: { courses: [], assignments: [], events: [], actionItems: [], facts: [], notes: [], topics: [], requirements: [], importantFacts: [], sources: [], updatedAt: new Date().toISOString(), sourceStatus: { canvas: "error" }, sourceIntelligence: emptySchoolSourceIntelligence() }, error: "Canvas data is temporarily unavailable.", errorCategory: "provider-error" }; }
       providerResult = existing.error && !existing.errorCategory ? { ...existing, errorCategory: "provider-error" } : existing;
       const connection = (await listProviderConnections(accountId)).find((item) => item.provider === "canvas" && item.providerType === "rest" && item.status === "connected" && !item.reconnectRequired);
-      if (existing.snapshot.sourceStatus?.canvas === "healthy" && !existing.error) return { ...existing, kioskSource: "account-provider" };
+      if (existing.snapshot.sourceStatus?.canvas === "healthy" && !existing.error) return { ...existing, kioskSource: "account-provider", credentialAvailable: true };
       if (!connection) return providerResult;
       try {
         const credentials = await getProviderCredentials<{ baseUrl?: unknown; token?: unknown }>(accountId, connection.id);
         if (typeof credentials?.baseUrl !== "string" || typeof credentials.token !== "string") return providerResult = { ...providerResult, error: "Canvas credentials are unavailable.", errorCategory: "configuration-error" };
+        credentialAvailable = true;
         const result = await new CanvasAcademicProvider(credentials.baseUrl, credentials.token).sync(accountId);
-        return providerResult = { ...existing, kioskSource: "account-provider", snapshot: { ...existing.snapshot, planningAssignments: [...(existing.snapshot.planningAssignments ?? []), ...result.assignments], canvasCourses: result.courses.map(({ startAt, endAt, ...course }) => ({ ...course, ...(startAt ? { startAt: startAt.toISOString() } : {}), ...(endAt ? { endAt: endAt.toISOString() } : {}) })), sourceStatus: { canvas: "healthy", lastSyncedAt: connection.lastSuccessfulRefreshAt?.toISOString() ?? null } } };
+        return providerResult = { ...existing, kioskSource: "account-provider", credentialAvailable: true, snapshot: { ...existing.snapshot, planningAssignments: [...(existing.snapshot.planningAssignments ?? []), ...result.assignments], canvasCourses: result.courses.map(({ startAt, endAt, ...course }) => ({ ...course, ...(startAt ? { startAt: startAt.toISOString() } : {}), ...(endAt ? { endAt: endAt.toISOString() } : {}) })), sourceStatus: { canvas: "healthy", lastSyncedAt: connection.lastSuccessfulRefreshAt?.toISOString() ?? null } } };
       } catch (error) {
         const status = canvasErrorStatus(error);
         return providerResult = { ...providerResult, error: "Canvas data is temporarily unavailable.", errorCategory: status === "invalid_token" || status === "forbidden" ? "authentication-error" : "provider-error" };
@@ -170,9 +173,9 @@ export async function getDeveloperKioskSchoolData(accountId: string): Promise<Sc
       const fallback = await fetchKioskCanvasIcal(feedUrl);
       if (fallback.parsedEvents === 0) throw new SyntaxError("Canvas calendar feed contained no events.");
       const base = providerResult ?? { data: buildDashboard([]), snapshot: { courses: [], assignments: [], events: [], actionItems: [], facts: [], notes: [], topics: [], requirements: [], importantFacts: [], sources: [], updatedAt: new Date().toISOString(), sourceStatus: { canvas: "error" }, sourceIntelligence: emptySchoolSourceIntelligence() } };
-      return { ...base, data: fallback.data, snapshot: withPlanning(accountId, { ...base.snapshot, sourceStatus: { canvas: "healthy", lastSyncedAt: new Date().toISOString() } }, fallback.data, [], []), error: undefined, errorCategory: undefined, kioskSource: "kiosk-canvas-ical" };
+      return { ...base, data: fallback.data, snapshot: withPlanning(accountId, { ...base.snapshot, sourceStatus: { canvas: "healthy", lastSyncedAt: new Date().toISOString() } }, fallback.data, [], []), error: undefined, errorCategory: undefined, kioskSource: "kiosk-canvas-ical", credentialAvailable };
     },
   });
   const value = resolution.value ?? providerResult ?? { data: buildDashboard([]), snapshot: { courses: [], assignments: [], events: [], actionItems: [], facts: [], notes: [], topics: [], requirements: [], importantFacts: [], sources: [], updatedAt: new Date().toISOString(), sourceStatus: { canvas: "error" }, sourceIntelligence: emptySchoolSourceIntelligence() }, error: "Canvas data is temporarily unavailable.", errorCategory: "provider-error" };
-  return { ...value, kioskSource: resolution.source, accountProviderSucceeded: resolution.accountProviderSucceeded, canvasIcalConfigured: resolution.canvasIcalConfigured, canvasIcalAttempted: resolution.canvasIcalAttempted, canvasIcalSucceeded: resolution.canvasIcalSucceeded };
+  return { ...value, kioskSource: resolution.source, accountProviderSucceeded: resolution.accountProviderSucceeded, canvasIcalConfigured: resolution.canvasIcalConfigured, canvasIcalAttempted: resolution.canvasIcalAttempted, canvasIcalSucceeded: resolution.canvasIcalSucceeded, credentialAvailable: value.credentialAvailable ?? credentialAvailable };
 }

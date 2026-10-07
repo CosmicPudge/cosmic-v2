@@ -4,10 +4,23 @@ import { fetchWithTimeout } from "@/services/kiosk/fetchWithTimeout";
 const API_KEY = process.env.OPENWEATHER_API_KEY;
 type ForecastItem = { main: { temp_max: number; temp_min: number }; rain?: { [key: string]: number }; snow?: { [key: string]: number } };
 
+export class WeatherProviderError extends Error {
+  constructor(public readonly category: "configuration-error" | "timeout" | "network-error" | "invalid-response", public readonly status?: number) {
+    super(category);
+    this.name = "WeatherProviderError";
+  }
+}
+
+type CurrentWeatherPayload = {
+  name: string;
+  weather: [{ icon: string; main: string; description: string }];
+  main: { temp: number; feels_like: number; humidity: number };
+  wind: { speed: number; deg?: number };
+  sys: { sunrise: number; sunset: number };
+};
+
 if (!API_KEY) {
-  throw new Error(
-    "OPENWEATHER_API_KEY is not configured."
-  );
+  throw new WeatherProviderError("configuration-error");
 }
 
 export async function getOpenWeather(
@@ -20,13 +33,23 @@ export async function getOpenWeather(
   currentUrl.search = new URLSearchParams({ lat: String(lat), lon: String(lon), appid: API_KEY ?? "", units: "imperial" }).toString();
   // Current conditions are intentionally fresher than the forecast. The
   // forecast request below remains on the slower five-minute cache window.
-  const currentResponse = await fetchWithTimeout(currentUrl, { redirect: "error", next: { revalidate: 45 } });
-
-  if (!currentResponse.ok) {
-    throw new Error("Failed to fetch current weather.");
+  let currentResponse: Response;
+  try {
+    currentResponse = await fetchWithTimeout(currentUrl, { redirect: "error", next: { revalidate: 45 } });
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") throw new WeatherProviderError("timeout");
+    throw new WeatherProviderError("network-error");
   }
 
-  const current = await currentResponse.json();
+  if (!currentResponse.ok) {
+    throw new WeatherProviderError("invalid-response", currentResponse.status);
+  }
+
+  let current: CurrentWeatherPayload;
+  try { current = await currentResponse.json() as CurrentWeatherPayload; } catch { throw new WeatherProviderError("invalid-response", currentResponse.status); }
+  if (!current || typeof current.name !== "string" || !Array.isArray(current.weather) || !current.weather[0] || typeof current.weather[0].icon !== "string" || typeof current.weather[0].main !== "string" || typeof current.weather[0].description !== "string" || typeof current.main?.temp !== "number" || typeof current.main.feels_like !== "number" || typeof current.main.humidity !== "number" || typeof current.wind?.speed !== "number" || typeof current.sys?.sunrise !== "number" || typeof current.sys?.sunset !== "number") {
+    throw new WeatherProviderError("invalid-response", currentResponse.status);
+  }
 
   // Forecast
   const forecastUrl = new URL("https://api.openweathermap.org/data/2.5/forecast");
@@ -97,7 +120,7 @@ export async function getOpenWeather(
 
     windSpeed: Math.round(current.wind.speed),
 
-    windDirection: current.wind.deg,
+    windDirection: current.wind.deg ?? 0,
 
     precipitation24h: Number(
       precipitation24h.toFixed(2)

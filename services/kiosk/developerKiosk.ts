@@ -9,6 +9,8 @@ import type { CalendarEvent } from "@/core/contracts";
 import { KIOSK_REFRESH_MS, sceneRefreshDiagnostics } from "@/services/kiosk/refreshPolicy";
 import { readCosmicUpdateStatus } from "@/services/settings/cosmicUpdate";
 import { resolveDeviceLocation } from "@/services/kiosk/deviceLocation";
+import { classifyWeatherError, type KioskDiagnostics } from "@/services/kiosk/diagnostics";
+import { getAuthRepository } from "@/services/auth/repository";
 
 const DEFAULT_HOST = "dev.cosmicpudge.shop";
 const MAX_EVENTS = 8;
@@ -79,7 +81,7 @@ function boundedEvent(event: { id?: string; title?: string; start: Date; end: Da
   };
 }
 
-export async function getDeveloperKioskData(request?: Request) {
+export async function getDeveloperKioskData(request?: Request, diagnostics?: KioskDiagnostics) {
   const location = kioskLocation(request);
   const now = new Date();
   const end = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
@@ -107,13 +109,33 @@ export async function getDeveloperKioskData(request?: Request) {
     cosmicUpdate: readCosmicUpdateStatus(now),
   };
 
+  if (diagnostics) {
+    const params = request ? new URL(request.url).searchParams : null;
+    const locationSource = params?.get("kioskLocationSource");
+    const fallbackLat = process.env.COSMIC_KIOSK_LAT?.trim();
+    const fallbackLon = process.env.COSMIC_KIOSK_LON?.trim();
+    const fallbackConfigured = Boolean(fallbackLat && fallbackLon && Number.isFinite(Number(fallbackLat)) && Number.isFinite(Number(fallbackLon)));
+    diagnostics.weather.browserLocationProvided = locationSource === "current";
+    diagnostics.weather.storedLocationAvailable = locationSource === "last-known";
+    diagnostics.weather.serverFallbackConfigured = fallbackConfigured;
+    diagnostics.weather.locationSource = location?.source === "current" ? "browser" : location?.source === "last-known" ? "stored" : location?.source === "fallback" ? "server-fallback" : "unavailable";
+    diagnostics.weather.providerAttempted = false;
+    diagnostics.weather.providerResult = "unknown";
+    diagnostics.school.accountConfigured = Boolean(process.env.COSMIC_KIOSK_ACCOUNT_ID?.trim());
+    diagnostics.school.fallbackConfigured = Boolean(process.env.COSMIC_KIOSK_CANVAS_ICAL_URL?.trim());
+  }
+
   if (location) {
+    if (diagnostics) diagnostics.weather.providerAttempted = true;
     try {
       result.weather = await getEnvironment(location.lat, location.lon);
       if (location.label === "Kiosk location" && result.weather && typeof result.weather === "object" && "city" in result.weather && typeof result.weather.city === "string") location.label = result.weather.city;
       result.refreshDiagnostics.weather = sceneRefreshDiagnostics(new Date().toISOString(), KIOSK_REFRESH_MS.weatherCurrent);
+      if (diagnostics) diagnostics.weather.providerResult = "ok";
     }
-    catch { /* The client renders the designed unavailable state. */ }
+    catch (error) {
+      if (diagnostics) Object.assign(diagnostics.weather, classifyWeatherError(error));
+    }
   }
 
   try {
@@ -165,8 +187,44 @@ export async function getDeveloperKioskData(request?: Request) {
         ...(school.error ? { error: "School data temporarily unavailable." } : {}),
         diagnostics: { category: school.errorCategory ?? (connected ? "connected" : "provider-not-found"), configured: true, accountMatched: true, source: school.kioskSource ?? "account-provider", ...(connected ? { connectionType: "canvas-rest-or-calendar" } : {}), accountProviderSucceeded: school.accountProviderSucceeded ?? false, canvasIcalConfigured: school.canvasIcalConfigured ?? false, canvasIcalAttempted: school.canvasIcalAttempted ?? false, canvasIcalSucceeded: school.canvasIcalSucceeded ?? false },
       };
+      if (diagnostics) {
+        diagnostics.school.accountLookupAttempted = true;
+        diagnostics.school.provider = school.kioskSource === "kiosk-canvas-ical" ? "ical" : school.accountProviderSucceeded || school.snapshot.sourceStatus?.canvas !== "not_connected" || school.credentialAvailable ? "canvas" : "none";
+        diagnostics.school.providerConfigured = Boolean(school.accountProviderSucceeded || school.canvasIcalConfigured || school.snapshot.sourceStatus?.canvas !== "not_connected" || school.credentialAvailable);
+        diagnostics.school.credentialAvailable = Boolean(school.credentialAvailable);
+        diagnostics.school.providerAttempted = true;
+        diagnostics.school.providerResult = connected ? "ok" : school.errorCategory === "authentication-error" ? "auth-error" : school.errorCategory === "configuration-error" && !school.credentialAvailable ? "credential-error" : diagnostics.school.providerConfigured ? "provider-error" : "no-source";
+        diagnostics.school.aggregateConfigured = true;
+        diagnostics.school.aggregateHasData = Boolean(upcoming.length || connected);
+      }
       if (connected) result.refreshDiagnostics.school = sceneRefreshDiagnostics(new Date().toISOString(), KIOSK_REFRESH_MS.school);
-    } catch (error) { result.school = { assignments: [], overdueCount: 0, sceneState: "unavailable", connected: false, error: "School data temporarily unavailable.", diagnostics: { category: providerErrorCategory(error), configured: true, accountMatched: true, source: "account-provider" } }; }
+    } catch (error) {
+      result.school = { assignments: [], overdueCount: 0, sceneState: "unavailable", connected: false, error: "School data temporarily unavailable.", diagnostics: { category: providerErrorCategory(error), configured: true, accountMatched: true, source: "account-provider" } };
+      if (diagnostics) {
+        diagnostics.school.accountLookupAttempted = true;
+        diagnostics.school.provider = "canvas";
+        diagnostics.school.providerConfigured = true;
+        diagnostics.school.providerAttempted = true;
+        diagnostics.school.providerResult = providerErrorCategory(error) === "authentication-error" ? "auth-error" : "provider-error";
+        diagnostics.school.aggregateConfigured = true;
+      }
+    }
+  }
+
+  if (diagnostics) {
+    if (accountId) {
+      try {
+        diagnostics.school.accountMatched = Boolean(await getAuthRepository().findUserById(accountId));
+      } catch {
+        diagnostics.school.accountMatched = false;
+      }
+    }
+    if (!accountId) {
+      diagnostics.school.provider = "none";
+      diagnostics.school.providerResult = "account-not-found";
+    }
+    diagnostics.weather.aggregateHasWeather = result.weather !== null;
+    diagnostics.school.aggregateHasData = Boolean(result.school.assignments.length || result.school.connected);
   }
 
   return result;
