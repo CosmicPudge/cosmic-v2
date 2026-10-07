@@ -10,6 +10,7 @@ import ProgressBar from "@/components/os/ui/ProgressBar";
 import CosmosState from "@/components/os/ui/CosmosState";
 import { getFoundationProgress } from "@/config/cosmosMilestones";
 import FoundationSurfaceToggle from "@/components/os/ui/FoundationSurfaceToggle";
+import FoundationViewportIndicator from "@/components/os/ui/FoundationViewportIndicator";
 
 const demoCards = [
   { title: "School", value: "3.42 GPA", detail: "2 assignments due soon", icon: GraduationCap },
@@ -30,6 +31,7 @@ export default function CosmosFoundationPreviewPage() {
         subtitle="A live visual sandbox for the shared shell, navigation, top bar, glass system, cards, status patterns, and responsive behavior."
         rightContent={
           <div className="flex flex-wrap items-center justify-end gap-2">
+            <FoundationViewportIndicator />
             <FoundationSurfaceToggle />
             <Link
             href="/cosmos-progress"
