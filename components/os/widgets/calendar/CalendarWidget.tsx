@@ -37,7 +37,7 @@ export default function CalendarWidget() {
   useDashboardWidgetReadiness("calendar", loading ? "loading" : error && !calendar ? "degraded" : "ready");
 
   if (presentation === "kiosk") {
-    return <KioskCalendarScene calendar={visibleCalendar} loading={developer.data ? developer.loading : loading} error={developer.data ? developer.error : error} />;
+    return <KioskCalendarScene calendar={visibleCalendar} loading={developer.loading} error={developer.error} />;
   }
 
   return (
