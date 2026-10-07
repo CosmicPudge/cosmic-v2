@@ -9,6 +9,7 @@ import type { CosmicAIPermissions } from "./AI";
 
 export type BackgroundIntensity = "low" | "normal" | "high";
 export type BackgroundMotion = "off" | "subtle" | "normal";
+export type CosmosSurfaceStyle = "glass" | "solid";
 export type AmbientIdleMinutes = 1 | 2 | 5 | 10 | 15 | 30 | null;
 
 export interface SportsFollowedTeam {
@@ -93,6 +94,7 @@ export interface CosmicSettingsLocalData {
   profiles?: Partial<Record<CosmicProfileId, CosmicUserPreferences>>;
   appearance: {
     reducedEffects: boolean;
+    surfaceStyle: CosmosSurfaceStyle;
   };
   background: {
     intensity: BackgroundIntensity;
