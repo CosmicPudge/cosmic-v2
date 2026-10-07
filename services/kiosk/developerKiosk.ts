@@ -16,7 +16,23 @@ import { isDeveloperKioskSchoolConnected } from "@/services/kiosk/schoolHealth";
 const DEFAULT_HOST = "dev.cosmicpudge.shop";
 const MAX_EVENTS = 8;
 const MAX_ASSIGNMENTS = 8;
+const KIOSK_DATA_PROVIDER_TIMEOUT_MS = 10_000;
 const schoolCache = new Map<string, { expiresAt: number; value: Awaited<ReturnType<typeof getDeveloperKioskSchoolData>> }>();
+
+class KioskDataProviderTimeout extends Error {
+  category = "timeout" as const;
+}
+
+function withKioskDataProviderTimeout<T>(promise: Promise<T>, timeoutMs = KIOSK_DATA_PROVIDER_TIMEOUT_MS): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new KioskDataProviderTimeout()), timeoutMs);
+    promise.then(resolve, reject).finally(() => clearTimeout(timer));
+  });
+}
+
+function traceKioskCalendar(stage: "fetch=start" | "fetch=ok" | "fetch=failed" | "parse=ok" | "aggregate=present" | "aggregate=missing" | "health=connected" | "health=reconnecting" | "health=stale" | "health=disconnected" | "scene=loading" | "scene=ready" | "scene=empty" | "scene=error", category?: string) {
+  if (process.env.NODE_ENV !== "production" || process.env.VERCEL_ENV === "preview") console.info(`[kiosk-calendar] ${stage}${category ? ` category=${category}` : ""}`);
+}
 
 export type KioskProviderDiagnostic = {
   category: "connected" | "provider-not-found" | "account-not-found" | "provider-error" | "parse-error" | "configuration-error" | "authentication-error" | "account-mismatch";
@@ -140,26 +156,33 @@ export async function getDeveloperKioskData(request?: Request, diagnostics?: Kio
   }
 
   try {
+    traceKioskCalendar("fetch=start");
     const accountId = process.env.COSMIC_KIOSK_ACCOUNT_ID?.trim();
     let engineResult: Awaited<ReturnType<typeof getDeveloperKioskCalendarEngine>> = null;
-    try { engineResult = await getDeveloperKioskCalendarEngine(accountId); } catch { /* The kiosk iCal feeds are the bounded fallback. */ }
+    try { engineResult = await withKioskDataProviderTimeout(getDeveloperKioskCalendarEngine(accountId)); } catch { /* The kiosk iCal feeds are the bounded fallback. */ }
     const engine = engineResult?.engine;
     if (engine && engineResult) {
-      const events = await engine.getEvents({ start: now, end });
+      const events = await withKioskDataProviderTimeout(engine.getEvents({ start: now, end }));
       result.calendar = { connected: true, events: events.slice(0, MAX_EVENTS).map((event) => boundedEvent(event)), diagnostics: { category: "connected", configured: true, accountMatched: Boolean(accountId), source: "account-provider", feedCount: 0, ...(engineResult.context?.connection?.providerType ? { connectionType: engineResult.context.connection.providerType } : {}) } };
       result.refreshDiagnostics.calendar = sceneRefreshDiagnostics(new Date().toISOString(), KIOSK_REFRESH_MS.calendar);
+      traceKioskCalendar("fetch=ok");
+      traceKioskCalendar("parse=ok");
     } else {
       throw new Error("Account calendar unavailable.");
     }
   } catch {
+    traceKioskCalendar("fetch=failed", "provider-or-timeout");
     const urls = [process.env.COSMIC_KIOSK_ICAL_URL_1, process.env.COSMIC_KIOSK_ICAL_URL_2].map((value) => value?.trim()).filter((value): value is string => Boolean(value));
     if (!urls.length) {
       result.calendar = { connected: false, events: [], error: "Calendar is not configured.", diagnostics: { category: "configuration-error", configured: false, accountMatched: Boolean(process.env.COSMIC_KIOSK_ACCOUNT_ID?.trim()), source: "kiosk-ical", feedCount: 0 } };
+      traceKioskCalendar("aggregate=missing", "configuration-error");
     } else {
       const fallback = await fetchKioskCalendarIcalFeeds(urls);
       const visibleEvents = fallback.events.filter((event) => event.end > now && event.start < end).slice(0, MAX_EVENTS).map((event) => boundedEvent(event));
       result.calendar = { connected: fallback.feedCount > 0, events: visibleEvents, ...(fallback.feedCount ? {} : { error: "Calendar feeds are temporarily unavailable." }), diagnostics: { category: fallback.feedCount ? "connected" : fallback.category, configured: true, accountMatched: Boolean(process.env.COSMIC_KIOSK_ACCOUNT_ID?.trim()), source: "kiosk-ical", feedCount: fallback.feedCount } };
       if (fallback.feedCount > 0) result.refreshDiagnostics.calendar = sceneRefreshDiagnostics(new Date().toISOString(), KIOSK_REFRESH_MS.calendar);
+      traceKioskCalendar(fallback.feedCount > 0 ? "fetch=ok" : "fetch=failed", fallback.category);
+      traceKioskCalendar(fallback.feedCount > 0 ? "parse=ok" : "aggregate=missing", fallback.category);
     }
   }
 
@@ -169,7 +192,7 @@ export async function getDeveloperKioskData(request?: Request, diagnostics?: Kio
       const cachedSchool = schoolCache.get(accountId);
       const school = cachedSchool && cachedSchool.expiresAt > Date.now()
         ? cachedSchool.value
-        : await getDeveloperKioskSchoolData(accountId);
+        : await withKioskDataProviderTimeout(getDeveloperKioskSchoolData(accountId));
       if (!cachedSchool || cachedSchool.expiresAt <= Date.now()) {
         schoolCache.set(accountId, { value: school, expiresAt: Date.now() + KIOSK_REFRESH_MS.school });
       }
