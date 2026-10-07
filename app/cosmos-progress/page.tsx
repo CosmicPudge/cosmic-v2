@@ -22,7 +22,7 @@ export default async function CosmosProgressPage({ searchParams }: ProgressPageP
   const isHome = milestoneIndex === 1;
   const checks = isFoundation ? foundationChecks : isHome ? homeChecks : [];
   const progress = isFoundation ? getFoundationProgress() : isHome ? getHomeProgress() : { completed: 0, total: 0, percent: 0 };
-  const status = milestoneIndex === 0 ? "Complete" : milestoneIndex === 1 ? "In progress" : "Not started";
+  const status = progress.percent === 100 ? "Complete" : milestoneIndex === 1 ? "In progress" : milestoneIndex === 0 ? "Complete" : "Not started";
 
   return (
     <main className="min-h-screen bg-[#030511] px-5 py-8 text-white sm:px-8 lg:px-12">
@@ -45,7 +45,7 @@ export default async function CosmosProgressPage({ searchParams }: ProgressPageP
             {milestoneIndex === 0
               ? "The shared Cosmos foundation is complete."
               : milestoneIndex === 1
-                ? "Home is being built now. Every check below must be complete before Milestone 2 begins."
+                ? progress.percent === 100 ? "Home is complete. Milestone 2 can begin after the dev merge is verified." : "Home is being built now. Every check below must be complete before Milestone 2 begins."
                 : "This milestone has not started yet. Cosmos moves forward one milestone at a time."}
           </p>
           <div className="text-left md:text-right">
