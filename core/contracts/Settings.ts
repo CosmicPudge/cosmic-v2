@@ -94,7 +94,7 @@ export interface CosmicSettingsLocalData {
   profiles?: Partial<Record<CosmicProfileId, CosmicUserPreferences>>;
   appearance: {
     reducedEffects: boolean;
-    surfaceStyle: CosmosSurfaceStyle;
+    surfaceStyle?: CosmosSurfaceStyle;
   };
   background: {
     intensity: BackgroundIntensity;
