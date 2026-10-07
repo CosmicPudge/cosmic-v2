@@ -6,11 +6,12 @@ function check(label, pass) { checks.push([label, Boolean(pass)]); if (!pass) pr
 const school = read("components/school/CosmosSchoolOverview.tsx");
 const page = read("app/school/page.tsx");
 const progress = read("app/cosmos-progress/page.tsx");
+const tabs = read("components/school/SchoolTabs.tsx");
 check("School overview component exists", exists("components/school/CosmosSchoolOverview.tsx"));
 check("School preview route exists", exists("app/cosmos-school/page.tsx"));
 check("School page mounts CosmosSchoolOverview", page.includes("<CosmosSchoolOverview />"));
 check("School overview uses shared AppHeader", school.includes("<AppHeader"));
-check("School tabs exist", ["Overview","Courses","Assignments","Calendar","Analytics"].every((label) => school.includes(`label: "${label}"`)));
+check("School tabs exist", ["Overview","Courses","Assignments","Calendar","Analytics"].every((label) => tabs.includes(`label: "${label}"`)) && school.includes("<SchoolTabs />"));
 check("Current GPA metric exists", school.includes('label="Current GPA"'));
 check("Next class metric exists", school.includes('label="Next class"'));
 check("Due soon metric exists", school.includes('label="Due soon"'));
