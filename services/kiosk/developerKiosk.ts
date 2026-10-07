@@ -11,6 +11,7 @@ import { readCosmicUpdateStatus } from "@/services/settings/cosmicUpdate";
 import { resolveDeviceLocation } from "@/services/kiosk/deviceLocation";
 import { classifyWeatherError, type KioskDiagnostics } from "@/services/kiosk/diagnostics";
 import { getAuthRepository } from "@/services/auth/repository";
+import { isDeveloperKioskSchoolConnected } from "@/services/kiosk/schoolHealth";
 
 const DEFAULT_HOST = "dev.cosmicpudge.shop";
 const MAX_EVENTS = 8;
@@ -178,7 +179,7 @@ export async function getDeveloperKioskData(request?: Request, diagnostics?: Kio
       const overdueCount = schoolUsesIcal ? 0 : upcoming.filter((item) => item.dueAt! < now).length;
       const urgentHours = Math.max(1, Number(process.env.COSMIC_KIOSK_SCHOOL_URGENT_HOURS ?? 24));
       const nextDue = upcoming[0]?.dueAt;
-      const connected = !school.error && school.snapshot.sourceStatus?.canvas === "healthy";
+      const connected = isDeveloperKioskSchoolConnected(school);
       result.school = {
         connected,
         assignments: upcoming.slice(0, MAX_ASSIGNMENTS).map((item) => ({ id: item.id.slice(0, 160), title: item.title.slice(0, 240), due: item.dueAt!.toISOString(), ...(item.courseName ? { course: item.courseName.slice(0, 120) } : {}), completed: item.completionStatus === "completed" })),
@@ -305,7 +306,7 @@ export async function getDeveloperKioskDiagnostics(request: Request, diagnostics
   diagnostics.school.aggregateConfigured = true;
   if (schoolResult.status === "fulfilled" && schoolResult.value) {
     const school = schoolResult.value;
-    const connected = !school.error && school.snapshot.sourceStatus?.canvas === "healthy";
+    const connected = isDeveloperKioskSchoolConnected(school);
     diagnostics.school.provider = school.kioskSource === "kiosk-canvas-ical" ? "ical" : "canvas";
     diagnostics.school.providerConfigured = true;
     diagnostics.school.credentialAvailable = Boolean(school.credentialAvailable);
