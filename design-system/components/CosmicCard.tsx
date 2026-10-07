@@ -5,11 +5,8 @@ import type { ReactNode } from "react";
 
 interface CosmicCardProps {
   children: ReactNode;
-
   className?: string;
-
   interactive?: boolean;
-
   glass?: boolean;
 }
 
@@ -22,20 +19,11 @@ export default function CosmicCard({
   return (
     <div
       className={clsx(
-
-        "cosmic-panel",
-        "overflow-hidden",
-
-        glass &&
-
-        "bg-white/[0.06] backdrop-blur-2xl",
-
+        "cosmic-panel cosmos-card overflow-hidden",
+        glass ? "cosmos-card-surface" : "bg-transparent",
         "transition-all duration-300",
-
-        interactive &&
-          "cosmic-panel-interactive",
-
-        className
+        interactive && "cosmic-panel-interactive",
+        className,
       )}
     >
       {children}
