@@ -664,3 +664,91 @@ export const supportReportEvents = pgTable("support_report_events", {
   userMessage: text("user_message"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [index("support_report_events_report_index").on(table.reportId, table.createdAt), check("support_report_events_kind_check", sql`${table.kind} in ('status', 'note')`)]);
+
+export const donutBatches = pgTable("donut_batches", {
+  id: text("id").primaryKey(),
+  deliveryDate: text("delivery_date").notNull(),
+  capacity: integer("capacity").notNull(),
+  reservedCount: integer("reserved_count").notNull().default(0),
+  reservationTtlMinutes: integer("reservation_ttl_minutes").notNull().default(15),
+  status: text("status").notNull().default("open"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  uniqueIndex("donut_batches_delivery_date_unique").on(table.deliveryDate),
+  index("donut_batches_status_index").on(table.status),
+  check("donut_batches_capacity_check", sql`${table.capacity} >= 0`),
+  check("donut_batches_reserved_count_check", sql`${table.reservedCount} >= 0 and ${table.reservedCount} <= ${table.capacity}`),
+  check("donut_batches_ttl_check", sql`${table.reservationTtlMinutes} > 0`),
+  check("donut_batches_status_check", sql`${table.status} in ('open', 'closed', 'preparing', 'completed')`),
+]);
+
+export const donutOrders = pgTable("donut_orders", {
+  id: text("id").primaryKey(),
+  idempotencyKey: text("idempotency_key").notNull(),
+  requestFingerprint: text("request_fingerprint").notNull(),
+  publicOrderNumber: text("public_order_number").notNull(),
+  batchId: text("batch_id").notNull().references(() => donutBatches.id, { onDelete: "restrict" }),
+  status: text("status").notNull().default("pending_payment"),
+  productionStage: text("production_stage"),
+  fullName: text("full_name").notNull(),
+  email: text("email").notNull(),
+  phoneE164: text("phone_e164").notNull(),
+  streetAddress: text("street_address").notNull(),
+  unit: text("unit"),
+  deliveryInstructions: text("delivery_instructions"),
+  deliveryWindow: text("delivery_window").notNull(),
+  subtotalCents: integer("subtotal_cents").notNull(),
+  deliveryFeeCents: integer("delivery_fee_cents").notNull(),
+  taxCents: integer("tax_cents").notNull(),
+  totalCents: integer("total_cents").notNull(),
+  reservationQuantity: integer("reservation_quantity").notNull(),
+  reservationExpiresAt: timestamp("reservation_expires_at", { withTimezone: true }).notNull(),
+  smsConsent: boolean("sms_consent").notNull().default(false),
+  smsConsentAt: timestamp("sms_consent_at", { withTimezone: true }),
+  paymentProviderIntentId: text("payment_provider_intent_id"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  uniqueIndex("donut_orders_idempotency_key_unique").on(table.idempotencyKey),
+  uniqueIndex("donut_orders_public_number_unique").on(table.publicOrderNumber),
+  index("donut_orders_batch_status_index").on(table.batchId, table.status),
+  index("donut_orders_reservation_expiry_index").on(table.status, table.reservationExpiresAt),
+  check("donut_orders_status_check", sql`${table.status} in ('pending_payment', 'payment_failed', 'expired', 'cancelled', 'paid', 'accepted', 'completed', 'refunded')`),
+  check("donut_orders_production_stage_check", sql`${table.productionStage} is null or ${table.productionStage} in ('Accepted', 'Preparing ingredients', 'Kneading', 'First rise', 'Shaping', 'Second rise', 'Frying', 'Cooling', 'Glazing / Filling', 'Setting', 'Out for delivery', 'Delivered')`),
+  check("donut_orders_reservation_quantity_check", sql`${table.reservationQuantity} > 0`),
+  check("donut_orders_sms_consent_check", sql`(${table.smsConsent} = false and ${table.smsConsentAt} is null) or (${table.smsConsent} = true and ${table.smsConsentAt} is not null)`),
+]);
+
+export const donutOrderItems = pgTable("donut_order_items", {
+  id: text("id").primaryKey(),
+  orderId: text("order_id").notNull().references(() => donutOrders.id, { onDelete: "cascade" }),
+  productId: text("product_id").notNull(),
+  purchasedName: text("purchased_name").notNull(),
+  purchasedPriceCents: integer("purchased_price_cents").notNull(),
+  quantity: integer("quantity").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [index("donut_order_items_order_index").on(table.orderId), check("donut_order_items_quantity_check", sql`${table.quantity} > 0`), check("donut_order_items_price_check", sql`${table.purchasedPriceCents} >= 0`)]);
+
+export const donutOrderEvents = pgTable("donut_order_events", {
+  id: text("id").primaryKey(),
+  orderId: text("order_id").notNull().references(() => donutOrders.id, { onDelete: "cascade" }),
+  kind: text("kind").notNull(),
+  fromStatus: text("from_status"),
+  toStatus: text("to_status"),
+  fromProductionStage: text("from_production_stage"),
+  toProductionStage: text("to_production_stage"),
+  actorAccountId: text("actor_account_id").references(() => users.id, { onDelete: "set null" }),
+  metadata: jsonb("metadata").notNull().default({}),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [index("donut_order_events_order_index").on(table.orderId, table.createdAt), check("donut_order_events_kind_check", sql`${table.kind} in ('created', 'reservation_expired', 'payment', 'status', 'production', 'delivery', 'refund', 'cancelled')`)]);
+
+export const donutTrackingTokens = pgTable("donut_tracking_tokens", {
+  id: text("id").primaryKey(),
+  orderId: text("order_id").notNull().references(() => donutOrders.id, { onDelete: "cascade" }),
+  tokenHash: text("token_hash").notNull(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }),
+  lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
+  revokedAt: timestamp("revoked_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [uniqueIndex("donut_tracking_tokens_hash_unique").on(table.tokenHash), uniqueIndex("donut_tracking_tokens_order_unique").on(table.orderId), index("donut_tracking_tokens_expiry_index").on(table.expiresAt)]);
