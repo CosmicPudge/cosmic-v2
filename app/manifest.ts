@@ -2,9 +2,9 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Cosmic OS",
-    short_name: "Cosmic",
-    description: "A local-first celestial dashboard and personal workspace.",
+    name: "Cosmos",
+    short_name: "Cosmos",
+    description: "Your personal workspace for school, life, projects, media, devices, and Cosmic AI.",
     start_url: "/os",
     scope: "/",
     display: "standalone",

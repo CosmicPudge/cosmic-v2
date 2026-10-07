@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 
 import "./globals.css";
+import "@/styles/cosmos-foundation.css";
 import "leaflet/dist/leaflet.css";
 
 import { PerformanceProvider } from "@/components/os/performance";
@@ -20,14 +21,14 @@ import { PersonalCosmicProvider } from "@/components/os/core/CosmicApplicationPr
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? "https://cosmicpudge.shop"),
   title: {
-    default: "Cosmic OS",
-    template: "%s • Cosmic OS",
+    default: "Cosmos",
+    template: "%s • Cosmos",
   },
-  description: "The Cosmic desktop experience.",
+  description: "Your personal workspace for school, life, projects, media, devices, and Cosmic AI.",
   alternates: { canonical: "/" },
-  openGraph: { title: "Cosmic OS", description: "The Cosmic desktop experience.", url: "https://cosmicpudge.shop", siteName: "Cosmic OS", type: "website" },
+  openGraph: { title: "Cosmos", description: "Your personal workspace for school, life, projects, media, devices, and Cosmic AI.", url: "https://cosmicpudge.shop", siteName: "Cosmos", type: "website" },
   robots: { index: true, follow: true },
-  applicationName: "Cosmic OS",
+  applicationName: "Cosmos",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,

@@ -3,12 +3,7 @@
 import { ReactNode } from "react";
 import clsx from "clsx";
 
-type StatusVariant =
-  | "primary"
-  | "success"
-  | "warning"
-  | "danger"
-  | "neutral";
+type StatusVariant = "primary" | "success" | "warning" | "danger" | "neutral";
 
 interface StatusChipProps {
   children: ReactNode;
@@ -18,43 +13,22 @@ interface StatusChipProps {
 }
 
 const variants = {
-  primary:
-    "bg-violet-500/15 border-violet-400/25 text-violet-200",
-
-  success:
-    "bg-emerald-500/15 border-emerald-400/25 text-emerald-200",
-
-  warning:
-    "bg-orange-500/15 border-orange-400/25 text-orange-200",
-
-  danger:
-    "bg-rose-500/15 border-rose-400/25 text-rose-200",
-
-  neutral:
-    "bg-white/5 border-white/10 text-white/70",
+  primary: "bg-violet-500/12 border-violet-400/22 text-violet-100",
+  success: "bg-emerald-500/12 border-emerald-400/22 text-emerald-100",
+  warning: "bg-amber-500/12 border-amber-400/22 text-amber-100",
+  danger: "bg-rose-500/12 border-rose-400/22 text-rose-100",
+  neutral: "bg-white/[0.035] border-white/10 text-white/65",
 };
 
-export default function StatusChip({
-  children,
-  variant = "neutral",
-  icon,
-  className,
-}: StatusChipProps) {
+export default function StatusChip({ children, variant = "neutral", icon, className }: StatusChipProps) {
   return (
-    <div
-      className={clsx(
-        "inline-flex items-center gap-2",
-        "rounded-full border",
-        "px-3 py-1.5",
-        "text-sm font-medium",
-        "transition-colors duration-300",
-        variants[variant],
-        className
-      )}
-    >
+    <span className={clsx(
+      "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold tracking-[0.02em]",
+      variants[variant],
+      className,
+    )}>
       {icon}
-
       <span>{children}</span>
-    </div>
+    </span>
   );
 }

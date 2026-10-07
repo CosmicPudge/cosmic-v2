@@ -15,6 +15,7 @@ import { Dashboard } from "@/components/dashboard";
 import useIdleAmbient from "@/hooks/os/useIdleAmbient";
 import WindowManager from "../window/WindowManager";
 import Sidebar from "@/components/os/layout/Sidebar";
+import CosmosTopBar from "@/components/os/layout/CosmosTopBar";
 
 export default function OperatingSystem() {
   useIdleAmbient();
@@ -33,10 +34,19 @@ export default function OperatingSystem() {
 
 function Desktop() {
   return (
-    <div data-cosmic-os-root className="cosmic-os-root relative w-full text-white">
-      <div className="cosmic-dashboard-frame cosmic-os-layout relative z-10">
+    <div data-cosmic-os-root className="cosmic-os-root cosmic-site-shell cosmos-app-shell relative min-h-screen w-full text-white">
+      <div className="cosmic-stars pointer-events-none absolute inset-0" />
+      <div className="cosmos-mobile-shell relative z-20 p-3 lg:hidden">
         <Sidebar variant="top" />
-        <div data-cosmic-workspace className="cosmic-os-workspace"><DashboardBoundary><Dashboard /></DashboardBoundary></div>
+      </div>
+      <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-[1920px]">
+        <Sidebar />
+        <div className="min-w-0 flex-1 px-3 pb-5 sm:px-5 lg:px-6 lg:pb-6">
+          <CosmosTopBar />
+          <div data-cosmic-workspace className="cosmic-os-workspace cosmos-page-slot">
+            <DashboardBoundary><Dashboard /></DashboardBoundary>
+          </div>
+        </div>
       </div>
 
       <WindowManager />
