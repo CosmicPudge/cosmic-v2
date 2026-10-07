@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { useSchoolData } from "@/components/school/hooks/useSchoolData";
 import { useFinanceRepository } from "@/services/finance/localRepository";
@@ -26,13 +26,20 @@ function timeLabel(date: Date) {
   return date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
 }
 
-function dueWithin(date: Date, days: number) {
-  const now = Date.now();
+function dueWithin(date: Date, days: number, now: number) {
   const time = date.getTime();
   return time >= now && time <= now + days * 86_400_000;
 }
 
 export function useHomeSummaries() {
+  const [now, setNow] = useState(0);
+  useEffect(() => {
+    const update = () => setNow(Date.now());
+    update();
+    const timer = window.setInterval(update, 60_000);
+    return () => window.clearInterval(timer);
+  }, []);
+
   const school = useSchoolData();
   const calendar = useCalendar();
   const finance = useFinanceRepository();
@@ -49,9 +56,9 @@ export function useHomeSummaries() {
     if (!school.data) return { value: "No school data", detail: "Open School to connect an academic source", state: "empty" };
 
     const nextClass = school.data.classes
-      .filter((item) => item.start.getTime() > Date.now())
+      .filter((item) => item.start.getTime() > now)
       .sort((a, b) => a.start.getTime() - b.start.getTime())[0];
-    const dueSoon = school.data.assignments.filter((item) => !item.completed && dueWithin(item.due, 7)).length;
+    const dueSoon = school.data.assignments.filter((item) => !item.completed && dueWithin(item.due, 7, now)).length;
     const gpa = school.data.stats.gpa;
 
     return {
@@ -59,7 +66,7 @@ export function useHomeSummaries() {
       detail: nextClass ? `${dueSoon} due soon · next class ${timeLabel(nextClass.start)}` : dueSoon ? `${dueSoon} assignment${dueSoon === 1 ? "" : "s"} due this week` : "Schedule is clear",
       state: "ready",
     };
-  }, [school.data, school.error, school.loading]);
+  }, [now, school.data, school.error, school.loading]);
 
   const calendarSummary = useMemo<HomeSummary>(() => {
     if (calendar.loading && !calendar.calendar) return { value: "Loading", detail: "Checking today's schedule", state: "loading" };
