@@ -85,7 +85,7 @@ export default function CosmosFoundationPreviewPage() {
                 </div>
                 <div className="rounded-xl border border-white/8 bg-white/[0.025] p-4">
                   <p className="text-sm text-white/45">QA</p>
-                  <p className="mt-1 text-lg font-semibold">Pending</p>
+                  <p className="mt-1 text-lg font-semibold">{percent === 100 ? "Complete" : "Pending"}</p>
                 </div>
               </div>
             </CosmicCard>
@@ -123,7 +123,7 @@ export default function CosmosFoundationPreviewPage() {
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/40">How to use this screen</p>
             <h2 className="mt-2 text-xl font-semibold">Milestone 0 visual QA sandbox</h2>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-white/55">
-              As shared components change, this page updates with them. Resize the browser, open the mobile menu, use search, click navigation, and compare glass surfaces here. Milestone 0 cannot close until both this foundation preview and the progress tracker are live, working, and at 100%. Current shared progress: ${percent}%.
+              As shared components change, this page updates with them. Resize the browser, open the mobile menu, use search, click navigation, and compare glass surfaces here. Milestone 0 cannot close until both this foundation preview and the progress tracker are live, working, and at 100%. Current shared progress: {percent}%.
             </p>
           </CosmicCard>
         </div>
