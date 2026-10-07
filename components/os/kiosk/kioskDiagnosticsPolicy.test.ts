@@ -48,7 +48,15 @@ test("diagnostics UI renders safe authentication failure metadata", () => {
   assert.match(diagnosticsSource, /Boot match/);
   assert.match(diagnosticsSource, /response\.status === 401/);
   assert.match(diagnosticsSource, /body\?\.auth/);
+  assert.match(diagnosticsSource, /\/api\/kiosk\/auth-status/);
+  assert.match(diagnosticsSource, /if \(response\.status === 401\)/);
+  assert.match(diagnosticsSource, /Boot query/);
   assert.doesNotMatch(diagnosticsSource, /sessionId|deviceId|accountId/);
+});
+
+test("diagnostics fallback is only reachable after a failed diagnostics response", () => {
+  assert.match(diagnosticsSource, /if \(response\.status === 401\) \{[\s\S]*auth-status/);
+  assert.match(diagnosticsSource, /if \(authStatus\.ok && authBody\)/);
 });
 
 test("diagnostics bootstrap requires a boot-bound authenticated device session", () => {

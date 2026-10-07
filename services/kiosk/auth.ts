@@ -15,6 +15,7 @@ export type DeveloperKioskSessionResult =
   | { status: "authenticated"; session: KioskSession };
 
 export type DeveloperKioskAuthDebug = KioskAuthDebug;
+export type DeveloperKioskAuthStatus = DeveloperKioskAuthDebug & { bootQueryPresent: boolean; expired: boolean };
 
 async function readDeveloperKioskAuth(request: Request) {
   const token = parseSessionCookie(request);
@@ -29,8 +30,17 @@ async function readDeveloperKioskAuth(request: Request) {
   return { debug: classifyKioskAuth({ cookiePresent: true, sessionFound: lookup.status === "hit", sessionKind, bootBound, bootMatch, sessionExpired: lookup.status === "expired" }), session };
 }
 
+function authStatus(request: Request, debug: DeveloperKioskAuthDebug): DeveloperKioskAuthStatus {
+  const bootQueryPresent = Boolean(new URL(request.url).searchParams.get("cosmic-boot")?.trim());
+  return { ...debug, bootQueryPresent, expired: debug.authResult === "expired" };
+}
+
 export async function inspectDeveloperKioskSession(request: Request): Promise<DeveloperKioskAuthDebug> {
   return (await readDeveloperKioskAuth(request)).debug;
+}
+
+export async function inspectDeveloperKioskAuthStatus(request: Request): Promise<DeveloperKioskAuthStatus> {
+  return authStatus(request, (await readDeveloperKioskAuth(request)).debug);
 }
 
 export function kioskAuthDebugEnabled() {

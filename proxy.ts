@@ -134,7 +134,7 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  if ((pathname === "/api/kiosk/data" || pathname === "/api/sports" || pathname === "/api/music") && isDeveloperKioskRequest(request)) {
+  if ((pathname === "/api/kiosk/data" || pathname === "/api/kiosk/diagnostics" || pathname === "/api/kiosk/auth-status" || pathname === "/api/sports" || pathname === "/api/music") && isDeveloperKioskRequest(request)) {
     return NextResponse.next();
   }
 

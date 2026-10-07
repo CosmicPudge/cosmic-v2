@@ -5,7 +5,7 @@ import type { KioskDiagnostics } from "@/services/kiosk/diagnostics";
 import { kioskApiUrl } from "@/services/kioskRequest";
 
 type DiagnosticsResponse = { runtime: { authenticated: boolean; environment: "dev"; runtimeReady: boolean } } & KioskDiagnostics;
-type AuthDiagnostics = { cookiePresent: boolean; sessionLookup: "hit" | "miss" | "not-attempted"; sessionKind: "device" | "user" | "none"; bootBound: boolean; bootMatch: boolean; authResult: "ok" | "missing-cookie" | "session-miss" | "wrong-kind" | "boot-mismatch" | "expired" | "unknown" };
+type AuthDiagnostics = { cookiePresent: boolean; sessionLookup: "hit" | "miss" | "not-attempted"; sessionKind: "device" | "user" | "none"; bootBound: boolean; bootQueryPresent?: boolean; bootMatch: boolean; expired?: boolean; authResult: "ok" | "missing-cookie" | "session-miss" | "wrong-kind" | "boot-mismatch" | "expired" | "unknown" };
 type DiagnosticsErrorResponse = { error: string; auth?: AuthDiagnostics };
 
 function Status({ label, value }: { label: string; value: string }) {
@@ -34,7 +34,12 @@ export default function KioskDiagnosticsView() {
       .then(async (response) => {
         if (!response.ok) {
           const body = await response.json().catch(() => null) as DiagnosticsErrorResponse | null;
-          if (response.status === 401 && body?.auth) throw new Error(JSON.stringify(body.auth));
+          if (response.status === 401) {
+            const authStatus = await fetch(kioskApiUrl(`/api/kiosk/auth-status?${params.toString()}`), { cache: "no-store", credentials: "same-origin" });
+            const authBody = await authStatus.json().catch(() => null) as AuthDiagnostics | null;
+            if (authStatus.ok && authBody) throw new Error(JSON.stringify(authBody));
+            if (body?.auth) throw new Error(JSON.stringify(body.auth));
+          }
           throw new Error(response.status === 401 ? "Kiosk session authentication is required." : "Diagnostics are temporarily unavailable.");
         }
         return response.json() as Promise<DiagnosticsResponse>;
@@ -45,7 +50,7 @@ export default function KioskDiagnosticsView() {
   }, []);
 
   const authError = parseAuthDiagnostics(error);
-  if (authError) return <DiagnosticsShell><p className="text-xs uppercase tracking-[.3em] text-amber-100/60">Authentication</p><h1 className="mt-3 text-3xl font-semibold text-white">Kiosk session authentication</h1><dl className="mt-8 max-w-xl rounded-2xl border border-amber-100/10 bg-white/[.04] p-5"><Status label="Cookie" value={authError.cookiePresent ? "PRESENT" : "MISSING"} /><Status label="Session lookup" value={authError.sessionLookup.toUpperCase()} /><Status label="Session type" value={authError.sessionKind.toUpperCase()} /><Status label="Boot bound" value={yesNo(authError.bootBound).toUpperCase()} /><Status label="Boot match" value={yesNo(authError.bootMatch).toUpperCase()} /><Status label="Result" value={authError.authResult.replaceAll("-", " ").toUpperCase()} /></dl></DiagnosticsShell>;
+  if (authError) return <DiagnosticsShell><p className="text-xs uppercase tracking-[.3em] text-amber-100/60">Authentication</p><h1 className="mt-3 text-3xl font-semibold text-white">Kiosk session authentication</h1><dl className="mt-8 max-w-xl rounded-2xl border border-amber-100/10 bg-white/[.04] p-5"><Status label="Cookie" value={authError.cookiePresent ? "PRESENT" : "MISSING"} /><Status label="Session lookup" value={authError.sessionLookup.toUpperCase()} /><Status label="Session type" value={authError.sessionKind.toUpperCase()} /><Status label="Boot query" value={authError.bootQueryPresent ? "PRESENT" : "MISSING"} /><Status label="Boot bound" value={yesNo(authError.bootBound).toUpperCase()} /><Status label="Boot match" value={yesNo(authError.bootMatch).toUpperCase()} /><Status label="Result" value={authError.authResult.replaceAll("-", " ").toUpperCase()} /></dl></DiagnosticsShell>;
   if (error) return <DiagnosticsShell><p className="text-sm text-amber-100/80">{error}</p></DiagnosticsShell>;
   if (!payload) return <DiagnosticsShell><p className="text-sm text-white/55">Loading kiosk diagnostics…</p></DiagnosticsShell>;
 
