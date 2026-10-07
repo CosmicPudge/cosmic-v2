@@ -11,10 +11,12 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     document.documentElement.dataset.cosmicReducedEffects = repository.data.appearance.reducedEffects ? "true" : "false";
+    document.documentElement.dataset.cosmosSurface = repository.data.appearance.surfaceStyle;
     return () => {
       delete document.documentElement.dataset.cosmicReducedEffects;
+      delete document.documentElement.dataset.cosmosSurface;
     };
-  }, [repository.data.appearance.reducedEffects]);
+  }, [repository.data.appearance.reducedEffects, repository.data.appearance.surfaceStyle]);
 
   return <SettingsContext.Provider value={repository}>{children}</SettingsContext.Provider>;
 }
