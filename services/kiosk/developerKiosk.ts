@@ -229,3 +229,100 @@ export async function getDeveloperKioskData(request?: Request, diagnostics?: Kio
 
   return result;
 }
+
+class KioskDiagnosticsTimeout extends Error {
+  category = "timeout" as const;
+}
+
+function withKioskDiagnosticsTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new KioskDiagnosticsTimeout()), timeoutMs);
+    promise.then(resolve, reject).finally(() => clearTimeout(timer));
+  });
+}
+
+type KioskDiagnosticsStage = (stage: "start" | "auth=ok" | "response=ready" | "account-lookup=start" | "account-lookup=done" | "account-lookup=failed" | "weather=start" | "weather=done" | "weather=failed" | "weather=timeout" | "school=start" | "school=done" | "school=failed" | "school=timeout") => void;
+
+export async function getDeveloperKioskDiagnostics(request: Request, diagnostics: KioskDiagnostics, stage: KioskDiagnosticsStage) {
+  const location = kioskLocation(request);
+  const params = new URL(request.url).searchParams;
+  const locationSource = params.get("kioskLocationSource");
+  const fallbackLat = process.env.COSMIC_KIOSK_LAT?.trim();
+  const fallbackLon = process.env.COSMIC_KIOSK_LON?.trim();
+  const fallbackConfigured = Boolean(fallbackLat && fallbackLon && Number.isFinite(Number(fallbackLat)) && Number.isFinite(Number(fallbackLon)));
+  diagnostics.weather.browserLocationProvided = locationSource === "current";
+  diagnostics.weather.storedLocationAvailable = locationSource === "last-known";
+  diagnostics.weather.serverFallbackConfigured = fallbackConfigured;
+  diagnostics.weather.locationSource = location?.source === "current" ? "browser" : location?.source === "last-known" ? "stored" : location?.source === "fallback" ? "server-fallback" : "unavailable";
+  diagnostics.school.accountConfigured = Boolean(process.env.COSMIC_KIOSK_ACCOUNT_ID?.trim());
+  diagnostics.school.fallbackConfigured = Boolean(process.env.COSMIC_KIOSK_CANVAS_ICAL_URL?.trim());
+
+  const accountId = process.env.COSMIC_KIOSK_ACCOUNT_ID?.trim();
+  stage("weather=start");
+  stage("school=start");
+  stage("account-lookup=start");
+  const weatherPromise = location
+    ? withKioskDiagnosticsTimeout(getEnvironment(location.lat, location.lon), 10_000)
+    : Promise.resolve(null);
+  const schoolPromise = accountId
+    ? withKioskDiagnosticsTimeout(getDeveloperKioskSchoolData(accountId), 10_000)
+    : Promise.resolve(null);
+  const accountPromise = accountId
+    ? withKioskDiagnosticsTimeout(getAuthRepository().findUserById(accountId), 5_000)
+    : Promise.resolve(null);
+  const [weatherResult, schoolResult, accountResult] = await Promise.allSettled([weatherPromise, schoolPromise, accountPromise]);
+
+  diagnostics.weather.providerAttempted = Boolean(location);
+  if (!location) {
+    diagnostics.weather.providerResult = "configuration-error";
+  } else if (weatherResult.status === "fulfilled") {
+    diagnostics.weather.providerResult = weatherResult.value ? "ok" : "unknown";
+    diagnostics.weather.aggregateHasWeather = Boolean(weatherResult.value);
+    stage("weather=done");
+  } else if (weatherResult.reason instanceof KioskDiagnosticsTimeout || (weatherResult.reason as { category?: string } | null)?.category === "timeout") {
+    diagnostics.weather.providerResult = "timeout";
+    stage("weather=timeout");
+  } else {
+    Object.assign(diagnostics.weather, classifyWeatherError(weatherResult.reason));
+    stage("weather=failed");
+  }
+
+  diagnostics.school.accountLookupAttempted = Boolean(accountId);
+  if (accountResult.status === "fulfilled") {
+    diagnostics.school.accountMatched = Boolean(accountResult.value);
+    stage(accountResult.value ? "account-lookup=done" : "account-lookup=failed");
+  } else {
+    diagnostics.school.accountMatched = false;
+    stage("account-lookup=failed");
+  }
+  if (!accountId) {
+    diagnostics.school.provider = "none";
+    diagnostics.school.providerResult = "account-not-found";
+    return;
+  }
+
+  diagnostics.school.providerAttempted = true;
+  diagnostics.school.aggregateConfigured = true;
+  if (schoolResult.status === "fulfilled" && schoolResult.value) {
+    const school = schoolResult.value;
+    const connected = !school.error && school.snapshot.sourceStatus?.canvas === "healthy";
+    diagnostics.school.provider = school.kioskSource === "kiosk-canvas-ical" ? "ical" : "canvas";
+    diagnostics.school.providerConfigured = true;
+    diagnostics.school.credentialAvailable = Boolean(school.credentialAvailable);
+    diagnostics.school.providerResult = connected ? "ok" : school.errorCategory === "authentication-error" ? "auth-error" : school.errorCategory === "configuration-error" && !school.credentialAvailable ? "credential-error" : "provider-error";
+    diagnostics.school.aggregateHasData = Boolean(school.snapshot.planningAssignments?.length || connected);
+    stage("school=done");
+  } else if (schoolResult.status === "rejected" && (schoolResult.reason instanceof KioskDiagnosticsTimeout || (schoolResult.reason as { category?: string } | null)?.category === "timeout")) {
+    diagnostics.school.provider = "canvas";
+    diagnostics.school.providerConfigured = true;
+    diagnostics.school.providerAttempted = true;
+    diagnostics.school.providerResult = "timeout";
+    stage("school=timeout");
+  } else {
+    diagnostics.school.provider = "canvas";
+    diagnostics.school.providerConfigured = true;
+    diagnostics.school.providerAttempted = true;
+    diagnostics.school.providerResult = "provider-error";
+    stage("school=failed");
+  }
+}

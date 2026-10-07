@@ -47,7 +47,7 @@ test("diagnostics UI renders safe authentication failure metadata", () => {
   assert.match(diagnosticsSource, /Session lookup/);
   assert.match(diagnosticsSource, /Boot match/);
   assert.match(diagnosticsSource, /response\.status === 401/);
-  assert.match(diagnosticsSource, /body\?\.auth/);
+  assert.match(diagnosticsSource, /"auth" in body && body\.auth/);
   assert.match(diagnosticsSource, /\/api\/kiosk\/auth-status/);
   assert.match(diagnosticsSource, /authResult !== "ok"/);
   assert.match(diagnosticsSource, /Boot query/);

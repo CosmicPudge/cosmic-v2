@@ -23,6 +23,13 @@ function parseAuthDiagnostics(value: string | null): AuthDiagnostics | null {
   try { return JSON.parse(value) as AuthDiagnostics; } catch { return null; }
 }
 
+function diagnosticsErrorCategory(reason: unknown): "timeout" | "aborted" | "network-error" | "invalid-json" | "http-error" {
+  if (reason instanceof Error && (reason.name === "AbortError" || reason.name === "TimeoutError" || reason.message === "DIAGNOSTICS REQUEST TIMED OUT")) return "timeout";
+  if (reason instanceof SyntaxError) return "invalid-json";
+  if (reason instanceof TypeError) return "network-error";
+  return "http-error";
+}
+
 function AuthStatusPanel({ auth }: { auth: AuthStatusResponse }) {
   return <><p className="text-xs uppercase tracking-[.3em] text-amber-100/60">Authentication</p><h1 className="mt-3 text-3xl font-semibold text-white">Kiosk session authentication</h1><dl className="mt-8 max-w-xl rounded-2xl border border-amber-100/10 bg-white/[.04] p-5"><Status label="Cookie" value={auth.cookiePresent ? "PRESENT" : "MISSING"} /><Status label="Session lookup" value={auth.sessionLookup.toUpperCase()} /><Status label="Session type" value={auth.sessionKind.toUpperCase()} /><Status label="Boot query" value={auth.bootQueryPresent ? "PRESENT" : "MISSING"} /><Status label="Boot bound" value={yesNo(auth.bootBound).toUpperCase()} /><Status label="Boot match" value={yesNo(auth.bootMatch).toUpperCase()} /><Status label="Expired" value={yesNo(auth.expired).toUpperCase()} /><Status label="Result" value={auth.authResult.replaceAll("-", " ").toUpperCase()} /></dl></>;
 }
@@ -53,17 +60,32 @@ export default function KioskDiagnosticsView() {
         log(`authResult=${value.authResult}`);
         if (value.authResult !== "ok") return;
         log("diagnostics request");
-        void fetch(kioskApiUrl(`/api/kiosk/diagnostics?${params.toString()}`), { cache: "no-store", credentials: "same-origin" })
+        const controller = new AbortController();
+        const timeout = window.setTimeout(() => controller.abort(), 15_000);
+        void fetch(kioskApiUrl(`/api/kiosk/diagnostics?${params.toString()}`), { cache: "no-store", credentials: "same-origin", signal: controller.signal })
           .then(async (response) => {
+            log(`diagnostics status=${response.status}`);
+            let body: DiagnosticsResponse | DiagnosticsErrorResponse;
+            try {
+              body = await response.json() as DiagnosticsResponse | DiagnosticsErrorResponse;
+              log("diagnostics parse=ok");
+            } catch {
+              log("diagnostics parse=failed");
+              throw new SyntaxError("invalid-json");
+            }
             if (!response.ok) {
-              const body = await response.json().catch(() => null) as DiagnosticsErrorResponse | null;
-              if (response.status === 401 && body?.auth) throw new Error(JSON.stringify(body.auth));
+              if (response.status === 401 && "auth" in body && body.auth) throw new Error(JSON.stringify(body.auth));
               throw new Error(response.status === 401 ? "Kiosk session authentication is required." : "Diagnostics are temporarily unavailable.");
             }
-            return response.json() as Promise<DiagnosticsResponse>;
+            return body as DiagnosticsResponse;
           })
           .then((diagnostics) => { if (active) setPayload(diagnostics); })
-          .catch((reason: unknown) => { if (active) setError(reason instanceof Error ? reason.message : "Diagnostics are temporarily unavailable."); });
+          .catch((reason: unknown) => {
+            const category = reason instanceof Error && reason.name === "AbortError" ? "timeout" : diagnosticsErrorCategory(reason);
+            log(`diagnostics error=${category}`);
+            if (active) setError(category === "timeout" ? "DIAGNOSTICS REQUEST TIMED OUT" : reason instanceof Error ? reason.message : "Diagnostics are temporarily unavailable.");
+          })
+          .finally(() => window.clearTimeout(timeout));
       })
       .catch((reason: unknown) => { if (active) setError(reason instanceof Error ? reason.message : "AUTH STATUS REQUEST FAILED"); });
     return () => { active = false; };
