@@ -49,14 +49,21 @@ test("diagnostics UI renders safe authentication failure metadata", () => {
   assert.match(diagnosticsSource, /response\.status === 401/);
   assert.match(diagnosticsSource, /body\?\.auth/);
   assert.match(diagnosticsSource, /\/api\/kiosk\/auth-status/);
-  assert.match(diagnosticsSource, /if \(response\.status === 401\)/);
+  assert.match(diagnosticsSource, /authResult !== "ok"/);
   assert.match(diagnosticsSource, /Boot query/);
+  assert.match(diagnosticsSource, /Expired/);
   assert.doesNotMatch(diagnosticsSource, /sessionId|deviceId|accountId/);
 });
 
-test("diagnostics fallback is only reachable after a failed diagnostics response", () => {
-  assert.match(diagnosticsSource, /if \(response\.status === 401\) \{[\s\S]*auth-status/);
-  assert.match(diagnosticsSource, /if \(authStatus\.ok && authBody\)/);
+test("auth-status is requested before diagnostics and diagnostics is gated on safe auth", () => {
+  const authStatusRequest = diagnosticsSource.indexOf("/api/kiosk/auth-status");
+  const diagnosticsRequest = diagnosticsSource.indexOf("/api/kiosk/diagnostics");
+  assert.ok(authStatusRequest >= 0 && authStatusRequest < diagnosticsRequest);
+  assert.match(diagnosticsSource, /log\("auth-status request"\)/);
+  assert.match(diagnosticsSource, /log\(`auth-status status=\$\{response\.status\}`\)/);
+  assert.match(diagnosticsSource, /log\(`authResult=\$\{value\.authResult\}`\)/);
+  assert.match(diagnosticsSource, /log\("diagnostics request"\)/);
+  assert.match(diagnosticsSource, /throw new Error\("AUTH STATUS REQUEST FAILED"\)/);
 });
 
 test("diagnostics bootstrap requires a boot-bound authenticated device session", () => {

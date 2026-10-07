@@ -5,7 +5,9 @@ import type { KioskDiagnostics } from "@/services/kiosk/diagnostics";
 import { kioskApiUrl } from "@/services/kioskRequest";
 
 type DiagnosticsResponse = { runtime: { authenticated: boolean; environment: "dev"; runtimeReady: boolean } } & KioskDiagnostics;
-type AuthDiagnostics = { cookiePresent: boolean; sessionLookup: "hit" | "miss" | "not-attempted"; sessionKind: "device" | "user" | "none"; bootBound: boolean; bootQueryPresent?: boolean; bootMatch: boolean; expired?: boolean; authResult: "ok" | "missing-cookie" | "session-miss" | "wrong-kind" | "boot-mismatch" | "expired" | "unknown" };
+type AuthResult = "ok" | "missing-cookie" | "session-miss" | "wrong-kind" | "boot-mismatch" | "expired" | "unknown";
+type AuthDiagnostics = { cookiePresent: boolean; sessionLookup: "hit" | "miss" | "not-attempted"; sessionKind: "device" | "user" | "none"; bootBound: boolean; bootQueryPresent?: boolean; bootMatch: boolean; expired?: boolean; authResult: AuthResult };
+type AuthStatusResponse = Omit<AuthDiagnostics, "bootQueryPresent" | "expired"> & { bootQueryPresent: boolean; expired: boolean };
 type DiagnosticsErrorResponse = { error: string; auth?: AuthDiagnostics };
 
 function Status({ label, value }: { label: string; value: string }) {
@@ -21,8 +23,13 @@ function parseAuthDiagnostics(value: string | null): AuthDiagnostics | null {
   try { return JSON.parse(value) as AuthDiagnostics; } catch { return null; }
 }
 
+function AuthStatusPanel({ auth }: { auth: AuthStatusResponse }) {
+  return <><p className="text-xs uppercase tracking-[.3em] text-amber-100/60">Authentication</p><h1 className="mt-3 text-3xl font-semibold text-white">Kiosk session authentication</h1><dl className="mt-8 max-w-xl rounded-2xl border border-amber-100/10 bg-white/[.04] p-5"><Status label="Cookie" value={auth.cookiePresent ? "PRESENT" : "MISSING"} /><Status label="Session lookup" value={auth.sessionLookup.toUpperCase()} /><Status label="Session type" value={auth.sessionKind.toUpperCase()} /><Status label="Boot query" value={auth.bootQueryPresent ? "PRESENT" : "MISSING"} /><Status label="Boot bound" value={yesNo(auth.bootBound).toUpperCase()} /><Status label="Boot match" value={yesNo(auth.bootMatch).toUpperCase()} /><Status label="Expired" value={yesNo(auth.expired).toUpperCase()} /><Status label="Result" value={auth.authResult.replaceAll("-", " ").toUpperCase()} /></dl></>;
+}
+
 export default function KioskDiagnosticsView() {
   const [payload, setPayload] = useState<DiagnosticsResponse | null>(null);
+  const [authStatus, setAuthStatus] = useState<AuthStatusResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -30,29 +37,43 @@ export default function KioskDiagnosticsView() {
     const bootId = new URLSearchParams(window.location.search).get("cosmic-boot")?.trim();
     if (bootId) params.set("cosmic-boot", bootId);
     let active = true;
-    void fetch(kioskApiUrl(`/api/kiosk/diagnostics?${params.toString()}`), { cache: "no-store", credentials: "same-origin" })
+    const log = (message: string) => {
+      if (["dev.cosmicpudge.shop", "localhost", "127.0.0.1"].includes(window.location.hostname.toLowerCase())) console.info(`[kiosk-diagnostics] ${message}`);
+    };
+    log("auth-status request");
+    void fetch(kioskApiUrl(`/api/kiosk/auth-status?${params.toString()}`), { cache: "no-store", credentials: "same-origin" })
       .then(async (response) => {
-        if (!response.ok) {
-          const body = await response.json().catch(() => null) as DiagnosticsErrorResponse | null;
-          if (response.status === 401) {
-            const authStatus = await fetch(kioskApiUrl(`/api/kiosk/auth-status?${params.toString()}`), { cache: "no-store", credentials: "same-origin" });
-            const authBody = await authStatus.json().catch(() => null) as AuthDiagnostics | null;
-            if (authStatus.ok && authBody) throw new Error(JSON.stringify(authBody));
-            if (body?.auth) throw new Error(JSON.stringify(body.auth));
-          }
-          throw new Error(response.status === 401 ? "Kiosk session authentication is required." : "Diagnostics are temporarily unavailable.");
-        }
-        return response.json() as Promise<DiagnosticsResponse>;
+        log(`auth-status status=${response.status}`);
+        if (!response.ok) throw new Error("AUTH STATUS REQUEST FAILED");
+        return response.json() as Promise<AuthStatusResponse>;
       })
-      .then((value) => { if (active) setPayload(value); })
-      .catch((reason: unknown) => { if (active) setError(reason instanceof Error ? reason.message : "Diagnostics are temporarily unavailable."); });
+      .then((value) => {
+        if (!active) return;
+        setAuthStatus(value);
+        log(`authResult=${value.authResult}`);
+        if (value.authResult !== "ok") return;
+        log("diagnostics request");
+        void fetch(kioskApiUrl(`/api/kiosk/diagnostics?${params.toString()}`), { cache: "no-store", credentials: "same-origin" })
+          .then(async (response) => {
+            if (!response.ok) {
+              const body = await response.json().catch(() => null) as DiagnosticsErrorResponse | null;
+              if (response.status === 401 && body?.auth) throw new Error(JSON.stringify(body.auth));
+              throw new Error(response.status === 401 ? "Kiosk session authentication is required." : "Diagnostics are temporarily unavailable.");
+            }
+            return response.json() as Promise<DiagnosticsResponse>;
+          })
+          .then((diagnostics) => { if (active) setPayload(diagnostics); })
+          .catch((reason: unknown) => { if (active) setError(reason instanceof Error ? reason.message : "Diagnostics are temporarily unavailable."); });
+      })
+      .catch((reason: unknown) => { if (active) setError(reason instanceof Error ? reason.message : "AUTH STATUS REQUEST FAILED"); });
     return () => { active = false; };
   }, []);
 
   const authError = parseAuthDiagnostics(error);
-  if (authError) return <DiagnosticsShell><p className="text-xs uppercase tracking-[.3em] text-amber-100/60">Authentication</p><h1 className="mt-3 text-3xl font-semibold text-white">Kiosk session authentication</h1><dl className="mt-8 max-w-xl rounded-2xl border border-amber-100/10 bg-white/[.04] p-5"><Status label="Cookie" value={authError.cookiePresent ? "PRESENT" : "MISSING"} /><Status label="Session lookup" value={authError.sessionLookup.toUpperCase()} /><Status label="Session type" value={authError.sessionKind.toUpperCase()} /><Status label="Boot query" value={authError.bootQueryPresent ? "PRESENT" : "MISSING"} /><Status label="Boot bound" value={yesNo(authError.bootBound).toUpperCase()} /><Status label="Boot match" value={yesNo(authError.bootMatch).toUpperCase()} /><Status label="Result" value={authError.authResult.replaceAll("-", " ").toUpperCase()} /></dl></DiagnosticsShell>;
+  if (authError) return <DiagnosticsShell><AuthStatusPanel auth={{ ...authError, bootQueryPresent: Boolean(authError.bootQueryPresent), expired: Boolean(authError.expired) }} /></DiagnosticsShell>;
   if (error) return <DiagnosticsShell><p className="text-sm text-amber-100/80">{error}</p></DiagnosticsShell>;
-  if (!payload) return <DiagnosticsShell><p className="text-sm text-white/55">Loading kiosk diagnostics…</p></DiagnosticsShell>;
+  if (authStatus && authStatus.authResult !== "ok") return <DiagnosticsShell><AuthStatusPanel auth={authStatus} /></DiagnosticsShell>;
+  if (!payload) return <DiagnosticsShell>{authStatus ? <AuthStatusPanel auth={authStatus} /> : <p className="text-sm text-white/55">Loading kiosk authentication status…</p>}</DiagnosticsShell>;
 
   return <DiagnosticsShell>
     <p className="text-xs uppercase tracking-[.3em] text-cyan-100/55">Authenticated developer kiosk</p>
