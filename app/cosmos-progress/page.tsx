@@ -41,6 +41,9 @@ const foundation = [
   ["TypeScript / lint / build validation", false],
   ["Regression fixes", false],
   ["Dev QA", false],
+  ["Progress tracker is live and accurate at /cosmos-progress", true],
+  ["Foundation preview is live and working at /cosmos-foundation", true],
+  ["Both progress and foundation screens show 100% before milestone close", false],
   ["PR into dev", false],
 ] as const;
 
@@ -93,7 +96,7 @@ export default function CosmosProgressPage() {
           </div>
         </section>
 
-        <p className="mt-10 text-sm text-white/35">Rule: the next milestone does not begin until the current milestone is 100% complete.</p>
+        <p className="mt-10 text-sm text-white/35">Rule: the next milestone does not begin until the current milestone is 100% complete. Milestone 0 cannot close unless both /cosmos-progress and /cosmos-foundation are live, working, and showing 100%.</p>
       </div>
     </main>
   );
