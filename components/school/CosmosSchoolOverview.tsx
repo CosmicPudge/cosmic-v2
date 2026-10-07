@@ -17,6 +17,8 @@ import AppHeader from "@/components/os/app/AppHeader";
 import CosmicCard from "@/design-system/components/CosmicCard";
 import StatusChip from "@/components/os/ui/StatusChip";
 import SchoolTabs from "@/components/school/SchoolTabs";
+import FoundationSurfaceToggle from "@/components/os/ui/FoundationSurfaceToggle";
+import FoundationViewportIndicator from "@/components/os/ui/FoundationViewportIndicator";
 import Skeleton from "@/components/os/ui/Skeleton";
 import { useSchool } from "@/components/school/context/SchoolDataContext";
 
@@ -130,7 +132,9 @@ export default function CosmosSchoolOverview({ preview = false }: { preview?: bo
         title="School"
         subtitle="Courses, assignments, schedule, progress, and feedback in one academic command center."
         rightContent={
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            {preview ? <FoundationViewportIndicator /> : null}
+            {preview ? <FoundationSurfaceToggle /> : null}
             {preview ? <StatusChip variant="primary">Milestone 2 preview</StatusChip> : null}
             <StatusChip variant={providerHealthy ? "success" : "warning"}>{sourceLabel}</StatusChip>
           </div>
