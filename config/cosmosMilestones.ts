@@ -128,13 +128,13 @@ export const schoolChecks = [
   ["Responsive mobile + tablet QA", true],
   ["Glass / solid QA", true],
   ["Accessibility and keyboard QA", true],
-  ["TypeScript / lint / build validation", false],
+  ["TypeScript / lint / build validation", true],
   ["Regression fixes", true],
-  ["Dev QA", false],
-  ["Progress tracker is live and accurate for Milestone 2", false],
-  ["School preview is live and working at /cosmos-school", false],
-  ["Both progress and School screens show 100% before milestone close", false],
-  ["PR into dev", false],
+  ["Dev QA", true],
+  ["Progress tracker is live and accurate for Milestone 2", true],
+  ["School preview is live and working at /cosmos-school", true],
+  ["Both progress and School screens show 100% before milestone close", true],
+  ["PR into dev", true],
 ] as const;
 
 export function getSchoolProgress() {
