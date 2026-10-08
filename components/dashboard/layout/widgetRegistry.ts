@@ -26,6 +26,11 @@ export const WIDGET_REGISTRY: WidgetRegistryItem[] = [
     enabled: true,
   },
   {
+    id: "school-calendar",
+    order: 3.5,
+    enabled: true,
+  },
+  {
     id: "notifications",
     order: 4,
     enabled: true,
@@ -73,6 +78,11 @@ export const WIDGET_REGISTRY: WidgetRegistryItem[] = [
   {
     id: "notes",
     order: 13,
+    enabled: true,
+  },
+  {
+    id: "tasks",
+    order: 13.5,
     enabled: true,
   },
   {
