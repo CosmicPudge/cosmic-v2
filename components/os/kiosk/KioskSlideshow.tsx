@@ -5,11 +5,13 @@ import { useSearchParams } from "next/navigation";
 
 import ClockWidget from "@/components/os/widgets/clock/ClockWidget";
 import WeatherWidget from "@/components/os/widgets/weather/WeatherWidget";
+import CalendarWidget from "@/components/os/widgets/calendar/CalendarWidget";
 import { WidgetProvider } from "@/components/os/ui/widget/WidgetContext";
 
 const BUILD_SLIDES = [
   { id: "clock", component: ClockWidget },
   { id: "weather", component: WeatherWidget },
+  { id: "calendar", component: CalendarWidget },
 ] as const;
 
 const ROTATION_MS = 120_000;
@@ -94,7 +96,7 @@ export default function KioskSlideshow() {
     <main
       className="fixed inset-0 h-[100dvh] w-[100dvw] touch-pan-y overflow-hidden bg-black"
       data-kiosk-rebuild={active.id}
-      data-kiosk-part="2-of-11"
+      data-kiosk-part="3-of-11"
       data-kiosk-slide-index={index}
       data-kiosk-slide-count={BUILD_SLIDES.length}
       onPointerDown={onPointerDown}
