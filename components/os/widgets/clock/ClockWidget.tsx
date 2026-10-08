@@ -46,12 +46,17 @@ export default function ClockWidget() {
   const developer = useDeveloperKioskData();
   const directWeather = useWeather({ enabled: presentation === "kiosk" });
   const kioskWeather = developer.data?.weather ?? directWeather.weather;
+  const kioskLocationLabel =
+    developer.data?.location?.label ??
+    (kioskWeather?.city && kioskWeather.city !== "Current location"
+      ? kioskWeather.city
+      : TEMPORARY_KIOSK_LOCATION.label);
 
   if (presentation === "kiosk") {
     return <KioskClockScene
       now={now}
       format={format}
-      locationLabel={developer.data?.location?.label ?? kioskWeather?.city ?? TEMPORARY_KIOSK_LOCATION.label}
+      locationLabel={kioskLocationLabel}
       temperature={kioskWeather ? Math.round(kioskWeather.temp) : null}
       condition={kioskWeather?.condition ?? null}
       isDay={kioskWeather ? kioskWeather.daylightProgress > 0 && kioskWeather.daylightProgress < 100 : true}
