@@ -5,7 +5,7 @@ import { safeReturnUrl } from "./returnUrl";
 const COOKIE = "cosmic_oauth_state";
 const PKCE_COOKIE = "cosmic_oauth_pkce";
 const TTL_MS = 10 * 60 * 1000;
-const KNOWN_PROVIDERS = new Set(["google", "microsoft", "spotify"]);
+const KNOWN_PROVIDERS = new Set(["google", "microsoft", "apple", "spotify"]);
 export type OAuthOwnerKind = "personal" | "legacy-account";
 const secret = () => process.env.COSMIC_AUTH_SECRET ?? "cosmic-local-development-oauth-secret";
 const sign = (value: string) => createHmac("sha256", secret()).update(value).digest("base64url");
