@@ -6,10 +6,10 @@ export const GOOGLE_IDENTITY_SCOPES = ["openid", "email", "profile"] as const;
 export const MICROSOFT_IDENTITY_SCOPES = ["openid", "profile", "email", "User.Read"] as const;
 export const APPLE_IDENTITY_SCOPES = ["name", "email"] as const;
 
-export function isGoogleIdentityConfigured() { return Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET && (process.env.GOOGLE_IDENTITY_REDIRECT_URI ?? process.env.GOOGLE_REDIRECT_URI)); }
-export function googleIdentityRedirectUri() { return process.env.GOOGLE_IDENTITY_REDIRECT_URI ?? process.env.GOOGLE_REDIRECT_URI!; }
-export function isMicrosoftIdentityConfigured() { return Boolean(process.env.MICROSOFT_CLIENT_ID && process.env.MICROSOFT_CLIENT_SECRET && (process.env.MICROSOFT_IDENTITY_REDIRECT_URI ?? process.env.MICROSOFT_REDIRECT_URI)); }
-export function microsoftIdentityRedirectUri() { return process.env.MICROSOFT_IDENTITY_REDIRECT_URI ?? process.env.MICROSOFT_REDIRECT_URI!; }
+export function isGoogleIdentityConfigured() { return Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET && process.env.GOOGLE_IDENTITY_REDIRECT_URI); }
+export function googleIdentityRedirectUri() { return process.env.GOOGLE_IDENTITY_REDIRECT_URI!; }
+export function isMicrosoftIdentityConfigured() { return Boolean(process.env.MICROSOFT_CLIENT_ID && process.env.MICROSOFT_CLIENT_SECRET && process.env.MICROSOFT_IDENTITY_REDIRECT_URI); }
+export function microsoftIdentityRedirectUri() { return process.env.MICROSOFT_IDENTITY_REDIRECT_URI!; }
 export function isAppleIdentityConfigured() { return Boolean(process.env.APPLE_CLIENT_ID && process.env.APPLE_TEAM_ID && process.env.APPLE_KEY_ID && process.env.APPLE_PRIVATE_KEY && process.env.APPLE_REDIRECT_URI); }
 export function appleIdentityRedirectUri() { return process.env.APPLE_REDIRECT_URI!; }
 
@@ -56,6 +56,10 @@ export async function verifyGoogleIdentity(accessToken: string): Promise<Provide
   if (!profile.sub || (profile.email && profile.email_verified === false)) throw new Error("Google identity is incomplete.");
   return { subject: profile.sub, ...(profile.email ? { email: profile.email } : {}), ...(profile.name ? { displayName: profile.name } : {}) };
 }
+
+export function microsoftIdentityAuthorizationUrl(state: string) { if (!isMicrosoftIdentityConfigured()) throw new Error("Microsoft sign-in is not configured."); const query = new URLSearchParams({ client_id: process.env.MICROSOFT_CLIENT_ID!, redirect_uri: microsoftIdentityRedirectUri(), response_type: "code", response_mode: "query", scope: MICROSOFT_IDENTITY_SCOPES.join(" "), state }); return `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?${query}`; }
+
+export async function exchangeMicrosoftIdentityCode(code: string): Promise<{ access_token: string }> { const response = await fetch("https://login.microsoftonline.com/common/oauth2/v2.0/token", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ client_id: process.env.MICROSOFT_CLIENT_ID!, client_secret: process.env.MICROSOFT_CLIENT_SECRET!, redirect_uri: microsoftIdentityRedirectUri(), grant_type: "authorization_code", code, scope: MICROSOFT_IDENTITY_SCOPES.join(" ") }) }); if (!response.ok) throw new Error("Microsoft identity sign-in failed."); const token = await response.json() as { access_token?: string }; if (!token.access_token) throw new Error("Microsoft identity token is missing."); return { access_token: token.access_token }; }
 
 export async function verifyMicrosoftIdentity(accessToken: string): Promise<ProviderIdentityProfile> {
   const response = await fetch("https://graph.microsoft.com/v1.0/me?$select=id,displayName,mail,userPrincipalName", { headers: { Authorization: `Bearer ${accessToken}` }, cache: "no-store" });
