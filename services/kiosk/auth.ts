@@ -55,6 +55,11 @@ export function logDeveloperKioskAuth(route: "data" | "diagnostics" | "redeem", 
 export async function getDeveloperKioskSession(request: Request): Promise<DeveloperKioskSessionResult> {
   if (!isDeveloperKioskRequest(request)) return { status: "not-found" };
   try {
+    const host = new URL(request.url).hostname.toLowerCase();
+    if (process.env.NODE_ENV !== "production" && (host === "localhost" || host === "127.0.0.1")) {
+      const localSession = await getCurrentCosmicSession(request, { allowUser: true, allowDevice: true });
+      return localSession ? { status: "authenticated", session: localSession } : { status: "unauthorized", diagnostics: classifyKioskAuth({ cookiePresent: false, sessionFound: false, sessionKind: "none", bootBound: false, bootMatch: false }) };
+    }
     const inspected = await readDeveloperKioskAuth(request);
     const session = await getCurrentCosmicSession(request, { allowUser: false, allowDevice: true, bootId: kioskBootId(request) });
     if (inspected.debug.authResult !== "ok") return { status: "unauthorized", diagnostics: inspected.debug };
