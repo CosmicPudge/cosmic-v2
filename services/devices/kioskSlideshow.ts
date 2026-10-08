@@ -31,6 +31,15 @@ function database() {
   return getDatabase();
 }
 
+let slideColumnReady: Promise<void> | null = null;
+function ensureSlideColumn() {
+  if (!slideColumnReady) {
+    const db = database();
+    slideColumnReady = db.execute(sql.raw(`ALTER TABLE "kiosk_device_settings" ADD COLUMN IF NOT EXISTS "slideshow_enabled_slides" jsonb NOT NULL DEFAULT '["clock","calendar","school-calendar","sports","music","garage","notes","tasks","cosmic","system"]'::jsonb`)).then(() => undefined);
+  }
+  return slideColumnReady;
+}
+
 function stateFromRow(row: typeof kioskDeviceSettings.$inferSelect | undefined): KioskSlideshowState {
   return {
     paused: row?.slideshowPaused ?? false,
@@ -47,6 +56,7 @@ function stateFromRow(row: typeof kioskDeviceSettings.$inferSelect | undefined):
 }
 
 async function ensureRow(deviceId: string) {
+  await ensureSlideColumn();
   const db = database();
   const [row] = await db.select().from(kioskDeviceSettings).where(eq(kioskDeviceSettings.deviceId, deviceId)).limit(1);
   if (row) return row;
