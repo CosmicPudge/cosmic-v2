@@ -46,7 +46,6 @@ export default function ClockWidget() {
     return <KioskClockScene
       now={now}
       format={format}
-      nextAlarm={nextAlarm?.occurrence ?? null}
       locationLabel={developer.data?.location?.label}
       temperature={developer.data?.weather ? Math.round(developer.data.weather.temp) : null}
       condition={developer.data?.weather?.condition ?? null}
@@ -110,14 +109,12 @@ export default function ClockWidget() {
 function KioskClockScene({
   now,
   format,
-  nextAlarm,
   locationLabel,
   temperature,
   condition,
 }: {
   now: Date | number | null;
   format: Parameters<typeof formatClockTime>[1];
-  nextAlarm: Date | number | null;
   locationLabel?: string;
   temperature: number | null;
   condition: string | null;
@@ -173,18 +170,6 @@ function KioskClockScene({
           )}
         </div>
 
-        <div className="kiosk-clock-reference-dots" aria-hidden="true">
-          <span className="is-active" />
-          <span />
-          <span />
-        </div>
-
-        {nextAlarm && (
-          <div className="kiosk-clock-reference-alarm">
-            <span>Next alarm</span>
-            <strong>{formatClockTime(nextAlarm, format)}</strong>
-          </div>
-        )}
       </div>
     </Widget>
   );
