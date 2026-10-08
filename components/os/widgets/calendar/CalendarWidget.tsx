@@ -24,7 +24,13 @@ export default function CalendarWidget() {
     calendar,
     loading,
     error,
-  } = useCalendar({ enabled: typeof window === "undefined" || window.location.pathname !== "/kiosk" });
+  } = useCalendar({
+    enabled:
+      typeof window === "undefined" ||
+      window.location.pathname !== "/kiosk" ||
+      ["localhost", "127.0.0.1"].includes(window.location.hostname),
+    includeSchool: false,
+  });
   const developer = useDeveloperKioskData();
   const developerCalendar = developer.data ? {
     today: developer.data.calendar.todayEvents.map(hydrateDeveloperEvent),
@@ -33,11 +39,18 @@ export default function CalendarWidget() {
     timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     accountCalendarConnected: developer.data.calendar.connected,
   } : null;
-  const visibleCalendar = developer.data ? developerCalendar : calendar;
+  const visibleCalendar =
+    developerCalendar?.accountCalendarConnected || developerCalendar?.today.length || developerCalendar?.upcoming.length
+      ? developerCalendar
+      : calendar;
   useDashboardWidgetReadiness("calendar", loading ? "loading" : error && !calendar ? "degraded" : "ready");
 
   if (presentation === "kiosk") {
-    return <KioskCalendarScene calendar={visibleCalendar} loading={developer.loading} error={developer.error} />;
+    return <KioskCalendarScene
+      calendar={visibleCalendar}
+      loading={!visibleCalendar && (developer.loading || loading)}
+      error={visibleCalendar ? null : (developer.error ?? error)}
+    />;
   }
 
   return (
