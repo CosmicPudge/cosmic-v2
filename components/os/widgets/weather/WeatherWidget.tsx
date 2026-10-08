@@ -1,5 +1,7 @@
 "use client";
 
+import Image from "next/image";
+import { MapPin } from "lucide-react";
 import useWeather from "@/hooks/os/useWeather";
 import type { WeatherData } from "@/engines/environment";
 
@@ -17,10 +19,10 @@ import WeatherFooter from "./WeatherFooter";
 import WeatherIcon from "@/components/icons/weather/WeatherIcon";
 import mapWeatherCondition from "@/components/icons/weather/mapWeatherCondition";
 import { resolveWeatherKioskScene } from "./weatherScene";
-import KioskSceneIdentity from "../shared/KioskSceneIdentity";
 import { useDeveloperKioskData } from "@/hooks/os/useDeveloperKioskData";
-import KioskConnectionStatus from "@/components/os/widgets/shared/KioskConnectionStatus";
 import { shouldLoadDashboardWidgetProvider } from "@/services/kiosk/widgetDataPolicy";
+import { useClockTick } from "@/hooks/os/useClock";
+import { TEMPORARY_KIOSK_LOCATION } from "@/services/kioskLocation";
 
 export default function WeatherWidget() {
   const { size, presentation } = useWidgetContext();
@@ -29,7 +31,7 @@ export default function WeatherWidget() {
     loading,
     error,
   } = useWeather({ enabled: shouldLoadDashboardWidgetProvider(presentation) });
-  const developer = useDeveloperKioskData({ poll: false });
+  const developer = useDeveloperKioskData();
   const kioskWeather = developer.data?.weather ?? weather;
   useDashboardWidgetReadiness("weather", loading ? "loading" : error && !weather ? "degraded" : "ready");
   const developmentWeatherOverride = process.env.NODE_ENV !== "production" && presentation === "kiosk" && typeof window !== "undefined"
@@ -38,7 +40,7 @@ export default function WeatherWidget() {
   const scene = resolveWeatherKioskScene(kioskWeather, developmentWeatherOverride);
 
   if (presentation === "kiosk") {
-    return <KioskWeatherScene weather={kioskWeather} loading={developer.loading || loading} error={developer.error ?? error} scene={scene} locationLabel={developer.data?.location?.label} lastUpdated={developer.data?.refreshDiagnostics?.weather?.lastSuccessfulRefreshAt} />;
+    return <KioskWeatherScene weather={kioskWeather} loading={developer.loading || loading} error={developer.error ?? error} scene={scene} locationLabel={developer.data?.location?.label} />;
   }
 
   return (
@@ -77,71 +79,109 @@ export default function WeatherWidget() {
   );
 }
 
-function KioskWeatherScene({ weather, loading, error, scene, locationLabel, lastUpdated }: { weather: WeatherData | null; loading: boolean; error: string | null; scene: ReturnType<typeof resolveWeatherKioskScene>; locationLabel?: string; lastUpdated?: string }) {
+function KioskWeatherScene({
+  weather,
+  loading,
+  error,
+  scene,
+  locationLabel,
+}: {
+  weather: WeatherData | null;
+  loading: boolean;
+  error: string | null;
+  scene: ReturnType<typeof resolveWeatherKioskScene>;
+  locationLabel?: string;
+}) {
+  const now = useClockTick(30_000);
   const isDay = scene.id.endsWith("day") || (weather !== null && weather.daylightProgress > 0 && weather.daylightProgress < 100);
-  const forecast = weather?.hourlyForecast.slice(0, 5) ?? [];
+  const forecast = weather?.hourlyForecast.slice(0, 6) ?? [];
+  const location = locationLabel ?? (weather?.city && weather.city !== "Current location" ? weather.city : TEMPORARY_KIOSK_LOCATION.label);
+  const background = scene.src ?? scene.fallbackSrcs[0] ?? "/kiosk/scenes/weather/weather-cloudy.png";
+  const precipChance = weather?.hourlyForecast[0]?.precipitationChance ?? weather?.dailyForecast[0]?.precipitationChance ?? 0;
 
   return (
-    <Widget
-      accent="weather"
-      className="kiosk-weather-widget"
-      contentPadding={false}
-      sceneState={scene.id}
-      sceneVariant={scene.id}
-      imageUrl={scene.src}
-      imageFallbackUrls={scene.fallbackSrcs}
-      imagePosition={scene.objectPosition}
-      imageOpacity={1}
-      imageBlur={0}
-    >
-      <div className="kiosk-weather-scene relative flex h-full min-h-0 flex-col overflow-hidden px-6 pb-5 pt-7 text-white sm:px-12 sm:pb-8 sm:pt-10">
-        <KioskSceneIdentity sceneLabel="WEATHER" variant="inline" />
-        <div className="relative z-10 flex items-start justify-between gap-4">
-          <div className="min-w-0">
-            <p className="truncate text-[clamp(.85rem,1.8vw,1.25rem)] font-semibold uppercase tracking-[.18em] text-white/90">{weather?.city ?? locationLabel ?? "Current conditions"}</p>
-            <p className="mt-1 truncate text-[clamp(.68rem,1.25vw,.9rem)] uppercase tracking-[.24em] text-white/65">{weather?.condition ?? (loading ? "Loading conditions" : "Weather unavailable")}</p>
-            {error && weather && <p className="mt-1 text-[.58rem] uppercase tracking-[.18em] text-amber-100/65">Last update may be delayed</p>}
-          </div>
-          {weather && <WeatherIcon condition={mapWeatherCondition(weather.condition)} isDay={isDay} size={56} />}
+    <section className="cosmos-kiosk-weather" data-weather-scene={scene.id} aria-label="Cosmos weather">
+      <Image
+        className="cosmos-kiosk-weather-background"
+        src={background}
+        alt=""
+        fill
+        priority
+        sizes="100vw"
+        style={{ objectPosition: scene.objectPosition }}
+      />
+      <div className="cosmos-kiosk-weather-shade" aria-hidden="true" />
+
+      <header className="cosmos-kiosk-weather-header">
+        <div className="cosmos-kiosk-weather-brand">
+          <strong>COSMOS</strong>
+          <span aria-hidden="true">•</span>
+          <span>WEATHER</span>
         </div>
-        <div className="relative z-10 mt-1"><KioskConnectionStatus service="weather" lastUpdated={lastUpdated} /></div>
+        <div className="cosmos-kiosk-weather-now">
+          <strong>{now ? new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" }).format(now) : "--:--"}</strong>
+          <span aria-hidden="true">•</span>
+          <span>{now ? new Intl.DateTimeFormat(undefined, { weekday: "long", month: "long", day: "numeric" }).format(now) : "Synchronizing"}</span>
+        </div>
+      </header>
 
-        {weather ? (
-          <div className="relative z-10 mt-5 flex min-h-0 flex-1 flex-col justify-center gap-5 sm:mt-2 sm:flex-row sm:items-center sm:justify-between sm:gap-10">
-            <div className="shrink-0">
-              <p className="kiosk-weather-temperature tabular-nums font-extralight tracking-[-.08em]">{Math.round(weather.temp)}°</p>
-              <p className="mt-1 text-[clamp(.72rem,1.35vw,1rem)] text-white/75">Feels like {Math.round(weather.feelsLike)}°</p>
-              <p className="mt-2 text-[clamp(.68rem,1.2vw,.9rem)] uppercase tracking-[.16em] text-white/65">H {Math.round(weather.high)}° <span className="text-white/35">·</span> L {Math.round(weather.low)}°</p>
+      {weather ? (
+        <>
+          <div className="cosmos-kiosk-weather-hero">
+            <div className="cosmos-kiosk-weather-icon">
+              <WeatherIcon condition={mapWeatherCondition(weather.condition)} isDay={isDay} size={112} />
             </div>
-            <div className="grid grid-cols-2 gap-x-8 gap-y-3 sm:gap-x-10">
-              <WeatherValue label="Humidity" value={`${weather.humidity}%`} />
-              <WeatherValue label="Wind" value={`${Math.round(weather.windSpeed)} mph`} />
-              <WeatherValue label="Precipitation" value={`${weather.precipitation24h} mm`} />
-              <WeatherValue label="UV index" value={`${weather.uvIndex}`} />
+            <div>
+              <p className="cosmos-kiosk-weather-temp">{Math.round(weather.temp)}°</p>
+              <p className="cosmos-kiosk-weather-condition">{weather.condition}</p>
+              <p className="cosmos-kiosk-weather-location"><MapPin size={19} strokeWidth={2.2} />{location}</p>
             </div>
           </div>
-        ) : (
-          <div className="relative z-10 flex flex-1 items-center justify-center text-sm text-white/65">{loading ? "Cosmic is locating current conditions…" : "Weather temporarily unavailable"}</div>
-        )}
 
-        <div className="relative z-10 mt-4 border-t border-white/20 pt-3">
-          {forecast.length > 0 ? (
-            <div className="grid grid-cols-5 gap-1 sm:gap-3">
+          <div className="cosmos-kiosk-weather-stats">
+            <WeatherStat label="High / Low" value={`${Math.round(weather.high)}° / ${Math.round(weather.low)}°`} />
+            <WeatherStat label="Feels Like" value={`${Math.round(weather.feelsLike)}°`} />
+            <WeatherStat label="Humidity" value={`${weather.humidity}%`} />
+            <WeatherStat label="Wind" value={`${Math.round(weather.windSpeed)} mph`} />
+            <WeatherStat label="Precip Chance" value={`${precipChance}%`} />
+            <WeatherStat label="Sunrise" value={formatSunTime(weather.sunrise)} />
+            <WeatherStat label="Sunset" value={formatSunTime(weather.sunset)} />
+          </div>
+
+          <div className="cosmos-kiosk-weather-hourly">
+            <p className="cosmos-kiosk-weather-section-label">NEXT 6 HOURS</p>
+            <div className="cosmos-kiosk-weather-hourly-grid">
               {forecast.map((hour, index) => (
-                <div key={`${hour.time}-${index}`} className="min-w-0 text-center">
-                  <p className="truncate text-[.58rem] uppercase tracking-[.12em] text-white/55">{index === 0 ? "Now" : hour.time}</p>
-                  <p className="mt-1 text-[clamp(.72rem,1.5vw,1rem)] font-semibold tabular-nums">{Math.round(hour.temp)}°</p>
-                  <p className="mt-0.5 text-[.56rem] text-white/45">{hour.precipitationChance}%</p>
+                <div className="cosmos-kiosk-weather-hour" key={`${hour.time}-${index}`}>
+                  <p>{index === 0 ? "Now" : hour.time}</p>
+                  <WeatherIcon condition={mapWeatherCondition(hour.icon)} isDay={isDay} size={38} />
+                  <strong>{Math.round(hour.temp)}°</strong>
                 </div>
               ))}
             </div>
-          ) : (
-            <p className="text-center text-[.62rem] uppercase tracking-[.18em] text-white/45">{error ? "Reconnecting" : "Forecast will appear when available"}</p>
-          )}
+          </div>
+        </>
+      ) : (
+        <div className="cosmos-kiosk-weather-unavailable">
+          {loading ? "Loading current weather…" : error ? "Weather temporarily unavailable" : "Weather unavailable"}
         </div>
-      </div>
-    </Widget>
+      )}
+    </section>
   );
+}
+
+function WeatherStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="cosmos-kiosk-weather-stat">
+      <span>{label}</span>
+      <strong>{value}</strong>
+    </div>
+  );
+}
+
+function formatSunTime(value: number) {
+  if (!value) return "--";
+  return new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" }).format(new Date(value * 1000));
 }
 
 function WeatherValue({ label, value }: { label: string; value: string }) {
