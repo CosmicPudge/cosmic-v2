@@ -19,7 +19,7 @@ export async function GET(request: Request) {
     return Response.json({ error: "Authentication required.", category: "session-expired" }, { status: 401, headers: { "Cache-Control": "no-store" } });
   }
   try {
-    const value = await getDeveloperKioskData(request);
+    const value = await getDeveloperKioskData(request, undefined, auth.session.account.id);
     if (process.env.NODE_ENV !== "production") console.info(`[kiosk-data] status=200 auth=ok weather=${Boolean(value.weather) ? "ok" : "degraded"} calendar=${value.calendar.connected ? "ok" : "degraded"} school=${value.school.connected ? "ok" : "degraded"} durationMs=${Date.now() - startedAt}`);
     return Response.json(value, { headers: { "Cache-Control": "no-store" } });
   } catch {
