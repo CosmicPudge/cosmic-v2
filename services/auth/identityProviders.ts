@@ -59,7 +59,29 @@ export async function verifyGoogleIdentity(accessToken: string): Promise<Provide
 
 export function microsoftIdentityAuthorizationUrl(state: string) { if (!isMicrosoftIdentityConfigured()) throw new Error("Microsoft sign-in is not configured."); const query = new URLSearchParams({ client_id: process.env.MICROSOFT_CLIENT_ID!, redirect_uri: microsoftIdentityRedirectUri(), response_type: "code", response_mode: "query", scope: MICROSOFT_IDENTITY_SCOPES.join(" "), state }); return `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?${query}`; }
 
-export async function exchangeMicrosoftIdentityCode(code: string): Promise<{ access_token: string }> { const response = await fetch("https://login.microsoftonline.com/common/oauth2/v2.0/token", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ client_id: process.env.MICROSOFT_CLIENT_ID!, client_secret: process.env.MICROSOFT_CLIENT_SECRET!, redirect_uri: microsoftIdentityRedirectUri(), grant_type: "authorization_code", code, scope: MICROSOFT_IDENTITY_SCOPES.join(" ") }) }); if (!response.ok) throw new Error("Microsoft identity sign-in failed."); const token = await response.json() as { access_token?: string }; if (!token.access_token) throw new Error("Microsoft identity token is missing."); return { access_token: token.access_token }; }
+export async function exchangeMicrosoftIdentityCode(code: string): Promise<{ access_token: string }> {
+  const response = await fetch("https://login.microsoftonline.com/common/oauth2/v2.0/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      client_id: process.env.MICROSOFT_CLIENT_ID!,
+      client_secret: process.env.MICROSOFT_CLIENT_SECRET!,
+      redirect_uri: microsoftIdentityRedirectUri(),
+      grant_type: "authorization_code",
+      code,
+      scope: MICROSOFT_IDENTITY_SCOPES.join(" "),
+    }),
+  });
+  const token = await response.json() as { access_token?: string; error?: string; error_description?: string; error_codes?: number[] };
+  if (!response.ok) {
+    const aadCode = token.error_codes?.[0];
+    const diagnostic = [token.error, aadCode ? `AADSTS${aadCode}` : null].filter(Boolean).join(" / ");
+    console.error("[auth] Microsoft token exchange failed", diagnostic || response.status);
+    throw new Error(diagnostic ? `Microsoft identity sign-in failed (${diagnostic}).` : "Microsoft identity sign-in failed.");
+  }
+  if (!token.access_token) throw new Error("Microsoft identity token is missing.");
+  return { access_token: token.access_token };
+}
 
 export async function verifyMicrosoftIdentity(accessToken: string): Promise<ProviderIdentityProfile> {
   const response = await fetch("https://graph.microsoft.com/v1.0/me?$select=id,displayName,mail,userPrincipalName", { headers: { Authorization: `Bearer ${accessToken}` }, cache: "no-store" });
