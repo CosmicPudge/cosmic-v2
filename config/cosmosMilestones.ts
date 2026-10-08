@@ -166,7 +166,7 @@ export const kioskChecks = [
   ["Live sports interruption behavior preserved", true],
   ["Music playback hold behavior preserved", true],
   ["Kiosk scene sizing / compact presentation QA", false],
-  ["Raspberry Pi kiosk compatibility", false],
+  ["Raspberry Pi kiosk compatibility", true],
   ["Resilience / reconnect behavior", true],
   ["TypeScript / lint / build validation", true],
   ["Dev QA", false],
