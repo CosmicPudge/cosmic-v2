@@ -112,7 +112,7 @@ function KioskClockScene({ now, format, nextAlarm }: { now: Date | number | null
       <div className="kiosk-clock-scene relative flex h-full min-h-0 flex-col items-center justify-center overflow-hidden px-5 pb-16 pt-8 text-center text-white sm:px-10">
         <div className="absolute left-5 top-5 flex items-center gap-2 text-white/80 sm:left-8 sm:top-8">
           <CosmicIcon icon="clock" size={22} glow="purple" label="" />
-          <span className="text-[clamp(.65rem,1.25vw,.95rem)] font-medium tracking-[.18em]">COSMIC OS</span>
+          <span className="text-[clamp(.65rem,1.25vw,.95rem)] font-medium tracking-[.18em]">COSMOS</span>
         </div>
 
         <div className="relative z-10 flex max-w-full flex-col items-center">
