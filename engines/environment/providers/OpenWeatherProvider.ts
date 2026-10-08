@@ -19,14 +19,13 @@ type CurrentWeatherPayload = {
   sys: { sunrise: number; sunset: number };
 };
 
-if (!API_KEY) {
-  throw new WeatherProviderError("configuration-error");
-}
-
 export async function getOpenWeather(
   lat: number,
   lon: number
 ): Promise<CurrentWeather & { daylightProgress: number }> {
+  if (!API_KEY) {
+    throw new WeatherProviderError("configuration-error");
+  }
 
   // Current Weather
   const currentUrl = new URL("https://api.openweathermap.org/data/2.5/weather");
