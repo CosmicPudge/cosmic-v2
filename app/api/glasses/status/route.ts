@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 
-import { getEnvironment } from "@/engines/environment";
 
 export const dynamic = "force-dynamic";
 
@@ -27,6 +26,7 @@ export async function GET(request: Request) {
     DEFAULT_LON;
 
   try {
+    const { getEnvironment } = await import("@/engines/environment");
     const environment = await getEnvironment(
       lat,
       lon,
