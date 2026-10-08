@@ -27,7 +27,7 @@ import {
   KIOSK_TRANSITION_DURATION_MS,
 } from "./kioskConfig";
 import { KioskSlideshowProvider } from "./KioskSlideshowContext";
-import type { KioskSlideshowPauseReason } from "@/core/contracts/Kiosk";
+import { DEFAULT_KIOSK_ENABLED_SLIDES, KIOSK_SLIDE_ORDER, type KioskSlideId, type KioskSlideshowPauseReason } from "@/core/contracts/Kiosk";
 import { useEntitlements } from "@/hooks/os/useEntitlements";
 import { resolveKioskSwipeDirection, shouldResetKioskRotationAfterSwipe } from "./kioskSlideshowInteraction";
 import { createKioskSportsTestEvent, parseKioskSportsTestOverride } from "./kioskSportsTestOverride";
@@ -177,18 +177,19 @@ function KioskNormalSlideshow() {
     refreshMs: (snapshot) => sportsRefreshMs(snapshot),
   });
 
+  const [enabledSlides, setEnabledSlides] = useState<KioskSlideId[]>([...DEFAULT_KIOSK_ENABLED_SLIDES]);
   const widgets = useMemo(() => {
-    const developerOrder = ["clock", "weather", "calendar", "school", "sports", "music", "notifications", "system"];
+    const kioskOrder = [...KIOSK_SLIDE_ORDER];
     return dashboardWidgets
-      .filter((widget) => (standaloneDeveloperKiosk ? developerOrder.includes(widget.id) : (widget.id !== "school" || entitlements.features["school.basic"])) &&
+      .filter((widget) => (standaloneDeveloperKiosk ? enabledSlides.includes(widget.id as KioskSlideId) : (widget.id !== "school-calendar" && widget.id !== "tasks" && (widget.id !== "school" || entitlements.features["school.basic"]))) &&
         WIDGET_REGISTRY.some(
           (entry) =>
             entry.id === widget.id &&
             entry.enabled,
         ),
       )
-      .sort((a, b) => standaloneDeveloperKiosk ? developerOrder.indexOf(a.id) - developerOrder.indexOf(b.id) : a.priority - b.priority);
-  }, [entitlements.features, standaloneDeveloperKiosk]);
+      .sort((a, b) => standaloneDeveloperKiosk ? kioskOrder.indexOf(a.id as KioskSlideId) - kioskOrder.indexOf(b.id as KioskSlideId) : a.priority - b.priority);
+  }, [enabledSlides, entitlements.features, standaloneDeveloperKiosk]);
 
   const testSportParam = searchParams.get("simulate-sport") ?? searchParams.get("kiosk-sport-test");
 
@@ -462,8 +463,9 @@ function KioskNormalSlideshow() {
       try {
         const response = await fetch(`/api/devices/kiosk-control?cosmic-kiosk=1&cosmic-boot=${encodeURIComponent(bootId)}`, { cache: "no-store", credentials: "include", signal: controller.signal });
         if (!response.ok || cancelled) return;
-        const state = await response.json() as { paused: boolean; pauseReason: KioskSlideshowPauseReason; holdMusicWhilePlaying: boolean; command?: "pause" | "resume" | "next" | "previous" | null; commandRevision: number; appliedCommandRevision: number };
+        const state = await response.json() as { paused: boolean; pauseReason: KioskSlideshowPauseReason; holdMusicWhilePlaying: boolean; enabledSlides?: KioskSlideId[]; command?: "pause" | "resume" | "next" | "previous" | null; commandRevision: number; appliedCommandRevision: number };
         setHoldMusicWhilePlaying(state.holdMusicWhilePlaying);
+        if (state.enabledSlides) setEnabledSlides(state.enabledSlides);
         let nextPaused = stateRef.current.paused;
         let nextReason = stateRef.current.pauseReason;
         if (state.pauseReason === "manual" || (state.pauseReason === null && state.command === "resume")) {
