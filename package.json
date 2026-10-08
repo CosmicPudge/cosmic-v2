@@ -11,6 +11,7 @@
     "qa:cosmos-foundation": "node scripts/qa-cosmos-foundation.mjs",
     "qa:cosmos-home": "node scripts/qa-cosmos-home.mjs",
     "qa:cosmos-school": "node scripts/qa-cosmos-school.mjs",
+    "qa:cosmos-kiosk": "node scripts/qa-cosmos-kiosk.mjs",
     "sync:phone-glasses": "node scripts/sync-phone-glasses.mjs",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
