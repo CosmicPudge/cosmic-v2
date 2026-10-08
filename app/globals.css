@@ -740,6 +740,43 @@ html, body { width: 100%; min-height: 100%; background: #030511; }
   }
 }
 
+/* M3 rebuild slideshow navigation. */
+@keyframes kiosk-rebuild-slide-in {
+  from { opacity: 0; transform: translateX(2.5%); }
+  to { opacity: 1; transform: translateX(0); }
+}
+.cosmos-kiosk-slide-dots {
+  position: absolute;
+  left: 50%;
+  bottom: clamp(.55rem, 1.6vh, 1rem);
+  z-index: 30;
+  display: flex;
+  gap: .45rem;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+.cosmos-kiosk-slide-dots span {
+  width: .42rem;
+  height: .42rem;
+  border-radius: 999px;
+  background: rgba(196,181,253,.34);
+  box-shadow: 0 0 8px rgba(0,0,0,.22);
+}
+.cosmos-kiosk-slide-dots .is-active {
+  background: #7c3aed;
+  box-shadow: 0 0 12px rgba(124,58,237,.82);
+}
+@media (orientation: landscape) and (max-width: 900px) and (max-height: 520px) {
+  .cosmos-kiosk-slide-dots {
+    bottom: .35rem;
+    gap: .32rem;
+  }
+  .cosmos-kiosk-slide-dots span {
+    width: .3rem;
+    height: .3rem;
+  }
+}
+
 /* Notifications is a calm full-screen empty state until the notification feed is available. */
 .kiosk-slide[data-kiosk-scene="notifications"] .kiosk-slide-header { display: none; }
 .kiosk-slide[data-kiosk-scene="notifications"] .kiosk-slide-content { padding: 0; }
