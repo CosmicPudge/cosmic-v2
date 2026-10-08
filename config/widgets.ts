@@ -16,6 +16,8 @@ import NotesWidget from "@/components/os/widgets/notes/NotesWidget";
 import OutlookWidget from "@/components/os/widgets/outlook/OutlookWidget";
 import MusicWidget from "@/components/os/widgets/music/MusicWidget";
 import FinanceWidget from "@/components/os/widgets/finance/FinanceWidget";
+import SchoolCalendarKioskWidget from "@/components/os/widgets/school/SchoolCalendarKioskWidget";
+import TasksWidget from "@/components/os/widgets/tasks/TasksWidget";
 
 export interface WidgetSize {
   cols: number;
@@ -58,6 +60,24 @@ export interface DashboardWidget {
 }
 
 export const dashboardWidgets: DashboardWidget[] = [
+  {
+    id: "school-calendar",
+    component: SchoolCalendarKioskWidget,
+    cols: 3,
+    rows: 2,
+    priority: 3.5,
+    movable: false,
+    resizable: false,
+  },
+  {
+    id: "tasks",
+    component: TasksWidget,
+    cols: 3,
+    rows: 2,
+    priority: 13.5,
+    movable: true,
+    resizable: true,
+  },
   {
     id: "finance",
     component: FinanceWidget,
