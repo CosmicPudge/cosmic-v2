@@ -474,6 +474,272 @@ html, body { width: 100%; min-height: 100%; background: #030511; }
 .kiosk-slide[data-kiosk-scene="weather"] .kiosk-scene-illustration { display: none; }
 .kiosk-weather-temperature { font-size: clamp(4.25rem, 12vw, 9rem); line-height: .82; text-shadow: 0 0 28px rgba(225,240,255,.22); }
 
+/* M3 visual rebuild — Part 2/11: standalone Weather. */
+.cosmos-kiosk-weather {
+  position: relative;
+  isolation: isolate;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #050617;
+  color: white;
+}
+.cosmos-kiosk-weather-background {
+  z-index: -3;
+  object-fit: cover;
+  filter: saturate(1.04) contrast(1.04);
+}
+.cosmos-kiosk-weather-shade {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, rgba(5,4,25,.26), rgba(6,5,30,.06) 52%, rgba(5,4,22,.18)),
+    linear-gradient(180deg, rgba(2,3,16,.08), transparent 38%, rgba(2,3,15,.34));
+}
+.cosmos-kiosk-weather-header {
+  position: absolute;
+  top: clamp(1.2rem, 3vh, 2.2rem);
+  left: clamp(1.5rem, 3.4vw, 3.5rem);
+  right: clamp(1.5rem, 3.4vw, 3.5rem);
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.cosmos-kiosk-weather-brand,
+.cosmos-kiosk-weather-now {
+  display: flex;
+  align-items: center;
+  gap: .78rem;
+  text-transform: uppercase;
+  text-shadow: 0 2px 12px rgba(0,0,0,.52);
+}
+.cosmos-kiosk-weather-brand {
+  font-size: clamp(.7rem, 1.3vw, 1rem);
+  letter-spacing: .32em;
+}
+.cosmos-kiosk-weather-brand strong { font-weight: 700; }
+.cosmos-kiosk-weather-brand > span:first-of-type,
+.cosmos-kiosk-weather-now > span:first-of-type {
+  color: #8b5cf6;
+  letter-spacing: 0;
+}
+.cosmos-kiosk-weather-brand > span:last-child {
+  color: rgba(226,232,240,.68);
+}
+.cosmos-kiosk-weather-now {
+  font-size: clamp(.68rem, 1.25vw, .95rem);
+  letter-spacing: .02em;
+  color: rgba(255,255,255,.78);
+}
+.cosmos-kiosk-weather-now strong {
+  color: white;
+  font-weight: 650;
+}
+.cosmos-kiosk-weather-hero {
+  position: absolute;
+  top: 18%;
+  left: clamp(2rem, 5vw, 5rem);
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: clamp(1.4rem, 3vw, 2.8rem);
+}
+.cosmos-kiosk-weather-icon {
+  filter: drop-shadow(0 0 26px rgba(216,180,254,.28));
+}
+.cosmos-kiosk-weather-temp {
+  margin: 0;
+  font-size: clamp(6rem, 18vw, 12rem);
+  font-weight: 650;
+  letter-spacing: -.08em;
+  line-height: .76;
+  text-shadow: 0 0 28px rgba(139,92,246,.26);
+}
+.cosmos-kiosk-weather-condition {
+  margin: 1rem 0 0;
+  font-size: clamp(1.6rem, 4vw, 3rem);
+  font-weight: 350;
+  line-height: 1;
+}
+.cosmos-kiosk-weather-location {
+  display: flex;
+  align-items: center;
+  gap: .55rem;
+  margin: .9rem 0 0;
+  color: rgba(255,255,255,.86);
+  font-size: clamp(.82rem, 1.5vw, 1.08rem);
+}
+.cosmos-kiosk-weather-stats,
+.cosmos-kiosk-weather-hourly {
+  position: absolute;
+  left: clamp(1.5rem, 3.4vw, 3.5rem);
+  right: clamp(1.5rem, 3.4vw, 3.5rem);
+  z-index: 3;
+  border: 1px solid rgba(196,181,253,.28);
+  background: linear-gradient(135deg, rgba(16,10,43,.62), rgba(7,6,28,.52));
+  box-shadow: 0 18px 46px rgba(0,0,0,.24), inset 0 1px 0 rgba(255,255,255,.045);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+.cosmos-kiosk-weather-stats {
+  bottom: 23%;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  border-radius: 1.15rem;
+  overflow: hidden;
+}
+.cosmos-kiosk-weather-stat {
+  min-width: 0;
+  padding: 1rem .7rem 1.05rem;
+  text-align: center;
+}
+.cosmos-kiosk-weather-stat + .cosmos-kiosk-weather-stat {
+  border-left: 1px solid rgba(255,255,255,.09);
+}
+.cosmos-kiosk-weather-stat span {
+  display: block;
+  color: rgba(230,224,255,.68);
+  font-size: clamp(.58rem, 1vw, .78rem);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.cosmos-kiosk-weather-stat strong {
+  display: block;
+  margin-top: .45rem;
+  font-size: clamp(.9rem, 1.55vw, 1.25rem);
+  font-weight: 650;
+}
+.cosmos-kiosk-weather-hourly {
+  bottom: 3%;
+  padding: .8rem 1.1rem .95rem;
+  border-radius: 1.1rem;
+}
+.cosmos-kiosk-weather-section-label {
+  margin: 0 0 .55rem;
+  color: rgba(232,226,255,.82);
+  font-size: .72rem;
+  font-weight: 650;
+  letter-spacing: .24em;
+}
+.cosmos-kiosk-weather-hourly-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+.cosmos-kiosk-weather-hour {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  gap: .25rem;
+  text-align: center;
+}
+.cosmos-kiosk-weather-hour + .cosmos-kiosk-weather-hour {
+  border-left: 1px solid rgba(255,255,255,.09);
+}
+.cosmos-kiosk-weather-hour p {
+  margin: 0;
+  color: rgba(255,255,255,.68);
+  font-size: clamp(.6rem, 1vw, .76rem);
+}
+.cosmos-kiosk-weather-hour strong {
+  font-size: clamp(.9rem, 1.45vw, 1.2rem);
+}
+.cosmos-kiosk-weather-unavailable {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  font-size: 1rem;
+  color: rgba(255,255,255,.7);
+}
+
+@media (orientation: landscape) and (max-width: 900px) and (max-height: 520px) {
+  .cosmos-kiosk-weather-header {
+    top: .7rem;
+    left: 1rem;
+    right: 1rem;
+  }
+  .cosmos-kiosk-weather-brand {
+    gap: .48rem;
+    font-size: .56rem;
+    letter-spacing: .24em;
+  }
+  .cosmos-kiosk-weather-now {
+    gap: .42rem;
+    font-size: .54rem;
+  }
+  .cosmos-kiosk-weather-hero {
+    top: 14%;
+    left: 1.4rem;
+    gap: .8rem;
+  }
+  .cosmos-kiosk-weather-icon svg {
+    width: 64px !important;
+    height: 64px !important;
+  }
+  .cosmos-kiosk-weather-temp {
+    font-size: clamp(4.3rem, 17vw, 6.4rem);
+  }
+  .cosmos-kiosk-weather-condition {
+    margin-top: .45rem;
+    font-size: 1.5rem;
+  }
+  .cosmos-kiosk-weather-location {
+    margin-top: .38rem;
+    font-size: .66rem;
+  }
+  .cosmos-kiosk-weather-location svg {
+    width: 13px;
+    height: 13px;
+  }
+  .cosmos-kiosk-weather-stats {
+    left: 1rem;
+    right: 1rem;
+    bottom: 22%;
+    border-radius: .78rem;
+  }
+  .cosmos-kiosk-weather-stat {
+    padding: .5rem .25rem .55rem;
+  }
+  .cosmos-kiosk-weather-stat span {
+    font-size: .44rem;
+    letter-spacing: .04em;
+  }
+  .cosmos-kiosk-weather-stat strong {
+    margin-top: .22rem;
+    font-size: .7rem;
+  }
+  .cosmos-kiosk-weather-hourly {
+    left: 1rem;
+    right: 1rem;
+    bottom: 1.7%;
+    padding: .42rem .65rem .5rem;
+    border-radius: .78rem;
+  }
+  .cosmos-kiosk-weather-section-label {
+    margin-bottom: .25rem;
+    font-size: .48rem;
+  }
+  .cosmos-kiosk-weather-hour {
+    gap: .05rem;
+  }
+  .cosmos-kiosk-weather-hour p {
+    font-size: .45rem;
+  }
+  .cosmos-kiosk-weather-hour svg {
+    width: 24px !important;
+    height: 24px !important;
+  }
+  .cosmos-kiosk-weather-hour strong {
+    font-size: .66rem;
+  }
+}
+
 /* Notifications is a calm full-screen empty state until the notification feed is available. */
 .kiosk-slide[data-kiosk-scene="notifications"] .kiosk-slide-header { display: none; }
 .kiosk-slide[data-kiosk-scene="notifications"] .kiosk-slide-content { padding: 0; }
