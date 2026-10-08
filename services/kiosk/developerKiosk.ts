@@ -12,6 +12,10 @@ import { resolveDeviceLocation } from "@/services/kiosk/deviceLocation";
 import { classifyWeatherError, type KioskDiagnostics } from "@/services/kiosk/diagnostics";
 import { getAuthRepository } from "@/services/auth/repository";
 import { isDeveloperKioskSchoolConnected } from "@/services/kiosk/schoolHealth";
+import { readCloudSnapshot } from "@/services/sync/repository";
+import type { GarageLocalData } from "@/core/contracts/Garage";
+import type { NotesLocalData } from "@/core/contracts/Notes";
+import type { ProjectsLocalData } from "@/core/contracts/Projects";
 
 const DEFAULT_HOST = "dev.cosmicpudge.shop";
 const MAX_EVENTS = 8;
@@ -98,15 +102,27 @@ function boundedEvent(event: { id?: string; title?: string; start: Date; end: Da
   };
 }
 
-export async function getDeveloperKioskData(request?: Request, diagnostics?: KioskDiagnostics) {
+export async function getDeveloperKioskData(request?: Request, diagnostics?: KioskDiagnostics, authenticatedAccountId?: string) {
   const location = kioskLocation(request);
   const now = new Date();
   const end = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
+  const accountId = authenticatedAccountId ?? process.env.COSMIC_KIOSK_ACCOUNT_ID?.trim();
   const result: {
     location: typeof location;
     weather: unknown | null;
     calendar: { events: ReturnType<typeof boundedEvent>[]; connected: boolean; error?: string; diagnostics: KioskProviderDiagnostic };
-    school: { assignments: Array<{ id: string; title: string; due: string; course?: string; completed: boolean }>; overdueCount: number; sceneState: "clear" | "upcoming" | "urgent" | "overdue" | "unavailable"; connected: boolean; error?: string; diagnostics: KioskProviderDiagnostic };
+    school: {
+      assignments: Array<{ id: string; title: string; due: string; course?: string; completed: boolean }>;
+      classes: Array<{ id: string; name: string; start: string; end: string; location?: string; instructor?: string }>;
+      overdueCount: number;
+      sceneState: "clear" | "upcoming" | "urgent" | "overdue" | "unavailable";
+      connected: boolean;
+      error?: string;
+      diagnostics: KioskProviderDiagnostic;
+    };
+    garage: { connected: boolean; vehicle?: { id: string; nickname: string; mileage: number; status: string; fuelLevel?: number }; maintenanceDue: number; openIssues: number; priority?: string; updatedAt?: string };
+    notes: { connected: boolean; total: number; recent?: { id: string; title: string; body: string; pinned: boolean; updatedAt: string }; updatedAt?: string };
+    projects: { connected: boolean; openTasks: Array<{ id: string; title: string; priority: string; dueDate?: string; projectTitle?: string }>; updatedAt?: string };
     refreshDiagnostics: {
       weather: ReturnType<typeof sceneRefreshDiagnostics>;
       calendar: ReturnType<typeof sceneRefreshDiagnostics>;
@@ -117,7 +133,10 @@ export async function getDeveloperKioskData(request?: Request, diagnostics?: Kio
     location,
     weather: null,
     calendar: { events: [], connected: false, diagnostics: { category: "configuration-error", configured: false, accountMatched: false, source: "kiosk-ical", feedCount: 0 } },
-    school: { assignments: [], overdueCount: 0, sceneState: "unavailable", connected: false, diagnostics: { category: "account-not-found", configured: false, accountMatched: false, source: "kiosk-canvas-ical" } },
+    school: { assignments: [], classes: [], overdueCount: 0, sceneState: "unavailable", connected: false, diagnostics: { category: "account-not-found", configured: false, accountMatched: false, source: "kiosk-canvas-ical" } },
+    garage: { connected: false, maintenanceDue: 0, openIssues: 0 },
+    notes: { connected: false, total: 0 },
+    projects: { connected: false, openTasks: [] },
     refreshDiagnostics: {
       weather: sceneRefreshDiagnostics(undefined, KIOSK_REFRESH_MS.weatherCurrent),
       calendar: sceneRefreshDiagnostics(undefined, KIOSK_REFRESH_MS.calendar),
@@ -157,7 +176,6 @@ export async function getDeveloperKioskData(request?: Request, diagnostics?: Kio
 
   try {
     traceKioskCalendar("fetch=start");
-    const accountId = process.env.COSMIC_KIOSK_ACCOUNT_ID?.trim();
     let engineResult: Awaited<ReturnType<typeof getDeveloperKioskCalendarEngine>> = null;
     try { engineResult = await withKioskDataProviderTimeout(getDeveloperKioskCalendarEngine(accountId)); } catch { /* The kiosk iCal feeds are the bounded fallback. */ }
     const engine = engineResult?.engine;
@@ -186,7 +204,6 @@ export async function getDeveloperKioskData(request?: Request, diagnostics?: Kio
     }
   }
 
-  const accountId = process.env.COSMIC_KIOSK_ACCOUNT_ID?.trim();
   if (accountId) {
     try {
       const cachedSchool = schoolCache.get(accountId);
@@ -206,6 +223,7 @@ export async function getDeveloperKioskData(request?: Request, diagnostics?: Kio
       result.school = {
         connected,
         assignments: upcoming.slice(0, MAX_ASSIGNMENTS).map((item) => ({ id: item.id.slice(0, 160), title: item.title.slice(0, 240), due: item.dueAt!.toISOString(), ...(item.courseName ? { course: item.courseName.slice(0, 120) } : {}), completed: item.completionStatus === "completed" })),
+        classes: school.data.classes.filter((item) => item.end >= now).slice(0, 8).map((item) => ({ id: item.id, name: item.name, start: item.start.toISOString(), end: item.end.toISOString(), ...(item.location ? { location: item.location } : {}), ...(item.instructor ? { instructor: item.instructor } : {}) })),
         overdueCount,
         sceneState: overdueCount > 0 ? "overdue" : nextDue ? (nextDue.getTime() - now.getTime() <= urgentHours * 60 * 60 * 1000 ? "urgent" : "upcoming") : "clear",
         ...(school.error ? { error: "School data temporarily unavailable." } : {}),
@@ -223,7 +241,7 @@ export async function getDeveloperKioskData(request?: Request, diagnostics?: Kio
       }
       if (connected) result.refreshDiagnostics.school = sceneRefreshDiagnostics(new Date().toISOString(), KIOSK_REFRESH_MS.school);
     } catch (error) {
-      result.school = { assignments: [], overdueCount: 0, sceneState: "unavailable", connected: false, error: "School data temporarily unavailable.", diagnostics: { category: providerErrorCategory(error), configured: true, accountMatched: true, source: "account-provider" } };
+      result.school = { assignments: [], classes: [], overdueCount: 0, sceneState: "unavailable", connected: false, error: "School data temporarily unavailable.", diagnostics: { category: providerErrorCategory(error), configured: true, accountMatched: true, source: "account-provider" } };
       if (diagnostics) {
         diagnostics.school.accountLookupAttempted = true;
         diagnostics.school.provider = "canvas";
@@ -232,6 +250,61 @@ export async function getDeveloperKioskData(request?: Request, diagnostics?: Kio
         diagnostics.school.providerResult = providerErrorCategory(error) === "authentication-error" ? "auth-error" : "provider-error";
         diagnostics.school.aggregateConfigured = true;
       }
+    }
+  }
+
+  if (accountId) {
+    try {
+      const [garageDoc, notesDoc, projectsDoc] = await Promise.all([
+        readCloudSnapshot(accountId, "garage"),
+        readCloudSnapshot(accountId, "notes"),
+        readCloudSnapshot(accountId, "projects"),
+      ]);
+
+      const garage = garageDoc?.snapshot as GarageLocalData | undefined;
+      if (garage?.version === 1 && Array.isArray(garage.vehicles)) {
+        const vehicle = garage.vehicles.find((item) => item.id === garage.selectedVehicleId) ?? garage.vehicles.find((item) => item.isPrimary) ?? garage.vehicles[0];
+        if (vehicle) {
+          const latestTelemetry = (garage.telemetrySnapshots ?? []).filter((item) => item.vehicleId === vehicle.id).sort((a, b) => b.timestamp.localeCompare(a.timestamp))[0];
+          const dueMaintenance = (garage.maintenance ?? []).filter((item) => item.vehicleId === vehicle.id && ((item.nextDueMileage !== undefined && vehicle.currentMileage >= item.nextDueMileage - 500) || (item.nextDueDate && new Date(item.nextDueDate).getTime() - now.getTime() <= 30 * 86_400_000)));
+          const openIssues = (garage.issues ?? []).filter((item) => item.vehicleId === vehicle.id && item.status !== "resolved");
+          const urgent = openIssues.find((item) => item.severity === "critical" || item.severity === "high");
+          result.garage = {
+            connected: true,
+            vehicle: { id: vehicle.id, nickname: vehicle.nickname, mileage: vehicle.currentMileage, status: vehicle.status, ...(latestTelemetry?.fuelLevel !== undefined ? { fuelLevel: latestTelemetry.fuelLevel } : {}) },
+            maintenanceDue: dueMaintenance.length,
+            openIssues: openIssues.length,
+            ...(urgent ? { priority: `${urgent.severity} issue: ${urgent.title}` } : dueMaintenance[0] ? { priority: `Maintenance: ${dueMaintenance[0].name}` } : {}),
+            updatedAt: garageDoc?.updatedAt,
+          };
+        } else {
+          result.garage = { connected: true, maintenanceDue: 0, openIssues: 0, updatedAt: garageDoc?.updatedAt };
+        }
+      }
+
+      const notes = notesDoc?.snapshot as NotesLocalData | undefined;
+      if (notes?.version === 1 && Array.isArray(notes.notes)) {
+        const visible = notes.notes.filter((item) => !item.archived).sort((a, b) => Number(b.pinned) - Number(a.pinned) || b.updatedAt.localeCompare(a.updatedAt));
+        const recent = visible[0];
+        result.notes = {
+          connected: true,
+          total: visible.length,
+          ...(recent ? { recent: { id: recent.id, title: recent.title, body: recent.body, pinned: recent.pinned, updatedAt: recent.updatedAt } } : {}),
+          updatedAt: notesDoc?.updatedAt,
+        };
+      }
+
+      const projects = projectsDoc?.snapshot as ProjectsLocalData | undefined;
+      if (projects?.version === 1 && Array.isArray(projects.tasks)) {
+        const projectNames = new Map((projects.projects ?? []).map((item) => [item.id, item.title]));
+        result.projects = {
+          connected: true,
+          openTasks: projects.tasks.filter((item) => !item.completed).sort((a, b) => (a.dueDate ?? "9999").localeCompare(b.dueDate ?? "9999") || a.order - b.order).slice(0, 12).map((item) => ({ id: item.id, title: item.title, priority: item.priority, ...(item.dueDate ? { dueDate: item.dueDate } : {}), ...(projectNames.get(item.projectId) ? { projectTitle: projectNames.get(item.projectId) } : {}) })),
+          updatedAt: projectsDoc?.updatedAt,
+        };
+      }
+    } catch {
+      // Keep the individual live-data sections in their disconnected state.
     }
   }
 
