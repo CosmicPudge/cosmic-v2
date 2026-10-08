@@ -12,6 +12,11 @@ const devicePage = read("app/devices/page.tsx");
 const connected = read("components/account/ConnectedDevices.tsx");
 const widgets = read("config/widgets.ts");
 const milestones = read("config/cosmosMilestones.ts");
+const kioskPage = read("app/kiosk/page.tsx");
+const legacyKioskPage = read("app/cosmos-kiosk/page.tsx");
+const kioskDataRoute = read("app/api/kiosk/data/route.ts");
+const kioskDataService = read("services/kiosk/developerKiosk.ts");
+const standaloneKiosk = read("components/os/kiosk/StandaloneDesktopKiosk.tsx");
 
 const expectedOrder = '["clock", "calendar", "school-calendar", "sports", "music", "garage", "notes", "tasks", "cosmic", "system"]';
 
@@ -26,7 +31,10 @@ check("Slideshow consumes enabled slide settings", slideshow.includes("enabledSl
 check("Devices page exposes kiosk controls", devicePage.includes("<ConnectedDevices />"));
 check("Devices controls expose all kiosk slide toggles", ["Personal Calendar","School Calendar","Sports","Music","Garage","Notes","Tasks","Cosmic AI","System"].every((label) => connected.includes(label)));
 check("Manual slideshow controls remain available", ["Previous","Pause","Next"].every((label) => connected.includes(label)));
-check("Milestone 3 preview route exists", fs.existsSync("app/cosmos-kiosk/page.tsx"));
+check("Canonical /kiosk route exists", fs.existsSync("app/kiosk/page.tsx") && kioskPage.includes("StandaloneDesktopKiosk"));
+check("Legacy /cosmos-kiosk redirects to /kiosk", legacyKioskPage.includes('redirect("/kiosk")'));
+check("Kiosk data is bound to the authenticated Cosmos account", kioskDataRoute.includes("auth.session.account.id") && kioskDataService.includes("authenticatedAccountId"));
+check("Pi browser handoff flow is present", standaloneKiosk.includes("127.0.0.1:8765/v1/browser-handoff") && standaloneKiosk.includes("/api/devices/handoff/consume"));
 check("Milestone 3 tracker is active", milestones.includes('export const kioskChecks') && read("app/cosmos-progress/page.tsx").includes("getKioskProgress"));
 
 const passed = checks.filter(([, ok]) => ok).length;
