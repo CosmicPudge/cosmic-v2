@@ -15,8 +15,20 @@ export async function GET(request: Request) {
     return Response.json({ error: "Kiosk authentication is temporarily unavailable.", category: "auth-error" }, { status: 503, headers: { "Cache-Control": "no-store" } });
   }
   if (auth.status === "unauthorized") {
-    if (process.env.NODE_ENV !== "production") console.info(`[kiosk-data] status=401 auth=session_expired durationMs=${Date.now() - startedAt}`);
-    return Response.json({ error: "Authentication required.", category: "session-expired" }, { status: 401, headers: { "Cache-Control": "no-store" } });
+    const host = new URL(request.url).hostname.toLowerCase();
+    const localDevelopment = process.env.NODE_ENV !== "production" && (host === "localhost" || host === "127.0.0.1");
+    if (!localDevelopment) {
+      if (process.env.NODE_ENV !== "production") console.info(`[kiosk-data] status=401 auth=session_expired durationMs=${Date.now() - startedAt}`);
+      return Response.json({ error: "Authentication required.", category: "session-expired" }, { status: 401, headers: { "Cache-Control": "no-store" } });
+    }
+    try {
+      const value = await getDeveloperKioskData(request);
+      if (process.env.NODE_ENV !== "production") console.info(`[kiosk-data] status=200 auth=local-dev weather=${Boolean(value.weather) ? "ok" : "degraded"} calendar=${value.calendar.connected ? "ok" : "degraded"} school=${value.school.connected ? "ok" : "degraded"} durationMs=${Date.now() - startedAt}`);
+      return Response.json(value, { headers: { "Cache-Control": "no-store" } });
+    } catch {
+      if (process.env.NODE_ENV !== "production") console.info(`[kiosk-data] status=503 auth=local-dev category=aggregate-error durationMs=${Date.now() - startedAt}`);
+      return Response.json({ error: "Kiosk data is temporarily unavailable.", category: "aggregate-error" }, { status: 503, headers: { "Cache-Control": "no-store" } });
+    }
   }
   try {
     const value = await getDeveloperKioskData(request, undefined, auth.session.account.id);
