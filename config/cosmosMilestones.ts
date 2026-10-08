@@ -168,7 +168,7 @@ export const kioskChecks = [
   ["Kiosk scene sizing / compact presentation QA", false],
   ["Raspberry Pi kiosk compatibility", false],
   ["Resilience / reconnect behavior", true],
-  ["TypeScript / lint / build validation", false],
+  ["TypeScript / lint / build validation", true],
   ["Dev QA", false],
   ["Progress tracker live for Milestone 3", false],
   ["/kiosk is live and working", false],
