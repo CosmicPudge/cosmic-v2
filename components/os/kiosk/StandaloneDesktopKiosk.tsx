@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import useKioskDeviceLocation from "@/hooks/os/useKioskDeviceLocation";
 import { DashboardReadinessProvider } from "@/components/dashboard/readiness/DashboardReadiness";
-import KioskAmbientFrame from "./KioskAmbientFrame";
 import KioskSlideshow from "./KioskSlideshow";
 import { KioskRuntimeProvider } from "./KioskRuntimeContext";
 import { ConnectionHealthProvider } from "@/services/kiosk/ConnectionHealthProvider";
@@ -97,7 +96,7 @@ export default function StandaloneDesktopKiosk() {
       <KioskRuntimeProvider ready={runtimeReady}>
         {renderState === "establishing-session" ? <CosmosKioskLoadingScreen label="Connecting your display" /> : null}
         {renderState === "diagnostics" ? <KioskDiagnosticsView /> : null}
-        {renderState === "normal" ? <ConnectionHealthProvider><DashboardReadinessProvider criticalWidgetIds={[]}><KioskAmbientFrame><KioskSlideshow /></KioskAmbientFrame></DashboardReadinessProvider></ConnectionHealthProvider> : null}
+        {renderState === "normal" ? <ConnectionHealthProvider><DashboardReadinessProvider criticalWidgetIds={[]}><KioskSlideshow /></DashboardReadinessProvider></ConnectionHealthProvider> : null}
       </KioskRuntimeProvider>
       <span className="sr-only">Cosmic developer kiosk presentation.</span>
     </div>
