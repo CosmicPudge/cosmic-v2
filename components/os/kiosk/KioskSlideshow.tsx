@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import ClockWidget from "@/components/os/widgets/clock/ClockWidget";
 import WeatherWidget from "@/components/os/widgets/weather/WeatherWidget";
 import CalendarWidget from "@/components/os/widgets/calendar/CalendarWidget";
+import CalendarWidget from "@/components/os/widgets/calendar/CalendarWidget";
 import { WidgetProvider } from "@/components/os/ui/widget/WidgetContext";
 
 const BUILD_SLIDES = [
