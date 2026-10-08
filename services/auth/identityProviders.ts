@@ -1,6 +1,6 @@
 import "server-only";
 
-import { createPrivateKey, createPublicKey, sign as cryptoSign, verify as cryptoVerify } from "node:crypto";
+import { createPrivateKey, createPublicKey, sign as cryptoSign, verify as cryptoVerify, type JsonWebKey as NodeJsonWebKey } from "node:crypto";
 
 export const GOOGLE_IDENTITY_SCOPES = ["openid", "email", "profile"] as const;
 export const MICROSOFT_IDENTITY_SCOPES = ["openid", "profile", "email", "User.Read"] as const;
@@ -85,7 +85,7 @@ async function verifyAppleIdToken(idToken: string): Promise<AppleTokenPayload> {
   const jwks = await jwksResponse.json() as { keys?: Array<JsonWebKey & { kid?: string }> };
   const jwk = jwks.keys?.find((item) => item.kid === header.kid);
   if (!jwk) throw new Error("Apple identity key is unavailable.");
-  const publicKey = createPublicKey({ key: jwk, format: "jwk" });
+  const publicKey = createPublicKey({ key: jwk as unknown as NodeJsonWebKey, format: "jwk" });
   const verified = cryptoVerify("RSA-SHA256", Buffer.from(`${parts[0]}.${parts[1]}`), publicKey, Buffer.from(parts[2], "base64url"));
   if (!verified) throw new Error("Apple identity token could not be verified.");
   const payload = JSON.parse(Buffer.from(parts[1], "base64url").toString("utf8")) as AppleTokenPayload;
