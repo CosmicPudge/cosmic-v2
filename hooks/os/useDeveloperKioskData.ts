@@ -18,7 +18,21 @@ export interface DeveloperKioskData {
   location: { lat: number; lon: number; label: string; source?: "current" | "last-known" | "fallback" | "unavailable"; stale?: boolean } | null;
   weather: WeatherData | null;
   calendar: { events: Array<{ id: string; title: string; start: string; end: string; allDay: boolean; location?: string; calendar?: string; category?: CalendarEventCategory }>; nextEvent?: DeveloperKioskData["calendar"]["events"][number]; todayEvents: DeveloperKioskData["calendar"]["events"]; weekEvents: DeveloperKioskData["calendar"]["events"]; connected: boolean; error?: string; diagnostics?: { category?: string } };
-  school: { assignments: Array<{ id: string; title: string; due: string; course?: string; completed: boolean }>; nextAssignment?: DeveloperKioskData["school"]["assignments"][number]; dueToday: DeveloperKioskData["school"]["assignments"]; dueThisWeek: DeveloperKioskData["school"]["assignments"]; overdueCount: number; sceneState: "clear" | "upcoming" | "urgent" | "overdue" | "unavailable"; connected: boolean; error?: string; diagnostics?: { category?: string } };
+  school: {
+    assignments: Array<{ id: string; title: string; due: string; course?: string; completed: boolean }>;
+    classes: Array<{ id: string; name: string; start: string; end: string; location?: string; instructor?: string }>;
+    nextAssignment?: DeveloperKioskData["school"]["assignments"][number];
+    dueToday: DeveloperKioskData["school"]["assignments"];
+    dueThisWeek: DeveloperKioskData["school"]["assignments"];
+    overdueCount: number;
+    sceneState: "clear" | "upcoming" | "urgent" | "overdue" | "unavailable";
+    connected: boolean;
+    error?: string;
+    diagnostics?: { category?: string };
+  };
+  garage: { connected: boolean; vehicle?: { id: string; nickname: string; mileage: number; status: string; fuelLevel?: number }; maintenanceDue: number; openIssues: number; priority?: string; updatedAt?: string };
+  notes: { connected: boolean; total: number; recent?: { id: string; title: string; body: string; pinned: boolean; updatedAt: string }; updatedAt?: string };
+  projects: { connected: boolean; openTasks: Array<{ id: string; title: string; priority: string; dueDate?: string; projectTitle?: string }>; updatedAt?: string };
   refreshDiagnostics?: {
     weather?: { effectiveRefreshMs: number; lastSuccessfulRefreshAt?: string; staleAgeMs?: number; refreshMode: "idle" | "active" | "near-live" | "live" };
     calendar?: { effectiveRefreshMs: number; lastSuccessfulRefreshAt?: string; staleAgeMs?: number; refreshMode: "idle" | "active" | "near-live" | "live" };
