@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowUpRight, MapPin } from "lucide-react";
 import { useDeveloperKioskData } from "@/hooks/os/useDeveloperKioskData";
+import useWeather from "@/hooks/os/useWeather";
 import WeatherIcon from "@/components/icons/weather/WeatherIcon";
 import mapWeatherCondition from "@/components/icons/weather/mapWeatherCondition";
 
@@ -41,16 +42,18 @@ export default function ClockWidget() {
         .filter((entry) => entry.occurrence !== null)
         .sort((left, right) => left.occurrence!.getTime() - right.occurrence!.getTime())[0];
   const clockImage = currentClockImage();
-  const developer = useDeveloperKioskData({ poll: false });
+  const developer = useDeveloperKioskData();
+  const directWeather = useWeather({ enabled: presentation === "kiosk" });
+  const kioskWeather = developer.data?.weather ?? directWeather.weather;
 
   if (presentation === "kiosk") {
     return <KioskClockScene
       now={now}
       format={format}
-      locationLabel={developer.data?.location?.label}
-      temperature={developer.data?.weather ? Math.round(developer.data.weather.temp) : null}
-      condition={developer.data?.weather?.condition ?? null}
-      isDay={developer.data?.weather ? developer.data.weather.daylightProgress > 0 && developer.data.weather.daylightProgress < 100 : true}
+      locationLabel={developer.data?.location?.label ?? kioskWeather?.city}
+      temperature={kioskWeather ? Math.round(kioskWeather.temp) : null}
+      condition={kioskWeather?.condition ?? null}
+      isDay={kioskWeather ? kioskWeather.daylightProgress > 0 && kioskWeather.daylightProgress < 100 : true}
     />;
   }
 
