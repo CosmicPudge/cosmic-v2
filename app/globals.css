@@ -606,6 +606,78 @@ html, body { width: 100%; min-height: 100%; background: #030511; }
 .kiosk-setup-preview[data-kiosk-setup-preview="calendar"] .kiosk-scene-surface::before { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(2,8,20,.48), transparent 58%), linear-gradient(180deg, rgba(2,8,20,.08), transparent 48%, rgba(1,4,12,.4)); opacity: 1; }
 .kiosk-setup-preview[data-kiosk-setup-preview="calendar"] .kiosk-scene-surface::after { content: ""; position: absolute; inset: 0; background: radial-gradient(ellipse at center, transparent 40%, rgba(0,0,8,.3) 100%), linear-gradient(180deg, transparent 62%, rgba(0,0,8,.32)); opacity: 1; }
 
+/* M3 physical kiosk profile: keep the Cosmos scenes readable on the 800×480 Pi display. */
+@media (orientation: landscape) and (max-width: 900px) and (max-height: 520px) {
+  .kiosk-scene-identity-overlay {
+    top: .65rem;
+    left: .85rem;
+    gap: .32rem;
+    font-size: .5rem;
+    letter-spacing: .14em;
+  }
+  .kiosk-scene-identity-overlay .cosmic-icon-shell { transform: scale(.84); transform-origin: left center; }
+  .kiosk-native-scene-main {
+    justify-content: center;
+    padding: 2.35rem 1.25rem 1rem;
+  }
+  .kiosk-native-scene-title {
+    max-width: 72vw;
+    font-size: clamp(1.45rem, 5.4vw, 2.65rem);
+    line-height: .96;
+  }
+  .kiosk-native-scene-subtitle {
+    max-width: 72vw;
+    margin-top: .4rem;
+    font-size: .68rem;
+  }
+  .kiosk-native-scene-details {
+    gap: .3rem .65rem;
+    margin-top: .65rem;
+    font-size: .52rem;
+  }
+  .kiosk-connection-status {
+    margin-top: .4rem;
+    font-size: .5rem;
+  }
+  .kiosk-system-status-layout {
+    flex-direction: row;
+    align-items: center;
+    gap: .75rem;
+    margin-top: .65rem;
+  }
+  .kiosk-system-status-grid {
+    width: min(68vw, 31rem);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: .4rem;
+  }
+  .kiosk-system-health-grid {
+    max-width: 72vw;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: .4rem;
+    margin-top: .6rem;
+  }
+  .kiosk-system-health-grid > div {
+    border-radius: .65rem;
+    padding: .4rem .5rem;
+  }
+  .kiosk-system-health-grid p { font-size: .48rem; }
+  .kiosk-system-health-grid strong { margin-top: .15rem; font-size: .66rem; }
+  .kiosk-system-health-grid span { display: none; }
+  .kiosk-system-status-orbit { width: 5.25rem; }
+  .kiosk-system-location,
+  .kiosk-system-update-status { margin-top: .55rem; }
+  .kiosk-slide-clock .kiosk-clock-scene {
+    padding: 2.25rem 1rem 1.2rem;
+  }
+  .kiosk-slide-clock .kiosk-clock-scene-time {
+    font-size: clamp(3.6rem, 14vw, 5.8rem);
+  }
+  .kiosk-slide-clock .kiosk-clock-scene > .absolute:first-child {
+    top: .7rem;
+    left: .85rem;
+  }
+}
+
 @media (max-width: 900px) and (max-height: 600px) {
   .kiosk-slide[data-kiosk-scene="calendar"] .kiosk-scene-image { opacity: .84 !important; }
   .kiosk-slide[data-kiosk-scene="calendar"] .kiosk-calendar-scene { padding: 1.1rem 1.1rem .8rem; }
