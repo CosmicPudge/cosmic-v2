@@ -1,10 +1,11 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
-import { ArrowUpRight } from "lucide-react";
-import { CosmicIcon } from "@/components/cosmic-icons";
+import { ArrowUpRight, MapPin } from "lucide-react";
 import { useDeveloperKioskData } from "@/hooks/os/useDeveloperKioskData";
-import KioskSceneIdentity from "@/components/os/widgets/shared/KioskSceneIdentity";
+import WeatherIcon from "@/components/icons/weather/WeatherIcon";
+import mapWeatherCondition from "@/components/icons/weather/mapWeatherCondition";
 
 import { useClockData } from "@/components/apps/clock/ClockProvider";
 import { useClockTick } from "@/hooks/os/useClock";
@@ -49,6 +50,7 @@ export default function ClockWidget() {
       locationLabel={developer.data?.location?.label}
       temperature={developer.data?.weather ? Math.round(developer.data.weather.temp) : null}
       condition={developer.data?.weather?.condition ?? null}
+      isDay={developer.data?.weather ? developer.data.weather.daylightProgress > 0 && developer.data.weather.daylightProgress < 100 : true}
     />;
   }
 
@@ -112,12 +114,14 @@ function KioskClockScene({
   locationLabel,
   temperature,
   condition,
+  isDay,
 }: {
   now: Date | number | null;
   format: Parameters<typeof formatClockTime>[1];
   locationLabel?: string;
   temperature: number | null;
   condition: string | null;
+  isDay: boolean;
 }) {
   const timeLabel = now === null ? "--:--" : formatClockTime(now, format);
   const timeParts = /^(.+?)(?:\s+(AM|PM))?$/.exec(timeLabel);
@@ -126,52 +130,52 @@ function KioskClockScene({
   const fullDate = now === null
     ? "Synchronizing"
     : new Intl.DateTimeFormat(undefined, { weekday: "long", month: "long", day: "numeric" }).format(now);
+  const resolvedLocation = locationLabel ?? "Location unavailable";
+  const resolvedCondition = condition ?? "Weather unavailable";
 
   return (
-    <Widget
-      accent="clock"
-      className="kiosk-clock-widget"
-      contentPadding={false}
-      sceneVariant="night"
-      imageUrl="/kiosk/scenes/clock/clock-cosmic-night.png"
-      imagePosition="center center"
-      imageOpacity={1}
-      imageBlur={0}
-    >
-      <div className="kiosk-clock-scene relative flex h-full min-h-0 flex-col overflow-hidden text-center text-white">
-        <KioskSceneIdentity sceneLabel="CLOCK" />
+    <section className="cosmos-kiosk-clock" aria-label="Cosmos clock">
+      <Image
+        className="cosmos-kiosk-clock-background"
+        src="/kiosk/scenes/clock/clock-cosmic-night.png"
+        alt=""
+        fill
+        priority
+        sizes="100vw"
+      />
+      <div className="cosmos-kiosk-clock-shade" aria-hidden="true" />
 
-        <div className="kiosk-clock-reference-content relative z-10 flex min-h-0 flex-1 flex-col items-center justify-center">
-          <div className="kiosk-clock-reference-time-row flex items-end justify-center">
-            <p className="kiosk-clock-reference-time tabular-nums font-semibold tracking-[-0.075em] text-white">
-              {clockTime}
-            </p>
-            {meridiem ? <p className="kiosk-clock-reference-meridiem">{meridiem}</p> : null}
-          </div>
+      <header className="cosmos-kiosk-clock-brand">
+        <strong>COSMOS</strong>
+        <span aria-hidden="true">•</span>
+        <span>CLOCK</span>
+      </header>
 
-          <p className="kiosk-clock-reference-date">{fullDate}</p>
-
-          {(locationLabel || temperature !== null || condition) && (
-            <div className="kiosk-clock-reference-status">
-              {locationLabel ? (
-                <span className="kiosk-clock-reference-status-item">
-                  <span aria-hidden="true">●</span>
-                  {locationLabel}
-                </span>
-              ) : null}
-              {temperature !== null ? (
-                <span className="kiosk-clock-reference-status-item">
-                  <span className="kiosk-clock-reference-weather-icon" aria-hidden="true">☀</span>
-                  {temperature}°F
-                </span>
-              ) : null}
-              {condition ? <span className="kiosk-clock-reference-status-item">{condition}</span> : null}
-            </div>
-          )}
+      <div className="cosmos-kiosk-clock-center">
+        <div className="cosmos-kiosk-clock-time-row">
+          <p className="cosmos-kiosk-clock-time">{clockTime}</p>
+          {meridiem ? <p className="cosmos-kiosk-clock-meridiem">{meridiem}</p> : null}
         </div>
 
+        <p className="cosmos-kiosk-clock-date">{fullDate}</p>
+
+        <div className="cosmos-kiosk-clock-status">
+          <span className="cosmos-kiosk-clock-status-item">
+            <MapPin size={22} strokeWidth={2.2} aria-hidden="true" />
+            <span>{resolvedLocation}</span>
+          </span>
+          <span className="cosmos-kiosk-clock-status-divider" aria-hidden="true" />
+          <span className="cosmos-kiosk-clock-status-item">
+            {condition ? <WeatherIcon condition={mapWeatherCondition(condition)} isDay={isDay} size={26} /> : null}
+            <span>{temperature !== null ? `${temperature}°F` : "--°F"}</span>
+          </span>
+          <span className="cosmos-kiosk-clock-status-divider" aria-hidden="true" />
+          <span className="cosmos-kiosk-clock-status-item">
+            <span>{resolvedCondition}</span>
+          </span>
+        </div>
       </div>
-    </Widget>
+    </section>
   );
 }
 
