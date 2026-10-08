@@ -22,9 +22,6 @@ export default function TasksWidget() {
     ...schoolTasks.map((item) => ({ title: item.title, due: item.due, priority: item.priority ?? "normal" })),
     ...projectTasks.map((item) => ({ title: item.title, due: item.dueDate ? new Date(`${item.dueDate}T12:00:00`) : undefined, priority: item.priority ?? "normal" })),
   ].sort((a, b) => (a.due?.getTime() ?? Number.MAX_SAFE_INTEGER) - (b.due?.getTime() ?? Number.MAX_SAFE_INTEGER));
-  const high = combined.filter((item) => item.priority === "high").length;
-  const next = combined[0];
-
   if (presentation === "kiosk") {
     const schoolItems = kiosk.data?.school.assignments.map((item) => ({ title: item.title, due: new Date(item.due), priority: "normal" })) ?? [];
     const projectItems = kiosk.data?.projects.openTasks.map((item) => ({ title: item.title, due: item.dueDate ? new Date(`${item.dueDate}T12:00:00`) : undefined, priority: item.priority })) ?? [];
