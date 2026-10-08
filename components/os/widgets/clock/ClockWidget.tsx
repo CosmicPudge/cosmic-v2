@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import { CosmicIcon } from "@/components/cosmic-icons";
+import { useDeveloperKioskData } from "@/hooks/os/useDeveloperKioskData";
+import KioskSceneIdentity from "@/components/os/widgets/shared/KioskSceneIdentity";
 
 import { useClockData } from "@/components/apps/clock/ClockProvider";
 import { useClockTick } from "@/hooks/os/useClock";
@@ -38,9 +40,17 @@ export default function ClockWidget() {
         .filter((entry) => entry.occurrence !== null)
         .sort((left, right) => left.occurrence!.getTime() - right.occurrence!.getTime())[0];
   const clockImage = currentClockImage();
+  const developer = useDeveloperKioskData({ poll: false });
 
   if (presentation === "kiosk") {
-    return <KioskClockScene now={now} format={format} nextAlarm={nextAlarm?.occurrence ?? null} />;
+    return <KioskClockScene
+      now={now}
+      format={format}
+      nextAlarm={nextAlarm?.occurrence ?? null}
+      locationLabel={developer.data?.location?.label}
+      temperature={developer.data?.weather ? Math.round(developer.data.weather.temp) : null}
+      condition={developer.data?.weather?.condition ?? null}
+    />;
   }
 
   return (
@@ -97,7 +107,29 @@ export default function ClockWidget() {
   );
 }
 
-function KioskClockScene({ now, format, nextAlarm }: { now: Date | number | null; format: Parameters<typeof formatClockTime>[1]; nextAlarm: Date | number | null }) {
+function KioskClockScene({
+  now,
+  format,
+  nextAlarm,
+  locationLabel,
+  temperature,
+  condition,
+}: {
+  now: Date | number | null;
+  format: Parameters<typeof formatClockTime>[1];
+  nextAlarm: Date | number | null;
+  locationLabel?: string;
+  temperature: number | null;
+  condition: string | null;
+}) {
+  const timeLabel = now === null ? "--:--" : formatClockTime(now, format);
+  const timeParts = /^(.+?)(?:\s+(AM|PM))?$/.exec(timeLabel);
+  const clockTime = timeParts?.[1] ?? timeLabel;
+  const meridiem = timeParts?.[2] ?? "";
+  const fullDate = now === null
+    ? "Synchronizing"
+    : new Intl.DateTimeFormat(undefined, { weekday: "long", month: "long", day: "numeric" }).format(now);
+
   return (
     <Widget
       accent="clock"
@@ -109,28 +141,48 @@ function KioskClockScene({ now, format, nextAlarm }: { now: Date | number | null
       imageOpacity={1}
       imageBlur={0}
     >
-      <div className="kiosk-clock-scene relative flex h-full min-h-0 flex-col items-center justify-center overflow-hidden px-5 pb-16 pt-8 text-center text-white sm:px-10">
-        <div className="absolute left-5 top-5 flex items-center gap-2 text-white/80 sm:left-8 sm:top-8">
-          <CosmicIcon icon="clock" size={22} glow="purple" label="" />
-          <span className="text-[clamp(.65rem,1.25vw,.95rem)] font-medium tracking-[.18em]">COSMOS</span>
+      <div className="kiosk-clock-scene relative flex h-full min-h-0 flex-col overflow-hidden text-center text-white">
+        <KioskSceneIdentity sceneLabel="CLOCK" />
+
+        <div className="kiosk-clock-reference-content relative z-10 flex min-h-0 flex-1 flex-col items-center justify-center">
+          <div className="kiosk-clock-reference-time-row flex items-end justify-center">
+            <p className="kiosk-clock-reference-time tabular-nums font-semibold tracking-[-0.075em] text-white">
+              {clockTime}
+            </p>
+            {meridiem ? <p className="kiosk-clock-reference-meridiem">{meridiem}</p> : null}
+          </div>
+
+          <p className="kiosk-clock-reference-date">{fullDate}</p>
+
+          {(locationLabel || temperature !== null || condition) && (
+            <div className="kiosk-clock-reference-status">
+              {locationLabel ? (
+                <span className="kiosk-clock-reference-status-item">
+                  <span aria-hidden="true">●</span>
+                  {locationLabel}
+                </span>
+              ) : null}
+              {temperature !== null ? (
+                <span className="kiosk-clock-reference-status-item">
+                  <span className="kiosk-clock-reference-weather-icon" aria-hidden="true">☀</span>
+                  {temperature}°F
+                </span>
+              ) : null}
+              {condition ? <span className="kiosk-clock-reference-status-item">{condition}</span> : null}
+            </div>
+          )}
         </div>
 
-        <div className="relative z-10 flex max-w-full flex-col items-center">
-          <p className="kiosk-clock-scene-time tabular-nums font-extralight tracking-[-0.08em] text-white">
-            {now === null ? "--:--" : formatClockTime(now, format)}
-          </p>
-          <p className="mt-3 text-[clamp(.8rem,1.8vw,1.35rem)] font-medium uppercase tracking-[.34em] text-white/85">
-            {now === null ? "Synchronizing" : new Intl.DateTimeFormat(undefined, { weekday: "long" }).format(now)}
-          </p>
-          <p className="mt-1 text-[clamp(.75rem,1.5vw,1.1rem)] uppercase tracking-[.24em] text-white/65">
-            {now === null ? "" : new Intl.DateTimeFormat(undefined, { month: "long", day: "numeric", year: "numeric" }).format(now)}
-          </p>
+        <div className="kiosk-clock-reference-dots" aria-hidden="true">
+          <span className="is-active" />
+          <span />
+          <span />
         </div>
 
         {nextAlarm && (
-          <div className="absolute bottom-6 left-1/2 z-10 -translate-x-1/2 text-center text-white/75">
-            <p className="text-[.58rem] font-semibold uppercase tracking-[.28em] text-cyan-100/70">Next alarm</p>
-            <p className="mt-1 text-[clamp(.75rem,1.2vw,1rem)] tabular-nums">{formatClockTime(nextAlarm, format)}</p>
+          <div className="kiosk-clock-reference-alarm">
+            <span>Next alarm</span>
+            <strong>{formatClockTime(nextAlarm, format)}</strong>
           </div>
         )}
       </div>
