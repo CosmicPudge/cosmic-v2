@@ -1,6 +1,5 @@
 import "server-only";
 
-import { getEnvironment } from "@/engines/environment";
 import { getDeveloperKioskCalendarEngine } from "@/services/calendar/accountProvider";
 import { fetchKioskCalendarIcalFeeds } from "@/services/kiosk/icalFallback";
 import { getDeveloperKioskSchoolData } from "@/services/school/server";
@@ -164,6 +163,7 @@ export async function getDeveloperKioskData(request?: Request, diagnostics?: Kio
   if (location) {
     if (diagnostics) diagnostics.weather.providerAttempted = true;
     try {
+      const { getEnvironment } = await import("@/engines/environment");
       result.weather = await getEnvironment(location.lat, location.lon);
       if (location.label === "Kiosk location" && result.weather && typeof result.weather === "object" && "city" in result.weather && typeof result.weather.city === "string") location.label = result.weather.city;
       result.refreshDiagnostics.weather = sceneRefreshDiagnostics(new Date().toISOString(), KIOSK_REFRESH_MS.weatherCurrent);
@@ -359,7 +359,7 @@ export async function getDeveloperKioskDiagnostics(request: Request, diagnostics
   stage("school=start");
   stage("account-lookup=start");
   const weatherPromise = location
-    ? withKioskDiagnosticsTimeout(getEnvironment(location.lat, location.lon), 10_000)
+    ? withKioskDiagnosticsTimeout(import("@/engines/environment").then(({ getEnvironment }) => getEnvironment(location.lat, location.lon)), 10_000)
     : Promise.resolve(null);
   const schoolPromise = accountId
     ? withKioskDiagnosticsTimeout(getDeveloperKioskSchoolData(accountId), 10_000)
