@@ -275,172 +275,181 @@ html, body { width: 100%; min-height: 100%; background: #030511; }
 .kiosk-slide[data-kiosk-scene="notifications"] .kiosk-scene-surface { background: radial-gradient(circle at 80% 22%, rgba(251,113,133,.16), transparent 24%), linear-gradient(145deg, #211020, #080813 68%) !important; }
 .kiosk-slide[data-kiosk-scene="briefing"] .kiosk-scene-surface { background: radial-gradient(ellipse at 58% 16%, rgba(232,121,249,.16), transparent 30%), linear-gradient(145deg, #1b1232, #070817 68%) !important; }
 
-/* The clock slide is a scene, not a dashboard card. The image remains sharp and the UI floats above it. */
-.kiosk-slide-clock .kiosk-slide-header { display: none; }
-.kiosk-slide-clock .kiosk-slide-content { padding: 0; }
-.kiosk-slide-clock .kiosk-slide-card,
-.kiosk-slide-clock [data-widget-accent="clock"],
-.kiosk-slide-clock [data-widget-accent="clock"] > div {
-  border-radius: 0 !important;
-  border-color: transparent !important;
-  background: transparent !important;
-  box-shadow: none !important;
-  backdrop-filter: none !important;
+/* M3 visual rebuild — Part 1/11: standalone Clock. */
+.cosmos-kiosk-clock {
+  position: relative;
+  isolation: isolate;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: #030511;
+  color: white;
 }
-.kiosk-slide-clock .kiosk-scene-surface { background: #05091a !important; }
-.kiosk-slide-clock .kiosk-scene-image { opacity: 1 !important; filter: none !important; }
-.kiosk-slide-clock .kiosk-scene-surface::before { background: radial-gradient(ellipse at 50% 42%, transparent 20%, rgba(0,0,12,.16) 70%), linear-gradient(180deg, rgba(0,0,0,.1), transparent 38%, rgba(0,0,0,.38)); opacity: 1; }
-.kiosk-slide-clock .kiosk-scene-surface::after { background: radial-gradient(ellipse at center, transparent 44%, rgba(0,0,8,.38) 100%), linear-gradient(180deg, transparent 56%, rgba(0,0,8,.4)); opacity: 1; }
-.kiosk-slide-clock .kiosk-scene-motif,
-.kiosk-slide-clock .kiosk-scene-glow,
-.kiosk-slide-clock .kiosk-scene-illustration { display: none; }
-.kiosk-clock-scene-time { font-size: clamp(4rem, 12vw, 10rem); line-height: .88; text-shadow: 0 0 26px rgba(225,240,255,.24); }
-
-/* M3 part 1/11: Clock reference target. */
-.kiosk-clock-reference-content {
-  padding: clamp(3.2rem, 8vh, 5.8rem) 1.25rem clamp(4.2rem, 10vh, 6.5rem);
+.cosmos-kiosk-clock-background {
+  z-index: -3;
+  object-fit: cover;
+  object-position: center center;
+  filter: saturate(1.08) contrast(1.03);
 }
-.kiosk-clock-reference-time-row {
-  gap: clamp(.7rem, 1.5vw, 1.25rem);
+.cosmos-kiosk-clock-shade {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at 50% 43%, rgba(20, 10, 48, .05) 0 24%, rgba(3, 5, 17, .2) 58%, rgba(1, 2, 8, .48) 100%),
+    linear-gradient(180deg, rgba(1,2,9,.12), transparent 30%, rgba(1,2,9,.16) 72%, rgba(1,2,9,.42));
 }
-.kiosk-clock-reference-time {
-  font-size: clamp(5.4rem, 18vw, 11.5rem);
+.cosmos-kiosk-clock-brand {
+  position: absolute;
+  top: clamp(1.1rem, 3.5vh, 2.4rem);
+  left: clamp(1.4rem, 4vw, 4rem);
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: .85rem;
+  font-size: clamp(.72rem, 1.35vw, 1.05rem);
+  letter-spacing: .34em;
+  text-transform: uppercase;
+  text-shadow: 0 2px 12px rgba(0,0,0,.55);
+}
+.cosmos-kiosk-clock-brand strong {
+  font-weight: 700;
+  color: rgba(255,255,255,.97);
+}
+.cosmos-kiosk-clock-brand > span:first-of-type {
+  color: #8b5cf6;
+  letter-spacing: 0;
+}
+.cosmos-kiosk-clock-brand > span:last-child {
+  color: rgba(226,232,240,.62);
+  font-weight: 400;
+}
+.cosmos-kiosk-clock-center {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(3.5rem, 10vh, 7rem) 1.5rem clamp(2rem, 6vh, 4rem);
+  text-align: center;
+}
+.cosmos-kiosk-clock-time-row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: clamp(.7rem, 1.5vw, 1.2rem);
+}
+.cosmos-kiosk-clock-time {
+  margin: 0;
+  color: rgba(255,255,255,.98);
+  font-size: clamp(6rem, 20vw, 14rem);
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -.075em;
   line-height: .78;
   text-shadow:
-    0 0 12px rgba(255,255,255,.18),
-    0 0 34px rgba(139,92,246,.34);
+    0 0 10px rgba(255,255,255,.16),
+    0 0 34px rgba(139,92,246,.35),
+    0 6px 26px rgba(0,0,0,.35);
 }
-.kiosk-clock-reference-meridiem {
-  margin-bottom: clamp(.45rem, 2vw, 1.2rem);
-  color: rgba(196,181,253,.88);
-  font-size: clamp(1.25rem, 3.2vw, 2.7rem);
-  font-weight: 600;
-  letter-spacing: .03em;
+.cosmos-kiosk-clock-meridiem {
+  margin: 0 0 clamp(.45rem, 1.8vw, 1.2rem);
+  color: rgba(196,181,253,.9);
+  font-size: clamp(1.35rem, 3.4vw, 2.8rem);
+  font-weight: 650;
+  letter-spacing: .02em;
+  line-height: 1;
+  text-shadow: 0 0 16px rgba(139,92,246,.24);
 }
-.kiosk-clock-reference-date {
-  margin-top: clamp(1rem, 2.5vh, 1.7rem);
+.cosmos-kiosk-clock-date {
+  margin: clamp(1.1rem, 3vh, 1.9rem) 0 0;
   color: rgba(255,255,255,.96);
-  font-size: clamp(1.45rem, 4vw, 3.25rem);
+  font-size: clamp(1.6rem, 4.2vw, 3.5rem);
   font-weight: 350;
-  letter-spacing: -.02em;
-  text-shadow: 0 2px 16px rgba(0,0,0,.55);
+  letter-spacing: -.025em;
+  line-height: 1.05;
+  text-shadow: 0 3px 20px rgba(0,0,0,.58);
 }
-.kiosk-clock-reference-status {
+.cosmos-kiosk-clock-status {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: clamp(.7rem, 1.7vw, 1.15rem);
-  margin-top: clamp(1rem, 2.5vh, 1.55rem);
-  min-height: 3rem;
-  max-width: min(76vw, 44rem);
-  padding: .65rem 1.15rem;
+  gap: clamp(.8rem, 1.6vw, 1.25rem);
+  margin-top: clamp(1.1rem, 2.8vh, 1.8rem);
+  max-width: min(80vw, 46rem);
+  min-height: 3.25rem;
+  padding: .72rem 1.25rem;
   border: 1px solid rgba(196,181,253,.42);
   border-radius: 1rem;
-  background: linear-gradient(135deg, rgba(26,18,57,.58), rgba(8,7,27,.46));
-  box-shadow: 0 14px 40px rgba(0,0,0,.2), inset 0 1px 0 rgba(255,255,255,.05);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: linear-gradient(135deg, rgba(23,14,54,.58), rgba(6,5,22,.46));
+  box-shadow: 0 18px 44px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.055);
+  backdrop-filter: blur(13px);
+  -webkit-backdrop-filter: blur(13px);
   color: rgba(255,255,255,.92);
-  font-size: clamp(.72rem, 1.55vw, 1.08rem);
+  font-size: clamp(.78rem, 1.55vw, 1.1rem);
 }
-.kiosk-clock-reference-status-item {
+.cosmos-kiosk-clock-status-item {
   display: inline-flex;
+  min-width: 0;
   align-items: center;
   gap: .5rem;
-  min-width: 0;
   white-space: nowrap;
 }
-.kiosk-clock-reference-status-item + .kiosk-clock-reference-status-item::before {
-  content: "";
-  width: .35rem;
-  height: .35rem;
-  margin-right: .15rem;
+.cosmos-kiosk-clock-status-divider {
+  width: .38rem;
+  height: .38rem;
+  flex: 0 0 auto;
   border-radius: 999px;
-  background: #8b5cf6;
-  box-shadow: 0 0 12px rgba(139,92,246,.85);
-}
-.kiosk-clock-reference-status-item:first-child > span:first-child {
-  color: #f8fafc;
-  font-size: .55em;
-  opacity: .95;
-}
-.kiosk-clock-reference-weather-icon {
-  color: #f8fafc;
-  font-size: 1.15em;
-}
-.kiosk-clock-reference-dots {
-  position: absolute;
-  bottom: clamp(.8rem, 2.2vh, 1.4rem);
-  left: 50%;
-  z-index: 12;
-  display: flex;
-  gap: .55rem;
-  transform: translateX(-50%);
-}
-.kiosk-clock-reference-dots span {
-  width: .45rem;
-  height: .45rem;
-  border-radius: 999px;
-  background: rgba(196,181,253,.35);
-}
-.kiosk-clock-reference-dots .is-active {
   background: #7c3aed;
-  box-shadow: 0 0 14px rgba(124,58,237,.9);
-}
-.kiosk-clock-reference-alarm {
-  position: absolute;
-  right: clamp(.9rem, 2vw, 1.5rem);
-  bottom: clamp(.75rem, 1.8vh, 1.15rem);
-  z-index: 12;
-  display: flex;
-  align-items: baseline;
-  gap: .45rem;
-  color: rgba(255,255,255,.42);
-  font-size: .56rem;
-  letter-spacing: .13em;
-  text-transform: uppercase;
-}
-.kiosk-clock-reference-alarm strong {
-  color: rgba(255,255,255,.72);
-  font-size: .72rem;
-  font-weight: 600;
-  letter-spacing: .03em;
+  box-shadow: 0 0 12px rgba(124,58,237,.85);
 }
 
 @media (orientation: landscape) and (max-width: 900px) and (max-height: 520px) {
-  .kiosk-clock-reference-content {
-    padding: 2.3rem .8rem 2.7rem;
+  .cosmos-kiosk-clock-brand {
+    top: .8rem;
+    left: 1rem;
+    gap: .55rem;
+    font-size: .58rem;
+    letter-spacing: .27em;
   }
-  .kiosk-clock-reference-time {
-    font-size: clamp(4.5rem, 20vw, 7.2rem);
+  .cosmos-kiosk-clock-center {
+    padding: 2.1rem .8rem 1.15rem;
   }
-  .kiosk-clock-reference-meridiem {
-    margin-bottom: .4rem;
-    font-size: clamp(1rem, 3.7vw, 1.55rem);
+  .cosmos-kiosk-clock-time {
+    font-size: clamp(5rem, 22vw, 7.8rem);
   }
-  .kiosk-clock-reference-date {
+  .cosmos-kiosk-clock-meridiem {
+    margin-bottom: .35rem;
+    font-size: clamp(1rem, 3.8vw, 1.55rem);
+  }
+  .cosmos-kiosk-clock-date {
     margin-top: .65rem;
-    font-size: clamp(1.1rem, 4.4vw, 1.8rem);
+    font-size: clamp(1.15rem, 4.6vw, 1.85rem);
   }
-  .kiosk-clock-reference-status {
-    gap: .5rem;
-    margin-top: .7rem;
-    min-height: 2.3rem;
-    max-width: 78vw;
+  .cosmos-kiosk-clock-status {
+    gap: .48rem;
+    margin-top: .72rem;
+    min-height: 2.35rem;
+    max-width: 82vw;
     padding: .42rem .75rem;
-    border-radius: .75rem;
+    border-radius: .78rem;
     font-size: .66rem;
   }
-  .kiosk-clock-reference-dots {
-    bottom: .55rem;
+  .cosmos-kiosk-clock-status-item {
+    gap: .32rem;
   }
-  .kiosk-clock-reference-alarm {
-    right: .65rem;
-    bottom: .5rem;
-    font-size: .46rem;
+  .cosmos-kiosk-clock-status-item svg {
+    width: 14px;
+    height: 14px;
   }
-  .kiosk-clock-reference-alarm strong {
-    font-size: .58rem;
+  .cosmos-kiosk-clock-status-divider {
+    width: .28rem;
+    height: .28rem;
   }
 }
 
