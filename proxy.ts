@@ -146,6 +146,19 @@ export async function proxy(request: NextRequest) {
   if ((pathname === "/api/kiosk/data" || pathname === "/api/kiosk/diagnostics" || pathname === "/api/kiosk/auth-status" || pathname === "/api/sports" || pathname === "/api/music") && isDeveloperKioskRequest(request)) {
     return NextResponse.next();
   }
+  // Local-only kiosk visual development. This lets the Clock and later
+  // reference scenes use real weather without requiring a paired device
+  // session while running on localhost. Production/dev.cosmicpudge.shop keep
+  // their normal auth boundary.
+  const isLocalKioskWeatherPreview =
+    process.env.NODE_ENV !== "production" &&
+    pathname === "/api/weather" &&
+    ["localhost", "127.0.0.1"].includes(request.nextUrl.hostname.toLowerCase()) &&
+    request.nextUrl.searchParams.get("cosmic-kiosk") === "1";
+  if (isLocalKioskWeatherPreview) {
+    return NextResponse.next();
+  }
+
 
   // Cosmic Glasses local development.
   // Production still requires normal authentication/device enrollment.
