@@ -167,7 +167,7 @@ function KioskNormalSlideshow() {
   const searchParams = useSearchParams();
   const { setPersistentClockHidden } = useKioskAmbientFrame();
   const { data: entitlements } = useEntitlements();
-  const standaloneDeveloperKiosk = typeof window !== "undefined" && window.location.pathname === "/kiosk";
+  const standaloneDeveloperKiosk = typeof window !== "undefined" && ["/kiosk", "/cosmos-kiosk"].includes(window.location.pathname);
   const kioskRuntimeReady = useKioskRuntimeReady();
   const manualSportsOverride = useMemo(() => parseKioskSportsTestOverride(searchParams, typeof window !== "undefined" ? window.location.hostname : "", typeof window !== "undefined" ? window.location.pathname : "") , [searchParams]);
 
