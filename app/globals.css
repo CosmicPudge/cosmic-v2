@@ -1179,6 +1179,381 @@ html, body { width: 100%; min-height: 100%; background: #030511; }
   }
 }
 
+/* M3 visual rebuild — Part 3/11: Personal Calendar. */
+.cosmos-kiosk-calendar {
+  position: relative;
+  isolation: isolate;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #050617;
+  color: white;
+}
+.cosmos-kiosk-calendar-background {
+  z-index: -3;
+  object-fit: cover;
+  object-position: center center;
+  filter: saturate(1.25) hue-rotate(10deg) contrast(1.04);
+}
+.cosmos-kiosk-calendar-shade {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 58% 20%, rgba(120,35,255,.22), transparent 38%),
+    linear-gradient(180deg, rgba(3,2,20,.18), rgba(7,4,30,.25) 40%, rgba(3,2,15,.5));
+}
+.cosmos-kiosk-calendar-brand {
+  position: absolute;
+  top: clamp(1rem, 3vh, 2rem);
+  left: clamp(1.5rem, 3.5vw, 3.8rem);
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: .8rem;
+  font-size: clamp(.68rem, 1.25vw, .98rem);
+  letter-spacing: .34em;
+  text-transform: uppercase;
+  text-shadow: 0 2px 14px rgba(0,0,0,.58);
+}
+.cosmos-kiosk-calendar-brand strong { font-weight: 700; }
+.cosmos-kiosk-calendar-brand > span:first-of-type {
+  color: #8b5cf6;
+  letter-spacing: 0;
+}
+.cosmos-kiosk-calendar-brand > span:last-child {
+  color: rgba(232,225,255,.68);
+}
+.cosmos-kiosk-calendar-heading {
+  position: absolute;
+  top: clamp(4.4rem, 12vh, 7.5rem);
+  left: clamp(1.5rem, 3.5vw, 3.8rem);
+  z-index: 4;
+}
+.cosmos-kiosk-calendar-heading h1 {
+  margin: 0;
+  font-size: clamp(3.2rem, 7vw, 6.4rem);
+  font-weight: 650;
+  letter-spacing: -.06em;
+  line-height: .92;
+  text-shadow: 0 0 26px rgba(139,92,246,.26), 0 4px 22px rgba(0,0,0,.42);
+}
+.cosmos-kiosk-calendar-heading p {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin: .85rem 0 0;
+  font-size: clamp(1.1rem, 2.2vw, 1.85rem);
+  color: rgba(255,255,255,.92);
+}
+.cosmos-kiosk-calendar-heading p strong { font-weight: 650; }
+.cosmos-kiosk-calendar-heading p span:first-of-type { color: rgba(255,255,255,.55); }
+.cosmos-kiosk-calendar-layout {
+  position: absolute;
+  left: clamp(1.5rem, 3.5vw, 3.8rem);
+  right: clamp(1.5rem, 3.5vw, 3.8rem);
+  top: 31%;
+  bottom: 4%;
+  z-index: 3;
+  display: grid;
+  grid-template-columns: minmax(0, 1.9fr) minmax(18rem, .95fr);
+  gap: 1.4rem;
+}
+.cosmos-kiosk-calendar-agenda {
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
+  gap: .5rem;
+}
+.cosmos-kiosk-calendar-event {
+  position: relative;
+  display: grid;
+  grid-template-columns: 10rem 4.2rem minmax(0,1fr) auto;
+  align-items: center;
+  gap: 1rem;
+  min-height: 4.7rem;
+  padding: .65rem .9rem;
+  border: 1px solid rgba(196,181,253,.26);
+  border-radius: 1rem;
+  background: linear-gradient(135deg, rgba(19,12,48,.64), rgba(8,7,27,.52));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.04), 0 10px 30px rgba(0,0,0,.16);
+  backdrop-filter: blur(13px);
+  -webkit-backdrop-filter: blur(13px);
+}
+.cosmos-kiosk-calendar-event::before {
+  content: "";
+  position: absolute;
+  left: 1rem;
+  top: -0.5rem;
+  bottom: -0.5rem;
+  width: 1px;
+  background: linear-gradient(180deg, rgba(167,139,250,.16), rgba(167,139,250,.88), rgba(167,139,250,.16));
+}
+.cosmos-kiosk-calendar-event::after {
+  content: "";
+  position: absolute;
+  left: .76rem;
+  top: 50%;
+  width: .5rem;
+  height: .5rem;
+  border-radius: 999px;
+  transform: translateY(-50%);
+  background: #a78bfa;
+  box-shadow: 0 0 14px rgba(167,139,250,.9);
+}
+.cosmos-kiosk-calendar-event.is-next {
+  border-color: rgba(168,85,247,.78);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.07), 0 0 26px rgba(126,34,206,.2);
+}
+.cosmos-kiosk-calendar-time {
+  padding-left: 1.3rem;
+}
+.cosmos-kiosk-calendar-time strong,
+.cosmos-kiosk-calendar-time span {
+  display: block;
+  font-variant-numeric: tabular-nums;
+}
+.cosmos-kiosk-calendar-time strong {
+  font-size: clamp(.95rem, 1.7vw, 1.35rem);
+  font-weight: 650;
+}
+.cosmos-kiosk-calendar-time span {
+  margin-top: .14rem;
+  color: rgba(232,226,255,.66);
+  font-size: clamp(.72rem, 1.2vw, .95rem);
+}
+.cosmos-kiosk-calendar-icon {
+  display: grid;
+  place-items: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  border: 1px solid rgba(196,181,253,.22);
+  border-radius: .8rem;
+  background: rgba(101,49,181,.22);
+  color: #c4b5fd;
+}
+.cosmos-kiosk-calendar-event-main {
+  min-width: 0;
+}
+.cosmos-kiosk-calendar-next-pill {
+  display: inline-flex;
+  margin-bottom: .28rem;
+  padding: .16rem .5rem;
+  border-radius: .5rem;
+  background: linear-gradient(180deg,#8b5cf6,#6d28d9);
+  box-shadow: 0 0 16px rgba(139,92,246,.5);
+  font-size: .58rem;
+  font-weight: 750;
+  letter-spacing: .04em;
+}
+.cosmos-kiosk-calendar-event-main h2 {
+  margin: 0;
+  overflow: hidden;
+  color: rgba(255,255,255,.97);
+  font-size: clamp(.9rem, 1.55vw, 1.22rem);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cosmos-kiosk-calendar-event-main p {
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+  margin: .28rem 0 0;
+  overflow: hidden;
+  color: rgba(224,215,255,.72);
+  font-size: clamp(.68rem, 1.15vw, .92rem);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cosmos-kiosk-calendar-source {
+  max-width: 9rem;
+  overflow: hidden;
+  padding: .38rem .72rem;
+  border: 1px solid rgba(196,181,253,.18);
+  border-radius: 999px;
+  background: rgba(92,50,151,.2);
+  color: rgba(231,221,255,.82);
+  font-size: clamp(.56rem, .95vw, .72rem);
+  text-overflow: ellipsis;
+  text-transform: capitalize;
+  white-space: nowrap;
+}
+.cosmos-kiosk-calendar-month {
+  align-self: stretch;
+  padding: 1.2rem 1.25rem;
+  border: 1px solid rgba(196,181,253,.3);
+  border-radius: 1.25rem;
+  background: linear-gradient(145deg, rgba(14,10,40,.76), rgba(7,6,25,.67));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.05), 0 18px 40px rgba(0,0,0,.2);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+.cosmos-kiosk-calendar-month h2 {
+  margin: 0 0 1rem;
+  text-align: center;
+  font-size: clamp(1.1rem, 2vw, 1.55rem);
+  font-weight: 550;
+}
+.cosmos-kiosk-calendar-weekdays,
+.cosmos-kiosk-calendar-month-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0,1fr));
+  text-align: center;
+}
+.cosmos-kiosk-calendar-weekdays {
+  margin-bottom: .5rem;
+  color: rgba(219,210,246,.72);
+  font-size: .58rem;
+  letter-spacing: .08em;
+}
+.cosmos-kiosk-calendar-month-grid {
+  row-gap: .52rem;
+}
+.cosmos-kiosk-calendar-day {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 2rem;
+  color: rgba(255,255,255,.9);
+  font-size: .75rem;
+}
+.cosmos-kiosk-calendar-day.is-muted { color: rgba(255,255,255,.28); }
+.cosmos-kiosk-calendar-day.is-today span {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  background: linear-gradient(145deg,#9f67ff,#7c3aed);
+  box-shadow: 0 0 18px rgba(139,92,246,.75);
+}
+.cosmos-kiosk-calendar-day.has-event::after {
+  content: "";
+  position: absolute;
+  bottom: .02rem;
+  width: .28rem;
+  height: .28rem;
+  border-radius: 999px;
+  background: #a78bfa;
+  box-shadow: 0 0 8px rgba(167,139,250,.75);
+}
+.cosmos-kiosk-calendar-empty,
+.cosmos-kiosk-calendar-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 9rem;
+  border: 1px solid rgba(196,181,253,.24);
+  border-radius: 1rem;
+  background: rgba(9,7,29,.55);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+.cosmos-kiosk-calendar-empty {
+  flex: 1;
+  flex-direction: column;
+  gap: .35rem;
+}
+.cosmos-kiosk-calendar-empty span { color: rgba(255,255,255,.58); }
+.cosmos-kiosk-calendar-state {
+  position: absolute;
+  inset: 38% 24%;
+  z-index: 4;
+  color: rgba(255,255,255,.74);
+}
+
+@media (orientation: landscape) and (max-width: 900px) and (max-height: 520px) {
+  .cosmos-kiosk-calendar-brand {
+    top: .7rem;
+    left: 1rem;
+    gap: .5rem;
+    font-size: .55rem;
+    letter-spacing: .25em;
+  }
+  .cosmos-kiosk-calendar-heading {
+    top: 2.8rem;
+    left: 1rem;
+  }
+  .cosmos-kiosk-calendar-heading h1 {
+    font-size: clamp(2.25rem, 7vw, 3.4rem);
+  }
+  .cosmos-kiosk-calendar-heading p {
+    gap: .55rem;
+    margin-top: .35rem;
+    font-size: .9rem;
+  }
+  .cosmos-kiosk-calendar-layout {
+    left: 1rem;
+    right: 1rem;
+    top: 28%;
+    bottom: 1rem;
+    grid-template-columns: minmax(0, 1.9fr) minmax(13rem, .9fr);
+    gap: .75rem;
+  }
+  .cosmos-kiosk-calendar-agenda {
+    gap: .28rem;
+  }
+  .cosmos-kiosk-calendar-event {
+    grid-template-columns: 5.6rem 2.5rem minmax(0,1fr) auto;
+    gap: .45rem;
+    min-height: 3.1rem;
+    padding: .35rem .45rem;
+    border-radius: .65rem;
+  }
+  .cosmos-kiosk-calendar-event::before { left: .65rem; }
+  .cosmos-kiosk-calendar-event::after { left: .51rem; width: .32rem; height: .32rem; }
+  .cosmos-kiosk-calendar-time { padding-left: .8rem; }
+  .cosmos-kiosk-calendar-time strong { font-size: .72rem; }
+  .cosmos-kiosk-calendar-time span { font-size: .54rem; }
+  .cosmos-kiosk-calendar-icon {
+    width: 2.15rem;
+    height: 2.15rem;
+    border-radius: .52rem;
+  }
+  .cosmos-kiosk-calendar-icon svg { width: 15px; height: 15px; }
+  .cosmos-kiosk-calendar-next-pill {
+    margin-bottom: .14rem;
+    padding: .1rem .32rem;
+    font-size: .4rem;
+  }
+  .cosmos-kiosk-calendar-event-main h2 { font-size: .68rem; }
+  .cosmos-kiosk-calendar-event-main p { margin-top: .12rem; font-size: .5rem; }
+  .cosmos-kiosk-calendar-event-main p svg { width: 10px; height: 10px; }
+  .cosmos-kiosk-calendar-source {
+    max-width: 5.5rem;
+    padding: .22rem .42rem;
+    font-size: .44rem;
+  }
+  .cosmos-kiosk-calendar-month {
+    padding: .65rem .75rem;
+    border-radius: .78rem;
+  }
+  .cosmos-kiosk-calendar-month h2 {
+    margin-bottom: .45rem;
+    font-size: .86rem;
+  }
+  .cosmos-kiosk-calendar-weekdays {
+    margin-bottom: .2rem;
+    font-size: .38rem;
+  }
+  .cosmos-kiosk-calendar-month-grid { row-gap: .16rem; }
+  .cosmos-kiosk-calendar-day {
+    min-height: 1.25rem;
+    font-size: .5rem;
+  }
+  .cosmos-kiosk-calendar-day.is-today span {
+    width: 1.3rem;
+    height: 1.3rem;
+  }
+  .cosmos-kiosk-calendar-day.has-event::after {
+    bottom: -.02rem;
+    width: .18rem;
+    height: .18rem;
+  }
+}
+
 /* Notifications is a calm full-screen empty state until the notification feed is available. */
 .kiosk-slide[data-kiosk-scene="notifications"] .kiosk-slide-header { display: none; }
 .kiosk-slide[data-kiosk-scene="notifications"] .kiosk-slide-content { padding: 0; }
