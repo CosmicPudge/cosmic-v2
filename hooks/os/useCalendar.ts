@@ -109,13 +109,14 @@ async function requestCalendarSnapshot(scopeId: string): Promise<CalendarSnapsho
 interface UseCalendarOptions {
   refreshMs?: number;
   enabled?: boolean;
+  includeSchool?: boolean;
 }
 
-export default function useCalendar({ refreshMs = DEFAULT_REFRESH_INTERVAL_MS, enabled = true }: UseCalendarOptions = {}) {
+export default function useCalendar({ refreshMs = DEFAULT_REFRESH_INTERVAL_MS, enabled = true, includeSchool = true }: UseCalendarOptions = {}) {
   const { recordSuccess, recordFailure } = useConnectionHealth();
   const scope = useCosmicScope();
   const entitlements = usePersonalCapabilities();
-  const school = useSchoolData({ enabled: enabled && entitlements.features["school.basic"] });
+  const school = useSchoolData({ enabled: enabled && includeSchool && entitlements.features["school.basic"] });
   const [calendar, setCalendar] =
     useState<CalendarSnapshot | null>(() => cachedCalendarSnapshot(scope.id));
 
@@ -140,7 +141,7 @@ export default function useCalendar({ refreshMs = DEFAULT_REFRESH_INTERVAL_MS, e
         setError(null);
 
         let snapshot = await requestCalendarSnapshot(scope.id);
-        if (school.snapshot) snapshot = mergeSchoolCalendarSnapshot(snapshot, school.snapshot);
+        if (includeSchool && school.snapshot) snapshot = mergeSchoolCalendarSnapshot(snapshot, school.snapshot);
 
         if (!cancelled) {
           setCalendar(snapshot);
@@ -171,19 +172,19 @@ export default function useCalendar({ refreshMs = DEFAULT_REFRESH_INTERVAL_MS, e
     return () => {
       cancelled = true;
     };
-  }, [enabled, recordFailure, recordSuccess, school.snapshot, scope.id]);
+  }, [enabled, includeSchool, recordFailure, recordSuccess, school.snapshot, scope.id]);
 
   const refresh = useCallback(async () => {
     if (!enabled) return;
     try {
       let snapshot = await requestCalendarSnapshot(scope.id);
-      if (school.snapshot) snapshot = mergeSchoolCalendarSnapshot(snapshot, school.snapshot);
+      if (includeSchool && school.snapshot) snapshot = mergeSchoolCalendarSnapshot(snapshot, school.snapshot);
       setCalendar(snapshot);
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unknown calendar error");
     }
-  }, [enabled, school.snapshot, scope.id]);
+  }, [enabled, includeSchool, school.snapshot, scope.id]);
 
   useVisiblePolling(refresh, refreshMs, { immediate: false });
 
