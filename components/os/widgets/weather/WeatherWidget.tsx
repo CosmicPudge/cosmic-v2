@@ -26,11 +26,16 @@ import { TEMPORARY_KIOSK_LOCATION } from "@/services/kioskLocation";
 
 export default function WeatherWidget() {
   const { size, presentation } = useWidgetContext();
+  const directWeatherEnabled =
+    presentation !== "kiosk" ||
+    (typeof window !== "undefined" && ["localhost", "127.0.0.1"].includes(window.location.hostname));
+
   const {
     weather,
     loading,
     error,
-  } = useWeather({ enabled: shouldLoadDashboardWidgetProvider(presentation) });
+  } = useWeather({ enabled: directWeatherEnabled ? true : shouldLoadDashboardWidgetProvider(presentation) });
+
   const developer = useDeveloperKioskData();
   const kioskWeather = developer.data?.weather ?? weather;
   useDashboardWidgetReadiness("weather", loading ? "loading" : error && !weather ? "degraded" : "ready");
@@ -40,7 +45,13 @@ export default function WeatherWidget() {
   const scene = resolveWeatherKioskScene(kioskWeather, developmentWeatherOverride);
 
   if (presentation === "kiosk") {
-    return <KioskWeatherScene weather={kioskWeather} loading={developer.loading || loading} error={developer.error ?? error} scene={scene} locationLabel={developer.data?.location?.label} />;
+    return <KioskWeatherScene
+      weather={kioskWeather}
+      loading={kioskWeather ? false : (developer.loading || loading)}
+      error={kioskWeather ? null : (developer.error ?? error)}
+      scene={scene}
+      locationLabel={developer.data?.location?.label}
+    />;
   }
 
   return (
