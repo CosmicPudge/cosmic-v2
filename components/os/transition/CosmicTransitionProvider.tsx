@@ -254,7 +254,8 @@ export function CosmicTransitionProvider({ children }: { children: ReactNode }) 
   const routeEntries = ROUTE_READINESS.map(([route, label, critical]) => ({ route, label, critical: [...critical], ready: Boolean(routeStates[route]?.ready), status: routeStates[route]?.status ?? "pending" })) satisfies RouteReadinessEntry[];
   const value = useMemo(() => ({ mode, intensity, pathname, destination: pendingDestination ?? routeLabel(pathname), bootComplete, bootOffline, reducedMotion, visible, progress, tasks, routeEntries, metrics, debugMode, dashboardReadiness, setDashboardReadiness: updateDashboardReadiness, markRouteReady, setRouteTask, prefetch }), [bootComplete, bootOffline, dashboardReadiness, debugMode, intensity, markRouteReady, metrics, mode, pathname, pendingDestination, prefetch, progress, reducedMotion, routeEntries, setRouteTask, tasks, updateDashboardReadiness, visible]);
 
-  return <TransitionContext.Provider value={value}>{children}<CosmicTransitionSurface key={`${pathname}-${visible}-${bootComplete}`} /></TransitionContext.Provider>;
+  const standaloneKiosk = pathname === "/kiosk" || pathname === "/cosmos-kiosk";
+  return <TransitionContext.Provider value={value}>{children}{standaloneKiosk ? null : <CosmicTransitionSurface key={`${pathname}-${visible}-${bootComplete}`} />}</TransitionContext.Provider>;
 }
 
 export function useCosmicTransition() {
@@ -278,14 +279,14 @@ function CosmicTransitionSurface() {
     return () => window.clearTimeout(timer);
   }, [reducedMotion, showingBoot, visible]);
   if (!showingBoot && !visible) return null;
-  return <div className={`cosmic-transition-surface ${showingBoot ? "cosmic-transition-boot" : "cosmic-transition-navigation"} ${reducedMotion ? "cosmic-transition-reduced" : ""}`} role="status" aria-live={showingBoot ? "polite" : "assertive"} aria-label={showingBoot ? "Preparing your Cosmic workspace" : `Opening ${destination}`}>
+  return <div className={`cosmic-transition-surface ${showingBoot ? "cosmic-transition-boot" : "cosmic-transition-navigation"} ${reducedMotion ? "cosmic-transition-reduced" : ""}`} role="status" aria-live={showingBoot ? "polite" : "assertive"} aria-label={showingBoot ? "Preparing your Cosmos workspace" : `Opening ${destination}`}>
     <div className="cosmic-transition-nebula" aria-hidden="true" />
     <div className="cosmic-transition-stars" aria-hidden="true" />
     <div className="cosmic-transition-content">
       <p className="cosmic-transition-mark" aria-hidden="true">✦</p>
-      <p className="cosmic-transition-kicker">COSMIC OS</p>
+      <p className="cosmic-transition-kicker">COSMOS</p>
       <h1>{showingBoot ? "Preparing your workspace" : mode === "account-switch" ? "Switching workspace" : `Opening ${destination}`}</h1>
-      <p className="cosmic-transition-copy">{showingBoot ? bootOffline ? "Using your saved Cosmic state while you’re offline." : "Getting the essentials ready…" : longLoad ? "The destination is taking a little longer to arrive…" : "Almost ready…"}</p>
+      <p className="cosmic-transition-copy">{showingBoot ? bootOffline ? "Using your saved Cosmos state while you’re offline." : "Getting the essentials ready…" : longLoad ? "The destination is taking a little longer to arrive…" : "Almost ready…"}</p>
       {showingBoot ? <><div className="cosmic-transition-progress" aria-hidden="true"><span style={{ width: `${Math.max(8, progress)}%` }} /></div><p className="cosmic-transition-count">{tasks.filter((task) => task.ready).length} of {tasks.length} essentials ready</p></> : <p className="cosmic-transition-destination">{destination}</p>}
     </div>
   </div>;
