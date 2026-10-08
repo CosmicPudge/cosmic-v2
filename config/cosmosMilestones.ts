@@ -171,8 +171,8 @@ export const kioskChecks = [
   ["TypeScript / lint / build validation", false],
   ["Dev QA", false],
   ["Progress tracker live for Milestone 3", false],
-  ["Kiosk preview live and working", false],
-  ["Both progress and kiosk screens show 100% before milestone close", false],
+  ["/kiosk is live and working", false],
+  ["Both progress and /kiosk show 100% before milestone close", false],
   ["PR into dev", false],
 ] as const;
 
