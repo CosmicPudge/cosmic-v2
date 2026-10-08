@@ -4,6 +4,7 @@ const SAFE_MESSAGES = new Set([
   "Email or password is incorrect.",
   "This password reset link is invalid or expired.",
   "Reset token and a new password are required.",
+  "An account with that email already exists.",
 ]);
 
 type DatabaseError = {
