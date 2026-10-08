@@ -2,7 +2,7 @@ import "server-only";
 
 import { eq, sql } from "drizzle-orm";
 
-import type { KioskSlideshowCommand, KioskSlideshowPauseReason } from "@/core/contracts/Kiosk";
+import { DEFAULT_KIOSK_ENABLED_SLIDES, KIOSK_SLIDE_ORDER, type KioskSlideId, type KioskSlideshowCommand, type KioskSlideshowPauseReason } from "@/core/contracts/Kiosk";
 import { getDatabase, isDatabaseConfigured } from "@/services/database/client";
 import { kioskDeviceSettings } from "@/services/database/schema";
 
@@ -11,11 +11,19 @@ export interface KioskSlideshowState {
   pauseReason: KioskSlideshowPauseReason;
   currentSlide: string | null;
   holdMusicWhilePlaying: boolean;
+  enabledSlides: KioskSlideId[];
   lastSeenAt: string | null;
   lastBootId: string | null;
   command: KioskSlideshowCommand | null;
   commandRevision: number;
   appliedCommandRevision: number;
+}
+
+function normalizeEnabledSlides(value: unknown): KioskSlideId[] {
+  if (!Array.isArray(value)) return [...DEFAULT_KIOSK_ENABLED_SLIDES];
+  const allowed = new Set<KioskSlideId>(KIOSK_SLIDE_ORDER);
+  const selected = value.filter((item): item is KioskSlideId => typeof item === "string" && allowed.has(item as KioskSlideId));
+  return KIOSK_SLIDE_ORDER.filter((id) => selected.includes(id));
 }
 
 function database() {
@@ -29,6 +37,7 @@ function stateFromRow(row: typeof kioskDeviceSettings.$inferSelect | undefined):
     pauseReason: (row?.slideshowPauseReason as KioskSlideshowPauseReason | null | undefined) ?? null,
     currentSlide: row?.slideshowCurrentSlide ?? null,
     holdMusicWhilePlaying: row?.slideshowHoldMusicWhilePlaying ?? false,
+    enabledSlides: normalizeEnabledSlides(row?.slideshowEnabledSlides),
     lastSeenAt: row?.slideshowLastSeenAt?.toISOString() ?? null,
     lastBootId: row?.slideshowLastBootId ?? null,
     command: (row?.slideshowCommand as KioskSlideshowCommand | null | undefined) ?? null,
@@ -77,6 +86,13 @@ export async function applyKioskSlideshowCommand(deviceId: string, command: Excl
   };
   const [updated] = await db.update(kioskDeviceSettings).set(updates).where(eq(kioskDeviceSettings.deviceId, deviceId)).returning();
   return stateFromRow(updated ?? row);
+}
+
+export async function setKioskEnabledSlides(deviceId: string, enabledSlides: unknown) {
+  const db = database();
+  const slides = normalizeEnabledSlides(enabledSlides);
+  const [updated] = await db.update(kioskDeviceSettings).set({ slideshowEnabledSlides: slides, updatedAt: new Date() }).where(eq(kioskDeviceSettings.deviceId, deviceId)).returning();
+  return stateFromRow(updated ?? await ensureRow(deviceId));
 }
 
 export async function setKioskHoldMusic(deviceId: string, holdMusicWhilePlaying: boolean) {
