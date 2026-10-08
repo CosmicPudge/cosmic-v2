@@ -6,7 +6,7 @@ import type {
 } from "./models/types";
 import { getWeatherAlerts } from "./providers/NWSProvider";
 import { getOpenWeather } from "./providers/OpenWeatherProvider";
-import { getOpenMeteo } from "./providers/OpenMeteoProvider";
+import { getOpenMeteo, getOpenMeteoCurrent } from "./providers/OpenMeteoProvider";
 import { getOpenWeatherAirQuality } from "./providers/OpenWeatherAirQualityProvider";
 import { getAstronomy } from "./providers/AstronomyProvider";
 import { mergeEnvironment } from "./utils/buildEnvironment";
@@ -64,7 +64,7 @@ async function loadEnvironment(lat: number, lon: number): Promise<WeatherData> {
     alertsResult,
     astronomyResult,
   ] = await Promise.allSettled([
-    getOpenWeather(lat, lon),
+    getOpenWeather(lat, lon).catch(() => getOpenMeteoCurrent(lat, lon)),
     getOpenMeteo(lat, lon),
     getOpenWeatherAirQuality(lat, lon),
     getWeatherAlerts(lat, lon),
