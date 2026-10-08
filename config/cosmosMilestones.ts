@@ -166,7 +166,7 @@ export const kioskChecks = [
   ["Live sports interruption behavior preserved", true],
   ["Music playback hold behavior preserved", true],
   ["M3 visual 1/11 — Clock reference implemented", true],
-  ["M3 visual 2/11 — Weather reference implemented", false],
+  ["M3 visual 2/11 — Weather reference implemented", true],
   ["M3 visual 3/11 — Personal Calendar reference implemented", false],
   ["M3 visual 4/11 — School Calendar reference implemented", false],
   ["M3 visual 5/11 — Sports reference implemented", false],
