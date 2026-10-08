@@ -13,6 +13,13 @@ const PUBLIC_API_ROUTES = new Set([
   "/api/account/signout",
   "/api/account/password-reset/request",
   "/api/account/password-reset/confirm",
+  "/api/account/auth-methods",
+  "/api/auth/google/identity",
+  "/api/auth/google/identity/callback",
+  "/api/auth/microsoft/identity",
+  "/api/auth/microsoft/identity/callback",
+  "/api/auth/apple",
+  "/api/auth/apple/callback",
 
   "/api/devices/pair",
   "/api/devices/pair/status",
