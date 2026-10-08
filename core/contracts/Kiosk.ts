@@ -9,6 +9,9 @@ export type KioskResolvedLocationSource = "phone" | "device" | "account" | "kios
 export type KioskSetupPreview = "normal" | "fit" | "clock" | "weather" | "calendar";
 export type KioskSlideshowPauseReason = "manual" | "music-playing" | "preview" | null;
 export type KioskSlideshowCommand = "pause" | "resume" | "next" | "previous";
+export const KIOSK_SLIDE_ORDER = ["clock", "calendar", "school-calendar", "sports", "music", "garage", "notes", "tasks", "cosmic", "system"] as const;
+export type KioskSlideId = (typeof KIOSK_SLIDE_ORDER)[number];
+export const DEFAULT_KIOSK_ENABLED_SLIDES: KioskSlideId[] = [...KIOSK_SLIDE_ORDER];
 
 export interface KioskDisplayProfile {
   viewportWidth: number;
