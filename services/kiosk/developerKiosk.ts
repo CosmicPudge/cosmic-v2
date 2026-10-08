@@ -57,7 +57,7 @@ function providerErrorCategory(error: unknown): KioskProviderDiagnostic["categor
 }
 
 export function isDeveloperKioskEnabled(): boolean {
-  return process.env.COSMIC_KIOSK_ENABLED === "true" || process.env.COSMIC_DEV_KIOSK_ENABLED === "true";
+  return process.env.NODE_ENV !== "production" || process.env.COSMIC_KIOSK_ENABLED === "true" || process.env.COSMIC_DEV_KIOSK_ENABLED === "true";
 }
 
 export function isDeveloperKioskHost(hostname: string): boolean {
