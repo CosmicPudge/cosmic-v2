@@ -1,4 +1,3 @@
-import { getEnvironment } from "@/engines/environment";
 import { kioskBootId, requireAuthenticatedSession } from "@/services/auth/server";
 
 export async function GET(request: Request) {
@@ -29,6 +28,7 @@ export async function GET(request: Request) {
   }
 
   try {
+    const { getEnvironment } = await import("@/engines/environment");
     const weather = await getEnvironment(latitude, longitude);
 
     return Response.json(weather);
