@@ -1,7 +1,7 @@
 import { kioskBootId, requireAuthenticatedSession, requireCosmicAccount } from "@/services/auth/server";
 import { assertSameOrigin } from "@/services/security/origin";
 import { assertDeviceOwner } from "@/services/devices/kioskProfile";
-import { applyKioskSlideshowCommand, readKioskSlideshowState, reportKioskSlideshowState, setKioskHoldMusic } from "@/services/devices/kioskSlideshow";
+import { applyKioskSlideshowCommand, readKioskSlideshowState, reportKioskSlideshowState, setKioskEnabledSlides, setKioskHoldMusic } from "@/services/devices/kioskSlideshow";
 import type { KioskSlideshowCommand, KioskSlideshowPauseReason } from "@/core/contracts/Kiosk";
 
 const commands = new Set<KioskSlideshowCommand>(["pause", "resume", "next", "previous"]);
@@ -38,6 +38,13 @@ export async function POST(request: Request) {
       if (!bootId || typeof body?.currentSlide !== "string" || typeof body?.paused !== "boolean" || (body.pauseReason !== null && (typeof body.pauseReason !== "string" || !pauseReasons.has(body.pauseReason as Exclude<KioskSlideshowPauseReason, null>))) || typeof body?.appliedCommandRevision !== "number") return Response.json({ error: "Invalid kiosk state report." }, { status: 400 });
       const state = await reportKioskSlideshowState(session.deviceId, { bootId, currentSlide: body.currentSlide.slice(0, 80), paused: body.paused, pauseReason: body.pauseReason as KioskSlideshowPauseReason, appliedCommandRevision: Math.floor(body.appliedCommandRevision) });
       return Response.json(state, { headers: { "Cache-Control": "no-store" } });
+    }
+    if (action === "set-slides") {
+      if (session.sessionType === "device") return Response.json({ error: "A kiosk cannot change remote settings." }, { status: 403 });
+      const account = await requireCosmicAccount(request);
+      const deviceId = typeof body?.deviceId === "string" ? body.deviceId : null;
+      if (!deviceId || !Array.isArray(body?.enabledSlides) || !(await assertDeviceOwner(deviceId, account.id))) return Response.json({ error: "Invalid kiosk slide settings." }, { status: 400 });
+      return Response.json(await setKioskEnabledSlides(deviceId, body.enabledSlides), { headers: { "Cache-Control": "no-store" } });
     }
     if (action === "set-hold") {
       if (session.sessionType === "device") return Response.json({ error: "A kiosk cannot change remote settings." }, { status: 403 });
