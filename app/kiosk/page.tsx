@@ -1,9 +1,10 @@
 import { Suspense } from "react";
 import StandaloneDesktopKiosk from "@/components/os/kiosk/StandaloneDesktopKiosk";
+import CosmosKioskLoadingScreen from "@/components/os/kiosk/CosmosKioskLoadingScreen";
 
 export default function KioskPage() {
   return (
-    <Suspense fallback={<main className="fixed inset-0 bg-[#02040e]" aria-busy="true" />}>
+    <Suspense fallback={<CosmosKioskLoadingScreen />}>
       <StandaloneDesktopKiosk />
     </Suspense>
   );
