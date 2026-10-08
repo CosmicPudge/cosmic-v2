@@ -1,15 +1,26 @@
 import { kioskBootId, requireAuthenticatedSession } from "@/services/auth/server";
 
 export async function GET(request: Request) {
+  const requestUrl = new URL(request.url);
   const bootId = kioskBootId(request);
-  try {
-    const session = await requireAuthenticatedSession(request, { allowDevice: true, bootId });
-    if (process.env.NODE_ENV !== "production") console.info(`[weather] route-auth=accepted sessionType=${session.sessionType ?? "user"} bootPresent=${Boolean(bootId)}`);
-  } catch (error) {
-    if (process.env.NODE_ENV !== "production") console.info(`[weather] route-auth=rejected bootPresent=${Boolean(bootId)}`);
-    throw error;
+  const localKioskPreview =
+    process.env.NODE_ENV !== "production" &&
+    ["localhost", "127.0.0.1"].includes(requestUrl.hostname) &&
+    requestUrl.searchParams.get("cosmic-kiosk") === "1";
+
+  if (!localKioskPreview) {
+    try {
+      const session = await requireAuthenticatedSession(request, { allowDevice: true, bootId });
+      if (process.env.NODE_ENV !== "production") console.info(`[weather] route-auth=accepted sessionType=${session.sessionType ?? "user"} bootPresent=${Boolean(bootId)}`);
+    } catch (error) {
+      if (process.env.NODE_ENV !== "production") console.info(`[weather] route-auth=rejected bootPresent=${Boolean(bootId)}`);
+      throw error;
+    }
+  } else if (process.env.NODE_ENV !== "production") {
+    console.info("[weather] route-auth=local-kiosk-preview");
   }
-  const { searchParams } = new URL(request.url);
+
+  const { searchParams } = requestUrl;
 
   const lat = searchParams.get("lat");
   const lon = searchParams.get("lon");
