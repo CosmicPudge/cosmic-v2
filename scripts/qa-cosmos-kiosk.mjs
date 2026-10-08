@@ -17,6 +17,9 @@ const legacyKioskPage = read("app/cosmos-kiosk/page.tsx");
 const kioskDataRoute = read("app/api/kiosk/data/route.ts");
 const kioskDataService = read("services/kiosk/developerKiosk.ts");
 const standaloneKiosk = read("components/os/kiosk/StandaloneDesktopKiosk.tsx");
+const transitionProvider = read("components/os/transition/CosmicTransitionProvider.tsx");
+const globals = read("app/globals.css");
+const kioskIdentity = read("components/os/widgets/shared/KioskSceneIdentity.tsx");
 
 const expectedOrder = '["clock", "calendar", "school-calendar", "sports", "music", "garage", "notes", "tasks", "cosmic", "system"]';
 
@@ -36,6 +39,9 @@ check("Legacy /cosmos-kiosk redirects to /kiosk", legacyKioskPage.includes('redi
 check("Kiosk data is bound to the authenticated Cosmos account", kioskDataRoute.includes("auth.session.account.id") && kioskDataService.includes("authenticatedAccountId"));
 check("Pi browser handoff flow is present", standaloneKiosk.includes("127.0.0.1:8765/v1/browser-handoff") && standaloneKiosk.includes("/api/devices/handoff/consume"));
 check("Milestone 3 tracker is active", milestones.includes('export const kioskChecks') && read("app/cosmos-progress/page.tsx").includes("getKioskProgress"));
+check("Standalone kiosk bypasses the global transition surface", transitionProvider.includes('pathname === "/kiosk"') && transitionProvider.includes("standaloneKiosk ? null"));
+check("Kiosk scene identity uses Cosmos branding", kioskIdentity.includes(">COSMOS</span>") && !kioskIdentity.includes("COSMIC OS"));
+check("Pi 800x480 compact presentation profile exists", globals.includes("M3 physical kiosk profile") && globals.includes("max-height: 520px") && globals.includes("max-width: 900px"));
 
 const passed = checks.filter(([, ok]) => ok).length;
 for (const [label, ok] of checks) console.log(`${ok ? "PASS" : "FAIL"}  ${label}`);
