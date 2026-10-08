@@ -11,6 +11,8 @@ const PUBLIC_API_ROUTES = new Set([
   "/api/account/signin",
   "/api/account/signup",
   "/api/account/signout",
+  "/api/account/password-reset/request",
+  "/api/account/password-reset/confirm",
 
   "/api/devices/pair",
   "/api/devices/pair/status",
