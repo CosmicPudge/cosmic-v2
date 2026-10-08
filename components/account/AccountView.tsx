@@ -16,16 +16,16 @@ const inputClass = "mt-2 w-full rounded-xl border border-white/12 bg-black/20 px
 const primaryClass = "inline-flex w-full items-center justify-center rounded-xl border border-cyan-100/25 bg-cyan-100/[.12] px-4 py-3 text-sm font-semibold text-cyan-50 shadow-[0_8px_30px_rgba(34,211,238,.08)] transition hover:border-cyan-100/40 hover:bg-cyan-100/[.18] focus-visible:outline-2 focus-visible:outline-cyan-200 focus-visible:outline-offset-2 disabled:cursor-wait disabled:opacity-50";
 const providerClass = "flex w-full items-center gap-3 rounded-xl border border-white/10 bg-white/[.045] px-4 py-3 text-sm font-medium text-white/80 transition hover:border-white/20 hover:bg-white/[.08] focus-visible:outline-2 focus-visible:outline-cyan-200 focus-visible:outline-offset-2";
 
-function ProviderIcon({ provider }: { provider: "google" | "microsoft" | "apple" }) {
-  const source = provider === "google" ? "/auth/brands/google-g.svg" : provider === "microsoft" ? "/auth/brands/microsoft-symbol.svg" : "/auth/brands/apple-sign-in.png";
+function ProviderIcon({ provider }: { provider: "google" | "microsoft" }) {
+  const source = provider === "google" ? "/auth/brands/google-g.svg" : "/auth/brands/microsoft-symbol.svg";
   return <Image src={source} alt="" width={28} height={28} className="h-7 w-7 object-contain" aria-hidden="true" />;
 }
 
-type AuthMethods = { password: boolean; google: boolean; microsoft: boolean; apple: boolean };
+type AuthMethods = { password: boolean; google: boolean; microsoft: boolean };
 
 function SocialButtons({ returnTo, methods }: { returnTo: string; methods: AuthMethods | null }) {
   const query = `?returnTo=${encodeURIComponent(returnTo)}`;
-  const button = (provider: "google" | "microsoft" | "apple", label: string, href: string) => {
+  const button = (provider: "google" | "microsoft", label: string, href: string) => {
     const configured = methods?.[provider] ?? false;
     return configured
       ? <a className={providerClass} href={`${href}${query}`}><ProviderIcon provider={provider} /><span>{label}</span></a>
@@ -34,7 +34,6 @@ function SocialButtons({ returnTo, methods }: { returnTo: string; methods: AuthM
   return <div className="space-y-2.5">
     {button("google", "Continue with Google", "/api/auth/google/identity")}
     {button("microsoft", "Continue with Microsoft", "/api/auth/microsoft/identity")}
-    {button("apple", "Continue with Apple", "/api/auth/apple")}
   </div>;
 }
 
