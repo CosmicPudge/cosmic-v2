@@ -2,7 +2,6 @@ import "server-only";
 import type { CosmicAIPermissions } from "@/core/contracts/AI";
 import type { CosmicAccount } from "@/core/contracts/Account";
 import type { CalendarEvent } from "@/core/contracts/Calendar";
-import { getEnvironment } from "@/engines/environment";
 import { calendarRangeForRequest, serializeAccountSettings, serializeSportsEvent, serializeWeatherData } from "./deterministic";
 import { getCalendarEngineForRequest } from "@/services/calendar/accountProvider";
 import { recordToolMetric } from "@/services/observability/metrics";
@@ -34,6 +33,7 @@ async function executeCurrentWeather(args: ToolArgs) {
   const latitude = args.latitude; const longitude = args.longitude;
   if (typeof latitude !== "number" || !Number.isFinite(latitude) || typeof longitude !== "number" || !Number.isFinite(longitude) || latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) return unavailable("location_required", "A valid location is required for current weather.");
   try {
+    const { getEnvironment } = await import("@/engines/environment");
     const weather = await getEnvironment(latitude, longitude);
     return serializeWeatherData(weather, args.locationLabel);
   } catch { return unavailable("provider_unavailable", "Current weather is temporarily unavailable."); }
