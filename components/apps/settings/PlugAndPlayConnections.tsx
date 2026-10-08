@@ -68,11 +68,24 @@ export default function PlugAndPlayConnections({ onChanged }: { onChanged?: () =
     }
   }
 
-  useEffect(() => { void load(); }, []);
-
   useEffect(() => {
-    if (looksLikeCanvasFeed(url)) setMode("school");
-  }, [url]);
+    let cancelled = false;
+    Promise.all([
+      fetch("/api/calendar/subscriptions", { cache: "no-store" }),
+      fetch("/api/school/canvas", { cache: "no-store" }),
+    ]).then(async ([subscriptionsResponse, canvasResponse]) => {
+      if (cancelled) return;
+      if (subscriptionsResponse.ok) {
+        const body = await subscriptionsResponse.json() as { subscriptions?: CalendarSubscription[] };
+        if (!cancelled) setSubscriptions(body.subscriptions ?? []);
+      }
+      if (canvasResponse.ok) {
+        const body = await canvasResponse.json() as CanvasStatus;
+        if (!cancelled) setCanvas(body);
+      }
+    }).finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, []);
 
   async function addConnection() {
     if (!url.trim()) return;
@@ -179,7 +192,7 @@ export default function PlugAndPlayConnections({ onChanged }: { onChanged?: () =
             </div>
           </label>
           <label className="text-sm text-white/55">Calendar link
-            <input value={url} onChange={(event) => setUrl(event.target.value)} placeholder={mode === "school" ? "Paste your Canvas Calendar Feed URL" : "Paste webcal:// or https:// calendar link"} className={`mt-2 ${inputClass}`} autoComplete="off" spellCheck={false} />
+            <input value={url} onChange={(event) => { const value = event.target.value; setUrl(value); if (looksLikeCanvasFeed(value)) setMode("school"); }} placeholder={mode === "school" ? "Paste your Canvas Calendar Feed URL" : "Paste webcal:// or https:// calendar link"} className={`mt-2 ${inputClass}`} autoComplete="off" spellCheck={false} />
           </label>
         </div>
 
