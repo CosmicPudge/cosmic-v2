@@ -7,16 +7,15 @@ import useWeather from "@/hooks/os/useWeather";
 import { useDeveloperKioskData } from "@/hooks/os/useDeveloperKioskData";
 import { useMusic } from "@/hooks/os/useMusic";
 import { useKioskSlideshowControl } from "@/components/os/kiosk/KioskSlideshowContext";
-import { TEMPORARY_KIOSK_LOCATION } from "@/services/kioskLocation";
 import type { MusicTrack } from "@/core/contracts/Music";
 
 export default function CosmosMusicKioskScene() {
-  const music=useMusic({refreshMs:(snapshot)=>snapshot?.playback.playing?5_000:15_000});
+  const music=useMusic({refreshMs:(snapshot)=>snapshot?.playback.playing?500:30_000});
   const now=useClockTick(1_000);
   const developer=useDeveloperKioskData();
   const directWeather=useWeather({enabled:true});
   const weather=developer.data?.weather ?? directWeather.weather;
-  const location=developer.data?.location?.label ?? (weather?.city && weather.city!=="Current location"?weather.city:TEMPORARY_KIOSK_LOCATION.label);
+  const location=developer.data?.location?.label ?? (weather?.city && weather.city!=="Current location"?weather.city:"Location unavailable");
   const track=music.playback?.track;
   const queue=music.snapshot?.queue ?? [];
   const progress=useProgress(music.playback?.positionMs??0,music.playback?.durationMs??track?.durationMs,music.playback?.playing??false,track?.id??"none");
