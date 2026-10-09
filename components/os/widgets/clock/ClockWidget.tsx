@@ -7,7 +7,6 @@ import { useDeveloperKioskData } from "@/hooks/os/useDeveloperKioskData";
 import useWeather from "@/hooks/os/useWeather";
 import WeatherIcon from "@/components/icons/weather/WeatherIcon";
 import mapWeatherCondition from "@/components/icons/weather/mapWeatherCondition";
-import { TEMPORARY_KIOSK_LOCATION } from "@/services/kioskLocation";
 
 import { useClockData } from "@/components/apps/clock/ClockProvider";
 import { useClockTick } from "@/hooks/os/useClock";
@@ -50,7 +49,7 @@ export default function ClockWidget() {
     developer.data?.location?.label ??
     (kioskWeather?.city && kioskWeather.city !== "Current location"
       ? kioskWeather.city
-      : TEMPORARY_KIOSK_LOCATION.label);
+      : "Location unavailable");
 
   if (presentation === "kiosk") {
     return <KioskClockScene
