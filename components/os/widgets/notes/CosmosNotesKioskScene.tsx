@@ -13,7 +13,8 @@ export default function CosmosNotesKioskScene() {
   const local = useNotes();
   const kiosk = useDeveloperKioskData();
   const localNotes: DisplayNote[] = local.notes.filter(n=>!n.archived).slice(0,4);
-  const recent = kiosk.data?.notes?.recent;\n  const synced: DisplayNote[] = recent ? [{ ...recent, tags: [] }] : [];
+  const recent = kiosk.data?.notes?.recent;
+  const synced: DisplayNote[] = recent ? [{ ...recent, tags: [] }] : [];
   const notes: DisplayNote[] = localNotes.length ? localNotes : synced;
   const date = now ? new Date(now) : null;
 
