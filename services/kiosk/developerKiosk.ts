@@ -141,7 +141,7 @@ export async function getDeveloperKioskData(request?: Request, diagnostics?: Kio
       calendar: sceneRefreshDiagnostics(undefined, KIOSK_REFRESH_MS.calendar),
       school: sceneRefreshDiagnostics(undefined, KIOSK_REFRESH_MS.school),
     },
-    cosmicUpdate: readCosmicUpdateStatus(now),
+    cosmicUpdate: readCosmicUpdateStatus(),
   };
 
   if (diagnostics) {
