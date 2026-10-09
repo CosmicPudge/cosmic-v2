@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import useKioskDeviceLocation from "@/hooks/os/useKioskDeviceLocation";
 
 import ClockWidget from "@/components/os/widgets/clock/ClockWidget";
 import WeatherWidget from "@/components/os/widgets/weather/WeatherWidget";
