@@ -3130,3 +3130,25 @@ html[data-cosmic-kiosk="true"] button, html[data-cosmic-kiosk="true"] a, html[da
   filter: drop-shadow(0 0 12px color-mix(in srgb,var(--sports-accent-2) 36%,transparent))
           drop-shadow(0 0 26px color-mix(in srgb,var(--sports-accent) 46%,transparent));
 }
+
+
+/* Sports should feel alive: hero colors drive accents, glass shimmer and motion. */
+.cosmos-sports-accent-text { color: var(--sports-accent-2, #a855f7); text-shadow:0 0 12px var(--sports-accent, #6f2dbd); }
+.cosmos-sports-accent-soft { color:color-mix(in srgb,var(--sports-accent-2,#a855f7) 70%,white); }
+.cosmos-sports-status-pill {
+  background:linear-gradient(120deg,var(--sports-accent,#6f2dbd),var(--sports-accent-2,#a855f7));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.28),0 0 22px color-mix(in srgb,var(--sports-accent-2,#a855f7) 48%,transparent);
+}
+.cosmos-sports-feature-card::after,
+.cosmos-sports-rail::after {
+  content:"";pointer-events:none;position:absolute;inset:-80% -35%;
+  background:linear-gradient(105deg,transparent 43%,rgba(255,255,255,.09) 49%,rgba(255,255,255,.18) 50%,rgba(255,255,255,.06) 52%,transparent 58%);
+  transform:translateX(-38%);animation:cosmosSportsGlassSweep 9s ease-in-out infinite;
+}
+.cosmos-sports-feature-card:nth-child(2)::after { animation-delay:-4.5s; }
+.cosmos-sports-hero-bg { animation:cosmosSportsHeroDrift 18s ease-in-out infinite alternate; }
+@keyframes cosmosSportsGlassSweep { 0%,68%{transform:translateX(-38%)} 86%,100%{transform:translateX(38%)} }
+@keyframes cosmosSportsHeroDrift { from{transform:scale(1.015) translate3d(-.25%,0,0)} to{transform:scale(1.045) translate3d(.35%,-.3%,0)} }
+@media (prefers-reduced-motion: reduce) {
+ .cosmos-sports-feature-card::after,.cosmos-sports-rail::after,.cosmos-sports-hero-bg{animation:none}
+}
