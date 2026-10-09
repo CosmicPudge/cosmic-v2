@@ -106,6 +106,15 @@ export default function SportsKioskOverview() {
     if (features.length >= 2) break;
     if (!features.some((card)=>card?.event?.id===event.id)) features.push({key:`auto-${event.id}`,label:sportLabel(event.sport),match:()=>false,event});
   }
+  // Always keep three events visible (hero + two feature cards) whenever the
+  // followed schedule has at least three upcoming/live events.
+  const visibleIds = new Set([primary?.id, ...features.map((card)=>card?.event?.id)].filter(Boolean));
+  for (const event of upcomingPool) {
+    if (features.length >= 2) break;
+    if (visibleIds.has(event.id)) continue;
+    features.push({key:`auto-${event.id}`,label:sportLabel(event.sport),match:()=>false,event});
+    visibleIds.add(event.id);
+  }
   const featureIds = new Set(features.map((card)=>card?.event?.id).filter(Boolean));
   const allFollowed = upcomingPool
     .filter((event,index,array)=>array.findIndex((item)=>item.id===event.id)===index)
@@ -116,12 +125,12 @@ export default function SportsKioskOverview() {
   const now = new Date();
   const packersGameDay = Boolean(primary && primary.sport === "nfl" && /green bay|packers/i.test(`${primary.title} ${primary.homeTeam?.name ?? ""} ${primary.awayTeam?.name ?? ""}`) && (primary.status === "live" || primary.start.toDateString() === now.toDateString()));
 
-  return <section className="cosmos-sports-motion relative h-full w-full touch-none select-none overflow-hidden overscroll-none bg-[#090316] text-white">
+  return <section data-kiosk-rebuild="sports" data-sports-hero={heroTheme(primary).key} style={{"--sports-accent":heroTheme(primary).accent,"--sports-accent-2":heroTheme(primary).accent2} as React.CSSProperties} className="cosmos-sports-motion relative h-full w-full touch-none select-none overflow-hidden overscroll-none bg-[#090316] text-white">
     <img src={background} alt="" className="cosmos-sports-hero-bg absolute inset-0 h-full w-full object-cover" />
     <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(5,2,18,.22),rgba(10,3,28,.64)_47%,rgba(8,3,24,.92))]" />
     <div className="absolute inset-0 bg-[radial-gradient(circle_at_48%_28%,rgba(139,44,255,.18),transparent_38%)]" />
     <div className="relative z-10 flex h-full min-h-0 flex-col overflow-hidden px-[3.2vw] pb-[3.8vh] pt-[4.5vh]">
-      <div className="text-[clamp(.65rem,1.15vw,1.1rem)] font-semibold uppercase tracking-[.35em]">COSMOS <span className="text-violet-500">•</span> <span className="font-normal text-white/65">SPORTS</span></div>
+      <div className="text-[clamp(.65rem,1.15vw,1.1rem)] font-semibold uppercase tracking-[.35em]">COSMOS <span className="cosmos-sports-accent-text">•</span> <span className="font-normal text-white/65">SPORTS</span></div>
       <h1 className={`mt-[5vh] text-[clamp(3rem,6.3vw,6.2rem)] font-black leading-[.88] tracking-[-.055em] ${packersGameDay ? "cosmos-kiosk-packers-gameday-title" : "drop-shadow-[0_0_22px_rgba(174,91,255,.5)]"}`}>{smartHeadline(primary, packersGameDay)}</h1>
       <p className="mt-3 text-[clamp(1.25rem,2.4vw,2.35rem)] font-light">{dateLine(now)}</p>
 
@@ -132,7 +141,7 @@ export default function SportsKioskOverview() {
             {features.map((card) => card ? <FeatureEvent key={card.key} event={card.event} label={card.label} /> : null)}
           </div>
         </div>
-        <aside className="min-h-0 overflow-hidden rounded-[1.6vw] border border-violet-400/45 bg-[#100720]/80 p-[1.2vw] shadow-[inset_0_0_30px_rgba(124,58,237,.08)] backdrop-blur-md">
+        <aside className="cosmos-sports-rail min-h-0 overflow-hidden rounded-[1.6vw] border border-violet-400/45 bg-[#100720]/80 p-[1.2vw] shadow-[inset_0_0_30px_rgba(124,58,237,.08)] backdrop-blur-md">
           <div className="flex items-center justify-between border-b border-white/10 pb-3 text-[clamp(.7rem,1vw,.95rem)] uppercase tracking-[.23em] text-violet-100"><span>🏆 &nbsp; Around Your Sports</span><span className="text-white/55">Upcoming</span></div>
           <div className="mt-2 flex min-h-0 flex-col overflow-hidden">{league.length ? league.map((event) => <LeagueRow key={event.id} event={event} />) : <p className="py-12 text-center text-white/45">No other followed events right now.</p>}</div>
         </aside>
@@ -148,7 +157,7 @@ function EventHero({ event, loading }: { event?: SportsEvent; loading: boolean }
     <div className="flex items-center justify-between text-[clamp(.72rem,1.1vw,1rem)] uppercase tracking-[.25em] text-violet-100"><span>{sportIcon(event)} &nbsp; {view.sportLabel}</span><span>{view.live ? "● LIVE" : (event.homeTeam?.name?.toLowerCase().includes("green bay") ? "⌂ HOME GAME" : view.eventType)}</span></div>
     <div className="grid h-[calc(100%-2rem)] grid-cols-[1fr_auto_1fr] items-center gap-[2vw]">
       <Team event={event} side="away" />
-      <div className="min-w-[9rem] text-center"><span className="rounded-full bg-violet-600 px-5 py-2 text-xs font-black uppercase tracking-[.12em] shadow-[0_0_20px_rgba(139,92,246,.6)]">{view.live ? "Live" : event.status === "pregame" ? "Pregame" : "Up Next"}</span><p className="mt-4 text-[clamp(1.8rem,3vw,3.1rem)] font-black">{view.live ? score(event) : eventTime(event)}</p><p className="mt-1 text-[clamp(.8rem,1.1vw,1.1rem)] font-semibold text-violet-200">{event.start.toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" })}</p><p className="mt-2 text-[clamp(.75rem,1vw,.95rem)] text-white/70">⌖ {view.venueName ?? "Venue TBA"}</p>{view.broadcaster ? <p className="mt-1 text-sm text-white/55">{view.broadcaster}</p> : null}</div>
+      <div className="min-w-[9rem] text-center"><span className="cosmos-sports-status-pill rounded-full px-5 py-2 text-xs font-black uppercase tracking-[.12em]">{view.live ? "Live" : event.status === "pregame" ? "Pregame" : "Up Next"}</span><p className="mt-4 text-[clamp(1.8rem,3vw,3.1rem)] font-black">{view.live ? score(event) : eventTime(event)}</p><p className="mt-1 text-[clamp(.8rem,1.1vw,1.1rem)] font-semibold cosmos-sports-accent-soft">{event.start.toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" })}</p><p className="mt-2 text-[clamp(.75rem,1vw,.95rem)] text-white/70">⌖ {view.venueName ?? "Venue TBA"}</p>{view.broadcaster ? <p className="mt-1 text-sm text-white/55">{view.broadcaster}</p> : null}</div>
       <Team event={event} side="home" />
     </div>
   </article>;
@@ -164,7 +173,7 @@ function FeatureEvent({ event, label }: { event?: SportsEvent; label: string }) 
   if (!event) return <article className="flex min-h-0 flex-col justify-between rounded-[1vw] border border-violet-400/30 bg-[linear-gradient(130deg,rgba(64,24,109,.8),rgba(12,6,35,.85))] p-[1vw]"><span className="flex items-center gap-2 text-[clamp(.7rem,.95vw,.95rem)] font-bold uppercase tracking-[.12em] text-violet-100"><CategoryMark label={label} />{label}</span><p className="text-[clamp(.7rem,.9vw,.9rem)] text-white/50">No upcoming event available</p></article>;
   const view = normalizeKioskSportsEvent(event)!;
   const featureBg=view.backgroundKey ? selectKioskSportsBackground(view.backgroundKey) : undefined;
-  return <article className="relative overflow-hidden rounded-[1.2vw] border border-violet-400/55 bg-[#100720] p-[1.05vw] shadow-[0_0_20px_rgba(124,58,237,.16)]">
+  return <article className="cosmos-sports-feature-card relative overflow-hidden rounded-[1.2vw] border border-violet-400/55 bg-[#100720] p-[1.05vw] shadow-[0_0_20px_rgba(124,58,237,.16)]">
     {featureBg ? <img src={featureBg} alt="" className="cosmos-sports-feature-bg absolute inset-0 h-full w-full object-cover opacity-35" /> : null}
     <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(13,5,35,.94),rgba(24,8,54,.72))]" />
     <div className="relative z-10 flex h-full flex-col"><div className="flex justify-between text-[clamp(.65rem,.9vw,.82rem)] uppercase tracking-[.2em] text-violet-100"><span className="flex items-center gap-2"><CategoryMark label={label} />{label}</span><span>{view.eventType}</span></div><div className="mt-[.5vh] flex h-[calc(100%-2rem)] flex-col gap-1"><div><div className="flex items-center gap-3">{event.awayTeam && <SportsTeamLogo sport={event.sport} team={logoTeam(event,event.awayTeam)} size="md" />}{event.homeTeam && <SportsTeamLogo sport={event.sport} team={logoTeam(event,event.homeTeam)} size="md" />}<p className="line-clamp-2 text-[clamp(1rem,1.38vw,1.42rem)] font-black leading-[1.08]">{event.title}</p></div><p className="mt-1 truncate text-[clamp(.72rem,.9vw,.88rem)] text-white/70">{view.venueName ?? view.venueLocation ?? "Venue TBA"}{event.broadcast ? ` · ${event.broadcast}` : ""}</p></div><div className="mt-auto flex items-center justify-between gap-1"><span className="rounded-full bg-violet-600/80 px-2 py-1 text-[.6rem] font-bold uppercase">{view.live ? "Live" : "Next"}</span><p className="whitespace-nowrap text-[clamp(.78rem,.98vw,1rem)] font-black text-violet-100">{fullDate(event)}</p></div></div></div></article>;
