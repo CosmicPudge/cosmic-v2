@@ -94,6 +94,7 @@ export default function SportsKioskOverview() {
   const league = allFollowed.slice(0,5);
   const background = primaryView ? selectKioskSportsBackground(primaryView.backgroundKey) : "/dashboard/sports/stadium.webp";
   const now = new Date();
+  const packersGameDay = Boolean(primary && primary.sport === "nfl" && /green bay|packers/i.test(`${primary.title} ${primary.homeTeam?.name ?? ""} ${primary.awayTeam?.name ?? ""}`) && (primary.status === "live" || primary.start.toDateString() === now.toDateString()));
 
   return <section className="relative h-full w-full touch-none select-none overflow-hidden overscroll-none bg-[#090316] text-white">
     <img src={background} alt="" className="absolute inset-0 h-full w-full object-cover" />
@@ -101,7 +102,7 @@ export default function SportsKioskOverview() {
     <div className="absolute inset-0 bg-[radial-gradient(circle_at_48%_28%,rgba(139,44,255,.18),transparent_38%)]" />
     <div className="relative z-10 flex h-full min-h-0 flex-col overflow-hidden px-[3.2vw] pb-[3.8vh] pt-[4.5vh]">
       <div className="text-[clamp(.65rem,1.15vw,1.1rem)] font-semibold uppercase tracking-[.35em]">COSMOS <span className="text-violet-500">•</span> <span className="font-normal text-white/65">SPORTS</span></div>
-      <h1 className="mt-[5vh] text-[clamp(3rem,6.3vw,6.2rem)] font-black leading-[.88] tracking-[-.055em] drop-shadow-[0_0_22px_rgba(174,91,255,.5)]">{headline(primary)}</h1>
+      <h1 className={`mt-[5vh] text-[clamp(3rem,6.3vw,6.2rem)] font-black leading-[.88] tracking-[-.055em] ${packersGameDay ? "cosmos-kiosk-packers-gameday-title" : "drop-shadow-[0_0_22px_rgba(174,91,255,.5)]"}`}>{headline(primary)}</h1>
       <p className="mt-3 text-[clamp(1.25rem,2.4vw,2.35rem)] font-light">{dateLine(now)}</p>
 
       <div className="mt-[4.5vh] grid min-h-0 flex-1 grid-cols-[2.1fr_.95fr] gap-[1.2vw]">
