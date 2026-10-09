@@ -177,7 +177,15 @@ export async function getDeveloperKioskData(request?: Request, diagnostics?: Kio
   try {
     traceKioskCalendar("fetch=start");
     let engineResult: Awaited<ReturnType<typeof getDeveloperKioskCalendarEngine>> = null;
-    try { engineResult = await withKioskDataProviderTimeout(getDeveloperKioskCalendarEngine(accountId)); } catch { /* The kiosk iCal feeds are the bounded fallback. */ }
+    try {
+      engineResult = await withKioskDataProviderTimeout(getDeveloperKioskCalendarEngine(accountId));
+    } catch (error) {
+      if (process.env.NODE_ENV !== "production" || process.env.VERCEL_ENV === "preview") {
+        const detail = error instanceof Error ? error.message : String(error ?? "Unknown calendar provider error");
+        console.error(`[kiosk-calendar] account-provider-error detail=${detail}`);
+      }
+      /* The kiosk iCal feeds are the bounded fallback. */
+    }
     const engine = engineResult?.engine;
     if (engine && engineResult) {
       const events = await withKioskDataProviderTimeout(engine.getEvents({ start: now, end }));
