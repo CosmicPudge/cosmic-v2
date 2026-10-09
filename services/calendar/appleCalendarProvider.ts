@@ -157,6 +157,8 @@ export class AppleCalendarProvider
         )
       );
 
+    console.info(`[apple-caldav] discovery=ok calendars=${calendars.length} eventCalendars=${eventCalendars.length} personalMatches=${eventCalendars.filter((calendar) => ["not available", "stetson work", "school", "cosmic ai"].includes(calendar.displayName.trim().toLowerCase())).length}`);
+
     const events =
       await Promise.all(
         eventCalendars.map(
@@ -215,6 +217,8 @@ export class AppleCalendarProvider
             a.start.getTime() -
             b.start.getTime()
         );
+
+    console.info(`[apple-caldav] fetch=ok eventCount=${normalized.length} personalEventCount=${normalized.filter((event) => ["not available", "stetson work", "school", "cosmic ai"].includes((event.calendarName ?? "").trim().toLowerCase())).length}`);
 
     this.cache = {
       start: start.getTime(),
