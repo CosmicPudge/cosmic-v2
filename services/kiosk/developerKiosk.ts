@@ -196,7 +196,7 @@ export async function getDeveloperKioskData(request?: Request, diagnostics?: Kio
     const engine = engineResult?.engine;
     if (engine && engineResult) {
       const events = await withKioskDataProviderTimeout(engine.getEvents({ start: now, end }));
-      result.calendar = { connected: true, events: events.filter((event) => !/^canvas(?:\\s|$)/i.test(event.calendarName ?? event.calendar ?? "")).slice(0, MAX_EVENTS).map((event) => boundedEvent(event)), diagnostics: { category: "connected", configured: true, accountMatched: Boolean(accountId), source: "account-provider", feedCount: 0, ...(engineResult.context?.connection?.providerType ? { connectionType: engineResult.context.connection.providerType } : {}) } };
+      result.calendar = { connected: true, events: events.filter((event) => !/^canvas(?:\s|$)/i.test(event.calendarName ?? event.calendar ?? "")).slice(0, MAX_EVENTS).map((event) => boundedEvent(event)), diagnostics: { category: "connected", configured: true, accountMatched: Boolean(accountId), source: "account-provider", feedCount: 0, ...(engineResult.context?.connection?.providerType ? { connectionType: engineResult.context.connection.providerType } : {}) } };
       result.refreshDiagnostics.calendar = sceneRefreshDiagnostics(new Date().toISOString(), KIOSK_REFRESH_MS.calendar);
       traceKioskCalendar("fetch=ok");
       traceKioskCalendar("parse=ok");
@@ -218,7 +218,7 @@ export async function getDeveloperKioskData(request?: Request, diagnostics?: Kio
       traceKioskCalendar("aggregate=missing", "configuration-error");
     } else {
       const fallback = await fetchKioskCalendarIcalFeeds(urls, fetch, calendarNames);
-      const visibleEvents = fallback.events.filter((event) => event.end > now && event.start < end && !/^canvas(?:\\s|$)/i.test(event.calendarName ?? event.calendar ?? "")).slice(0, MAX_EVENTS).map((event) => boundedEvent(event));
+      const visibleEvents = fallback.events.filter((event) => event.end > now && event.start < end && !/^canvas(?:\s|$)/i.test(event.calendarName ?? event.calendar ?? "")).slice(0, MAX_EVENTS).map((event) => boundedEvent(event));
       result.calendar = { connected: fallback.feedCount > 0, events: visibleEvents, ...(fallback.feedCount ? {} : { error: "Calendar feeds are temporarily unavailable." }), diagnostics: { category: fallback.feedCount ? "connected" : fallback.category, configured: true, accountMatched: Boolean(process.env.COSMIC_KIOSK_ACCOUNT_ID?.trim()), source: "kiosk-ical", feedCount: fallback.feedCount } };
       if (fallback.feedCount > 0) result.refreshDiagnostics.calendar = sceneRefreshDiagnostics(new Date().toISOString(), KIOSK_REFRESH_MS.calendar);
       traceKioskCalendar(fallback.feedCount > 0 ? "fetch=ok" : "fetch=failed", fallback.category);
