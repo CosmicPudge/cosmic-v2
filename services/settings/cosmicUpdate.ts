@@ -17,8 +17,9 @@ export function compareCosmicVersions(left: string, right: string) {
 }
 
 export function readCosmicUpdateStatus(now = new Date()): CosmicUpdateStatus {
-  const currentVersion = COSMIC_APP_VERSION;
-  const latestVersion = process.env.COSMIC_LATEST_VERSION?.trim() || currentVersion;
+  const currentVersion = String(COSMIC_APP_VERSION);
+  const configuredLatestVersion = process.env.COSMIC_LATEST_VERSION;
+  const latestVersion = typeof configuredLatestVersion === "string" ? configuredLatestVersion.trim() || currentVersion : currentVersion;
   const updateAvailable = compareCosmicVersions(latestVersion, currentVersion) > 0;
   return { currentVersion, latestVersion, updateAvailable, checkedAt: now.toISOString(), state: updateAvailable ? "available" : "up-to-date" };
 }
