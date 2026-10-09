@@ -7,6 +7,7 @@ import { isFavoriteEvent } from "@/services/sports/preferences";
 import { normalizeKioskSportsEvent } from "@/services/sports/kioskSelection";
 import { selectKioskSportsBackground } from "@/components/os/widgets/shared/kioskSceneBackgrounds";
 import type { SportsEvent } from "@/core/contracts/Sports";
+import SportsTeamLogo from "@/components/apps/sports/SportsTeamLogo";
 
 const FAVORITES = [
   { key: "nfl", label: "Green Bay Packers", match: (event: SportsEvent) => event.sport === "nfl" && /packers|green bay/i.test(event.title + " " + event.homeTeam?.name + " " + event.awayTeam?.name) },
@@ -31,7 +32,7 @@ export default function SportsKioskOverview() {
   const cards = FAVORITES.map((favorite) => ({ ...favorite, event: events.find(favorite.match) }));
   const primary = cards[0].event ?? events[0];
   const primaryView = primary ? normalizeKioskSportsEvent(primary) : undefined;
-  const secondary = cards.filter((card) => card.event?.id !== primary?.id);
+  const secondary = cards.filter((card) => card.key !== "nfl");
   const league = events.filter((event) => event.id !== primary?.id && !secondary.some((card) => card.event?.id === event.id)).slice(0, 4);
   const background = primaryView ? selectKioskSportsBackground(primaryView.backgroundKey) : "/dashboard/sports/stadium.webp";
   const now = new Date();
@@ -77,16 +78,25 @@ function EventHero({ event, loading }: { event?: SportsEvent; loading: boolean }
 function Team({ event, side }: { event: SportsEvent; side: "home" | "away" }) {
   const team = side === "home" ? event.homeTeam : event.awayTeam;
   if (!team) return <div className={side === "home" ? "text-left" : "text-right"}><p className="text-[clamp(1.5rem,2.5vw,2.6rem)] font-black uppercase">{event.metadata?.eventName ?? event.title}</p></div>;
-  return <div className={side === "home" ? "text-left" : "text-right"}><p className="text-[clamp(.7rem,.9vw,.85rem)] uppercase tracking-[.2em] text-violet-200/80">{team.abbreviation}</p><p className="mt-1 text-[clamp(1.6rem,2.8vw,3rem)] font-black uppercase leading-none">{team.name}</p><p className="mt-2 text-[clamp(.9rem,1.25vw,1.15rem)] text-white/70">{team.record ?? ""}</p></div>;
+  return <div className={side === "home" ? "text-left" : "text-right"}><div className={`mb-2 flex ${side === "home" ? "justify-start" : "justify-end"}`}><SportsTeamLogo sport={event.sport} team={team} size="lg" /></div><p className="text-[clamp(.7rem,.9vw,.85rem)] uppercase tracking-[.2em] text-violet-200/80">{team.abbreviation}</p><p className="mt-1 text-[clamp(1.6rem,2.8vw,3rem)] font-black uppercase leading-none">{team.name}</p><p className="mt-2 text-[clamp(.9rem,1.25vw,1.15rem)] text-white/70">{team.record ?? ""}</p></div>;
 }
 
 function MiniEvent({ event, label }: { event?: SportsEvent; label: string }) {
-  if (!event) return <article className="flex min-h-0 flex-col justify-between rounded-[1vw] border border-violet-400/30 bg-[#100720]/75 p-[1vw]"><span className="text-[clamp(.7rem,.95vw,.95rem)] font-bold uppercase tracking-[.12em] text-violet-100">{label}</span><p className="text-[clamp(.8rem,1vw,1rem)] text-white/50">No upcoming event available</p></article>;
+  if (!event) return <article className="flex min-h-0 flex-col justify-between rounded-[1vw] border border-violet-400/30 bg-[linear-gradient(130deg,rgba(64,24,109,.8),rgba(12,6,35,.85))] p-[1vw]"><span className="flex items-center gap-2 text-[clamp(.7rem,.95vw,.95rem)] font-bold uppercase tracking-[.12em] text-violet-100"><CategoryMark label={label} />{label}</span><p className="text-[clamp(.8rem,1vw,1rem)] text-white/50">No upcoming event available</p></article>;
   const view = normalizeKioskSportsEvent(event)!;
-  return <article className="overflow-hidden rounded-[1vw] border border-violet-400/45 bg-[#100720]/82 p-[1vw] backdrop-blur-md"><div className="flex justify-between text-[clamp(.65rem,.9vw,.82rem)] uppercase tracking-[.2em] text-violet-100"><span>{sportIcon(event)} &nbsp; {view.sportLabel}</span><span>{view.eventType}</span></div><div className="mt-[1vh] flex flex-col gap-1"><div><p className="line-clamp-2 text-[clamp(.9rem,1.3vw,1.35rem)] font-black leading-tight">{event.title}</p><p className="mt-2 text-[clamp(.7rem,.9vw,.85rem)] text-white/60">{view.venueName ?? view.venueLocation ?? "Venue TBA"}</p></div><div className="mt-auto flex items-center justify-between gap-2"><span className="rounded-full bg-violet-600/80 px-2 py-1 text-[.6rem] font-bold uppercase">{view.live ? "Live" : "Next"}</span><p className="text-[clamp(.8rem,1.05vw,1.1rem)] font-black text-violet-100">{fullDate(event)}</p></div></div></article>;
+  return <article className="overflow-hidden rounded-[1vw] border border-violet-400/45 bg-[linear-gradient(130deg,rgba(69,26,115,.85),rgba(12,6,35,.84))] p-[1vw] backdrop-blur-md"><div className="flex justify-between text-[clamp(.65rem,.9vw,.82rem)] uppercase tracking-[.2em] text-violet-100"><span className="flex items-center gap-2"><CategoryMark label={label} />{label}</span><span>{view.eventType}</span></div><div className="mt-[1vh] flex flex-col gap-1"><div><div className="flex items-center gap-2">{event.homeTeam && <SportsTeamLogo sport={event.sport} team={event.homeTeam} size="sm" />}{event.awayTeam && <SportsTeamLogo sport={event.sport} team={event.awayTeam} size="sm" />}<p className="line-clamp-2 text-[clamp(.9rem,1.3vw,1.35rem)] font-black leading-tight">{event.title}</p></div><p className="mt-1 text-[clamp(.7rem,.9vw,.85rem)] text-white/70">{view.venueName ?? view.venueLocation ?? "Venue TBA"}{event.broadcast ? ` · ${event.broadcast}` : ""}</p></div><div className="mt-auto flex items-center justify-between gap-2"><span className="rounded-full bg-violet-600/80 px-2 py-1 text-[.6rem] font-bold uppercase">{view.live ? "Live" : "Next"}</span><p className="text-[clamp(.8rem,1.05vw,1.1rem)] font-black text-violet-100">{fullDate(event)}</p></div></div></article>;
 }
 function EmptyMini({ label }: { label: string }) { return <div className="col-span-2 flex items-center justify-center rounded-[1.45vw] border border-violet-400/30 bg-[#100720]/72 text-white/45">{label}</div>; }
 function LeagueRow({ event }: { event: SportsEvent }) { const view=normalizeKioskSportsEvent(event)!; return <div className="grid grid-cols-[1fr_auto] gap-3 border-b border-white/10 px-2 py-[1.45vh] last:border-0"><div className="min-w-0"><p className="truncate text-[clamp(.78rem,1.05vw,1rem)] font-bold">{event.title}</p><p className="mt-1 text-xs uppercase tracking-[.12em] text-white/45">{view.sportLabel}</p></div><div className="text-right"><p className="text-[clamp(.72rem,.95vw,.9rem)] text-violet-100">{fullDate(event)}</p><p className="mt-1 text-xs text-white/45">{event.broadcast ?? ""}</p></div></div>; }
+function CategoryMark({label}:{label:string}) { 
+ const key=label.toLowerCase();
+ if(key.includes("angels")) return <img src="/logos/mlb/LAA.svg" alt="" className="h-7 w-7 object-contain" />;
+ if(key.includes("utes")) return <img src="/sports/cfb/logos/utah.png" alt="" className="h-7 w-7 object-contain" />;
+ if(key.includes("utah state")) return <img src="/sports/cfb/teams/328.png" alt="" className="h-7 w-7 object-contain" />;
+ if(key.includes("formula")) return <b className="text-base italic text-red-500">F1</b>;
+ if(key.includes("nascar")) return <b className="text-sm italic text-orange-400">NASCAR</b>;
+ return <span className="text-violet-300">◉</span>;
+}
 function headline(event?: SportsEvent) { if (!event) return "Sports"; const text=`${event.homeTeam?.name ?? ""} ${event.awayTeam?.name ?? ""} ${event.title}`.toLowerCase(); if(text.includes("packers")) return "Packers Game Day"; if(text.includes("angels")) return "Angels Game Day"; if(event.sport==="f1") return "Formula 1"; if(event.sport==="nascar") return "NASCAR"; if(event.sport==="college-football") return "College Football"; return "Game Day"; }
 function sportIcon(event: SportsEvent) { return event.sport==="nfl"||event.sport==="college-football"?"◉":event.sport==="mlb"?"◌":event.sport==="f1"?"F1":"◆"; }
 function score(event: SportsEvent) { return event.awayTeam?.score !== undefined && event.homeTeam?.score !== undefined ? `${event.awayTeam.score} – ${event.homeTeam.score}` : "LIVE"; }
