@@ -7,6 +7,7 @@ import ClockWidget from "@/components/os/widgets/clock/ClockWidget";
 import WeatherWidget from "@/components/os/widgets/weather/WeatherWidget";
 import CalendarWidget from "@/components/os/widgets/calendar/CalendarWidget";
 import SchoolCalendarKioskWidget from "@/components/os/widgets/school/SchoolCalendarKioskWidget";
+import SportsKioskOverview from "@/components/os/widgets/sports/SportsKioskOverview";
 import { WidgetProvider } from "@/components/os/ui/widget/WidgetContext";
 
 const BUILD_SLIDES = [
@@ -14,6 +15,7 @@ const BUILD_SLIDES = [
   { id: "weather", component: WeatherWidget },
   { id: "calendar", component: CalendarWidget },
   { id: "school-calendar", component: SchoolCalendarKioskWidget },
+  { id: "sports", component: SportsKioskOverview },
 ] as const;
 
 const ROTATION_MS = 120_000;
@@ -98,7 +100,7 @@ export default function KioskSlideshow() {
     <main
       className="fixed inset-0 h-[100dvh] w-[100dvw] touch-pan-y overflow-hidden bg-black"
       data-kiosk-rebuild={active.id}
-      data-kiosk-part="4-of-11"
+      data-kiosk-part="5-of-11"
       data-kiosk-slide-index={index}
       data-kiosk-slide-count={BUILD_SLIDES.length}
       onPointerDown={onPointerDown}
