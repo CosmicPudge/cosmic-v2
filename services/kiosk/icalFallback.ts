@@ -79,12 +79,12 @@ async function fetchText(url: string, fetchImpl: typeof fetch) {
   return response.text();
 }
 
-export async function fetchKioskCalendarIcalFeeds(urls: string[], fetchImpl: typeof fetch = fetch): Promise<KioskCalendarIcalResult> {
+export async function fetchKioskCalendarIcalFeeds(\n  urls: string[],\n  fetchImpl: typeof fetch = fetch,\n  calendarNames: string[] = ["School", "Not Available"],\n): Promise<KioskCalendarIcalResult> {
   const window = { start: new Date(), end: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) };
   const results = await Promise.all(urls.map(async (url, index) => {
     let body: string;
     try { body = await fetchText(url, fetchImpl); } catch { return { events: [] as CalendarEvent[], category: "provider-error" as const }; }
-    try { return { events: parseKioskCalendarIcal(body, `Kiosk calendar ${index + 1}`, window), category: "connected" as const }; }
+    try { return { events: parseKioskCalendarIcal(body, calendarNames[index] ?? `Kiosk calendar ${index + 1}`, window), category: "connected" as const }; }
     catch { return { events: [] as CalendarEvent[], category: "parse-error" as const }; }
   }));
   const successful = results.filter((result) => result.category === "connected");
