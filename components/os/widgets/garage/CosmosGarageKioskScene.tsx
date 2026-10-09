@@ -15,15 +15,19 @@ export default function CosmosGarageKioskScene() {
   const directWeather = useWeather({ enabled: true });
   const weather = developer.data?.weather ?? directWeather.weather;
   const location = developer.data?.location?.label ?? (weather?.city && weather.city !== "Current location" ? weather.city : TEMPORARY_KIOSK_LOCATION.label);
-  const vehicle = garage.selectedVehicle;
+  const kioskGarage = developer.data?.garage;
+  const localVehicle = garage.selectedVehicle;
+  const vehicle = localVehicle ?? (kioskGarage?.vehicle ? { id: kioskGarage.vehicle.id, nickname: kioskGarage.vehicle.nickname, year: 2003, make: "Honda", model: "Civic", trim: undefined, currentMileage: kioskGarage.vehicle.mileage, status: kioskGarage.vehicle.status } : undefined);
   const summary = garage.summary;
   const telemetry = vehicle ? garage.data.telemetrySnapshots.filter((item) => item.vehicleId === vehicle.id).sort((a,b)=>b.timestamp.localeCompare(a.timestamp))[0] : undefined;
   const connection = vehicle ? garage.data.connections.find((item) => item.vehicleId === vehicle.id && item.status === "connected") : undefined;
   const maintenance = summary?.maintenance.map((item) => ({ item, status: maintenanceStatus(item, summary.currentMileage) })).sort((a,b) => rank(a.status)-rank(b.status)).slice(0,4) ?? [];
-  const fuelLevel = telemetry?.fuelLevel;
+  const fuelLevel = telemetry?.fuelLevel ?? kioskGarage?.vehicle?.fuelLevel;
   const range = fuelLevel !== undefined && summary?.averageMpg ? Math.round((fuelLevel / 100) * 13.2 * summary.averageMpg) : undefined;
   const engine = vehicle?.vinSpecifications ? [vehicle.vinSpecifications.displacement, vehicle.vinSpecifications.engineCylinders ? vehicle.vinSpecifications.engineCylinders + " cyl" : undefined].filter(Boolean).join(" · ") : undefined;
-  const transmission = vehicle?.vinSpecifications?.transmission;
+  const transmission = localVehicle?.vinSpecifications?.transmission ?? (vehicle ? "Temporary replacement · ~300k mi" : undefined);
+  const displayedMileage = summary?.currentMileage ?? kioskGarage?.vehicle?.mileage ?? (vehicle ? 150_000 : undefined);
+  const knownService = vehicle ? [{ name: "Timing Belt", status: "upcoming", due: "Recently replaced" }, { name: "Water Pump", status: "upcoming", due: "Recently replaced" }, { name: "Transmission", status: "dueSoon", due: "Temporary · ~300k mi" }] : [];
 
   return <section data-kiosk-rebuild="garage" className="relative h-full w-full select-none overflow-hidden bg-[#080b10] text-white">
     <div className="absolute inset-0 bg-[url('/dashboard/garage/automotive-workshop.webp')] bg-cover bg-center opacity-90"/>
@@ -35,7 +39,7 @@ export default function CosmosGarageKioskScene() {
           <div className="flex items-center justify-between"><Label>{vehicle ? vehicle.year + " " + vehicle.make + " " + vehicle.model + (vehicle.trim ? " " + vehicle.trim : "") : "SELECTED VEHICLE"}</Label><span className="flex items-center gap-2 text-[clamp(.55rem,.85vw,.8rem)] tracking-[.25em] text-white/65"><i className={"h-2 w-2 rounded-full " + (connection ? "bg-emerald-400 shadow-[0_0_10px_rgba(74,222,128,.9)]" : "bg-white/30")}/>{connection ? "ONLINE" : "LOCAL"}</span></div>
           <div className="flex min-h-0 flex-1 items-center justify-center py-[1vh]"><CarFront strokeWidth={.75} className="h-[15vh] w-[19vw] text-white/80 drop-shadow-[0_10px_25px_rgba(0,0,0,.65)]"/></div>
           <div className="grid grid-cols-3 divide-x divide-white/20 text-center">
-            <Metric value={summary ? summary.currentMileage.toLocaleString() : "—"} label="Miles"/>
+            <Metric value={displayedMileage !== undefined ? "~" + displayedMileage.toLocaleString() : "—"} label="Miles"/>
             <Metric value={engine || vehicle?.vinSpecifications?.fuelType || "—"} label="Engine"/>
             <Metric value={transmission || "—"} label="Transmission"/>
           </div>
@@ -46,7 +50,7 @@ export default function CosmosGarageKioskScene() {
         </Glass>
         <Glass className="col-span-2 p-[1.55vw]">
           <Label>MAINTENANCE</Label>
-          <div className="mt-[1vh] divide-y divide-white/10">{maintenance.length ? maintenance.map(({item,status}) => <MaintenanceRow key={item.id} name={item.name} status={status} due={item.nextDueMileage !== undefined && summary ? dueText(item.nextDueMileage-summary.currentMileage) : item.nextDueDate}/>) : <div className="flex h-[14vh] items-center justify-center text-sm text-white/45">{garage.loading ? "Loading Garage…" : vehicle ? "No maintenance items recorded." : "No vehicle selected."}</div>}</div>
+          <div className="mt-[1vh] divide-y divide-white/10">{maintenance.length ? maintenance.map(({item,status}) => <MaintenanceRow key={item.id} name={item.name} status={status} due={item.nextDueMileage !== undefined && summary ? dueText(item.nextDueMileage-summary.currentMileage) : item.nextDueDate}/>) : knownService.length ? knownService.map((item) => <MaintenanceRow key={item.name} name={item.name} status={item.status} due={item.due}/>) : <div className="flex h-[14vh] items-center justify-center text-sm text-white/45">{garage.loading ? "Loading Garage…" : "No vehicle selected."}</div>}</div>
         </Glass>
         <Glass className="p-[1.45vw]">
           <Label>QUICK ACTIONS</Label>
@@ -56,8 +60,8 @@ export default function CosmosGarageKioskScene() {
           <div className="flex items-center justify-between"><Label>GARAGE STATUS</Label><span className="text-xs text-white/40">{vehicle?.nickname ?? "No vehicle"}</span></div>
           <div className="mt-[1.4vh] grid grid-cols-4 gap-[1vw]">
             <Status icon={<Gauge/>} value={summary?.latestMpg ? summary.latestMpg.toFixed(1) : "—"} label="Latest MPG"/>
-            <Status icon={<Wrench/>} value={String(maintenance.filter(x=>x.status==="overdue"||x.status==="dueSoon").length)} label="Maintenance"/>
-            <Status icon={<Settings2/>} value={String(summary?.issues.filter(x=>x.status!=="resolved").length ?? 0)} label="Open Issues"/>
+            <Status icon={<Wrench/>} value={String(maintenance.length ? maintenance.filter(x=>x.status==="overdue"||x.status==="dueSoon").length : knownService.filter(x=>x.status==="dueSoon").length)} label="Maintenance"/>
+            <Status icon={<Settings2/>} value={String(summary?.issues.filter(x=>x.status!=="resolved").length ?? kioskGarage?.openIssues ?? 0)} label="Open Issues"/>
             <Status icon={<FileText/>} value={summary?.services[0]?.date ?? "—"} label="Recent Service"/>
           </div>
         </Glass>
