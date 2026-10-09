@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useCosmicScope, createScopedStorageKey } from "@/services/storage/scope";
 import { kioskApiUrl } from "@/services/kioskRequest";
-import { TEMPORARY_KIOSK_LOCATION } from "@/services/kioskLocation";
 import { readKioskDeviceLocation } from "@/hooks/os/useKioskDeviceLocation";
 
 export interface UserLocation {
@@ -65,13 +64,15 @@ export default function useLocation({ enabled = true }: { enabled?: boolean } = 
         if (!active) return;
         const saved = readSavedLocation(scope.id);
         const local = window.location.pathname === "/kiosk" ? readKioskDeviceLocation() : null;
-        const resolved = profileLocation ?? (local ? { lat: local.latitude, lon: local.longitude } : null) ?? saved ?? { lat: TEMPORARY_KIOSK_LOCATION.latitude, lon: TEMPORARY_KIOSK_LOCATION.longitude };
+        const resolved = (local ? { lat: local.latitude, lon: local.longitude } : null) ?? profileLocation ?? saved ?? null;
         weatherLog("location-state=available");
         setLocation(resolved);
       };
       void resolveKioskLocation();
       const refresh = window.setInterval(() => void resolveKioskLocation(), 45_000);
-      return () => { active = false; window.clearInterval(refresh); };
+      const onLocationChanged = () => void resolveKioskLocation();
+      window.addEventListener("cosmic:kiosk-location-changed", onLocationChanged);
+      return () => { active = false; window.clearInterval(refresh); window.removeEventListener("cosmic:kiosk-location-changed", onLocationChanged); };
     }
 
     if (!navigator.geolocation) {
