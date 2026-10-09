@@ -39,17 +39,16 @@ export default function CalendarWidget() {
     timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     accountCalendarConnected: developer.data.calendar.connected,
   } : null;
-  const visibleCalendar =
-    developerCalendar?.accountCalendarConnected || developerCalendar?.today.length || developerCalendar?.upcoming.length
-      ? developerCalendar
-      : (presentation === "kiosk" ? developerCalendar : calendar);
+  const visibleCalendar = presentation === "kiosk"
+    ? (developerCalendar?.accountCalendarConnected ? developerCalendar : null)
+    : calendar;
   useDashboardWidgetReadiness("calendar", loading ? "loading" : error && !calendar ? "degraded" : "ready");
 
   if (presentation === "kiosk") {
     return <KioskCalendarScene
       calendar={visibleCalendar}
       loading={!visibleCalendar && developer.loading}
-      error={developer.data?.calendar.connected ? null : (developer.data?.calendar.error ?? developer.error ?? error ?? "Calendar data unavailable")}
+      error={developer.data?.calendar.connected ? null : (developer.data?.calendar.error ?? developer.error ?? "Calendar connection unavailable")}
     />;
   }
 
