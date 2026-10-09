@@ -24,7 +24,7 @@ export default function CosmosGarageKioskScene() {
   const maintenance = summary?.maintenance.map((item) => ({ item, status: maintenanceStatus(item, summary.currentMileage) })).sort((a,b) => rank(a.status)-rank(b.status)).slice(0,4) ?? [];
   const fuelLevel = telemetry?.fuelLevel ?? kioskGarage?.vehicle?.fuelLevel;
   const range = fuelLevel !== undefined && summary?.averageMpg ? Math.round((fuelLevel / 100) * 13.2 * summary.averageMpg) : undefined;
-  const engine = vehicle?.vinSpecifications ? [vehicle.vinSpecifications.displacement, vehicle.vinSpecifications.engineCylinders ? vehicle.vinSpecifications.engineCylinders + " cyl" : undefined].filter(Boolean).join(" · ") : undefined;
+  const engine = localVehicle?.vinSpecifications ? [localVehicle.vinSpecifications.displacement, localVehicle.vinSpecifications.engineCylinders ? localVehicle.vinSpecifications.engineCylinders + " cyl" : undefined].filter(Boolean).join(" · ") : undefined;
   const transmission = localVehicle?.vinSpecifications?.transmission ?? (vehicle ? "Temporary replacement · ~300k mi" : undefined);
   const displayedMileage = summary?.currentMileage ?? kioskGarage?.vehicle?.mileage ?? (vehicle ? 150_000 : undefined);
   const knownService = vehicle ? [{ name: "Timing Belt", status: "upcoming", due: "Recently replaced" }, { name: "Water Pump", status: "upcoming", due: "Recently replaced" }, { name: "Transmission", status: "dueSoon", due: "Temporary · ~300k mi" }] : [];
