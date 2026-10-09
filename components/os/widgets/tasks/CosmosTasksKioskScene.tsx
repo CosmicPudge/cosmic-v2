@@ -3,7 +3,7 @@
 import { Check, Circle, Clock3, GraduationCap, BriefcaseBusiness, UserRound, FolderKanban, Play, Plus, ChevronRight } from "lucide-react";
 import { useClockTick } from "@/hooks/os/useClock";
 import { useDeveloperKioskData } from "@/hooks/os/useDeveloperKioskData";
-import { useWeather } from "@/hooks/os/useWeather";
+import useWeather from "@/hooks/os/useWeather";
 
 type Task={id:string;title:string;subtitle?:string;due?:Date;category:"school"|"project"|"personal"|"work";priority?:string;completed?:boolean};
 
@@ -20,7 +20,7 @@ export default function CosmosTasksKioskScene(){
   <div className="relative z-10 flex h-full flex-col px-[3.3vw] py-[3.1vh]">
    <header className="flex h-[16vh] items-start justify-between">
     <div><h1 className="text-[clamp(2.2rem,4.5vw,4.8rem)] font-light tracking-[.22em]">COSMOS</h1><p className="mt-1 text-center text-[clamp(.8rem,1.35vw,1.3rem)] tracking-[.55em] text-white/55">TASKS</p></div>
-    <div className="flex items-start gap-[2vw] text-right"><div><p className="text-sm text-white/75">{fmtDate(d)}</p><p className="text-[clamp(2rem,4vw,4rem)] font-light leading-tight">{fmtTime(d)}</p></div><div className="border-l border-white/15 pl-[2vw]"><p className="text-[clamp(1.4rem,2.2vw,2.4rem)] font-semibold">{weather.data?.tempF!==undefined?Math.round(weather.data.tempF)+"°":"—"}</p><p className="text-sm text-white/75">{weather.data?.condition??"Weather"}</p><p className="mt-1 text-xs text-white/45">{kiosk.data?.location?.label??weather.data?.city??""}</p></div></div>
+    <div className="flex items-start gap-[2vw] text-right"><div><p className="text-sm text-white/75">{fmtDate(d)}</p><p className="text-[clamp(2rem,4vw,4rem)] font-light leading-tight">{fmtTime(d)}</p></div><div className="border-l border-white/15 pl-[2vw]"><p className="text-[clamp(1.4rem,2.2vw,2.4rem)] font-semibold">{weather.weather?.tempF!==undefined?Math.round(weather.data.tempF)+"°":"—"}</p><p className="text-sm text-white/75">{weather.weather?.condition??"Weather"}</p><p className="mt-1 text-xs text-white/45">{kiosk.data?.location?.label??weather.weather?.city??""}</p></div></div>
    </header>
    <div className="grid min-h-0 flex-1 grid-cols-[1.12fr_.92fr_1fr] grid-rows-[1fr_.42fr] gap-[1.2vw]">
     <Glass title="TODAY" badge={today.length+" TASK"+(today.length===1?"":"S")} className="row-span-1">{today.length?today.map((t,i)=><TaskRow key={t.id} task={t} color={i<2?"blue":"slate"}/>):<Empty text={kiosk.loading?"Loading today…":"Nothing due today"}/>}</Glass>
