@@ -134,7 +134,7 @@ export function useMusic({ refreshMs, enabled = true }: UseMusicOptions = {}) {
     setActionError(undefined);
 
     try {
-      const response = await fetch("/api/music/action", {
+      const response = await fetch(kioskApiUrl("/api/music/action"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action, value }),
