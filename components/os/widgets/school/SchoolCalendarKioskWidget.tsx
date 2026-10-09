@@ -32,11 +32,11 @@ export default function SchoolCalendarKioskWidget() {
     </div>
     <div className="cosmos-kiosk-school-layout">
       <div className="cosmos-kiosk-school-schedule">
-        {classes.length ? classes.slice(0,6).map((item,index)=><ClassRow key={item.id} item={item} next={index===0} now={now} />) :
-          <div className="cosmos-kiosk-school-empty">{kiosk.loading ? "Loading school schedule…" : "No upcoming classes."}</div>}
+        {assignments.length ? assignments.slice(0,6).map((item,index)=><DueAssignmentRow key={item.id} item={item} next={index===0} now={now} />) :
+          <div className="cosmos-kiosk-school-empty">{kiosk.loading ? "Loading assignments…" : "No assignments due in the next 7 days."}</div>}
       </div>
       <aside className="cosmos-kiosk-school-side">
-        <MiniMonth now={now} classes={classes} assignments={assignments} />
+        <MiniMonth now={now} assignments={assignments} />
         <section className="cosmos-kiosk-school-reminders">
           <header>ACADEMIC REMINDERS</header>
           {assignments.length ? <div className="cosmos-kiosk-school-reminder-scroll">{assignments.map((item,index)=><AssignmentRow key={item.id} item={item} index={index} now={now} />)}</div> :
@@ -47,15 +47,13 @@ export default function SchoolCalendarKioskWidget() {
   </section>;
 }
 
-function ClassRow({item,next,now}:{item:SchoolClass;next:boolean;now:Date}) {
-  const start=new Date(item.start), end=new Date(item.end);
-  const meta=classMeta(item.name);
-  const Icon=meta.icon;
+function DueAssignmentRow({item,next,now}:{item:Assignment;next:boolean;now:Date}) {
+  const due=new Date(item.due);
   return <article className={"cosmos-kiosk-school-class "+(next?"is-next":"")}>
-    <div className="cosmos-kiosk-school-time"><em>{dayLabel(start)}</em><strong>{start.toLocaleTimeString([], {hour:"numeric",minute:"2-digit"})}</strong><span>– {end.toLocaleTimeString([], {hour:"numeric",minute:"2-digit"})}</span></div>
-    <div className="cosmos-kiosk-school-icon"><Icon size={26} strokeWidth={1.8}/></div>
-    <div className="cosmos-kiosk-school-class-main"><div className="cosmos-kiosk-school-class-kicker"><span>{schoolDayLabel(start,now)}</span>{next?<span className="cosmos-kiosk-school-next">UP NEXT</span>:null}</div><h2>{item.name}</h2><p><MapPin size={16}/>{item.location || item.instructor || "Campus"}</p></div>
-    <span className={"cosmos-kiosk-school-type "+meta.kind}>{meta.label}</span>
+    <div className="cosmos-kiosk-school-time"><strong>{due.toLocaleTimeString([], {hour:"numeric",minute:"2-digit"})}</strong><span>Due</span></div>
+    <div className="cosmos-kiosk-school-icon"><BookOpen size={26} strokeWidth={1.8}/></div>
+    <div className="cosmos-kiosk-school-class-main"><div className="cosmos-kiosk-school-class-kicker"><span>{schoolDayLabel(due,now)}</span>{next?<span className="cosmos-kiosk-school-next">UP NEXT</span>:null}</div><h2>{item.title}</h2><p><GraduationCap size={16}/>{item.course || "School"}</p></div>
+    <span className="cosmos-kiosk-school-type class">Assignment</span>
   </article>;
 }
 
@@ -69,10 +67,10 @@ function AssignmentRow({item,index,now}:{item:Assignment;index:number;now:Date})
   </article>;
 }
 
-function MiniMonth({now,classes,assignments}:{now:Date;classes:SchoolClass[];assignments:Assignment[]}) {
+function MiniMonth({now,assignments}:{now:Date;assignments:Assignment[]}) {
   const year=now.getFullYear(), month=now.getMonth(), today=now.getDate(), lead=new Date(year,month,1).getDay();
   const dim=new Date(year,month+1,0).getDate(), prev=new Date(year,month,0).getDate();
-  const marked=new Set([...classes.map(x=>new Date(x.start)),...assignments.map(x=>new Date(x.due))].filter(d=>d.getMonth()===month).map(d=>d.getDate()));
+  const marked=new Set(assignments.map(x=>new Date(x.due)).filter(d=>d.getMonth()===month).map(d=>d.getDate()));
   const cells=Array.from({length:42},(_,i)=>{const d=i-lead+1;return d<1?{d:prev+d,m:true}:d>dim?{d:d-dim,m:true}:{d,m:false}});
   return <section className="cosmos-kiosk-school-month"><h2>{now.toLocaleDateString([], {month:"long",year:"numeric"})}</h2><div className="cosmos-kiosk-school-weekdays">{["SUN","MON","TUE","WED","THU","FRI","SAT"].map(x=><span key={x}>{x}</span>)}</div><div className="cosmos-kiosk-school-days">{cells.map((c,i)=><span key={i} className={(c.m?"muted ":"") + (!c.m&&c.d===today?"today ":"") + (!c.m&&marked.has(c.d)?"marked":"")}>{c.d}</span>)}</div></section>;
 }
