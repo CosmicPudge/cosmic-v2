@@ -4,7 +4,6 @@ import IconCanvas from "../primitives/IconCanvas";
 import Glow from "../primitives/Glow";
 import Motion from "../primitives/Motion";
 import Moon from "../primitives/Moon";
-import Stars from "../primitives/Stars";
 
 import { Colors } from "@/design-system/tokens/colors";
 
@@ -18,10 +17,9 @@ export default function ClearNight({
   size = 48,
   starDensity = "normal",
 }: Props) {
+  void starDensity;
   return (
     <IconCanvas size={size}>
-
-  <Stars density={starDensity} />
 
   <Glow
     color={Colors.weather.moonGlow}
