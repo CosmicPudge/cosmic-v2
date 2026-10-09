@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { CalendarDays, MapPin } from "lucide-react";
+import type React from "react";
 
 import type { CalendarEvent, CalendarSnapshot } from "@/core/contracts";
 import { useClockTick } from "@/hooks/os/useClock";
@@ -58,7 +59,11 @@ export default function KioskCalendarScene({ calendar, loading, error }: Props) 
         <div className="cosmos-kiosk-calendar-layout">
           <div className="cosmos-kiosk-calendar-agenda" aria-label="Upcoming personal events">
             {events.length ? events.map((event, index) => (
-              <article className={`cosmos-kiosk-calendar-event ${index === 0 ? "is-next" : ""}`} key={event.id}>
+              <article
+                className={`cosmos-kiosk-calendar-event ${index === 0 ? "is-next" : ""}`}
+                key={event.id}
+                style={{ "--calendar-accent": calendarAccent(event) } as React.CSSProperties}
+              >
                 <div className="cosmos-kiosk-calendar-time">
                   <strong>{formatEventTime(event, timeZone)}</strong>
                   <span>{formatEventEnd(event, timeZone)}</span>
@@ -67,7 +72,10 @@ export default function KioskCalendarScene({ calendar, loading, error }: Props) 
                   <CalendarDays size={24} strokeWidth={1.9} />
                 </div>
                 <div className="cosmos-kiosk-calendar-event-main">
-                  {index === 0 ? <span className="cosmos-kiosk-calendar-next-pill">UP NEXT</span> : null}
+                  <div className="cosmos-kiosk-calendar-event-kicker">
+                    <span className="cosmos-kiosk-calendar-event-day">{eventDayLabel(event, now, timeZone)}</span>
+                    {index === 0 ? <span className="cosmos-kiosk-calendar-next-pill">UP NEXT</span> : null}
+                  </div>
                   <h2>{event.title}</h2>
                   <p>
                     <MapPin size={16} strokeWidth={2.1} aria-hidden="true" />
@@ -131,6 +139,24 @@ function MiniMonth({ now, events, timeZone }: { now: Date; events: CalendarEvent
       </div>
     </aside>
   );
+}
+
+function eventDayLabel(event: CalendarEvent, now: Date, timeZone?: string) {
+  const eventKey = formatDate(event.start, { year: "numeric", month: "2-digit", day: "2-digit" }, timeZone);
+  const todayKey = formatDate(now, { year: "numeric", month: "2-digit", day: "2-digit" }, timeZone);
+  const tomorrow = new Date(now.getTime() + 86_400_000);
+  const tomorrowKey = formatDate(tomorrow, { year: "numeric", month: "2-digit", day: "2-digit" }, timeZone);
+  if (eventKey === todayKey) return "TODAY";
+  if (eventKey === tomorrowKey) return "TOMORROW";
+  return formatDate(event.start, { weekday: "short", month: "short", day: "numeric" }, timeZone).toUpperCase();
+}
+
+function calendarAccent(event: CalendarEvent) {
+  const key = (event.calendarName ?? event.category ?? "personal").toLowerCase();
+  const palette = ["#a855f7", "#22d3ee", "#3b82f6", "#f59e0b", "#ec4899", "#10b981", "#8b5cf6", "#f97316"];
+  let hash = 0;
+  for (let index = 0; index < key.length; index += 1) hash = ((hash << 5) - hash + key.charCodeAt(index)) | 0;
+  return palette[Math.abs(hash) % palette.length];
 }
 
 function categoryLabel(event: CalendarEvent) {
