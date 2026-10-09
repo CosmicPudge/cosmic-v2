@@ -10,18 +10,13 @@
  </filter>
  <filter id="glow"><feGaussianBlur stdDeviation="14" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
  <filter id="texture"><feTurbulence type="fractalNoise" baseFrequency=".018" numOctaves="3" seed="7" result="t"/><feColorMatrix in="t" type="saturate" values="0"/><feComponentTransfer><feFuncA type="table" tableValues="0 .16"/></feComponentTransfer><feBlend in="SourceGraphic" mode="soft-light"/></filter>
- <pattern id="stars" width="137" height="109" patternUnits="userSpaceOnUse">
-  <circle cx="9" cy="17" r="1.1" fill="#fff"/><circle cx="48" cy="73" r=".7" fill="#b8c8ff"/><circle cx="101" cy="31" r="1.35" fill="#e7c8ff"/><circle cx="124" cy="94" r=".65" fill="#fff"/><circle cx="72" cy="9" r=".55" fill="#fff"/>
- </pattern>
-</defs>
+ </defs>
 <rect width="1600" height="900" fill="url(#space)"/>
-<ellipse cx="850" cy="130" rx="760" ry="300" fill="#6826c7" opacity=".24" filter="url(#neb)"/>
-<ellipse cx="440" cy="390" rx="520" ry="360" fill="#9d2ed4" opacity=".18" filter="url(#neb)"/>
-<ellipse cx="1370" cy="380" rx="390" ry="330" fill="#5d2ecb" opacity=".15" filter="url(#neb)"/>
-<rect width="1600" height="900" fill="url(#stars)" opacity=".9"/>
+<ellipse cx="800" cy="120" rx="690" ry="235" fill="#7627cf" opacity=".22" filter="url(#neb)"/>
+<ellipse cx="365" cy="245" rx="430" ry="245" fill="#a22ee0" opacity=".20" filter="url(#neb)"/>
+<ellipse cx="1280" cy="235" rx="420" ry="260" fill="#552bd0" opacity=".18" filter="url(#neb)"/>
 <circle cx="1260" cy="104" r="68" fill="url(#moon)" filter="url(#texture)" opacity=".95"/>
 <ellipse cx="1160" cy="565" rx="690" ry="455" fill="url(#planet)" filter="url(#texture)"/>
 <path d="M505 278 C760 155 1180 120 1605 285" fill="none" stroke="#bfa9ff" stroke-width="5" opacity=".9" filter="url(#glow)"/>
 <circle cx="1480" cy="174" r="14" fill="#fff" filter="url(#glow)"/><circle cx="1480" cy="174" r="46" fill="#e8b5ff" opacity=".32" filter="url(#glow)"/>
-<g opacity=".85" filter="url(#glow)" fill="#fff"><circle cx="804" cy="76" r="2"/><circle cx="675" cy="122" r="2.5"/><circle cx="1010" cy="88" r="2"/><circle cx="572" cy="211" r="2"/></g>
 </svg>
