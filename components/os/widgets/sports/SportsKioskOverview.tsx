@@ -3,25 +3,36 @@
 import { useMemo } from "react";
 import { useSports } from "@/hooks/os/useSports";
 import { useSettingsRepository } from "@/services/settings/localRepository";
-import { prioritizeFollowedEvents } from "@/services/sports/preferences";
+import { isFavoriteEvent } from "@/services/sports/preferences";
 import { normalizeKioskSportsEvent } from "@/services/sports/kioskSelection";
 import { selectKioskSportsBackground } from "@/components/os/widgets/shared/kioskSceneBackgrounds";
 import type { SportsEvent } from "@/core/contracts/Sports";
 
-const SPORT_ORDER = ["nfl", "mlb", "f1", "nascar", "college-football"] as const;
+const FAVORITES = [
+  { key: "nfl", label: "Green Bay Packers", match: (event: SportsEvent) => event.sport === "nfl" && /packers|green bay/i.test(event.title + " " + event.homeTeam?.name + " " + event.awayTeam?.name) },
+  { key: "mlb", label: "Los Angeles Angels", match: (event: SportsEvent) => event.sport === "mlb" && /angels/i.test(event.title + " " + event.homeTeam?.name + " " + event.awayTeam?.name) },
+  { key: "f1", label: "Formula 1", match: (event: SportsEvent) => event.sport === "f1" },
+  { key: "nascar", label: "NASCAR", match: (event: SportsEvent) => event.sport === "nascar" },
+  { key: "usu", label: "Utah State", match: (event: SportsEvent) => event.sport === "college-football" && /utah state|aggies/i.test(event.title + " " + event.homeTeam?.name + " " + event.awayTeam?.name) },
+  { key: "utah", label: "Utah Utes", match: (event: SportsEvent) => event.sport === "college-football" && /utah utes|utah university|utah at|at utah|utah vs|vs utah/i.test(event.title + " " + event.homeTeam?.name + " " + event.awayTeam?.name) && !/utah state/i.test(event.title + " " + event.homeTeam?.name + " " + event.awayTeam?.name) },
+] as const;
+function activeEvent(event: SportsEvent) { return !["final","cancelled","postponed"].includes(event.status) && (event.status === "live" || event.start.getTime() >= Date.now() - 60_000); }
+function fullDate(event: SportsEvent) { return event.start.toLocaleString([], { weekday:"short", month:"short", day:"numeric", hour:"numeric", minute:"2-digit" }); }
 
 export default function SportsKioskOverview() {
-  const { data, loading } = useSports({ kioskEligibility: true });
-  const { data: settings } = useSettingsRepository();
+  const { data, loading } = useSports({ kioskEligibility: false });
+  
   const events = useMemo(() => {
     if (!data) return [];
-    const unique = [...new Map([...data.live, ...data.upcoming, ...data.featured].map((event) => [event.id, event])).values()];
-    return prioritizeFollowedEvents(unique, settings.preferences).filter((event) => normalizeKioskSportsEvent(event));
-  }, [data, settings.preferences]);
-  const primary = events[0];
+    return [...new Map([...data.live, ...data.upcoming, ...data.featured].map((event) => [event.id, event])).values()]
+      .filter((event) => activeEvent(event) && FAVORITES.some((favorite) => favorite.match(event)))
+      .sort((a, b) => (a.status === "live" ? -1 : b.status === "live" ? 1 : a.start.getTime() - b.start.getTime()));
+  }, [data]);
+  const cards = FAVORITES.map((favorite) => ({ ...favorite, event: events.find(favorite.match) }));
+  const primary = cards[0].event ?? events[0];
   const primaryView = primary ? normalizeKioskSportsEvent(primary) : undefined;
-  const secondary = SPORT_ORDER.flatMap((sport) => events.find((event) => event.sport === sport && event.id !== primary?.id) ?? []).slice(0, 2);
-  const league = events.filter((event) => event.id !== primary?.id && !secondary.some((item) => item.id === event.id)).slice(0, 5);
+  const secondary = cards.filter((card) => card.event?.id !== primary?.id);
+  const league = events.filter((event) => event.id !== primary?.id && !secondary.some((card) => card.event?.id === event.id)).slice(0, 4);
   const background = primaryView ? selectKioskSportsBackground(primaryView.backgroundKey) : "/dashboard/sports/stadium.webp";
   const now = new Date();
 
@@ -34,15 +45,15 @@ export default function SportsKioskOverview() {
       <h1 className="mt-[5vh] text-[clamp(3rem,6.3vw,6.2rem)] font-black leading-[.88] tracking-[-.055em] drop-shadow-[0_0_22px_rgba(174,91,255,.5)]">{headline(primary)}</h1>
       <p className="mt-3 text-[clamp(1.25rem,2.4vw,2.35rem)] font-light">{dateLine(now)}</p>
 
-      <div className="mt-[4.5vh] grid min-h-0 flex-1 grid-cols-[2.15fr_.95fr] gap-[1.2vw]">
-        <div className="grid min-h-0 grid-rows-[1.25fr_.85fr] gap-[1.2vw]">
+      <div className="mt-[4.5vh] grid min-h-0 flex-1 grid-cols-[2.1fr_.95fr] gap-[1.2vw]">
+        <div className="grid min-h-0 grid-rows-[1.05fr_1fr] gap-[1.2vw]">
           <EventHero event={primary} loading={loading} />
-          <div className="grid min-h-0 grid-cols-2 gap-[1.2vw]">
-            {secondary.length ? secondary.map((event) => <MiniEvent key={event.id} event={event} />) : <EmptyMini label="More favorites will appear here" />}
+          <div className="grid min-h-0 grid-cols-3 grid-rows-2 gap-[.7vw]">
+            {secondary.map((card) => <MiniEvent key={card.key} event={card.event} label={card.label} />)}
           </div>
         </div>
         <aside className="min-h-0 rounded-[1.6vw] border border-violet-400/45 bg-[#100720]/80 p-[1.2vw] shadow-[inset_0_0_30px_rgba(124,58,237,.08)] backdrop-blur-md">
-          <div className="flex items-center justify-between border-b border-white/10 pb-3 text-[clamp(.7rem,1vw,.95rem)] uppercase tracking-[.23em] text-violet-100"><span>🏆 &nbsp; Around the League</span><span className="text-white/55">Upcoming</span></div>
+          <div className="flex items-center justify-between border-b border-white/10 pb-3 text-[clamp(.7rem,1vw,.95rem)] uppercase tracking-[.23em] text-violet-100"><span>🏆 &nbsp; More Matchups</span><span className="text-white/55">Upcoming</span></div>
           <div className="mt-2 flex flex-col">{league.length ? league.map((event) => <LeagueRow key={event.id} event={event} />) : <p className="py-12 text-center text-white/45">No other followed events right now.</p>}</div>
         </aside>
       </div>
@@ -57,7 +68,7 @@ function EventHero({ event, loading }: { event?: SportsEvent; loading: boolean }
     <div className="flex items-center justify-between text-[clamp(.72rem,1.1vw,1rem)] uppercase tracking-[.25em] text-violet-100"><span>{sportIcon(event)} &nbsp; {view.sportLabel}</span><span>{view.live ? "● LIVE" : view.eventType}</span></div>
     <div className="grid h-[calc(100%-2rem)] grid-cols-[1fr_auto_1fr] items-center gap-[2vw]">
       <Team event={event} side="away" />
-      <div className="min-w-[9rem] text-center"><span className="rounded-full bg-violet-600 px-5 py-2 text-xs font-black uppercase tracking-[.12em] shadow-[0_0_20px_rgba(139,92,246,.6)]">{view.live ? "Live" : event.status === "pregame" ? "Pregame" : "Up Next"}</span><p className="mt-4 text-[clamp(1.8rem,3vw,3.1rem)] font-black">{view.live ? score(event) : eventTime(event)}</p><p className="mt-2 text-[clamp(.75rem,1vw,.95rem)] text-white/70">⌖ {view.venueName ?? "Venue TBA"}</p>{view.broadcaster ? <p className="mt-1 text-sm text-white/55">{view.broadcaster}</p> : null}</div>
+      <div className="min-w-[9rem] text-center"><span className="rounded-full bg-violet-600 px-5 py-2 text-xs font-black uppercase tracking-[.12em] shadow-[0_0_20px_rgba(139,92,246,.6)]">{view.live ? "Live" : event.status === "pregame" ? "Pregame" : "Up Next"}</span><p className="mt-4 text-[clamp(1.8rem,3vw,3.1rem)] font-black">{view.live ? score(event) : eventTime(event)}</p><p className="mt-1 text-[clamp(.8rem,1.1vw,1.1rem)] font-semibold text-violet-200">{event.start.toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" })}</p><p className="mt-2 text-[clamp(.75rem,1vw,.95rem)] text-white/70">⌖ {view.venueName ?? "Venue TBA"}</p>{view.broadcaster ? <p className="mt-1 text-sm text-white/55">{view.broadcaster}</p> : null}</div>
       <Team event={event} side="home" />
     </div>
   </article>;
@@ -69,12 +80,12 @@ function Team({ event, side }: { event: SportsEvent; side: "home" | "away" }) {
   return <div className={side === "home" ? "text-left" : "text-right"}><p className="text-[clamp(.7rem,.9vw,.85rem)] uppercase tracking-[.2em] text-violet-200/80">{team.abbreviation}</p><p className="mt-1 text-[clamp(1.6rem,2.8vw,3rem)] font-black uppercase leading-none">{team.name}</p><p className="mt-2 text-[clamp(.9rem,1.25vw,1.15rem)] text-white/70">{team.record ?? ""}</p></div>;
 }
 
-function MiniEvent({ event }: { event: SportsEvent }) {
+function MiniEvent({ event, label }: { event?: SportsEvent; label: string }) {\n  if (!event) return <article className="flex min-h-0 flex-col justify-between rounded-[1vw] border border-violet-400/30 bg-[#100720]/75 p-[1vw]"><span className="text-[clamp(.7rem,.95vw,.95rem)] font-bold uppercase tracking-[.12em] text-violet-100">{label}</span><p className="text-[clamp(.8rem,1vw,1rem)] text-white/50">No upcoming event available</p></article>;
   const view = normalizeKioskSportsEvent(event)!;
-  return <article className="overflow-hidden rounded-[1.45vw] border border-violet-400/45 bg-[#100720]/82 p-[1.4vw] backdrop-blur-md"><div className="flex justify-between text-[clamp(.65rem,.9vw,.82rem)] uppercase tracking-[.2em] text-violet-100"><span>{sportIcon(event)} &nbsp; {view.sportLabel}</span><span>{view.eventType}</span></div><div className="mt-[2vh] grid grid-cols-[1fr_auto] items-end gap-3"><div><p className="line-clamp-2 text-[clamp(1.1rem,1.75vw,1.7rem)] font-black leading-tight">{event.title}</p><p className="mt-2 text-[clamp(.7rem,.9vw,.85rem)] text-white/60">{view.venueName ?? view.venueLocation ?? "Venue TBA"}</p></div><div className="text-right"><span className="rounded-full bg-violet-600/80 px-3 py-1 text-[.65rem] font-bold uppercase">{view.live ? "Live" : "Next"}</span><p className="mt-2 text-[clamp(1rem,1.4vw,1.35rem)] font-black">{eventTime(event)}</p></div></div></article>;
+  return <article className="overflow-hidden rounded-[1vw] border border-violet-400/45 bg-[#100720]/82 p-[1vw] backdrop-blur-md"><div className="flex justify-between text-[clamp(.65rem,.9vw,.82rem)] uppercase tracking-[.2em] text-violet-100"><span>{sportIcon(event)} &nbsp; {view.sportLabel}</span><span>{view.eventType}</span></div><div className="mt-[1vh] flex flex-col gap-1"><div><p className="line-clamp-2 text-[clamp(.9rem,1.3vw,1.35rem)] font-black leading-tight">{event.title}</p><p className="mt-2 text-[clamp(.7rem,.9vw,.85rem)] text-white/60">{view.venueName ?? view.venueLocation ?? "Venue TBA"}</p></div><div className="mt-auto flex items-center justify-between gap-2"><span className="rounded-full bg-violet-600/80 px-2 py-1 text-[.6rem] font-bold uppercase">{view.live ? "Live" : "Next"}</span><p className="text-[clamp(.8rem,1.05vw,1.1rem)] font-black text-violet-100">{fullDate(event)}</p></div></div></article>;
 }
 function EmptyMini({ label }: { label: string }) { return <div className="col-span-2 flex items-center justify-center rounded-[1.45vw] border border-violet-400/30 bg-[#100720]/72 text-white/45">{label}</div>; }
-function LeagueRow({ event }: { event: SportsEvent }) { const view=normalizeKioskSportsEvent(event)!; return <div className="grid grid-cols-[1fr_auto] gap-3 border-b border-white/10 px-2 py-[1.45vh] last:border-0"><div className="min-w-0"><p className="truncate text-[clamp(.78rem,1.05vw,1rem)] font-bold">{event.title}</p><p className="mt-1 text-xs uppercase tracking-[.12em] text-white/45">{view.sportLabel}</p></div><div className="text-right"><p className="text-[clamp(.72rem,.95vw,.9rem)] text-violet-100">{eventTime(event)}</p><p className="mt-1 text-xs text-white/45">{event.broadcast ?? ""}</p></div></div>; }
+function LeagueRow({ event }: { event: SportsEvent }) { const view=normalizeKioskSportsEvent(event)!; return <div className="grid grid-cols-[1fr_auto] gap-3 border-b border-white/10 px-2 py-[1.45vh] last:border-0"><div className="min-w-0"><p className="truncate text-[clamp(.78rem,1.05vw,1rem)] font-bold">{event.title}</p><p className="mt-1 text-xs uppercase tracking-[.12em] text-white/45">{view.sportLabel}</p></div><div className="text-right"><p className="text-[clamp(.72rem,.95vw,.9rem)] text-violet-100">{fullDate(event)}</p><p className="mt-1 text-xs text-white/45">{event.broadcast ?? ""}</p></div></div>; }
 function headline(event?: SportsEvent) { if (!event) return "Sports"; const text=`${event.homeTeam?.name ?? ""} ${event.awayTeam?.name ?? ""} ${event.title}`.toLowerCase(); if(text.includes("packers")) return "Packers Game Day"; if(text.includes("angels")) return "Angels Game Day"; if(event.sport==="f1") return "Formula 1"; if(event.sport==="nascar") return "NASCAR"; if(event.sport==="college-football") return "College Football"; return "Game Day"; }
 function sportIcon(event: SportsEvent) { return event.sport==="nfl"||event.sport==="college-football"?"◉":event.sport==="mlb"?"◌":event.sport==="f1"?"F1":"◆"; }
 function score(event: SportsEvent) { return event.awayTeam?.score !== undefined && event.homeTeam?.score !== undefined ? `${event.awayTeam.score} – ${event.homeTeam.score}` : "LIVE"; }
