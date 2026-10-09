@@ -32,14 +32,14 @@ export default function SchoolCalendarKioskWidget() {
     </div>
     <div className="cosmos-kiosk-school-layout">
       <div className="cosmos-kiosk-school-schedule">
-        {classes.length ? classes.map((item,index)=><ClassRow key={item.id} item={item} next={index===0} />) :
+        {classes.length ? classes.slice(0,6).map((item,index)=><ClassRow key={item.id} item={item} next={index===0} now={now} />) :
           <div className="cosmos-kiosk-school-empty">{kiosk.loading ? "Loading school schedule…" : "No upcoming classes."}</div>}
       </div>
       <aside className="cosmos-kiosk-school-side">
         <MiniMonth now={now} classes={classes} assignments={assignments} />
         <section className="cosmos-kiosk-school-reminders">
           <header>ACADEMIC REMINDERS</header>
-          {assignments.length ? assignments.map((item,index)=><AssignmentRow key={item.id} item={item} index={index} now={now} />) :
+          {assignments.length ? <div className="cosmos-kiosk-school-reminder-scroll">{assignments.map((item,index)=><AssignmentRow key={item.id} item={item} index={index} now={now} />)}</div> :
             <p className="cosmos-kiosk-school-no-reminders">No assignments due soon.</p>}
         </section>
       </aside>
@@ -47,14 +47,14 @@ export default function SchoolCalendarKioskWidget() {
   </section>;
 }
 
-function ClassRow({item,next}:{item:SchoolClass;next:boolean}) {
+function ClassRow({item,next,now}:{item:SchoolClass;next:boolean;now:Date}) {
   const start=new Date(item.start), end=new Date(item.end);
   const meta=classMeta(item.name);
   const Icon=meta.icon;
   return <article className={"cosmos-kiosk-school-class "+(next?"is-next":"")}>
     <div className="cosmos-kiosk-school-time"><em>{dayLabel(start)}</em><strong>{start.toLocaleTimeString([], {hour:"numeric",minute:"2-digit"})}</strong><span>– {end.toLocaleTimeString([], {hour:"numeric",minute:"2-digit"})}</span></div>
     <div className="cosmos-kiosk-school-icon"><Icon size={26} strokeWidth={1.8}/></div>
-    <div className="cosmos-kiosk-school-class-main">{next?<span className="cosmos-kiosk-school-next">UP NEXT</span>:null}<h2>{item.name}</h2><p><MapPin size={16}/>{item.location || item.instructor || "Campus"}</p></div>
+    <div className="cosmos-kiosk-school-class-main"><div className="cosmos-kiosk-school-class-kicker"><span>{schoolDayLabel(start,now)}</span>{next?<span className="cosmos-kiosk-school-next">UP NEXT</span>:null}</div><h2>{item.name}</h2><p><MapPin size={16}/>{item.location || item.instructor || "Campus"}</p></div>
     <span className={"cosmos-kiosk-school-type "+meta.kind}>{meta.label}</span>
   </article>;
 }
@@ -83,6 +83,13 @@ function dayLabel(value:Date) {
   const delta=Math.round((day.getTime()-today.getTime())/86_400_000);
   if(delta===0) return "TODAY";
   if(delta===1) return "TOMORROW";
+  return value.toLocaleDateString([], {weekday:"short",month:"short",day:"numeric"}).toUpperCase();
+}
+
+function schoolDayLabel(value:Date, now:Date) {
+  const key=value.toDateString(), today=now.toDateString(), tomorrow=new Date(now.getTime()+86_400_000).toDateString();
+  if(key===today) return "TODAY";
+  if(key===tomorrow) return "TOMORROW";
   return value.toLocaleDateString([], {weekday:"short",month:"short",day:"numeric"}).toUpperCase();
 }
 
