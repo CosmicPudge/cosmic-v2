@@ -26,9 +26,9 @@ import { TEMPORARY_KIOSK_LOCATION } from "@/services/kioskLocation";
 
 export default function WeatherWidget() {
   const { size, presentation } = useWidgetContext();
-  const directWeatherEnabled =
-    presentation !== "kiosk" ||
-    (typeof window !== "undefined" && ["localhost", "127.0.0.1"].includes(window.location.hostname));
+  // Use the same live weather provider as the shared kiosk header even when
+  // the separately authenticated kiosk aggregate is unavailable.
+  const directWeatherEnabled = true;
 
   const {
     weather,
