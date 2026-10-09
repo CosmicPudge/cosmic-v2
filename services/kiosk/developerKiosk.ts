@@ -18,7 +18,7 @@ import type { ProjectsLocalData } from "@/core/contracts/Projects";
 
 const DEFAULT_HOST = "dev.cosmicpudge.shop";
 const MAX_EVENTS = 24;
-const MAX_ASSIGNMENTS = 8;
+const MAX_ASSIGNMENTS = 64;
 const KIOSK_DATA_PROVIDER_TIMEOUT_MS = 10_000;
 const schoolCache = new Map<string, { expiresAt: number; value: Awaited<ReturnType<typeof getDeveloperKioskSchoolData>> }>();
 
@@ -99,6 +99,13 @@ function boundedEvent(event: { id?: string; title?: string; start: Date; end: Da
     ...((event.calendarName ?? event.calendar) ? { calendar: String(event.calendarName ?? event.calendar).slice(0, 100) } : {}),
     ...(event.category ? { category: String(event.category).slice(0, 100) } : {}),
   };
+}
+
+function looksLikeAssignmentDeadline(name: string, start: Date, end: Date) {
+  const durationMs = Math.abs(end.getTime() - start.getTime());
+  const midnight = start.getHours() === 0 && start.getMinutes() === 0 && end.getHours() === 0 && end.getMinutes() === 0;
+  const deadlineWords = /assignment|journal|response|essay|draft|report|quiz|exam|test|homework|rpf|rfp|lesson|module|discussion|due/i.test(name);
+  return durationMs === 0 || (midnight && deadlineWords);
 }
 
 export async function getDeveloperKioskData(request?: Request, diagnostics?: KioskDiagnostics, authenticatedAccountId?: string) {
@@ -238,7 +245,11 @@ export async function getDeveloperKioskData(request?: Request, diagnostics?: Kio
       result.school = {
         connected,
         assignments: upcoming.slice(0, MAX_ASSIGNMENTS).map((item) => ({ id: item.id.slice(0, 160), title: item.title.slice(0, 240), due: item.dueAt!.toISOString(), ...(item.courseName ? { course: item.courseName.slice(0, 120) } : {}), completed: item.completionStatus === "completed" })),
-        classes: school.data.classes.filter((item) => item.end >= now).slice(0, 8).map((item) => ({ id: item.id, name: item.name, start: item.start.toISOString(), end: item.end.toISOString(), ...(item.location ? { location: item.location } : {}), ...(item.instructor ? { instructor: item.instructor } : {}) })),
+        classes: school.data.classes
+          .filter((item) => item.end >= now)
+          .filter((item) => !looksLikeAssignmentDeadline(item.name, item.start, item.end))
+          .slice(0, 24)
+          .map((item) => ({ id: item.id, name: item.name, start: item.start.toISOString(), end: item.end.toISOString(), ...(item.location ? { location: item.location } : {}), ...(item.instructor ? { instructor: item.instructor } : {}) })),
         overdueCount,
         sceneState: overdueCount > 0 ? "overdue" : nextDue ? (nextDue.getTime() - now.getTime() <= urgentHours * 60 * 60 * 1000 ? "urgent" : "upcoming") : "clear",
         ...(school.error ? { error: "School data temporarily unavailable." } : {}),
