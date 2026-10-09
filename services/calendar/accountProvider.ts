@@ -27,7 +27,13 @@ async function getAccountSubscriptions(userId: string): Promise<CalendarSubscrip
   const subscriptions = await Promise.all(connections.map(async (connection) => {
     const credentials = await getProviderCredentials<{ url?: string; category?: CalendarSubscription["category"]; priority?: CalendarSubscription["priority"] }>(userId, connection.id);
     if (!credentials?.url || !connection.displayName) return null;
-    return { id: connection.id, name: connection.displayName, url: credentials.url, enabled: true, category: credentials.category, priority: credentials.priority ?? "normal" } satisfies CalendarSubscription;
+    const legacyName = connection.displayName.trim().toLowerCase();
+    const legacySports = new Set(["f1", "formula 1", "angels", "laa", "nascar", "packers", "usu football"]);
+    const category: CalendarSubscription["category"] =
+      legacySports.has(legacyName) ? "sports" :
+      legacyName === "canvas" ? "school" :
+      credentials.category ?? "personal";
+    return { id: connection.id, name: connection.displayName, url: credentials.url, enabled: true, category, priority: credentials.priority ?? "normal" } satisfies CalendarSubscription;
   }));
   return subscriptions.flatMap((subscription) => subscription ? [subscription] : []);
 }
