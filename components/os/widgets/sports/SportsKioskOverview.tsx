@@ -20,7 +20,7 @@ const FAVORITES = [
 function activeEvent(event: SportsEvent) { return !["final","cancelled","postponed"].includes(event.status) && (event.status === "live" || event.start.getTime() >= Date.now() - 60_000); }
 const UTAH_STATE_2026 = [
   ["2026-10-10T01:00:00Z","Washington State Cougars","home","The CW","Maverik Stadium"],
-  ["2026-10-25T00:30:00Z","Texas State Bobcats","away","CBS Sports Network","UFCU Stadium"],
+  ["2026-10-24T23:30:00Z","Texas State Bobcats","away","CBS Sports Network","UFCU Stadium"],
   ["2026-10-31T19:30:00Z","Colorado State Rams","home","USA Network","Maverik Stadium"],
   ["2026-11-08T02:30:00Z","Fresno State Bulldogs","home","USA Network","Maverik Stadium"],
   ["2026-11-15T02:30:00Z","San Diego State Aztecs","away","USA Network","Snapdragon Stadium"],
