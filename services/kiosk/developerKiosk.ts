@@ -17,7 +17,7 @@ import type { NotesLocalData } from "@/core/contracts/Notes";
 import type { ProjectsLocalData } from "@/core/contracts/Projects";
 
 const DEFAULT_HOST = "dev.cosmicpudge.shop";
-const MAX_EVENTS = 8;
+const MAX_EVENTS = 24;
 const MAX_ASSIGNMENTS = 8;
 const KIOSK_DATA_PROVIDER_TIMEOUT_MS = 10_000;
 const schoolCache = new Map<string, { expiresAt: number; value: Awaited<ReturnType<typeof getDeveloperKioskSchoolData>> }>();
@@ -88,7 +88,7 @@ function kioskLocation(request?: Request) {
   return { lat: resolved.latitude, lon: resolved.longitude, label: resolved.city ?? process.env.COSMIC_KIOSK_LOCATION_LABEL?.trim() ?? "Kiosk location", source: resolved.source, stale: resolved.stale };
 }
 
-function boundedEvent(event: { id?: string; title?: string; start: Date; end: Date; allDay?: boolean; location?: string; calendar?: string; category?: CalendarEvent["category"] }) {
+function boundedEvent(event: { id?: string; title?: string; start: Date; end: Date; allDay?: boolean; location?: string; calendar?: string; calendarName?: string; category?: CalendarEvent["category"] }) {
   return {
     id: String(event.id ?? crypto.randomUUID()).slice(0, 160),
     title: String(event.title ?? "Untitled event").slice(0, 240),
@@ -96,7 +96,7 @@ function boundedEvent(event: { id?: string; title?: string; start: Date; end: Da
     end: event.end.toISOString(),
     allDay: Boolean(event.allDay),
     ...(event.location ? { location: String(event.location).slice(0, 160) } : {}),
-    ...(event.calendar ? { calendar: String(event.calendar).slice(0, 100) } : {}),
+    ...((event.calendarName ?? event.calendar) ? { calendar: String(event.calendarName ?? event.calendar).slice(0, 100) } : {}),
     ...(event.category ? { category: String(event.category).slice(0, 100) } : {}),
   };
 }
