@@ -19,9 +19,9 @@ export default function KioskCalendarScene({ calendar, loading, error }: Props) 
   const now = tick === null ? new Date() : new Date(tick);
   const timeZone = calendar?.timeZone;
   const events = [...(calendar?.today ?? []), ...(calendar?.upcoming ?? [])]
-    .filter((event, index, list) => list.findIndex((item) => item.id === event.id) === index)
-    .filter((event) => event.end > now)
     .filter(isPersonalKioskEvent)
+    .filter((event, index, list) => list.findIndex((item) => personalEventKey(item) === personalEventKey(event)) === index)
+    .filter((event) => event.end > now)
     .sort(byStart)
     .slice(0, 6);
 
@@ -152,9 +152,20 @@ function eventDayLabel(event: CalendarEvent, now: Date, timeZone?: string) {
   return formatDate(event.start, { weekday: "short", month: "short", day: "numeric" }, timeZone).toUpperCase();
 }
 
+const PERSONAL_KIOSK_CALENDARS = new Set(["n/a", "work", "school", "cosmic ai"]);
+
+function normalizeCalendarName(value: string | undefined) {
+  const name = (value ?? "").trim().toLowerCase().replace(/\\s+/g, " ");
+  // Some Apple Calendar integrations expose the work calendar under its full name.
+  return name === "stetson work" ? "work" : name === "not available" ? "n/a" : name;
+}
+
 function isPersonalKioskEvent(event: CalendarEvent) {
-  const name = (event.calendarName ?? "").trim().toLowerCase();
-  return name !== "canvas" && !name.startsWith("canvas ");
+  return PERSONAL_KIOSK_CALENDARS.has(normalizeCalendarName(event.calendarName));
+}
+
+function personalEventKey(event: CalendarEvent) {
+  return [normalizeCalendarName(event.calendarName), event.title.trim().toLowerCase(), event.start.getTime(), event.end.getTime(), event.allDay ? "all-day" : "timed"].join("|");
 }
 
 function calendarAccent(event: CalendarEvent) {
