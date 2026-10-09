@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { CarFront, FileText, Fuel, Gauge, ListChecks, Settings2, Wrench } from "lucide-react";
+import { CarFront, FileText, Fuel, Gauge, ListChecks, Settings2, Wrench, CircleDot, Droplets, Cog } from "lucide-react";
 import { useClockTick } from "@/hooks/os/useClock";
 import useWeather from "@/hooks/os/useWeather";
 import { useDeveloperKioskData } from "@/hooks/os/useDeveloperKioskData";
@@ -37,11 +37,11 @@ export default function CosmosGarageKioskScene() {
       <div className="mt-[3.4vh] grid min-h-0 flex-1 grid-cols-[1.05fr_.94fr_.74fr] grid-rows-[.62fr_1.15fr_.83fr] gap-[1.35vw]">
         <Glass className="row-span-2 p-[1.7vw]">
           <div className="flex items-center justify-between"><Label>{vehicle ? vehicle.year + " " + vehicle.make + " " + vehicle.model + (vehicle.trim ? " " + vehicle.trim : "") : "SELECTED VEHICLE"}</Label><span className="flex items-center gap-2 text-[clamp(.55rem,.85vw,.8rem)] tracking-[.25em] text-white/65"><i className={"h-2 w-2 rounded-full " + (connection ? "bg-emerald-400 shadow-[0_0_10px_rgba(74,222,128,.9)]" : "bg-white/30")}/>{connection ? "ONLINE" : "LOCAL"}</span></div>
-          <div className="flex min-h-0 flex-1 items-center justify-center py-[1vh]"><CarFront strokeWidth={.75} className="h-[15vh] w-[19vw] text-white/80 drop-shadow-[0_10px_25px_rgba(0,0,0,.65)]"/></div>
+          <div className="relative flex min-h-0 flex-1 items-center justify-center py-[1vh]"><div className="absolute h-[10vh] w-[22vw] rounded-[50%] bg-sky-300/10 blur-3xl"/><div className="relative flex h-[16vh] w-[22vw] items-center justify-center rounded-[50%] border-b border-sky-200/15 bg-[radial-gradient(ellipse_at_center,rgba(148,196,225,.16),transparent_68%)]"><CarFront strokeWidth={.55} className="h-[13vh] w-[18vw] text-slate-100/90 drop-shadow-[0_12px_20px_rgba(0,0,0,.8)]"/><span className="absolute bottom-1 text-[9px] tracking-[.35em] text-sky-100/35">2003 CIVIC</span></div></div>
           <div className="grid grid-cols-3 divide-x divide-white/20 text-center">
             <Metric value={displayedMileage !== undefined ? "~" + displayedMileage.toLocaleString() : "—"} label="Miles"/>
-            <Metric value={engine || vehicle?.vinSpecifications?.fuelType || "—"} label="Engine"/>
-            <Metric value={transmission || "—"} label="Transmission"/>
+            <Metric value={engine || (vehicle ? "1.7L" : "—")} label="Engine"/>
+            <Metric value={transmission ? (transmission.startsWith("Temporary") ? "Temporary" : transmission) : "—"} label={transmission?.startsWith("Temporary") ? "~300k mi transmission" : "Transmission"}/>
           </div>
         </Glass>
         <Glass className="col-span-2 p-[1.55vw]">
@@ -54,7 +54,7 @@ export default function CosmosGarageKioskScene() {
         </Glass>
         <Glass className="p-[1.45vw]">
           <Label>QUICK ACTIONS</Label>
-          <div className="mt-[1.5vh] grid grid-cols-2 gap-[.8vw]"><Action icon={<FileText/>} label="Service Log"/><Action icon={<ListChecks/>} label="Parts List"/><Action icon={<Wrench/>} label="Mod Plans"/><Action icon={<Settings2/>} label="Troubleshooting"/></div>
+          <div className="mt-[1.5vh] grid flex-1 grid-cols-4 gap-[.8vw]"><Action icon={<FileText/>} label="Service Log"/><Action icon={<ListChecks/>} label="Parts List"/><Action icon={<Wrench/>} label="Mod Plans"/><Action icon={<Settings2/>} label="Troubleshooting"/></div>
         </Glass>
         <Glass className="col-span-2 p-[1.45vw]">
           <div className="flex items-center justify-between"><Label>GARAGE STATUS</Label><span className="text-xs text-white/40">{vehicle?.nickname ?? "No vehicle"}</span></div>
@@ -77,8 +77,8 @@ function Header({now,weather,location}:{now:number|null;weather:{temp:number;con
 function Glass({children,className=""}:{children:ReactNode;className?:string}){return <div className={"flex min-h-0 flex-col overflow-hidden rounded-[1.45vw] border border-white/20 bg-[linear-gradient(135deg,rgba(18,22,31,.73),rgba(7,11,20,.60))] shadow-[inset_0_1px_0_rgba(255,255,255,.14),0_16px_45px_rgba(0,0,0,.28)] backdrop-blur-2xl " + className}>{children}</div>}
 function Label({children}:{children:ReactNode}){return <p className="text-[clamp(.55rem,.82vw,.78rem)] tracking-[.29em] text-white/72">{children}</p>}
 function Metric({value,label}:{value:string;label:string}){return <div className="px-2"><p className="truncate text-[clamp(.8rem,1.4vw,1.35rem)] font-medium">{value}</p><p className="mt-1 text-xs text-white/48">{label}</p></div>}
-function MaintenanceRow({name,status,due}:{name:string;status:string;due?:string}){const width=status==="overdue"?"24%":status==="dueSoon"?"55%":status==="upcoming"?"82%":"92%";return <div className="grid grid-cols-[1fr_.75fr] items-center gap-3 py-[.65vh]"><div className="min-w-0"><p className="truncate text-sm">{name}</p><p className="truncate text-[11px] text-white/45">{status==="overdue"?"Overdue":status==="dueSoon"?"Check soon":status==="upcoming"?"Good":"Not scheduled"}{due?" · "+due:""}</p></div><div className="h-1.5 overflow-hidden rounded-full bg-white/12"><div className={"h-full rounded-full "+(status==="overdue"?"bg-rose-400":status==="dueSoon"?"bg-amber-300":"bg-emerald-400")} style={{width}}/></div></div>}
-function Action({icon,label}:{icon:ReactNode;label:string}){return <div className="flex min-w-0 flex-col items-center justify-center rounded-xl border border-white/15 bg-white/[.035] px-1 py-[.8vh] text-center [&_svg]:h-5 [&_svg]:w-5"><div className="mb-1 text-white/85">{icon}</div><span className="text-[clamp(.5rem,.65vw,.65rem)] text-white/75">{label}</span></div>}
+function MaintenanceRow({name,status,due}:{name:string;status:string;due?:string}){const Icon=name==="Timing Belt"?Cog:name==="Water Pump"?Droplets:name==="Transmission"?Settings2:CircleDot;const width=status==="overdue"?"24%":status==="dueSoon"?"55%":status==="upcoming"?"82%":"92%";return <div className="grid grid-cols-[1.15fr_.75fr] items-center gap-3 py-[.65vh]"><div className="flex min-w-0 items-center gap-3"><Icon className="h-5 w-5 shrink-0 text-white/75"/><div className="min-w-0"><p className="truncate text-sm">{name}</p><p className="truncate text-[11px] text-white/45">{status==="overdue"?"Overdue":status==="dueSoon"?"Check soon":status==="upcoming"?"Good":"Not scheduled"}{due?" · "+due:""}</p></div></div><div className="h-1.5 overflow-hidden rounded-full bg-white/12"><div className={"h-full rounded-full "+(status==="overdue"?"bg-rose-400":status==="dueSoon"?"bg-amber-300":"bg-emerald-400")} style={{width}}/></div></div>}
+function Action({icon,label}:{icon:ReactNode;label:string}){return <div className="flex min-w-0 flex-col items-center justify-center rounded-xl border border-white/15 bg-white/[.035] px-1 py-[1.2vh] text-center [&_svg]:h-5 [&_svg]:w-5"><div className="mb-1 text-white/85">{icon}</div><span className="text-[clamp(.5rem,.65vw,.65rem)] text-white/75">{label}</span></div>}
 function Status({icon,value,label}:{icon:ReactNode;value:string;label:string}){return <div className="flex min-w-0 items-center gap-2 rounded-xl bg-white/[.035] p-[.8vw] [&_svg]:h-5 [&_svg]:w-5"><div className="text-sky-200/80">{icon}</div><div className="min-w-0"><p className="truncate text-sm font-medium">{value}</p><p className="truncate text-[10px] text-white/42">{label}</p></div></div>}
 function rank(status:string){return status==="overdue"?0:status==="dueSoon"?1:status==="upcoming"?2:3}
 function dueText(delta:number){return delta<0?Math.abs(delta).toLocaleString()+" mi overdue":delta.toLocaleString()+" mi"}
