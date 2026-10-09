@@ -17,7 +17,7 @@ export default function CosmosGarageKioskScene() {
   const location = developer.data?.location?.label ?? (weather?.city && weather.city !== "Current location" ? weather.city : TEMPORARY_KIOSK_LOCATION.label);
   const kioskGarage = developer.data?.garage;
   const localVehicle = garage.selectedVehicle;
-  const vehicle = localVehicle ?? (kioskGarage?.vehicle ? { id: kioskGarage.vehicle.id, nickname: kioskGarage.vehicle.nickname, year: 2003, make: "Honda", model: "Civic", trim: undefined, currentMileage: kioskGarage.vehicle.mileage, status: kioskGarage.vehicle.status } : undefined);
+  const vehicle = localVehicle ?? (kioskGarage?.vehicle ? { id: kioskGarage.vehicle.id, nickname: kioskGarage.vehicle.nickname, year: 2003, make: "Honda", model: "Civic", trim: undefined, currentMileage: kioskGarage.vehicle.mileage, status: kioskGarage.vehicle.status } : { id: "known-civic", nickname: "Civic", year: 2003, make: "Honda", model: "Civic", trim: undefined, currentMileage: 150_000, status: "active" });
   const summary = garage.summary;
   const telemetry = vehicle ? garage.data.telemetrySnapshots.filter((item) => item.vehicleId === vehicle.id).sort((a,b)=>b.timestamp.localeCompare(a.timestamp))[0] : undefined;
   const connection = vehicle ? garage.data.connections.find((item) => item.vehicleId === vehicle.id && item.status === "connected") : undefined;
