@@ -105,6 +105,8 @@ function KioskWeatherScene({
 }) {
   const now = useClockTick(30_000);
   const isDay = scene.id.endsWith("day") || (weather !== null && weather.daylightProgress > 0 && weather.daylightProgress < 100);
+  // Provider entries may start hours ahead (for example 7 PM at 1 PM).
+  // Never relabel a future forecast entry as current conditions.
   const forecast = weather?.hourlyForecast.slice(0, 6) ?? [];
   const currentHour = now !== null ? new Date(now).getHours() : new Date().getHours();
   const location = locationLabel ?? (weather?.city && weather.city !== "Current location" ? weather.city : TEMPORARY_KIOSK_LOCATION.label);
@@ -165,7 +167,7 @@ function KioskWeatherScene({
             <div className="cosmos-kiosk-weather-hourly-grid">
               {forecast.map((hour, index) => (
                 <div className="cosmos-kiosk-weather-hour" key={`${hour.time}-${index}`}>
-                  <p>{index === 0 ? "Now" : hour.time}</p>
+                  <p>{hour.time}</p>
                   <WeatherIcon
                     condition={mapWeatherCondition(hour.icon)}
                     isDay={hourIsDay(hour.icon, currentHour + index)}
