@@ -60,6 +60,12 @@ export async function getDeveloperKioskSession(request: Request): Promise<Develo
       const localSession = await getCurrentCosmicSession(request, { allowUser: true, allowDevice: true });
       return localSession ? { status: "authenticated", session: localSession } : { status: "unauthorized", diagnostics: classifyKioskAuth({ cookiePresent: false, sessionFound: false, sessionKind: "none", bootBound: false, bootMatch: false }) };
     }
+    // Signed-in desktop previews on the dev hostname may use a user session.
+    // Boot-bound Raspberry Pi sessions continue through strict device auth.
+    if (host === "dev.cosmicpudge.shop" && !kioskBootId(request)) {
+      const browserSession = await getCurrentCosmicSession(request, { allowUser: true, allowDevice: false });
+      if (browserSession) return { status: "authenticated", session: browserSession };
+    }
     const inspected = await readDeveloperKioskAuth(request);
     const session = await getCurrentCosmicSession(request, { allowUser: false, allowDevice: true, bootId: kioskBootId(request) });
     if (inspected.debug.authResult !== "ok") return { status: "unauthorized", diagnostics: inspected.debug };
