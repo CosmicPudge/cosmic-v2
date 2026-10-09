@@ -102,7 +102,7 @@ export default function SportsKioskOverview() {
     <div className="absolute inset-0 bg-[radial-gradient(circle_at_48%_28%,rgba(139,44,255,.18),transparent_38%)]" />
     <div className="relative z-10 flex h-full min-h-0 flex-col overflow-hidden px-[3.2vw] pb-[3.8vh] pt-[4.5vh]">
       <div className="text-[clamp(.65rem,1.15vw,1.1rem)] font-semibold uppercase tracking-[.35em]">COSMOS <span className="text-violet-500">•</span> <span className="font-normal text-white/65">SPORTS</span></div>
-      <h1 className={`mt-[5vh] text-[clamp(3rem,6.3vw,6.2rem)] font-black leading-[.88] tracking-[-.055em] ${packersGameDay ? "cosmos-kiosk-packers-gameday-title" : "drop-shadow-[0_0_22px_rgba(174,91,255,.5)]"}`}>{headline(primary)}</h1>
+      <h1 className={`mt-[5vh] text-[clamp(3rem,6.3vw,6.2rem)] font-black leading-[.88] tracking-[-.055em] ${packersGameDay ? "cosmos-kiosk-packers-gameday-title" : "drop-shadow-[0_0_22px_rgba(174,91,255,.5)]"}`}>{packersHeadline(primary, packersGameDay)}</h1>
       <p className="mt-3 text-[clamp(1.25rem,2.4vw,2.35rem)] font-light">{dateLine(now)}</p>
 
       <div className="mt-[4.5vh] grid min-h-0 flex-1 grid-cols-[2.1fr_.95fr] gap-[1.2vw]">
@@ -180,6 +180,14 @@ function CategoryMark({label}:{label:string}) {
  if(key.includes("formula")) return <b className="text-base italic text-red-500">F1</b>;
  if(key.includes("nascar")) return <b className="text-sm italic text-orange-400">NASCAR</b>;
  return <span className="text-violet-300">◉</span>;
+}
+function packersHeadline(event: SportsEvent | undefined, gameDay: boolean) {
+  if (!event || event.sport !== "nfl" || !/green bay|packers/i.test(`${event.title} ${event.homeTeam?.name ?? ""} ${event.awayTeam?.name ?? ""}`)) return headline(event);
+  if (gameDay) return "Packers Game Day";
+  const days = Math.ceil((event.start.getTime() - Date.now()) / 86_400_000);
+  if (days === 1) return "Packers Tomorrow";
+  if (days > 1 && days <= 7) return "Packers Up Next";
+  return "Packers Up Next";
 }
 function headline(event?: SportsEvent) { if (!event) return "Sports"; const text=`${event.homeTeam?.name ?? ""} ${event.awayTeam?.name ?? ""} ${event.title}`.toLowerCase(); if(text.includes("packers")) return "Packers Game Day"; if(text.includes("angels")) return "Angels Game Day"; if(event.sport==="f1") return "Formula 1"; if(event.sport==="nascar") return "NASCAR"; if(event.sport==="college-football") return "College Football"; return "Game Day"; }
 function sportIcon(event: SportsEvent) { return event.sport==="nfl"||event.sport==="college-football"?"◉":event.sport==="mlb"?"◌":event.sport==="f1"?"F1":"◆"; }
