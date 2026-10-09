@@ -3106,3 +3106,27 @@ html[data-cosmic-kiosk="true"] button, html[data-cosmic-kiosk="true"] a, html[da
           drop-shadow(0 0 10px rgba(255,182,18,.34))
           drop-shadow(0 0 24px rgba(32,55,49,.7));
 }
+
+
+/* Sports hero is driven by whichever followed event is next/live. */
+[data-kiosk-rebuild="sports"][data-sports-hero] {
+  --kiosk-glass-edge: color-mix(in srgb, var(--sports-accent-2) 38%, rgba(196,160,255,.42));
+  --kiosk-glass-shadow: color-mix(in srgb, var(--sports-accent) 26%, rgba(35,10,78,.30));
+}
+[data-kiosk-rebuild="sports"][data-sports-hero] :is([class*="rounded-"][class*="border"],[class*="backdrop-blur"]) {
+  background-image: linear-gradient(135deg,
+    color-mix(in srgb, var(--sports-accent-2) 10%, rgba(255,255,255,.08)),
+    color-mix(in srgb, var(--sports-accent) 22%, rgba(16,7,35,.52)) 48%,
+    rgba(9,3,22,.62));
+}
+[data-kiosk-rebuild="sports"][data-sports-hero="redbull"] h1,
+[data-kiosk-rebuild="sports"][data-sports-hero="usu"] h1,
+[data-kiosk-rebuild="sports"][data-sports-hero="utah"] h1,
+[data-kiosk-rebuild="sports"][data-sports-hero="angels"] h1,
+[data-kiosk-rebuild="sports"][data-sports-hero="nascar"] h1 {
+  color: transparent;
+  background: linear-gradient(180deg,#fff 0%,#fff 12%,var(--sports-accent-2) 38%,var(--sports-accent) 72%,var(--sports-accent-2) 100%);
+  -webkit-background-clip:text;background-clip:text;
+  filter: drop-shadow(0 0 12px color-mix(in srgb,var(--sports-accent-2) 36%,transparent))
+          drop-shadow(0 0 26px color-mix(in srgb,var(--sports-accent) 46%,transparent));
+}
