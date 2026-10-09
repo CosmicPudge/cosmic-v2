@@ -2935,3 +2935,43 @@ html[data-cosmic-kiosk="true"] button, html[data-cosmic-kiosk="true"] a, html[da
 .cosmic-school-nav-active { border-color: rgba(165,243,252,.24) !important; background: rgba(165,243,252,.1) !important; color: #ecfeff !important; }
 .cosmic-school-mobile-link { color: rgba(255,255,255,.55); transition: background-color 180ms ease, color 180ms ease, border-color 180ms ease; }
 .cosmic-school-mobile-link:hover { border-color: rgba(165,243,252,.25); background: rgba(165,243,252,.08); color: white; }
+
+
+/* M3 calendar source/day accents */
+.cosmos-kiosk-calendar-event {
+  border-left-color: color-mix(in srgb, var(--calendar-accent, #a855f7) 72%, transparent);
+}
+.cosmos-kiosk-calendar-event.is-next {
+  box-shadow: inset 3px 0 0 var(--calendar-accent, #a855f7);
+}
+.cosmos-kiosk-calendar-icon {
+  border-color: color-mix(in srgb, var(--calendar-accent, #a855f7) 42%, transparent);
+  background: color-mix(in srgb, var(--calendar-accent, #a855f7) 18%, rgba(9,7,31,.72));
+  color: color-mix(in srgb, var(--calendar-accent, #a855f7) 72%, white);
+}
+.cosmos-kiosk-calendar-source {
+  border-color: color-mix(in srgb, var(--calendar-accent, #a855f7) 42%, transparent);
+  background: color-mix(in srgb, var(--calendar-accent, #a855f7) 17%, rgba(9,7,31,.72));
+  color: color-mix(in srgb, var(--calendar-accent, #a855f7) 62%, white);
+}
+.cosmos-kiosk-calendar-event-kicker {
+  display: flex;
+  align-items: center;
+  gap: .42rem;
+  margin-bottom: .18rem;
+}
+.cosmos-kiosk-calendar-event-day {
+  color: color-mix(in srgb, var(--calendar-accent, #a855f7) 66%, white);
+  font-size: .58rem;
+  font-weight: 750;
+  letter-spacing: .08em;
+}
+.cosmos-kiosk-calendar-next-pill {
+  margin-bottom: 0;
+  background: var(--calendar-accent, #8b5cf6);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--calendar-accent, #8b5cf6) 60%, transparent);
+}
+@media (orientation: landscape) and (max-width: 900px) and (max-height: 520px) {
+  .cosmos-kiosk-calendar-event-kicker { gap: .28rem; margin-bottom: .06rem; }
+  .cosmos-kiosk-calendar-event-day { font-size: .4rem; }
+}
