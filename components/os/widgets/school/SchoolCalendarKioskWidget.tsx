@@ -14,12 +14,13 @@ export default function SchoolCalendarKioskWidget() {
   const school = kiosk.data?.school;
   const classes = [...(school?.classes ?? [])]
     .filter((item) => new Date(item.end) >= now)
+    .filter((item) => new Date(item.start).getTime() <= now.getTime() + 7 * 86_400_000)
     .sort((a,b) => +new Date(a.start) - +new Date(b.start))
     .slice(0,6);
   const assignments = [...(school?.assignments ?? [])]
     .filter((item) => !item.completed && new Date(item.due) >= now)
-    .sort((a,b) => +new Date(a.due) - +new Date(b.due))
-    .slice(0,3);
+    .filter((item) => new Date(item.due).getTime() <= now.getTime() + 7 * 86_400_000)
+    .sort((a,b) => +new Date(a.due) - +new Date(b.due));
 
   return <section className="cosmos-kiosk-school-calendar">
     <div className="cosmos-kiosk-school-bg" aria-hidden="true" />
@@ -51,7 +52,7 @@ function ClassRow({item,next}:{item:SchoolClass;next:boolean}) {
   const meta=classMeta(item.name);
   const Icon=meta.icon;
   return <article className={"cosmos-kiosk-school-class "+(next?"is-next":"")}>
-    <div className="cosmos-kiosk-school-time"><strong>{start.toLocaleTimeString([], {hour:"numeric",minute:"2-digit"})}</strong><span>– {end.toLocaleTimeString([], {hour:"numeric",minute:"2-digit"})}</span></div>
+    <div className="cosmos-kiosk-school-time"><em>{dayLabel(start)}</em><strong>{start.toLocaleTimeString([], {hour:"numeric",minute:"2-digit"})}</strong><span>– {end.toLocaleTimeString([], {hour:"numeric",minute:"2-digit"})}</span></div>
     <div className="cosmos-kiosk-school-icon"><Icon size={26} strokeWidth={1.8}/></div>
     <div className="cosmos-kiosk-school-class-main">{next?<span className="cosmos-kiosk-school-next">UP NEXT</span>:null}<h2>{item.name}</h2><p><MapPin size={16}/>{item.location || item.instructor || "Campus"}</p></div>
     <span className={"cosmos-kiosk-school-type "+meta.kind}>{meta.label}</span>
@@ -74,6 +75,15 @@ function MiniMonth({now,classes,assignments}:{now:Date;classes:SchoolClass[];ass
   const marked=new Set([...classes.map(x=>new Date(x.start)),...assignments.map(x=>new Date(x.due))].filter(d=>d.getMonth()===month).map(d=>d.getDate()));
   const cells=Array.from({length:42},(_,i)=>{const d=i-lead+1;return d<1?{d:prev+d,m:true}:d>dim?{d:d-dim,m:true}:{d,m:false}});
   return <section className="cosmos-kiosk-school-month"><h2>{now.toLocaleDateString([], {month:"long",year:"numeric"})}</h2><div className="cosmos-kiosk-school-weekdays">{["SUN","MON","TUE","WED","THU","FRI","SAT"].map(x=><span key={x}>{x}</span>)}</div><div className="cosmos-kiosk-school-days">{cells.map((c,i)=><span key={i} className={(c.m?"muted ":"") + (!c.m&&c.d===today?"today ":"") + (!c.m&&marked.has(c.d)?"marked":"")}>{c.d}</span>)}</div></section>;
+}
+
+function dayLabel(value:Date) {
+  const today=new Date(); today.setHours(0,0,0,0);
+  const day=new Date(value); day.setHours(0,0,0,0);
+  const delta=Math.round((day.getTime()-today.getTime())/86_400_000);
+  if(delta===0) return "TODAY";
+  if(delta===1) return "TOMORROW";
+  return value.toLocaleDateString([], {weekday:"short",month:"short",day:"numeric"}).toUpperCase();
 }
 
 function classMeta(name:string) {
