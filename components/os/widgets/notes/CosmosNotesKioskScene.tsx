@@ -13,16 +13,16 @@ export default function CosmosNotesKioskScene() {
   const local = useNotes();
   const kiosk = useDeveloperKioskData();
   const localNotes: DisplayNote[] = local.notes.filter(n=>!n.archived).slice(0,4);
-  const synced = kiosk.data?.notes?.recent;
-  const notes: DisplayNote[] = localNotes.length ? localNotes : synced ? [{
-    id:synced.id,title:synced.title,body:synced.body,tags:[],pinned:synced.pinned,updatedAt:synced.updatedAt
-  }] : [];
+  const synced = kiosk.data?.notes?.items ?? [];
+  const notes: DisplayNote[] = localNotes.length ? localNotes : synced;
   const date = now ? new Date(now) : null;
 
   return <section data-kiosk-rebuild="notes" className="relative h-full w-full select-none overflow-hidden bg-[#090317] text-white">
     <div className="absolute inset-0 bg-[radial-gradient(circle_at_78%_18%,rgba(168,85,247,.58),transparent_23%),radial-gradient(circle_at_62%_50%,rgba(74,35,170,.44),transparent_34%),radial-gradient(circle_at_18%_88%,rgba(103,30,170,.28),transparent_30%),linear-gradient(145deg,#05020d_0%,#11052b_46%,#250751_72%,#07020f_100%)]"/>
     <div className="absolute -right-[5vw] top-[11vh] h-[40vw] w-[70vw] rounded-[50%] border-t border-violet-200/70 bg-[radial-gradient(ellipse_at_55%_8%,rgba(190,130,255,.8),rgba(87,42,176,.38)_16%,rgba(20,7,55,.92)_49%,rgba(7,2,19,.98)_72%)] shadow-[0_-8px_35px_rgba(210,150,255,.58),0_-2px_8px_rgba(255,255,255,.8)]"/>
-    <div className="absolute inset-0 opacity-70 [background-image:radial-gradient(circle,rgba(255,255,255,.9)_0_1px,transparent_1.4px)] [background-size:53px_47px]"/>
+    <div className="absolute inset-0 opacity-75 [background-image:radial-gradient(circle_at_18%_20%,rgba(255,255,255,.95)_0_1px,transparent_1.6px),radial-gradient(circle_at_70%_42%,rgba(216,180,254,.9)_0_1px,transparent_1.5px),radial-gradient(circle_at_40%_80%,rgba(147,197,253,.8)_0_1px,transparent_1.5px)] [background-size:71px_59px,97px_83px,131px_109px]"/>
+    <div className="absolute left-[24vw] top-[-9vh] h-[28vh] w-[50vw] rotate-[-8deg] rounded-[50%] bg-fuchsia-500/18 blur-[55px]"/>
+    <div className="absolute right-[4vw] top-[1vh] h-[19vh] w-[32vw] rounded-[50%] bg-violet-400/20 blur-[45px]"/>
     <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(5,2,14,.06),rgba(5,2,14,.28))]"/>
 
     <div className="relative z-10 flex h-full flex-col px-[3.8vw] py-[4.2vh]">
