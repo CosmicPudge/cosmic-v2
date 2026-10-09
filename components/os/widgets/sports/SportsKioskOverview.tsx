@@ -12,7 +12,7 @@ import SportsTeamLogo from "@/components/apps/sports/SportsTeamLogo";
 const FAVORITES = [
   { key: "nfl", label: "Green Bay Packers", match: (event: SportsEvent) => event.sport === "nfl" && /packers|green bay/i.test(event.title + " " + event.homeTeam?.name + " " + event.awayTeam?.name) },
   { key: "mlb", label: "Los Angeles Angels", match: (event: SportsEvent) => event.sport === "mlb" && /angels/i.test(event.title + " " + event.homeTeam?.name + " " + event.awayTeam?.name) },
-  { key: "f1", label: "Formula 1", match: (event: SportsEvent) => event.sport === "formula1" },
+  { key: "f1", label: "Formula 1", match: (event: SportsEvent) => event.sport === "f1" },
   { key: "nascar", label: "NASCAR", match: (event: SportsEvent) => event.sport === "nascar" },
   { key: "usu", label: "Utah State", match: (event: SportsEvent) => event.sport === "college-football" && /utah state|aggies/i.test(event.title + " " + event.homeTeam?.name + " " + event.awayTeam?.name) },
   { key: "utah", label: "Utah Utes", match: (event: SportsEvent) => event.sport === "college-football" && /\butah\b|utes/i.test(event.title + " " + event.homeTeam?.name + " " + event.awayTeam?.name) && !/utah state/i.test(event.title + " " + event.homeTeam?.name + " " + event.awayTeam?.name) },
@@ -140,10 +140,10 @@ function EventHero({ event, loading }: { event?: SportsEvent; loading: boolean }
   const view = normalizeKioskSportsEvent(event)!;
   return <article className="relative overflow-hidden rounded-[1.6vw] border border-violet-400/55 bg-[linear-gradient(110deg,rgba(17,7,38,.9),rgba(17,7,38,.62))] px-[2.2vw] py-[2.2vh] shadow-[0_0_24px_rgba(124,58,237,.18)] backdrop-blur-md">
     <div className="flex items-center justify-between text-[clamp(.72rem,1.1vw,1rem)] uppercase tracking-[.25em] text-violet-100"><span>{sportIcon(event)} &nbsp; {view.sportLabel}</span><span>{view.live ? "● LIVE" : (event.homeTeam?.name?.toLowerCase().includes("green bay") ? "⌂ HOME GAME" : view.eventType)}</span></div>
-    <div className={`grid h-[calc(100%-2rem)] items-center gap-[2vw] ${event.sport === "formula1" || event.sport === "nascar" ? "grid-cols-[1.35fr_1fr]" : "grid-cols-[1fr_auto_1fr]"}`}>
-      {event.sport === "formula1" || event.sport === "nascar" ? <MotorsportIdentity event={event} /> : <Team event={event} side="away" />}
+    <div className={`grid h-[calc(100%-2rem)] items-center gap-[2vw] ${event.sport === "f1" || event.sport === "nascar" ? "grid-cols-[1.35fr_1fr]" : "grid-cols-[1fr_auto_1fr]"}`}>
+      {event.sport === "f1" || event.sport === "nascar" ? <MotorsportIdentity event={event} /> : <Team event={event} side="away" />}
       <div className="min-w-[9rem] text-center"><span className="cosmos-sports-status-pill rounded-full px-5 py-2 text-xs font-black uppercase tracking-[.12em]">{view.live ? "Live" : event.status === "pregame" ? "Pregame" : "Up Next"}</span><p className="mt-4 text-[clamp(1.8rem,3vw,3.1rem)] font-black">{view.live ? score(event) : eventTime(event)}</p><p className="mt-1 text-[clamp(.8rem,1.1vw,1.1rem)] font-semibold cosmos-sports-accent-soft">{event.start.toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" })}</p><p className="mt-2 text-[clamp(.75rem,1vw,.95rem)] text-white/70">⌖ {view.venueName ?? "Venue TBA"}</p>{view.broadcaster ? <p className="mt-1 text-sm text-white/55">{view.broadcaster}</p> : null}</div>
-      {event.sport === "formula1" || event.sport === "nascar" ? null : <Team event={event} side="home" />}
+      {event.sport === "f1" || event.sport === "nascar" ? null : <Team event={event} side="home" />}
     </div>
   </article>;
 }
@@ -151,7 +151,7 @@ function EventHero({ event, loading }: { event?: SportsEvent; loading: boolean }
 function MotorsportIdentity({ event }: { event: SportsEvent }) {
   const view=normalizeKioskSportsEvent(event)!;
   const session=String(event.metadata?.eventName ?? event.title).replace(/^Singapore Airlines\s+/i,"");
-  return <div className="pr-[2vw]"><p className="text-[clamp(.75rem,1vw,.95rem)] font-bold uppercase tracking-[.22em] cosmos-sports-accent-soft">{event.sport==="formula1" ? "RED BULL RACING · F1" : "NASCAR"}</p><p className="mt-3 text-[clamp(1.7rem,3vw,3.2rem)] font-black uppercase leading-[.95]">{session}</p><p className="mt-3 text-[clamp(.8rem,1vw,1rem)] text-white/65">{view.venueName ?? view.venueLocation ?? "Venue TBA"}</p></div>;
+  return <div className="pr-[2vw]"><p className="text-[clamp(.75rem,1vw,.95rem)] font-bold uppercase tracking-[.22em] cosmos-sports-accent-soft">{event.sport==="f1" ? "RED BULL RACING · F1" : "NASCAR"}</p><p className="mt-3 text-[clamp(1.7rem,3vw,3.2rem)] font-black uppercase leading-[.95]">{session}</p><p className="mt-3 text-[clamp(.8rem,1vw,1rem)] text-white/65">{view.venueName ?? view.venueLocation ?? "Venue TBA"}</p></div>;
 }
 
 function Team({ event, side }: { event: SportsEvent; side: "home" | "away" }) {
@@ -202,7 +202,7 @@ function CategoryMark({label}:{label:string}) {
  return <span className="text-violet-300">◉</span>;
 }
 function sportLabel(sport: SportsEvent["sport"]) {
- if(sport==="formula1") return "FORMULA 1";
+ if(sport==="f1") return "FORMULA 1";
  if(sport==="college-football") return "COLLEGE FOOTBALL";
  if(sport==="mlb") return "MLB";
  if(sport==="nfl") return "NFL";
@@ -211,7 +211,7 @@ function sportLabel(sport: SportsEvent["sport"]) {
 }
 function heroTheme(event?: SportsEvent) {
  const text=`${event?.title ?? ""} ${event?.homeTeam?.name ?? ""} ${event?.awayTeam?.name ?? ""}`.toLowerCase();
- if(event?.sport==="formula1") return {key:"redbull",accent:"#1e41ff",accent2:"#e10600"};
+ if(event?.sport==="f1") return {key:"redbull",accent:"#1e41ff",accent2:"#e10600"};
  if(event?.sport==="college-football" && /utah state/.test(text)) return {key:"usu",accent:"#0f2439",accent2:"#8aa2b8"};
  if(event?.sport==="college-football" && /utah utes|kansas.*utah/.test(text)) return {key:"utah",accent:"#cc0000",accent2:"#ffffff"};
  if(event?.sport==="mlb" && /angels/.test(text)) return {key:"angels",accent:"#ba0021",accent2:"#003263"};
@@ -223,7 +223,7 @@ function smartHeadline(event: SportsEvent | undefined, packersGameDay: boolean) 
  if(!event) return "Your Sports";
  const text=`${event.title} ${event.homeTeam?.name ?? ""} ${event.awayTeam?.name ?? ""}`;
  if(event.sport==="nfl" && /green bay|packers/i.test(text)) return packersHeadline(event,packersGameDay);
- if(event.sport==="formula1") return `F1 at ${event.title.replace(/Grand Prix.*$/i,"Grand Prix").replace(/ ·.*$/,"")}`;
+ if(event.sport==="f1") return `F1 at ${event.title.replace(/Grand Prix.*$/i,"Grand Prix").replace(/ ·.*$/,"")}`;
  if(event.sport==="college-football" && /utah state/i.test(text)) return "Utah State Game Day";
  if(event.sport==="college-football" && /utah utes|kansas.*utah/i.test(text)) return "Utah Game Day";
  if(event.sport==="mlb" && /angels/i.test(text)) return "Angels Game Day";
@@ -238,8 +238,8 @@ function packersHeadline(event: SportsEvent | undefined, gameDay: boolean) {
   if (days > 1 && days <= 7) return "Packers Up Next";
   return "Packers Up Next";
 }
-function headline(event?: SportsEvent) { if (!event) return "Sports"; const text=`${event.homeTeam?.name ?? ""} ${event.awayTeam?.name ?? ""} ${event.title}`.toLowerCase(); if(text.includes("packers")) return "Packers Game Day"; if(text.includes("angels")) return "Angels Game Day"; if(event.sport==="formula1") return "Formula 1"; if(event.sport==="nascar") return "NASCAR"; if(event.sport==="college-football") return "College Football"; return "Game Day"; }
-function sportIcon(event: SportsEvent) { return event.sport==="nfl"||event.sport==="college-football"?"◉":event.sport==="mlb"?"◌":event.sport==="formula1"?"F1":"◆"; }
+function headline(event?: SportsEvent) { if (!event) return "Sports"; const text=`${event.homeTeam?.name ?? ""} ${event.awayTeam?.name ?? ""} ${event.title}`.toLowerCase(); if(text.includes("packers")) return "Packers Game Day"; if(text.includes("angels")) return "Angels Game Day"; if(event.sport==="f1") return "Formula 1"; if(event.sport==="nascar") return "NASCAR"; if(event.sport==="college-football") return "College Football"; return "Game Day"; }
+function sportIcon(event: SportsEvent) { return event.sport==="nfl"||event.sport==="college-football"?"◉":event.sport==="mlb"?"◌":event.sport==="f1"?"F1":"◆"; }
 function score(event: SportsEvent) { return event.awayTeam?.score !== undefined && event.homeTeam?.score !== undefined ? `${event.awayTeam.score} – ${event.homeTeam.score}` : "LIVE"; }
 function eventTime(event: SportsEvent) { return event.start.toLocaleString([], { weekday:"short", hour:"numeric", minute:"2-digit" }); }
 function dateLine(date: Date) { return `Today  |  ${date.toLocaleDateString([], { weekday:"long", month:"long", day:"numeric" })}`; }
@@ -248,7 +248,7 @@ function dynamicHeadlineStyle(event: SportsEvent | undefined, packersGameDay: bo
   if (packersGameDay) return {};
   const text = `${event?.title ?? ""} ${event?.homeTeam?.name ?? ""} ${event?.awayTeam?.name ?? ""}`.toLowerCase();
   let colors = ["#c4b5fd","#8b5cf6","#22d3ee"];
-  if (event?.sport === "formula1") colors = ["#1e3a8a","#ef4444","#f8fafc"]; // followed constructor: Red Bull
+  if (event?.sport === "f1") colors = ["#1e3a8a","#ef4444","#f8fafc"]; // followed constructor: Red Bull
   else if (event?.sport === "college-football" && text.includes("utah state")) colors = ["#ffffff","#94a3b8","#0f172a"];
   else if (event?.sport === "college-football" && (text.includes("utah utes") || text.includes("utah"))) colors = ["#cc0000","#ffffff","#7f1d1d"];
   else if (event?.sport === "mlb" && text.includes("angels")) colors = ["#ba0021","#ffffff","#003263"];
