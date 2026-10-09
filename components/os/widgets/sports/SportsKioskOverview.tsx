@@ -94,9 +94,20 @@ export default function SportsKioskOverview() {
   // only during an active race week; otherwise Utah takes it.
   const leftFeature = angels?.event && withinDays(angels.event,7) ? angels : usu;
   const rightFeature = f1?.event && withinDays(f1.event,7) ? f1 : utah;
-  const features = [leftFeature,rightFeature].filter((card) => Boolean(card) && card?.event?.id !== primary?.id);
+  const preferredFeatures = [leftFeature,rightFeature].filter((card) => Boolean(card) && card?.event?.id !== primary?.id);
+  // Always keep three distinct upcoming/live events visible when at least three exist.
+  // Fill any smart seasonal slot vacated by the hero with the next chronological event.
+  const upcomingPool = [...events, ...officialUsuSchedule(), ...officialUtahSchedule()]
+    .filter((event,index,array)=>array.findIndex((item)=>item.id===event.id)===index)
+    .filter((event)=>event.id!==primary?.id && (event.status==="live" || event.start.getTime()>=Date.now()-60_000))
+    .sort((a,b)=>a.start.getTime()-b.start.getTime());
+  const features = [...preferredFeatures];
+  for (const event of upcomingPool) {
+    if (features.length >= 2) break;
+    if (!features.some((card)=>card?.event?.id===event.id)) features.push({key:`auto-${event.id}`,label:sportLabel(event.sport),match:()=>false,event});
+  }
   const featureIds = new Set(features.map((card)=>card?.event?.id).filter(Boolean));
-  const allFollowed = [...events, ...officialUsuSchedule(), ...officialUtahSchedule()]
+  const allFollowed = upcomingPool
     .filter((event,index,array)=>array.findIndex((item)=>item.id===event.id)===index)
     .filter((event)=>event.id!==primary?.id && !featureIds.has(event.id))
     .sort((a,b)=>a.start.getTime()-b.start.getTime());
@@ -105,8 +116,8 @@ export default function SportsKioskOverview() {
   const now = new Date();
   const packersGameDay = Boolean(primary && primary.sport === "nfl" && /green bay|packers/i.test(`${primary.title} ${primary.homeTeam?.name ?? ""} ${primary.awayTeam?.name ?? ""}`) && (primary.status === "live" || primary.start.toDateString() === now.toDateString()));
 
-  return <section className="relative h-full w-full touch-none select-none overflow-hidden overscroll-none bg-[#090316] text-white">
-    <img src={background} alt="" className="absolute inset-0 h-full w-full object-cover" />
+  return <section className="cosmos-sports-motion relative h-full w-full touch-none select-none overflow-hidden overscroll-none bg-[#090316] text-white">
+    <img src={background} alt="" className="cosmos-sports-hero-bg absolute inset-0 h-full w-full object-cover" />
     <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(5,2,18,.22),rgba(10,3,28,.64)_47%,rgba(8,3,24,.92))]" />
     <div className="absolute inset-0 bg-[radial-gradient(circle_at_48%_28%,rgba(139,44,255,.18),transparent_38%)]" />
     <div className="relative z-10 flex h-full min-h-0 flex-col overflow-hidden px-[3.2vw] pb-[3.8vh] pt-[4.5vh]">
@@ -154,7 +165,7 @@ function FeatureEvent({ event, label }: { event?: SportsEvent; label: string }) 
   const view = normalizeKioskSportsEvent(event)!;
   const featureBg=view.backgroundKey ? selectKioskSportsBackground(view.backgroundKey) : undefined;
   return <article className="relative overflow-hidden rounded-[1.2vw] border border-violet-400/55 bg-[#100720] p-[1.05vw] shadow-[0_0_20px_rgba(124,58,237,.16)]">
-    {featureBg ? <img src={featureBg} alt="" className="absolute inset-0 h-full w-full object-cover opacity-35" /> : null}
+    {featureBg ? <img src={featureBg} alt="" className="cosmos-sports-feature-bg absolute inset-0 h-full w-full object-cover opacity-35" /> : null}
     <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(13,5,35,.94),rgba(24,8,54,.72))]" />
     <div className="relative z-10 flex h-full flex-col"><div className="flex justify-between text-[clamp(.65rem,.9vw,.82rem)] uppercase tracking-[.2em] text-violet-100"><span className="flex items-center gap-2"><CategoryMark label={label} />{label}</span><span>{view.eventType}</span></div><div className="mt-[.5vh] flex h-[calc(100%-2rem)] flex-col gap-1"><div><div className="flex items-center gap-3">{event.awayTeam && <SportsTeamLogo sport={event.sport} team={logoTeam(event,event.awayTeam)} size="md" />}{event.homeTeam && <SportsTeamLogo sport={event.sport} team={logoTeam(event,event.homeTeam)} size="md" />}<p className="line-clamp-2 text-[clamp(1rem,1.38vw,1.42rem)] font-black leading-[1.08]">{event.title}</p></div><p className="mt-1 truncate text-[clamp(.72rem,.9vw,.88rem)] text-white/70">{view.venueName ?? view.venueLocation ?? "Venue TBA"}{event.broadcast ? ` · ${event.broadcast}` : ""}</p></div><div className="mt-auto flex items-center justify-between gap-1"><span className="rounded-full bg-violet-600/80 px-2 py-1 text-[.6rem] font-bold uppercase">{view.live ? "Live" : "Next"}</span><p className="whitespace-nowrap text-[clamp(.78rem,.98vw,1rem)] font-black text-violet-100">{fullDate(event)}</p></div></div></div></article>;
 }
@@ -189,6 +200,14 @@ function CategoryMark({label}:{label:string}) {
  if(key.includes("formula")) return <b className="text-base italic text-red-500">F1</b>;
  if(key.includes("nascar")) return <b className="text-sm italic text-orange-400">NASCAR</b>;
  return <span className="text-violet-300">◉</span>;
+}
+function sportLabel(sport: SportsEvent["sport"]) {
+ if(sport==="formula1") return "FORMULA 1";
+ if(sport==="college-football") return "COLLEGE FOOTBALL";
+ if(sport==="mlb") return "MLB";
+ if(sport==="nfl") return "NFL";
+ if(sport==="nascar") return "NASCAR";
+ return sport.toUpperCase();
 }
 function heroTheme(event?: SportsEvent) {
  const text=`${event?.title ?? ""} ${event?.homeTeam?.name ?? ""} ${event?.awayTeam?.name ?? ""}`.toLowerCase();
