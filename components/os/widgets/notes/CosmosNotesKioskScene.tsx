@@ -18,14 +18,8 @@ export default function CosmosNotesKioskScene() {
   const date = now ? new Date(now) : null;
 
   return <section data-kiosk-rebuild="notes" className="relative h-full w-full select-none overflow-hidden bg-[#090317] text-white">
-    <div className="absolute inset-0 bg-[radial-gradient(circle_at_72%_18%,rgba(168,85,247,.55),transparent_23%),radial-gradient(circle_at_25%_62%,rgba(126,34,206,.30),transparent_31%),linear-gradient(145deg,#03010a_0%,#100326_48%,#26074d_75%,#05010c_100%)]"/>
-    <div className="absolute inset-x-0 top-[-9vh] h-[39vh] opacity-90 blur-[1px] [background-image:radial-gradient(ellipse_at_48%_45%,rgba(255,160,255,.80)_0%,rgba(168,85,247,.48)_8%,rgba(91,33,182,.25)_22%,transparent_50%),radial-gradient(ellipse_at_30%_55%,rgba(96,165,250,.35),transparent_34%),radial-gradient(ellipse_at_68%_28%,rgba(217,70,239,.48),transparent_32%)]"/>
-    <div className="absolute -right-[7vw] top-[9vh] h-[42vw] w-[72vw] rounded-[50%] border-t border-violet-100/90 bg-[radial-gradient(ellipse_at_52%_5%,rgba(224,195,255,.92),rgba(117,72,211,.56)_12%,rgba(35,15,78,.96)_42%,rgba(5,2,15,.99)_72%)] shadow-[0_-13px_48px_rgba(216,180,254,.75),0_-3px_12px_rgba(255,255,255,.95)]"/>
-    <div className="absolute right-[14vw] top-[4.5vh] h-[9vw] w-[9vw] rounded-full border border-violet-200/30 bg-[radial-gradient(circle_at_42%_34%,rgba(118,80,177,.75),rgba(28,12,62,.96)_55%,#090313_78%)] shadow-[0_0_28px_rgba(192,132,252,.28)]"/>
-    <div className="absolute right-[-1vw] top-[13vh] h-[3px] w-[12vw] rotate-[-7deg] bg-white/85 shadow-[0_0_8px_white,0_0_18px_rgba(232,121,249,.95),0_0_42px_rgba(168,85,247,.9)]"/>
-    <div className="absolute right-[4vw] top-[10.5vh] h-[4.5vw] w-[4.5vw] rounded-full bg-white/90 blur-[6px] shadow-[0_0_20px_white,0_0_55px_rgba(232,121,249,.95),0_0_95px_rgba(168,85,247,.85)]"/>
-    <div className="absolute inset-0 opacity-90 [background-image:radial-gradient(circle,rgba(255,255,255,.95)_0_1px,transparent_1.7px),radial-gradient(circle,rgba(216,180,254,.9)_0_1.2px,transparent_1.8px),radial-gradient(circle,rgba(147,197,253,.78)_0_.8px,transparent_1.5px)] [background-position:0_0,21px_31px,63px_11px] [background-size:83px_67px,127px_103px,173px_139px]"/>
-    <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(3,1,10,.02),rgba(3,1,10,.22)_58%,rgba(3,1,10,.38))]"/>
+    <div className="absolute inset-0 bg-[url('/kiosk/scenes/notes/notes-cosmic-nebula.svg')] bg-cover bg-center"/>
+    <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(2,2,10,.04),rgba(5,2,18,.12)_45%,rgba(3,1,12,.28))]"/>
 
     <div className="relative z-10 flex h-full flex-col px-[3.8vw] py-[4.2vh]">
       <header>
