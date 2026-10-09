@@ -27,8 +27,9 @@ export async function GET(request: Request) {
       return Response.json(value, { headers: { "Cache-Control": "no-store" } });
     } catch (error) {
       const detail = error instanceof Error ? error.message : "Unknown aggregate error";
-      if (process.env.NODE_ENV !== "production") console.info(`[kiosk-data] status=503 auth=local-dev category=aggregate-error detail=${detail} durationMs=${Date.now() - startedAt}`);
-      return Response.json({ error: "Kiosk data is temporarily unavailable.", category: "aggregate-error", ...(process.env.NODE_ENV !== "production" ? { detail } : {}) }, { status: 503, headers: { "Cache-Control": "no-store" } });
+      const stack = error instanceof Error ? error.stack : undefined;
+      if (process.env.NODE_ENV !== "production") console.info(`[kiosk-data] status=503 auth=local-dev category=aggregate-error detail=${detail} durationMs=${Date.now() - startedAt}\n${stack ?? ""}`);
+      return Response.json({ error: "Kiosk data is temporarily unavailable.", category: "aggregate-error", ...(process.env.NODE_ENV !== "production" ? { detail, stack } : {}) }, { status: 503, headers: { "Cache-Control": "no-store" } });
     }
   }
   try {
