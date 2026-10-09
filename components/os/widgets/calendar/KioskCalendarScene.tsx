@@ -21,6 +21,7 @@ export default function KioskCalendarScene({ calendar, loading, error }: Props) 
   const events = [...(calendar?.today ?? []), ...(calendar?.upcoming ?? [])]
     .filter((event, index, list) => list.findIndex((item) => item.id === event.id) === index)
     .filter((event) => event.end > now)
+    .filter(isPersonalKioskEvent)
     .sort(byStart)
     .slice(0, 6);
 
@@ -151,12 +152,20 @@ function eventDayLabel(event: CalendarEvent, now: Date, timeZone?: string) {
   return formatDate(event.start, { weekday: "short", month: "short", day: "numeric" }, timeZone).toUpperCase();
 }
 
+function isPersonalKioskEvent(event: CalendarEvent) {
+  const name = (event.calendarName ?? "").trim().toLowerCase();
+  if (event.category === "sports") return false;
+  if (name === "canvas") return false;
+  return !["f1", "formula 1", "angels", "laa", "nascar", "packers", "usu football"].includes(name);
+}
+
 function calendarAccent(event: CalendarEvent) {
-  const key = (event.calendarName ?? event.category ?? "personal").toLowerCase();
-  const palette = ["#a855f7", "#22d3ee", "#3b82f6", "#f59e0b", "#ec4899", "#10b981", "#8b5cf6", "#f97316"];
-  let hash = 0;
-  for (let index = 0; index < key.length; index += 1) hash = ((hash << 5) - hash + key.charCodeAt(index)) | 0;
-  return palette[Math.abs(hash) % palette.length];
+  const name = (event.calendarName ?? "").trim().toLowerCase();
+  if (name === "school") return "#3b82f6";
+  if (name === "not available") return "#22c55e";
+  if (name === "stetson work" || name === "work") return "#8b5cf6";
+  if (name === "cosmic ai") return "#d946ef";
+  return "#a855f7";
 }
 
 function categoryLabel(event: CalendarEvent) {
