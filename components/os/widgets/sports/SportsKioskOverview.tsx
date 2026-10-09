@@ -87,6 +87,9 @@ export default function SportsKioskOverview() {
       if (b.status === "live" && a.status !== "live") return 1;
       return a.start.getTime() - b.start.getTime();
     });
+  // F1 feeds expose Practice/Qualifying/Sprint/Race separately. The kiosk queue must
+  // keep those sessions as real chronological events instead of collapsing the sport
+  // to a single favorite card.
   const primary = chronological[0] ?? events[0];
   const primaryView = primary ? normalizeKioskSportsEvent(primary) : undefined;
   const features = chronological.slice(1,3).map((event) => ({
