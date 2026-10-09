@@ -1,6 +1,8 @@
 "use client";
 
 import Image from "next/image";
+import { useEffect, useState } from "react";
+import useLocation from "@/hooks/os/useLocation";
 import { MapPin } from "lucide-react";
 import useWeather from "@/hooks/os/useWeather";
 import type { WeatherData } from "@/engines/environment";
@@ -107,7 +109,45 @@ function KioskWeatherScene({
   const isDay = scene.id.endsWith("day") || (weather !== null && weather.daylightProgress > 0 && weather.daylightProgress < 100);
   // Provider entries may start hours ahead (for example 7 PM at 1 PM).
   // Never relabel a future forecast entry as current conditions.
-  const forecast = weather?.hourlyForecast.slice(0, 6) ?? [];
+
+  const coords = useLocation();
+  const [liveHourly, setLiveHourly] = useState<Array<{time:string;temp:number;icon:string}> | null>(null);
+  useEffect(() => {
+    if (!coords) return;
+    let active = true;
+    const fetchHourly = async () => {
+      try {
+        const params = new URLSearchParams({
+          latitude:String(coords.lat),longitude:String(coords.lon),
+          hourly:"temperature_2m,weather_code",temperature_unit:"fahrenheit",
+          timezone:"auto",forecast_days:"2"
+        });
+        const response = await fetch("https://api.open-meteo.com/v1/forecast?" + params.toString());
+        if (!response.ok) throw new Error("Hourly provider unavailable");
+        const data = await response.json() as {utc_offset_seconds?:number;hourly?:{time?:string[];temperature_2m?:number[];weather_code?:number[]}};
+        const offset = data.utc_offset_seconds ?? 0;
+        const times = data.hourly?.time ?? [];
+        const temperatures = data.hourly?.temperature_2m ?? [];
+        const codes = data.hourly?.weather_code ?? [];
+        const upcoming = times.map((time,i) => ({
+          instant:Date.parse(time + "Z") - offset*1000,
+          temp:temperatures[i], code:codes[i]
+        })).filter(item => Number.isFinite(item.instant) && item.instant > Date.now() && Number.isFinite(item.temp))
+          .slice(0,5).map(item => ({
+            time:new Intl.DateTimeFormat("en-US",{hour:"numeric",timeZone:"UTC"}).format(new Date(item.instant+offset*1000)),
+            temp:item.temp,icon:hourlyWeatherIcon(item.code)
+          }));
+        if (active) setLiveHourly(upcoming);
+      } catch { if (active) setLiveHourly(null); }
+    };
+    void fetchHourly();
+    const interval = window.setInterval(() => void fetchHourly(), 600_000);
+    return () => {active=false;window.clearInterval(interval);};
+  }, [coords?.lat,coords?.lon]);
+  const forecast = liveHourly
+    ? [...(weather ? [{time:"Now",temp:weather.temp,icon:"03d"}] : []), ...liveHourly].slice(0,6)
+    : (weather?.hourlyForecast ?? []).slice(0,6);
+
   const currentHour = now !== null ? new Date(now).getHours() : new Date().getHours();
   const location = locationLabel ?? (weather?.city && weather.city !== "Current location" ? weather.city : TEMPORARY_KIOSK_LOCATION.label);
   const background = scene.src ?? scene.fallbackSrcs[0] ?? "/kiosk/scenes/weather/weather-cloudy.png";
@@ -188,6 +228,18 @@ function KioskWeatherScene({
   );
 }
 
+function hourlyWeatherIcon(code:number) {
+  if (code===0) return "01d";
+  if (code===1) return "02d";
+  if (code===2) return "03d";
+  if (code===3) return "04d";
+  if ([45,48].includes(code)) return "50d";
+  if ([51,53,55,56,57].includes(code)) return "09d";
+  if ([61,63,65,66,67,80,81,82].includes(code)) return "10d";
+  if ([71,73,75,77,85,86].includes(code)) return "13d";
+  if ([95,96,99].includes(code)) return "11d";
+  return "03d";
+}
 function hourIsDay(icon: string, hour: number) {
   if (icon.endsWith("n")) return false;
   if (icon.endsWith("d") && !["01d", "02d"].includes(icon)) return true;
