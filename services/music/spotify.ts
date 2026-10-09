@@ -275,7 +275,15 @@ export async function developerKioskSnapshotWithDiagnostics(accountId: string) {
     }
   }
 
-  if (ownerId && accountId === ownerId) {
+  // Local kiosk development may keep the active Spotify credential in the
+  // personal encrypted store even when the database account ID differs from
+  // COSMIC_OWNER_USER_ID. This fallback is intentionally developer-kiosk only.
+  if (process.env.NODE_ENV !== "production") {
+    try {
+      const personalResult = await personalSnapshotWithDiagnostics();
+      if (personalResult.snapshot.connected) return { ...personalResult, diagnostics: { category: "connected", providerFound: true, ownerMatch: accountId === ownerId, tokenRecordFound: true } satisfies KioskMusicDiagnostics };
+    } catch { /* Keep the account-backed diagnostic result below. */ }
+  } else if (ownerId && accountId === ownerId) {
     try {
       const personalResult = await personalSnapshotWithDiagnostics();
       if (personalResult.snapshot.connected) return { ...personalResult, diagnostics: { category: "connected", providerFound: true, ownerMatch: true, tokenRecordFound: true } satisfies KioskMusicDiagnostics };
