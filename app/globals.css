@@ -3084,3 +3084,25 @@ html[data-cosmic-kiosk="true"] button, html[data-cosmic-kiosk="true"] a, html[da
     background-color: rgba(15,7,32,.92);
   }
 }
+
+
+/* Packers game-day identity: team color lives inside the Liquid Glass headline,
+   while non-game days keep the normal Cosmos violet treatment. */
+.cosmos-kiosk-packers-gameday-title {
+  color: transparent;
+  background:
+    linear-gradient(180deg,
+      rgba(255,255,255,.96) 0%,
+      rgba(255,255,255,.72) 12%,
+      #ffb612 30%,
+      #f2d06b 46%,
+      #203731 58%,
+      #0f281f 78%,
+      #ffb612 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-stroke: 1px rgba(255,182,18,.28);
+  filter: drop-shadow(0 2px 1px rgba(255,255,255,.18))
+          drop-shadow(0 0 10px rgba(255,182,18,.34))
+          drop-shadow(0 0 24px rgba(32,55,49,.7));
+}
