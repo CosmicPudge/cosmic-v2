@@ -60,7 +60,7 @@ function providerStatus(value: unknown, now: Date, start: Date, end?: Date): Spo
 
 function sessionKind(label: string): "practice" | "qualifying" | "sprint" | "race" {
   const normalized = label.toLowerCase();
-  if (normalized.includes("sprint qualifying") || normalized.includes("sprint shootout")) return "sprintQualifying";
+  if (normalized.includes("sprint qualifying") || normalized.includes("sprint shootout")) return "qualifying";
   if (normalized.includes("qualifying") || normalized.includes("shootout")) return "qualifying";
   if (normalized.includes("sprint")) return "sprint";
   if (normalized.includes("practice") || normalized.includes("fp")) return "practice";
@@ -72,6 +72,7 @@ export function f1SessionKey(label: string): string {
   if (normalized.includes("practice 1") || normalized.includes("fp1")) return "practice1";
   if (normalized.includes("practice 2") || normalized.includes("fp2")) return "practice2";
   if (normalized.includes("practice 3") || normalized.includes("fp3")) return "practice3";
+  if (normalized.includes("sprint qualifying") || normalized.includes("sprint shootout")) return "sprintQualifying";
   if (normalized.includes("qualifying") || normalized.includes("shootout")) return "qualifying";
   if (normalized.includes("sprint")) return "sprint";
   return "race";
