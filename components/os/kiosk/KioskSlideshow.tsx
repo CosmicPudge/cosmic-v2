@@ -40,6 +40,7 @@ const SWIPE_THRESHOLD_PX = 55;
  * to this list. The active set currently contains Clock and Weather.
  */
 export default function KioskSlideshow() {
+  useKioskDeviceLocation();
   const searchParams = useSearchParams();
   const preview = process.env.NODE_ENV !== "production" ? searchParams.get("slide") : null;
   const forcedIndex = BUILD_SLIDES.findIndex((slide) => slide.id === preview);
