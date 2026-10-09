@@ -134,10 +134,10 @@ export default function KioskSlideshow() {
         </WidgetProvider>
       </div>
 
-      {active.id !== "clock" && active.id !== "weather" && active.id !== "music" && (
-        <div className="pointer-events-none absolute right-[3.4vw] top-[3.8vh] z-50 flex items-start gap-5 rounded-xl bg-black/35 px-4 py-2 text-right text-white backdrop-blur-md">
+      {active.id !== "clock" && active.id !== "weather" && active.id !== "music" && active.id !== "garage" && (
+        <div className="pointer-events-none absolute right-[3.4vw] top-[3.8vh] z-50 flex items-start gap-[1.3vw] text-right text-white drop-shadow-lg">
           <div><div className="text-xs tracking-wider">{headerClock ? new Intl.DateTimeFormat(undefined, { weekday: "short", month: "short", day: "numeric" }).format(headerClock) : ""}</div><div className="text-2xl tabular-nums">{headerClock ? new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" }).format(headerClock) : "--:--"}</div></div>
-          <div className="border-l border-white/25 pl-4"><div className="text-2xl font-semibold">{headerWeather.weather ? `${Math.round(headerWeather.weather.temp)}°` : "--°"}</div><div className="text-xs">{headerWeather.weather?.condition ?? "Weather unavailable"}</div><div className="text-xs opacity-70">{headerWeather.weather?.city ?? ""}</div></div>
+          <div className="border-l border-white/25 pl-[1.3vw]"><div className="text-2xl font-semibold">{headerWeather.weather ? `${Math.round(headerWeather.weather.temp)}°` : "--°"}</div><div className="text-xs">{headerWeather.weather?.condition ?? "Weather unavailable"}</div><div className="text-xs opacity-70">{headerWeather.weather?.city ?? ""}</div></div>
         </div>
       )}
       <div className="cosmos-kiosk-slide-dots" aria-label={`Slide ${index + 1} of ${BUILD_SLIDES.length}`}>
