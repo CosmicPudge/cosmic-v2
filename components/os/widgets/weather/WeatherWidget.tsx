@@ -106,7 +106,7 @@ function KioskWeatherScene({
   const now = useClockTick(30_000);
   const isDay = scene.id.endsWith("day") || (weather !== null && weather.daylightProgress > 0 && weather.daylightProgress < 100);
   const forecast = weather?.hourlyForecast.slice(0, 6) ?? [];
-  const currentHour = now?.getHours() ?? new Date().getHours();
+  const currentHour = now !== null ? new Date(now).getHours() : new Date().getHours();
   const location = locationLabel ?? (weather?.city && weather.city !== "Current location" ? weather.city : TEMPORARY_KIOSK_LOCATION.label);
   const background = scene.src ?? scene.fallbackSrcs[0] ?? "/kiosk/scenes/weather/weather-cloudy.png";
   const precipChance = weather?.hourlyForecast[0]?.precipitationChance ?? weather?.dailyForecast[0]?.precipitationChance ?? 0;
