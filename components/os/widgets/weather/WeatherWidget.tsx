@@ -106,6 +106,7 @@ function KioskWeatherScene({
   const now = useClockTick(30_000);
   const isDay = scene.id.endsWith("day") || (weather !== null && weather.daylightProgress > 0 && weather.daylightProgress < 100);
   const forecast = weather?.hourlyForecast.slice(0, 6) ?? [];
+  const currentHour = now?.getHours() ?? new Date().getHours();
   const location = locationLabel ?? (weather?.city && weather.city !== "Current location" ? weather.city : TEMPORARY_KIOSK_LOCATION.label);
   const background = scene.src ?? scene.fallbackSrcs[0] ?? "/kiosk/scenes/weather/weather-cloudy.png";
   const precipChance = weather?.hourlyForecast[0]?.precipitationChance ?? weather?.dailyForecast[0]?.precipitationChance ?? 0;
@@ -165,7 +166,11 @@ function KioskWeatherScene({
               {forecast.map((hour, index) => (
                 <div className="cosmos-kiosk-weather-hour" key={`${hour.time}-${index}`}>
                   <p>{index === 0 ? "Now" : hour.time}</p>
-                  <WeatherIcon condition={mapWeatherCondition(hour.icon)} isDay={isDay} size={38} />
+                  <WeatherIcon
+                    condition={mapWeatherCondition(hour.icon)}
+                    isDay={hourIsDay(hour.icon, currentHour + index)}
+                    size={38}
+                  />
                   <strong>{Math.round(hour.temp)}°</strong>
                 </div>
               ))}
@@ -179,6 +184,13 @@ function KioskWeatherScene({
       )}
     </section>
   );
+}
+
+function hourIsDay(icon: string, hour: number) {
+  if (icon.endsWith("n")) return false;
+  if (icon.endsWith("d") && !["01d", "02d"].includes(icon)) return true;
+  const normalizedHour = ((hour % 24) + 24) % 24;
+  return normalizedHour >= 6 && normalizedHour < 20;
 }
 
 function WeatherStat({ label, value }: { label: string; value: string }) {
