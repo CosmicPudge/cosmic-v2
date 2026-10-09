@@ -1,7 +1,7 @@
 import "server-only";
 
 import type { CosmicUpdateStatus } from "@/core/contracts/Updates";
-import { COSMIC_APP_VERSION } from "@/services/settings/dataTransfer";
+const COSMIC_APP_VERSION = "0.1.0";
 
 function versionParts(value: string) {
   return value.replace(/^v/i, "").split(".").map((part) => Number.parseInt(part, 10)).map((part) => Number.isFinite(part) ? part : 0);
