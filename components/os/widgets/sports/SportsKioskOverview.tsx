@@ -15,9 +15,27 @@ const FAVORITES = [
   { key: "f1", label: "Formula 1", match: (event: SportsEvent) => event.sport === "f1" },
   { key: "nascar", label: "NASCAR", match: (event: SportsEvent) => event.sport === "nascar" },
   { key: "usu", label: "Utah State", match: (event: SportsEvent) => event.sport === "college-football" && /utah state|aggies/i.test(event.title + " " + event.homeTeam?.name + " " + event.awayTeam?.name) },
-  { key: "utah", label: "Utah Utes", match: (event: SportsEvent) => event.sport === "college-football" && /utah utes|utah university|utah at|at utah|utah vs|vs utah/i.test(event.title + " " + event.homeTeam?.name + " " + event.awayTeam?.name) && !/utah state/i.test(event.title + " " + event.homeTeam?.name + " " + event.awayTeam?.name) },
+  { key: "utah", label: "Utah Utes", match: (event: SportsEvent) => event.sport === "college-football" && /\butah\b|utes/i.test(event.title + " " + event.homeTeam?.name + " " + event.awayTeam?.name) && !/utah state/i.test(event.title + " " + event.homeTeam?.name + " " + event.awayTeam?.name) },
 ] as const;
 function activeEvent(event: SportsEvent) { return !["final","cancelled","postponed"].includes(event.status) && (event.status === "live" || event.start.getTime() >= Date.now() - 60_000); }
+const UTAH_STATE_2026 = [
+  ["2026-10-10T01:00:00Z","Washington State Cougars","home","The CW","Maverik Stadium"],
+  ["2026-10-25T00:30:00Z","Texas State Bobcats","away","CBS Sports Network","UFCU Stadium"],
+  ["2026-10-31T19:30:00Z","Colorado State Rams","home","USA Network","Maverik Stadium"],
+  ["2026-11-08T02:30:00Z","Fresno State Bulldogs","home","USA Network","Maverik Stadium"],
+  ["2026-11-15T02:30:00Z","San Diego State Aztecs","away","USA Network","Snapdragon Stadium"],
+  ["2026-11-22T03:30:00Z","Oregon State Beavers","away","CBS Sports Network","Reser Stadium"],
+] as const;
+function officialUsuSchedule(): SportsEvent[] {
+  return UTAH_STATE_2026.map(([start,opponent,side,broadcast,venue],index) => ({
+    id: `usu-official-2026-${index}`, sport:"college-football" as const,
+    title: side==="home" ? `${opponent} at Utah State Aggies` : `Utah State Aggies at ${opponent}`,
+    start:new Date(start), status:"scheduled" as const,
+    homeTeam: side==="home" ? {id:"328",name:"Utah State Aggies",abbreviation:"USU"} : {name:opponent},
+    awayTeam: side==="away" ? {id:"328",name:"Utah State Aggies",abbreviation:"USU"} : {name:opponent},
+    venue,broadcast,source:"Utah State Athletics",sourceUrl:"https://utahstateaggies.com/news/2026/5/27/utah-state-football-selected-for-11-national-broadcasts.aspx",
+  })).filter(activeEvent);
+}
 function fullDate(event: SportsEvent) { return event.start.toLocaleString([], { weekday:"short", month:"short", day:"numeric", hour:"numeric", minute:"2-digit" }); }
 
 export default function SportsKioskOverview() {
@@ -29,11 +47,11 @@ export default function SportsKioskOverview() {
       .filter((event) => activeEvent(event) && FAVORITES.some((favorite) => favorite.match(event)))
       .sort((a, b) => (a.status === "live" ? -1 : b.status === "live" ? 1 : a.start.getTime() - b.start.getTime()));
   }, [data]);
-  const cards = FAVORITES.map((favorite) => ({ ...favorite, event: events.find(favorite.match) }));
+  const cards = FAVORITES.map((favorite) => ({ ...favorite, event: events.find(favorite.match) ?? (favorite.key === "usu" ? officialUsuSchedule()[0] : undefined) }));
   const primary = cards[0].event ?? events[0];
   const primaryView = primary ? normalizeKioskSportsEvent(primary) : undefined;
   const secondary = cards.filter((card) => card.key !== "nfl");
-  const league = events.filter((event) => event.id !== primary?.id && !secondary.some((card) => card.event?.id === event.id)).slice(0, 4);
+  const league = [...events, ...officialUsuSchedule().filter((item) => !events.some((event) => event.sport === "college-football" && Math.abs(event.start.getTime() - item.start.getTime()) < 60_000 && /utah state/i.test(event.title)))].filter((event) => event.id !== primary?.id && !secondary.some((card) => card.event?.id === event.id)).slice(0, 5);
   const background = primaryView ? selectKioskSportsBackground(primaryView.backgroundKey) : "/dashboard/sports/stadium.webp";
   const now = new Date();
 
@@ -78,21 +96,29 @@ function EventHero({ event, loading }: { event?: SportsEvent; loading: boolean }
 function Team({ event, side }: { event: SportsEvent; side: "home" | "away" }) {
   const team = side === "home" ? event.homeTeam : event.awayTeam;
   if (!team) return <div className={side === "home" ? "text-left" : "text-right"}><p className="text-[clamp(1.5rem,2.5vw,2.6rem)] font-black uppercase">{event.metadata?.eventName ?? event.title}</p></div>;
-  return <div className={side === "home" ? "text-left" : "text-right"}><div className={`mb-2 flex ${side === "home" ? "justify-start" : "justify-end"}`}><SportsTeamLogo sport={event.sport} team={team} size="lg" /></div><p className="text-[clamp(.7rem,.9vw,.85rem)] uppercase tracking-[.2em] text-violet-200/80">{team.abbreviation}</p><p className="mt-1 text-[clamp(1.6rem,2.8vw,3rem)] font-black uppercase leading-none">{team.name}</p><p className="mt-2 text-[clamp(.9rem,1.25vw,1.15rem)] text-white/70">{team.record ?? ""}</p></div>;
+  return <div className={side === "home" ? "text-left" : "text-right"}><div className={`mb-2 flex ${side === "home" ? "justify-start" : "justify-end"}`}><SportsTeamLogo sport={event.sport} team={logoTeam(event,team)} size="lg" /></div><p className="text-[clamp(.7rem,.9vw,.85rem)] uppercase tracking-[.2em] text-violet-200/80">{team.abbreviation}</p><p className="mt-1 text-[clamp(1.6rem,2.8vw,3rem)] font-black uppercase leading-none">{team.name}</p><p className="mt-2 text-[clamp(.9rem,1.25vw,1.15rem)] text-white/70">{team.record ?? ""}</p></div>;
 }
 
 function MiniEvent({ event, label }: { event?: SportsEvent; label: string }) {
   if (!event) return <article className="flex min-h-0 flex-col justify-between rounded-[1vw] border border-violet-400/30 bg-[linear-gradient(130deg,rgba(64,24,109,.8),rgba(12,6,35,.85))] p-[1vw]"><span className="flex items-center gap-2 text-[clamp(.7rem,.95vw,.95rem)] font-bold uppercase tracking-[.12em] text-violet-100"><CategoryMark label={label} />{label}</span><p className="text-[clamp(.8rem,1vw,1rem)] text-white/50">No upcoming event available</p></article>;
   const view = normalizeKioskSportsEvent(event)!;
-  return <article className="overflow-hidden rounded-[1vw] border border-violet-400/45 bg-[linear-gradient(130deg,rgba(69,26,115,.85),rgba(12,6,35,.84))] p-[1vw] backdrop-blur-md"><div className="flex justify-between text-[clamp(.65rem,.9vw,.82rem)] uppercase tracking-[.2em] text-violet-100"><span className="flex items-center gap-2"><CategoryMark label={label} />{label}</span><span>{view.eventType}</span></div><div className="mt-[1vh] flex flex-col gap-1"><div><div className="flex items-center gap-2">{event.homeTeam && <SportsTeamLogo sport={event.sport} team={event.homeTeam} size="sm" />}{event.awayTeam && <SportsTeamLogo sport={event.sport} team={event.awayTeam} size="sm" />}<p className="line-clamp-2 text-[clamp(.9rem,1.3vw,1.35rem)] font-black leading-tight">{event.title}</p></div><p className="mt-1 text-[clamp(.7rem,.9vw,.85rem)] text-white/70">{view.venueName ?? view.venueLocation ?? "Venue TBA"}{event.broadcast ? ` · ${event.broadcast}` : ""}</p></div><div className="mt-auto flex items-center justify-between gap-2"><span className="rounded-full bg-violet-600/80 px-2 py-1 text-[.6rem] font-bold uppercase">{view.live ? "Live" : "Next"}</span><p className="text-[clamp(.8rem,1.05vw,1.1rem)] font-black text-violet-100">{fullDate(event)}</p></div></div></article>;
+  return <article className="overflow-hidden rounded-[1vw] border border-violet-400/45 bg-[linear-gradient(130deg,rgba(69,26,115,.85),rgba(12,6,35,.84))] p-[1vw] backdrop-blur-md"><div className="flex justify-between text-[clamp(.65rem,.9vw,.82rem)] uppercase tracking-[.2em] text-violet-100"><span className="flex items-center gap-2"><CategoryMark label={label} />{label}</span><span>{view.eventType}</span></div><div className="mt-[1vh] flex flex-col gap-1"><div><div className="flex items-center gap-2">{event.homeTeam && <SportsTeamLogo sport={event.sport} team={logoTeam(event,event.homeTeam)} size="sm" />}{event.awayTeam && <SportsTeamLogo sport={event.sport} team={logoTeam(event,event.awayTeam)} size="sm" />}<p className="line-clamp-2 text-[clamp(.9rem,1.3vw,1.35rem)] font-black leading-tight">{event.title}</p></div><p className="mt-1 text-[clamp(.7rem,.9vw,.85rem)] text-white/70">{view.venueName ?? view.venueLocation ?? "Venue TBA"}{event.broadcast ? ` · ${event.broadcast}` : ""}</p></div><div className="mt-auto flex items-center justify-between gap-2"><span className="rounded-full bg-violet-600/80 px-2 py-1 text-[.6rem] font-bold uppercase">{view.live ? "Live" : "Next"}</span><p className="text-[clamp(.8rem,1.05vw,1.1rem)] font-black text-violet-100">{fullDate(event)}</p></div></div></article>;
 }
 function EmptyMini({ label }: { label: string }) { return <div className="col-span-2 flex items-center justify-center rounded-[1.45vw] border border-violet-400/30 bg-[#100720]/72 text-white/45">{label}</div>; }
 function LeagueRow({ event }: { event: SportsEvent }) { const view=normalizeKioskSportsEvent(event)!; return <div className="grid grid-cols-[1fr_auto] gap-3 border-b border-white/10 px-2 py-[1.45vh] last:border-0"><div className="min-w-0"><p className="truncate text-[clamp(.78rem,1.05vw,1rem)] font-bold">{event.title}</p><p className="mt-1 text-xs uppercase tracking-[.12em] text-white/45">{view.sportLabel}</p></div><div className="text-right"><p className="text-[clamp(.72rem,.95vw,.9rem)] text-violet-100">{fullDate(event)}</p><p className="mt-1 text-xs text-white/45">{event.broadcast ?? ""}</p></div></div>; }
+function logoTeam(event: SportsEvent, team: NonNullable<SportsEvent["homeTeam"]>) {
+  const id=team.id ?? "";
+  const abbreviation=(team.abbreviation ?? "").toLowerCase();
+  if(event.sport==="nfl" && /^[a-z]{2,3}$/.test(abbreviation)) return {...team,logo:`https://a.espncdn.com/i/teamlogos/nfl/500/${abbreviation}.png`};
+  if(event.sport==="college-football" && (id==="328" || /utah state|aggies/i.test(team.name))) return {...team,id:"328",logo:"https://a.espncdn.com/i/teamlogos/ncaa/500/328.png"};
+  if(event.sport==="college-football" && (id==="254" || /utah utes|^utah$/i.test(team.name))) return {...team,id:"254",logo:"https://a.espncdn.com/i/teamlogos/ncaa/500/254.png"};
+  return team;
+}
 function CategoryMark({label}:{label:string}) { 
  const key=label.toLowerCase();
  if(key.includes("angels")) return <img src="/logos/mlb/LAA.svg" alt="" className="h-7 w-7 object-contain" />;
- if(key.includes("utes")) return <img src="/sports/cfb/logos/utah.png" alt="" className="h-7 w-7 object-contain" />;
- if(key.includes("utah state")) return <img src="/sports/cfb/teams/328.png" alt="" className="h-7 w-7 object-contain" />;
+ if(key.includes("utes")) return <img src="https://a.espncdn.com/i/teamlogos/ncaa/500/254.png" alt="" className="h-7 w-7 object-contain" />;
+ if(key.includes("utah state")) return <img src="https://a.espncdn.com/i/teamlogos/ncaa/500/328.png" alt="" className="h-7 w-7 object-contain" />;
  if(key.includes("formula")) return <b className="text-base italic text-red-500">F1</b>;
  if(key.includes("nascar")) return <b className="text-sm italic text-orange-400">NASCAR</b>;
  return <span className="text-violet-300">◉</span>;
