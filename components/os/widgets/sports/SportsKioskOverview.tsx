@@ -72,49 +72,30 @@ export default function SportsKioskOverview() {
       .sort((a, b) => (a.status === "live" ? -1 : b.status === "live" ? 1 : a.start.getTime() - b.start.getTime()));
   }, [data]);
   const cards = buildFavoriteCards(events);
-  const packers = firstCard(cards,"nfl");
-  const angels = firstCard(cards,"mlb");
-  const f1 = firstCard(cards,"f1");
-  const usu = firstCard(cards,"usu");
-  const utah = firstCard(cards,"utah");
-  // The hero is chronological across followed sports, not permanently NFL.
-  // A currently-live followed event wins; otherwise the next event wins.
-  const heroCandidates = [packers?.event, angels?.event, f1?.event, usu?.event, utah?.event, firstCard(cards,"nascar")?.event]
-    .filter((event): event is SportsEvent => Boolean(event))
+  // One chronological queue drives every visible slot. LIVE wins, then the next
+  // scheduled event, then the following two events. This prevents a later game
+  // from occupying a feature card while an F1/NASCAR/etc. event happens sooner.
+  const chronological = [...events, ...officialUsuSchedule(), ...officialUtahSchedule()]
+    .filter((event) => activeEvent(event))
+    .filter((event,index,array) => array.findIndex((item) => item.id === event.id || (
+      item.sport === event.sport &&
+      item.start.getTime() === event.start.getTime() &&
+      item.title === event.title
+    )) === index)
     .sort((a,b) => {
       if (a.status === "live" && b.status !== "live") return -1;
       if (b.status === "live" && a.status !== "live") return 1;
-      return a.start.getTime()-b.start.getTime();
+      return a.start.getTime() - b.start.getTime();
     });
-  const primary = heroCandidates[0] ?? events[0];
+  const primary = chronological[0] ?? events[0];
   const primaryView = primary ? normalizeKioskSportsEvent(primary) : undefined;
-
-  // Match the approved composition: MLB owns the left feature slot only when it has
-  // a current/upcoming game; otherwise Utah State takes it. F1 owns the right slot
-  // only during an active race week; otherwise Utah takes it.
-  const leftFeature = angels?.event && withinDays(angels.event,7) ? angels : usu;
-  const rightFeature = f1?.event && withinDays(f1.event,7) ? f1 : utah;
-  const preferredFeatures = [leftFeature,rightFeature].filter((card) => Boolean(card) && card?.event?.id !== primary?.id);
-  // Always keep three distinct upcoming/live events visible when at least three exist.
-  // Fill any smart seasonal slot vacated by the hero with the next chronological event.
-  const upcomingPool = [...events, ...officialUsuSchedule(), ...officialUtahSchedule()]
-    .filter((event,index,array)=>array.findIndex((item)=>item.id===event.id)===index)
-    .filter((event)=>event.id!==primary?.id && (event.status==="live" || event.start.getTime()>=Date.now()-60_000))
-    .sort((a,b)=>a.start.getTime()-b.start.getTime());
-  const features = [...preferredFeatures];
-  for (const event of upcomingPool) {
-    if (features.length >= 2) break;
-    if (!features.some((card)=>card?.event?.id===event.id)) features.push({key:`auto-${event.id}`,label:sportLabel(event.sport),match:()=>false,event});
-  }
-  // Always keep three events visible (hero + two feature cards) whenever the
-  // followed schedule has at least three upcoming/live events.
-  const visibleIds = new Set([primary?.id, ...features.map((card)=>card?.event?.id)].filter(Boolean));
-  for (const event of upcomingPool) {
-    if (features.length >= 2) break;
-    if (visibleIds.has(event.id)) continue;
-    features.push({key:`auto-${event.id}`,label:sportLabel(event.sport),match:()=>false,event});
-    visibleIds.add(event.id);
-  }
+  const features = chronological.slice(1,3).map((event) => ({
+    key:`next-${event.id}`,
+    label:sportLabel(event.sport),
+    match:()=>false,
+    event,
+  }));
+  const upcomingPool = chronological.slice(1);
   const featureIds = new Set(features.map((card)=>card?.event?.id).filter(Boolean));
   const allFollowed = upcomingPool
     .filter((event,index,array)=>array.findIndex((item)=>item.id===event.id)===index)
