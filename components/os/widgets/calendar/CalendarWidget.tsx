@@ -42,14 +42,14 @@ export default function CalendarWidget() {
   const visibleCalendar =
     developerCalendar?.accountCalendarConnected || developerCalendar?.today.length || developerCalendar?.upcoming.length
       ? developerCalendar
-      : calendar;
+      : (presentation === "kiosk" ? developerCalendar : calendar);
   useDashboardWidgetReadiness("calendar", loading ? "loading" : error && !calendar ? "degraded" : "ready");
 
   if (presentation === "kiosk") {
     return <KioskCalendarScene
       calendar={visibleCalendar}
-      loading={!visibleCalendar && (developer.loading || loading)}
-      error={visibleCalendar ? null : (developer.error ?? error)}
+      loading={!visibleCalendar && developer.loading}
+      error={developer.data?.calendar.connected ? null : (developer.data?.calendar.error ?? developer.error ?? error ?? "Calendar data unavailable")}
     />;
   }
 
