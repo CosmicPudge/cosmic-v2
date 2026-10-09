@@ -20,14 +20,27 @@ function writeLocation(value: DeviceLocationCandidate) {
 
 export default function useKioskDeviceLocation() {
   useEffect(() => {
-    if (!navigator.geolocation) return;
     const stopResource = startKioskResource("geolocation");
     let active = true;
     let retryTimer: number | undefined;
     let lastAttempt = 0;
+    const resolveIp = async () => {
+      try {
+        const response = await fetch("https://ipwho.is/", { cache: "no-store" });
+        if (!response.ok) return;
+        const result = await response.json() as { success?: boolean; latitude?: number; longitude?: number; city?: string; region?: string; country?: string; timezone?: { id?: string } };
+        if (result.success === false || typeof result.latitude !== "number" || typeof result.longitude !== "number" || !Number.isFinite(result.latitude) || !Number.isFinite(result.longitude)) return;
+        if (!active) return;
+        const next: DeviceLocationCandidate = { latitude: result.latitude, longitude: result.longitude, resolvedAt: new Date().toISOString(), city: result.city, region: result.region, country: result.country, timezone: result.timezone?.id, label: [result.city, result.region].filter(Boolean).join(", ") };
+        const previous = readLocation();
+        writeLocation(next);
+        if (previous && hasMeaningfulDeviceLocationMove(previous, next)) window.dispatchEvent(new CustomEvent("cosmic:kiosk-location-moved"));
+      } catch { /* Keep the last detected location when IP lookup is unavailable. */ }
+    };
     const resolve = () => {
       if (!active || Date.now() - lastAttempt < 30_000) return;
       lastAttempt = Date.now();
+      if (!navigator.geolocation) { void resolveIp(); return; }
       navigator.geolocation.getCurrentPosition((position) => {
         if (!active) return;
         const next: DeviceLocationCandidate = { latitude: position.coords.latitude, longitude: position.coords.longitude, ...(Number.isFinite(position.coords.accuracy) ? { accuracyMeters: position.coords.accuracy } : {}), resolvedAt: new Date().toISOString() };
@@ -35,6 +48,7 @@ export default function useKioskDeviceLocation() {
         writeLocation(next);
         if (previous && hasMeaningfulDeviceLocationMove(previous, next)) window.dispatchEvent(new CustomEvent("cosmic:kiosk-location-moved"));
       }, () => {
+        void resolveIp();
         if (active) retryTimer = window.setTimeout(resolve, 5 * 60_000);
       }, { enableHighAccuracy: false, timeout: 8_000, maximumAge: 10 * 60_000 });
     };
