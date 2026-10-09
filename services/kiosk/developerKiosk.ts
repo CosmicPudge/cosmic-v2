@@ -18,6 +18,12 @@ import type { ProjectsLocalData } from "@/core/contracts/Projects";
 
 const DEFAULT_HOST = "dev.cosmicpudge.shop";
 const MAX_EVENTS = 24;
+const PERSONAL_KIOSK_CALENDARS = new Set(["not available", "stetson work", "school", "cosmic ai"]);
+
+function isPersonalKioskCalendar(name?: string) {
+  return PERSONAL_KIOSK_CALENDARS.has((name ?? "").trim().toLowerCase().replace(/\s+/g, " "));
+}
+
 const MAX_ASSIGNMENTS = 64;
 const KIOSK_DATA_PROVIDER_TIMEOUT_MS = 10_000;
 const schoolCache = new Map<string, { expiresAt: number; value: Awaited<ReturnType<typeof getDeveloperKioskSchoolData>> }>();
@@ -198,7 +204,11 @@ export async function getDeveloperKioskData(request?: Request, diagnostics?: Kio
     const engine = engineResult?.engine;
     if (engine && engineResult) {
       const events = await withKioskDataProviderTimeout(engine.getEvents({ start: now, end }));
-      result.calendar = { connected: true, events: events.filter((event) => !/^canvas(?:\s|$)/i.test(event.calendarName ?? "")).slice(0, MAX_EVENTS).map((event) => boundedEvent(event)), diagnostics: { category: "connected", configured: true, accountMatched: Boolean(accountId), source: "account-provider", feedCount: 0, ...(engineResult.context?.connection?.providerType ? { connectionType: engineResult.context.connection.providerType } : {}) } };
+      const personalEvents = events.filter((event) => isPersonalKioskCalendar(event.calendarName));
+      // A subscriptions-only provider can initialize successfully, but it is not a personal calendar connection.
+      // Fall back to the four explicitly configured personal iCal feeds when available.
+      if (!engineResult.context && personalEvents.length === 0) throw new Error("Private Apple calendar unavailable; check personal iCal fallback.");
+      result.calendar = { connected: true, events: personalEvents.filter((event, index, list) => list.findIndex((item) => item.calendarName === event.calendarName && item.title === event.title && item.start.getTime() === event.start.getTime() && item.end.getTime() === event.end.getTime()) === index).slice(0, MAX_EVENTS).map((event) => boundedEvent(event)), diagnostics: { category: "connected", configured: true, accountMatched: Boolean(accountId), source: "account-provider", feedCount: 0, ...(engineResult.context?.connection?.providerType ? { connectionType: engineResult.context.connection.providerType } : {}) } };
       result.refreshDiagnostics.calendar = sceneRefreshDiagnostics(new Date().toISOString(), KIOSK_REFRESH_MS.calendar);
       traceKioskCalendar("fetch=ok");
       traceKioskCalendar("parse=ok");
