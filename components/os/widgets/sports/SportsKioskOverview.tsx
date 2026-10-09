@@ -115,7 +115,7 @@ export default function SportsKioskOverview() {
     <div className="absolute inset-0 bg-[radial-gradient(circle_at_48%_28%,rgba(139,44,255,.18),transparent_38%)]" />
     <div className="relative z-10 flex h-full min-h-0 flex-col overflow-hidden px-[3.2vw] pb-[3.8vh] pt-[4.5vh]">
       <div className="text-[clamp(.65rem,1.15vw,1.1rem)] font-semibold uppercase tracking-[.35em]">COSMOS <span className="cosmos-sports-accent-text">•</span> <span className="font-normal text-white/65">SPORTS</span></div>
-      <h1 className={`mt-[5vh] text-[clamp(3rem,6.3vw,6.2rem)] font-black leading-[.88] tracking-[-.055em] ${packersGameDay ? "cosmos-kiosk-packers-gameday-title" : "drop-shadow-[0_0_22px_rgba(174,91,255,.5)]"}`}>{smartHeadline(primary, packersGameDay)}</h1>
+      <h1 className={`mt-[5vh] text-[clamp(3rem,6.3vw,6.2rem)] font-black leading-[.88] tracking-[-.055em] ${packersGameDay ? "cosmos-kiosk-packers-gameday-title" : ""}`} style={packersGameDay ? undefined : headlineStyle}>{smartHeadline(primary, packersGameDay)}</h1>
       <p className="mt-3 text-[clamp(1.25rem,2.4vw,2.35rem)] font-light">{dateLine(now)}</p>
 
       <div className="mt-[4.5vh] grid min-h-0 flex-1 grid-cols-[2.1fr_.95fr] gap-[1.2vw]">
@@ -236,3 +236,22 @@ function sportIcon(event: SportsEvent) { return event.sport==="nfl"||event.sport
 function score(event: SportsEvent) { return event.awayTeam?.score !== undefined && event.homeTeam?.score !== undefined ? `${event.awayTeam.score} – ${event.homeTeam.score}` : "LIVE"; }
 function eventTime(event: SportsEvent) { return event.start.toLocaleString([], { weekday:"short", hour:"numeric", minute:"2-digit" }); }
 function dateLine(date: Date) { return `Today  |  ${date.toLocaleDateString([], { weekday:"long", month:"long", day:"numeric" })}`; }
+
+function dynamicHeadlineStyle(event: SportsEvent | undefined, packersGameDay: boolean): React.CSSProperties {
+  if (packersGameDay) return {};
+  const text = `${event?.title ?? ""} ${event?.homeTeam?.name ?? ""} ${event?.awayTeam?.name ?? ""}`.toLowerCase();
+  let colors = ["#c4b5fd","#8b5cf6","#22d3ee"];
+  if (event?.sport === "f1") colors = ["#1e3a8a","#ef4444","#f8fafc"]; // followed constructor: Red Bull
+  else if (event?.sport === "college-football" && text.includes("utah state")) colors = ["#ffffff","#94a3b8","#0f172a"];
+  else if (event?.sport === "college-football" && (text.includes("utah utes") || text.includes("utah"))) colors = ["#cc0000","#ffffff","#7f1d1d"];
+  else if (event?.sport === "mlb" && text.includes("angels")) colors = ["#ba0021","#ffffff","#003263"];
+  else if (event?.sport === "nascar") colors = ["#f59e0b","#ef4444","#ffffff"];
+  return {
+    backgroundImage: `linear-gradient(105deg,${colors[0]} 0%,${colors[1]} 48%,${colors[2]} 100%)`,
+    WebkitBackgroundClip: "text",
+    backgroundClip: "text",
+    color: "transparent",
+    WebkitTextFillColor: "transparent",
+    filter: `drop-shadow(0 0 18px ${colors[1]}66)`,
+  };
+}
