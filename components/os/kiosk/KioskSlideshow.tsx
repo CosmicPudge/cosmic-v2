@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import useKioskDeviceLocation from "@/hooks/os/useKioskDeviceLocation";
+import useWeather from "@/hooks/os/useWeather";
+import { useClockTick } from "@/hooks/os/useClock";
 
 import ClockWidget from "@/components/os/widgets/clock/ClockWidget";
 import WeatherWidget from "@/components/os/widgets/weather/WeatherWidget";
@@ -42,6 +44,8 @@ const SWIPE_THRESHOLD_PX = 55;
  */
 export default function KioskSlideshow() {
   useKioskDeviceLocation();
+  const headerClock = useClockTick(1_000);
+  const headerWeather = useWeather({ enabled: true });
   const searchParams = useSearchParams();
   const preview = process.env.NODE_ENV !== "production" ? searchParams.get("slide") : null;
   const forcedIndex = BUILD_SLIDES.findIndex((slide) => slide.id === preview);
@@ -130,6 +134,12 @@ export default function KioskSlideshow() {
         </WidgetProvider>
       </div>
 
+      {active.id !== "clock" && active.id !== "weather" && active.id !== "music" && (
+        <div className="pointer-events-none absolute right-[3.4vw] top-[3.8vh] z-50 flex items-start gap-5 rounded-xl bg-black/35 px-4 py-2 text-right text-white backdrop-blur-md">
+          <div><div className="text-xs tracking-wider">{headerClock ? new Intl.DateTimeFormat(undefined, { weekday: "short", month: "short", day: "numeric" }).format(headerClock) : ""}</div><div className="text-2xl tabular-nums">{headerClock ? new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" }).format(headerClock) : "--:--"}</div></div>
+          <div className="border-l border-white/25 pl-4"><div className="text-2xl font-semibold">{headerWeather.weather ? `${Math.round(headerWeather.weather.temp)}°` : "--°"}</div><div className="text-xs">{headerWeather.weather?.condition ?? "Weather unavailable"}</div><div className="text-xs opacity-70">{headerWeather.weather?.city ?? ""}</div></div>
+        </div>
+      )}
       <div className="cosmos-kiosk-slide-dots" aria-label={`Slide ${index + 1} of ${BUILD_SLIDES.length}`}>
         {BUILD_SLIDES.map((slide, slideIndex) => (
           <span key={slide.id} className={slideIndex === index ? "is-active" : ""} />
