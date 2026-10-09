@@ -18,8 +18,8 @@ export default function CosmosNotesKioskScene() {
   const date = now ? new Date(now) : null;
 
   return <section data-kiosk-rebuild="notes" className="relative h-full w-full select-none overflow-hidden bg-[#090317] text-white">
-    <div className="absolute inset-0 bg-[url('/kiosk/scenes/notes/notes-cosmic-nebula.svg')] bg-cover bg-center"/>
-    <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(2,2,10,.04),rgba(5,2,18,.12)_45%,rgba(3,1,12,.28))]"/>
+    <div className="absolute inset-0 bg-[linear-gradient(145deg,#090315_0%,#17052f_42%,#2b0754_72%,#120326_100%)]"/>
+    <div className="absolute inset-0 bg-[radial-gradient(circle_at_72%_18%,rgba(168,85,247,.22),transparent_34%),radial-gradient(circle_at_18%_82%,rgba(126,34,206,.16),transparent_38%)]"/>
 
     <div className="relative z-10 flex h-full flex-col px-[3.8vw] py-[4.2vh]">
       <header>
