@@ -3022,3 +3022,65 @@ html[data-cosmic-kiosk="true"] button, html[data-cosmic-kiosk="true"] a, html[da
 .cosmos-kiosk-school-reminder time strong{font-size:.82rem;font-weight:800}
 .cosmos-kiosk-school-reminder time span{font-size:.7rem;color:#e9d5ff}
 @media (orientation:landscape) and (max-width:900px) and (max-height:520px){.cosmos-kiosk-school-time strong{font-size:.82rem}.cosmos-kiosk-school-time span{font-size:.4rem}.cosmos-kiosk-school-class-kicker{font-size:.4rem}.cosmos-kiosk-school-reminder time strong{font-size:.45rem}.cosmos-kiosk-school-reminder time span{font-size:.38rem}}
+
+
+/* M3 kiosk-wide Cosmos Liquid Glass polish.
+   Kept deliberately additive so approved slide layouts/content remain unchanged. */
+[data-kiosk-rebuild] {
+  --kiosk-glass-tint: 111 45 189;
+  --kiosk-glass-edge: rgba(196, 160, 255, .42);
+  --kiosk-glass-shine: rgba(255,255,255,.14);
+  --kiosk-glass-shadow: rgba(35, 10, 78, .30);
+}
+[data-kiosk-rebuild="clock"] { --kiosk-glass-tint: 101 55 190; }
+[data-kiosk-rebuild="weather"] { --kiosk-glass-tint: 72 91 205; }
+[data-kiosk-rebuild="calendar"] { --kiosk-glass-tint: 126 55 203; }
+[data-kiosk-rebuild="school-calendar"] { --kiosk-glass-tint: 113 46 196; }
+[data-kiosk-rebuild="sports"] { --kiosk-glass-tint: 100 38 174; }
+
+[data-kiosk-rebuild] :is(
+  [class*="rounded-"][class*="border"],
+  [class*="backdrop-blur"],
+  [class*="bg-[#"],
+  [class*="bg-[linear-gradient"]
+) {
+  border-color: var(--kiosk-glass-edge) !important;
+  box-shadow:
+    inset 0 1px 0 var(--kiosk-glass-shine),
+    inset 0 -1px 0 rgba(139,92,246,.08),
+    0 14px 38px var(--kiosk-glass-shadow),
+    0 0 22px rgba(var(--kiosk-glass-tint), .09);
+  backdrop-filter: blur(22px) saturate(145%);
+  -webkit-backdrop-filter: blur(22px) saturate(145%);
+}
+
+[data-kiosk-rebuild] :is(
+  [class*="rounded-"][class*="border"],
+  [class*="backdrop-blur"]
+) {
+  background-image:
+    linear-gradient(135deg,
+      rgba(255,255,255,.105) 0%,
+      rgba(var(--kiosk-glass-tint), .13) 28%,
+      rgba(16,7,35,.52) 62%,
+      rgba(var(--kiosk-glass-tint), .08) 100%);
+}
+
+[data-kiosk-rebuild] :is(
+  [class*="rounded-full"][class*="bg-"],
+  [class*="rounded-full"][class*="border"]
+) {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.22),
+    0 5px 16px rgba(var(--kiosk-glass-tint), .22);
+  backdrop-filter: blur(18px) saturate(150%);
+  -webkit-backdrop-filter: blur(18px) saturate(150%);
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  [data-kiosk-rebuild] :is([class*="rounded-"][class*="border"],[class*="backdrop-blur"]) {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background-color: rgba(15,7,32,.92);
+  }
+}
