@@ -79,7 +79,11 @@ async function fetchText(url: string, fetchImpl: typeof fetch) {
   return response.text();
 }
 
-export async function fetchKioskCalendarIcalFeeds(\n  urls: string[],\n  fetchImpl: typeof fetch = fetch,\n  calendarNames: string[] = ["School", "Not Available"],\n): Promise<KioskCalendarIcalResult> {
+export async function fetchKioskCalendarIcalFeeds(
+  urls: string[],
+  fetchImpl: typeof fetch = fetch,
+  calendarNames: string[] = ["School", "Not Available"],
+): Promise<KioskCalendarIcalResult> {
   const window = { start: new Date(), end: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) };
   const results = await Promise.all(urls.map(async (url, index) => {
     let body: string;
