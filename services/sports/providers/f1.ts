@@ -60,13 +60,14 @@ function providerStatus(value: unknown, now: Date, start: Date, end?: Date): Spo
 
 function sessionKind(label: string): "practice" | "qualifying" | "sprint" | "race" {
   const normalized = label.toLowerCase();
+  if (normalized.includes("sprint qualifying") || normalized.includes("sprint shootout")) return "sprintQualifying";
   if (normalized.includes("qualifying") || normalized.includes("shootout")) return "qualifying";
   if (normalized.includes("sprint")) return "sprint";
   if (normalized.includes("practice") || normalized.includes("fp")) return "practice";
   return "race";
 }
 
-export function f1SessionKey(label: string) {
+export function f1SessionKey(label: string): string {
   const normalized = label.toLowerCase();
   if (normalized.includes("practice 1") || normalized.includes("fp1")) return "practice1";
   if (normalized.includes("practice 2") || normalized.includes("fp2")) return "practice2";
@@ -171,7 +172,8 @@ export class F1Provider implements SportsProvider {
         if (!round || !raceName) return [];
         const location = isRecord(circuit.Location) ? [string(circuit.Location.locality), string(circuit.Location.country)].filter(Boolean).join(", ") : undefined;
         const circuitId = string(circuit.circuitId);
-        const weekend = [{ label: "Practice 1", value: isRecord(race.FirstPractice) ? race.FirstPractice : undefined }, { label: "Practice 2", value: isRecord(race.SecondPractice) ? race.SecondPractice : undefined }, { label: "Practice 3", value: isRecord(race.ThirdPractice) ? race.ThirdPractice : undefined }, { label: "Sprint", value: isRecord(race.Sprint) ? race.Sprint : undefined }, { label: "Qualifying", value: isRecord(race.Qualifying) ? race.Qualifying : undefined }, { label: "Race", value: string(race.date) ? { date: race.date, time: race.time } : undefined }];
+        const sprintQualifying = isRecord(race.SprintQualifying) ? race.SprintQualifying : isRecord(race.SprintShootout) ? race.SprintShootout : undefined;
+        const weekend = [{ label: "Practice 1", value: isRecord(race.FirstPractice) ? race.FirstPractice : undefined }, { label: "Practice 2", value: isRecord(race.SecondPractice) ? race.SecondPractice : undefined }, { label: "Practice 3", value: isRecord(race.ThirdPractice) ? race.ThirdPractice : undefined }, { label: "Sprint Qualifying", value: sprintQualifying }, { label: "Sprint", value: isRecord(race.Sprint) ? race.Sprint : undefined }, { label: "Qualifying", value: isRecord(race.Qualifying) ? race.Qualifying : undefined }, { label: "Race", value: string(race.date) ? { date: race.date, time: race.time } : undefined }];
         return weekend.flatMap(({ label, value }) => { const dateValue = value && string(value.date); if (!dateValue) return []; const country = isRecord(circuit.Location) ? string(circuit.Location.country) : undefined; const circuitName = string(circuit.circuitName); const start = parseF1SessionStart(dateValue, string(value?.time), country, circuitName); if (Number.isNaN(start.getTime())) return []; const kind = sessionKind(label); const sessionId = f1SessionKey(label); const state = resolveF1SessionState({ start, now, kind }); const title = `${raceName} · ${label}`; const timezone = resolveF1Timezone(circuitName, country); return [{ id: `jolpica-f1:${season}:${round}:${sessionId}`, sport: "f1" as const, title, start, status: state.status, venue: circuitName, broadcast: "Apple TV", source: "jolpica", provider: "jolpica", providerName: "Jolpica F1", official: false, fallback: true, sourceUrl: "https://api.jolpi.ca/docs/", metadata: { competition: raceName, eventName: title, sessionType: label, sessionKind: kind, circuit: circuitName, normalizedState: state.state, statusSource: state.statusSource, inferredLive: state.inferredLive, expectedEnd: state.expectedEnd.toISOString(), staleAfter: new Date(state.expectedEnd.getTime() + 30 * 60_000).toISOString(), lastProviderRefresh: now.toISOString(), timezoneResolved: Boolean(timezone), ...(timezone ? { timezone } : {}), ...(circuitId ? { circuitId } : {}), ...(country ? { country } : {}), ...(location ? { location } : {}) } }]; });
       });
     } catch { return []; }
