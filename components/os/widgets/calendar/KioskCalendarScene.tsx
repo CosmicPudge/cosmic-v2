@@ -152,12 +152,11 @@ function eventDayLabel(event: CalendarEvent, now: Date, timeZone?: string) {
   return formatDate(event.start, { weekday: "short", month: "short", day: "numeric" }, timeZone).toUpperCase();
 }
 
-const PERSONAL_KIOSK_CALENDARS = new Set(["n/a", "work", "school", "cosmic ai"]);
+const PERSONAL_KIOSK_CALENDARS = new Set(["not available", "stetson work", "school", "cosmic ai"]);
 
 function normalizeCalendarName(value: string | undefined) {
   const name = (value ?? "").trim().toLowerCase().replace(/\\s+/g, " ");
-  // Some Apple Calendar integrations expose the work calendar under its full name.
-  return name === "stetson work" ? "work" : name === "not available" ? "n/a" : name;
+  return name;
 }
 
 function isPersonalKioskEvent(event: CalendarEvent) {
