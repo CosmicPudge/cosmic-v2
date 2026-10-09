@@ -37,6 +37,7 @@ export function resolveSportsTeamIdentity(sport: SportKind, team?: SportsTeam): 
   if (!team) return undefined;
   const normalized = team.name.trim().toLowerCase();
   if (sport === "college-football") {
+    if (team.logo?.startsWith("https://a.espncdn.com/")) return { canonicalId: team.id ?? normalized, name: team.name, shortName: team.name, abbreviation: team.abbreviation ?? initialsForTeam(team), logoPath: team.logo };
     const catalog = CFB_TEAM_IDENTITY[team.id ?? ""];
     if (catalog) return { canonicalId: team.id === "254" ? "utah" : team.id ?? catalog.providerTeamId, name: catalog.displayName, shortName: catalog.shortDisplayName ?? catalog.displayName, schoolName: catalog.school, abbreviation: catalog.abbreviation ?? team.abbreviation ?? initialsForTeam(team), logoPath: catalog.logoPath ?? catalog.logoUrl, accent: catalog.color ? `#${catalog.color.replace(/^#/, "")}` : undefined };
   }
