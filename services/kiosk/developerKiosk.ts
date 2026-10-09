@@ -127,7 +127,7 @@ export async function getDeveloperKioskData(request?: Request, diagnostics?: Kio
       diagnostics: KioskProviderDiagnostic;
     };
     garage: { connected: boolean; vehicle?: { id: string; nickname: string; mileage: number; status: string; fuelLevel?: number }; maintenanceDue: number; openIssues: number; priority?: string; updatedAt?: string };
-    notes: { connected: boolean; total: number; recent?: { id: string; title: string; body: string; pinned: boolean; updatedAt: string }; updatedAt?: string };
+    notes: { connected: boolean; total: number; items: Array<{ id: string; title: string; body: string; tags: string[]; folder?: string; pinned: boolean; updatedAt: string }>; recent?: { id: string; title: string; body: string; pinned: boolean; updatedAt: string }; updatedAt?: string };
     projects: { connected: boolean; openTasks: Array<{ id: string; title: string; priority: string; dueDate?: string; projectTitle?: string }>; updatedAt?: string };
     refreshDiagnostics: {
       weather: ReturnType<typeof sceneRefreshDiagnostics>;
@@ -141,7 +141,7 @@ export async function getDeveloperKioskData(request?: Request, diagnostics?: Kio
     calendar: { events: [], connected: false, diagnostics: { category: "configuration-error", configured: false, accountMatched: false, source: "kiosk-ical", feedCount: 0 } },
     school: { assignments: [], classes: [], overdueCount: 0, sceneState: "unavailable", connected: false, diagnostics: { category: "account-not-found", configured: false, accountMatched: false, source: "kiosk-canvas-ical" } },
     garage: { connected: false, maintenanceDue: 0, openIssues: 0 },
-    notes: { connected: false, total: 0 },
+    notes: { connected: false, total: 0, items: [] },
     projects: { connected: false, openTasks: [] },
     refreshDiagnostics: {
       weather: sceneRefreshDiagnostics(undefined, KIOSK_REFRESH_MS.weatherCurrent),
@@ -315,6 +315,7 @@ export async function getDeveloperKioskData(request?: Request, diagnostics?: Kio
         result.notes = {
           connected: true,
           total: visible.length,
+          items: visible.slice(0, 4).map((item) => ({ id: item.id, title: item.title, body: item.body, tags: item.tags ?? [], ...(item.folder ? { folder: item.folder } : {}), pinned: item.pinned, updatedAt: item.updatedAt })),
           ...(recent ? { recent: { id: recent.id, title: recent.title, body: recent.body, pinned: recent.pinned, updatedAt: recent.updatedAt } } : {}),
           updatedAt: notesDoc?.updatedAt,
         };
