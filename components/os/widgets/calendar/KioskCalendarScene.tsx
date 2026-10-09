@@ -154,9 +154,7 @@ function eventDayLabel(event: CalendarEvent, now: Date, timeZone?: string) {
 
 function isPersonalKioskEvent(event: CalendarEvent) {
   const name = (event.calendarName ?? "").trim().toLowerCase();
-  if (event.category === "sports") return false;
-  if (name === "canvas") return false;
-  return !["f1", "formula 1", "angels", "laa", "nascar", "packers", "usu football"].includes(name);
+  return name !== "canvas" && !name.startsWith("canvas ");
 }
 
 function calendarAccent(event: CalendarEvent) {
