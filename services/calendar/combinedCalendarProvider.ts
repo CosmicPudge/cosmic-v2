@@ -27,10 +27,14 @@ export class CombinedCalendarProvider
 
     const events = results.flatMap((result, index) => {
       if (result.status === "fulfilled") return result.value;
-      console.error(
-        `Combined calendar provider ${index + 1} failed:`,
-        result.reason instanceof Error ? result.reason.message : "Unknown provider error",
-      );
+      // Log only a sanitized failure category; never expose provider URLs or credentials.
+      const message = result.reason instanceof Error ? result.reason.message : String(result.reason ?? "");
+      const category = /401|403|unauthori[sz]ed|authentication|credential/i.test(message)
+        ? "authentication-error"
+        : /timeout|timed out|abort/i.test(message)
+          ? "timeout"
+          : "provider-error";
+      console.error(`[calendar-provider] provider=${index + 1} status=failed category=${category}`);
       return [];
     });
 
