@@ -198,12 +198,19 @@ export async function getDeveloperKioskData(request?: Request, diagnostics?: Kio
     }
   } catch {
     traceKioskCalendar("fetch=failed", "provider-or-timeout");
-    const urls = [process.env.COSMIC_KIOSK_ICAL_URL_1, process.env.COSMIC_KIOSK_ICAL_URL_2].map((value) => value?.trim()).filter((value): value is string => Boolean(value));
+    const fallbackCalendars = [
+      { url: process.env.COSMIC_KIOSK_ICAL_URL_1, name: "School" },
+      { url: process.env.COSMIC_KIOSK_ICAL_URL_2, name: "Not Available" },
+      { url: process.env.COSMIC_KIOSK_ICAL_URL_3, name: "Stetson Work" },
+      { url: process.env.COSMIC_KIOSK_ICAL_URL_4, name: "Cosmic AI" },
+    ].filter((calendar): calendar is { url: string; name: string } => Boolean(calendar.url?.trim()));
+    const urls = fallbackCalendars.map((calendar) => calendar.url.trim());
+    const calendarNames = fallbackCalendars.map((calendar) => calendar.name);
     if (!urls.length) {
       result.calendar = { connected: false, events: [], error: "Calendar is not configured.", diagnostics: { category: "configuration-error", configured: false, accountMatched: Boolean(process.env.COSMIC_KIOSK_ACCOUNT_ID?.trim()), source: "kiosk-ical", feedCount: 0 } };
       traceKioskCalendar("aggregate=missing", "configuration-error");
     } else {
-      const fallback = await fetchKioskCalendarIcalFeeds(urls);
+      const fallback = await fetchKioskCalendarIcalFeeds(urls, fetch, calendarNames);
       const visibleEvents = fallback.events.filter((event) => event.end > now && event.start < end).slice(0, MAX_EVENTS).map((event) => boundedEvent(event));
       result.calendar = { connected: fallback.feedCount > 0, events: visibleEvents, ...(fallback.feedCount ? {} : { error: "Calendar feeds are temporarily unavailable." }), diagnostics: { category: fallback.feedCount ? "connected" : fallback.category, configured: true, accountMatched: Boolean(process.env.COSMIC_KIOSK_ACCOUNT_ID?.trim()), source: "kiosk-ical", feedCount: fallback.feedCount } };
       if (fallback.feedCount > 0) result.refreshDiagnostics.calendar = sceneRefreshDiagnostics(new Date().toISOString(), KIOSK_REFRESH_MS.calendar);
