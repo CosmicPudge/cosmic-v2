@@ -107,7 +107,8 @@ export default function SportsKioskOverview() {
   const league = allFollowed.slice(0,5);
   const background = primaryView ? selectKioskSportsBackground(primaryView.backgroundKey) : "/dashboard/sports/stadium.webp";
   const now = new Date();
-  const packersGameDay = Boolean(primary && primary.sport === "nfl" && /green bay|packers/i.test(`${primary.title} ${primary.homeTeam?.name ?? ""} ${primary.awayTeam?.name ?? ""}`) && (primary.status === "live" || primary.start.toDateString() === now.toDateString()));\n  const headlineStyle = dynamicHeadlineStyle(primary, packersGameDay);
+  const packersGameDay = Boolean(primary && primary.sport === "nfl" && /green bay|packers/i.test(`${primary.title} ${primary.homeTeam?.name ?? ""} ${primary.awayTeam?.name ?? ""}`) && (primary.status === "live" || primary.start.toDateString() === now.toDateString()));
+  const headlineStyle = dynamicHeadlineStyle(primary, packersGameDay);
 
   return <section data-kiosk-rebuild="sports" data-sports-hero={heroTheme(primary).key} style={{"--sports-accent":heroTheme(primary).accent,"--sports-accent-2":heroTheme(primary).accent2} as React.CSSProperties} className="cosmos-sports-motion relative h-full w-full touch-none select-none overflow-hidden overscroll-none bg-[#090316] text-white">
     <img src={background} alt="" className="cosmos-sports-hero-bg absolute inset-0 h-full w-full object-cover" />
