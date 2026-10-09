@@ -19,13 +19,20 @@ export class CombinedCalendarProvider
     range?: CalendarDateRange
   ): Promise<CalendarEvent[]> {
     const results =
-      await Promise.all(
+      await Promise.allSettled(
         this.providers.map((provider) =>
           provider.getEvents(range)
         )
       );
 
-    const events = results.flat();
+    const events = results.flatMap((result, index) => {
+      if (result.status === "fulfilled") return result.value;
+      console.error(
+        `Combined calendar provider ${index + 1} failed:`,
+        result.reason instanceof Error ? result.reason.message : "Unknown provider error",
+      );
+      return [];
+    });
 
     const filtered =
       range
