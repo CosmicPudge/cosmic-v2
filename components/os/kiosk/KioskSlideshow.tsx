@@ -56,12 +56,12 @@ export default function KioskSlideshow() {
   const musicPlaying = Boolean(music.playback?.playing);
   const [musicHold, setMusicHold] = useState(false);
   const [manualOverride, setManualOverride] = useState(false);
-  // Keep a playback session latched across brief false/empty Spotify responses.
-  // Only a sustained stop allows the next playback start to take over again.
   const musicSessionActive = useRef(false);
+  const lastTrackId = useRef<string | undefined>(undefined);
   useEffect(() => {
     if (musicPlaying) {
       setMusicHold(true);
+      lastTrackId.current = music.playback?.track?.id ?? lastTrackId.current;
       if (!musicSessionActive.current) {
         musicSessionActive.current = true;
         setManualOverride(false);
@@ -70,13 +70,20 @@ export default function KioskSlideshow() {
       }
       return;
     }
+    if (!musicSessionActive.current) return;
+    // A 204/empty response during song handoff, or a failed/rate-limited
+    // request, is NOT evidence that the listener paused Spotify.
+    if (!music.connected || music.requestError || music.providerError) return;
+    const hasPausedTrack = Boolean(music.playback?.track?.id);
+    const stablePauseMs = hasPausedTrack ? 12_000 : 90_000;
     const timer = window.setTimeout(() => {
       musicSessionActive.current = false;
+      lastTrackId.current = undefined;
       setMusicHold(false);
       setManualOverride(false);
-    }, 15_000);
+    }, stablePauseMs);
     return () => window.clearTimeout(timer);
-  }, [musicPlaying, forcedIndex]);
+  }, [musicPlaying, music.connected, music.requestError, music.providerError, music.playback?.track?.id, forcedIndex]);
   const pointerStart = useRef<{ id: number; x: number; y: number } | null>(null);
 
   const goTo = useCallback((direction: 1 | -1) => {
