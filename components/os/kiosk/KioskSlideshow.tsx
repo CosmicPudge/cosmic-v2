@@ -55,24 +55,27 @@ export default function KioskSlideshow() {
   const music = useMusic({ refreshMs: snapshot => snapshot?.playback.playing ? 500 : 3_000 });
   const musicPlaying = Boolean(music.playback?.playing);
   const [musicHold, setMusicHold] = useState(false);
-  useEffect(() => {
-    if (musicPlaying) { setMusicHold(true); return; }
-    // Avoid unwanted slide rotation during brief Spotify network gaps.
-    const timer = window.setTimeout(() => setMusicHold(false), 15_000);
-    return () => window.clearTimeout(timer);
-  }, [musicPlaying]);
   const [manualOverride, setManualOverride] = useState(false);
-  const previousPlaying = useRef(false);
+  // Keep a playback session latched across brief false/empty Spotify responses.
+  // Only a sustained stop allows the next playback start to take over again.
+  const musicSessionActive = useRef(false);
   useEffect(() => {
-    // A new playback session brings the kiosk to Music and holds rotation.
-    // A deliberate swipe releases that hold until playback stops and starts again.
-    if (musicPlaying && !previousPlaying.current) {
-      setManualOverride(false);
-      if (forcedIndex < 0) setIndex(BUILD_SLIDES.findIndex(slide => slide.id === "music"));
-      setRotationEpoch(value => value + 1);
+    if (musicPlaying) {
+      setMusicHold(true);
+      if (!musicSessionActive.current) {
+        musicSessionActive.current = true;
+        setManualOverride(false);
+        if (forcedIndex < 0) setIndex(BUILD_SLIDES.findIndex(slide => slide.id === "music"));
+        setRotationEpoch(value => value + 1);
+      }
+      return;
     }
-    if (!musicPlaying) setManualOverride(false);
-    previousPlaying.current = musicPlaying;
+    const timer = window.setTimeout(() => {
+      musicSessionActive.current = false;
+      setMusicHold(false);
+      setManualOverride(false);
+    }, 15_000);
+    return () => window.clearTimeout(timer);
   }, [musicPlaying, forcedIndex]);
   const pointerStart = useRef<{ id: number; x: number; y: number } | null>(null);
 
