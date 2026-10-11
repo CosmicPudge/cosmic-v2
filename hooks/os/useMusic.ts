@@ -137,12 +137,14 @@ export function useMusic({ refreshMs, enabled = true }: UseMusicOptions = {}) {
       const response = await fetch(kioskApiUrl("/api/music/action"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        cache: "no-store",
         body: JSON.stringify({ action, value }),
       });
-      const result = await response.json() as { error?: string };
+      const result = await response.json().catch(() => ({})) as { error?: string };
 
       if (!response.ok) {
-        throw new Error(result.error ?? "Music action failed.");
+        throw new Error(result.error ?? `Music action rejected (HTTP ${response.status}).`);
       }
 
       await refresh();
