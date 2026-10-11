@@ -34,6 +34,7 @@ const PUBLIC_API_ROUTES = new Set([
   "/api/devices/enrollment/redeem",
 
   "/api/auth/google/callback",
+  "/api/auth/spotify",
   "/api/auth/spotify/callback",
   "/api/billing/webhook",
   "/api/finance/webhooks/plaid",
