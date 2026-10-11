@@ -167,9 +167,9 @@ export default function KioskSlideshow() {
       </div>
 
       {active.id !== "clock" && active.id !== "weather" && (
-        <div className="pointer-events-none absolute right-[3.4vw] top-[3.8vh] z-50 flex items-start gap-[1.3vw] text-right text-white drop-shadow-lg">
-          <div><div className="text-xs tracking-wider">{headerClock ? new Intl.DateTimeFormat(undefined, { weekday: "short", month: "short", day: "numeric" }).format(headerClock) : ""}</div><div className="text-2xl tabular-nums">{headerClock ? new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" }).format(headerClock) : "--:--"}</div></div>
-          <div className="border-l border-white/25 pl-[1.3vw]"><div className="text-2xl font-semibold">{headerWeather.weather ? `${Math.round(headerWeather.weather.temp)}°` : "--°"}</div><div className="text-xs">{headerWeather.weather?.condition ?? "Weather unavailable"}</div><div className="text-xs opacity-70">{headerWeather.weather?.city ?? ""}</div></div>
+        <div className={`pointer-events-none absolute right-[3.4vw] z-50 flex items-start gap-[1.3vw] text-right text-white drop-shadow-lg ${active.id === "system" ? "top-[2vh] [&_.kiosk-header-date]:text-[10px] [&_.kiosk-header-time]:text-[20px] [&_.kiosk-header-weather]:text-[20px] [&_.kiosk-header-detail]:text-[10px] [&_.kiosk-header-detail]:leading-tight" : "top-[3.8vh]"}`}>
+          <div><div className="kiosk-header-date text-xs tracking-wider">{headerClock ? new Intl.DateTimeFormat(undefined, { weekday: "short", month: "short", day: "numeric" }).format(headerClock) : ""}</div><div className="kiosk-header-time text-2xl tabular-nums">{headerClock ? new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" }).format(headerClock) : "--:--"}</div></div>
+          <div className="border-l border-white/25 pl-[1.3vw]"><div className="kiosk-header-weather text-2xl font-semibold">{headerWeather.weather ? `${Math.round(headerWeather.weather.temp)}°` : "--°"}</div><div className="kiosk-header-detail text-xs">{headerWeather.weather?.condition ?? "Weather unavailable"}</div><div className="kiosk-header-detail text-xs opacity-70">{headerWeather.weather?.city ?? ""}</div></div>
         </div>
       )}
       <div className="cosmos-kiosk-slide-dots" aria-label={`Slide ${index + 1} of ${BUILD_SLIDES.length}`}>
