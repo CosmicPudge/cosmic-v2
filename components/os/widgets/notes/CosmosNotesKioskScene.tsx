@@ -25,7 +25,7 @@ export default function CosmosNotesKioskScene() {
     <div className="relative z-10 flex h-full flex-col px-[3.8vw] py-[4.2vh]">
       <header>
         <p className="text-[clamp(.65rem,1vw,.95rem)] font-semibold tracking-[.34em]"><span>COSMOS</span><span className="mx-3 text-fuchsia-500">•</span><span className="font-normal text-white/48">NOTES</span></p>
-        <h1 className="mt-[2.1vh] text-[clamp(3rem,7.2vw,7rem)] font-semibold leading-[.78] tracking-[-.045em] text-white drop-shadow-[0_0_20px_rgba(216,180,254,.42)]">Notes</h1>
+        <h1 className="mt-[1vh] text-[clamp(2.5rem,5.2vw,5rem)] font-semibold leading-[.78] tracking-[-.045em] text-white drop-shadow-[0_0_20px_rgba(216,180,254,.42)]">Notes</h1>
         <p className="mt-[2.1vh] text-[clamp(.9rem,1.7vw,1.6rem)] font-light text-white/92">{date ? new Intl.DateTimeFormat(undefined,{weekday:"long",month:"long",day:"numeric"}).format(date) : "Opening notes"} <span className="mx-3 text-white/55">|</span> {date ? new Intl.DateTimeFormat(undefined,{hour:"numeric",minute:"2-digit"}).format(date) : "--:--"}</p>
       </header>
 
