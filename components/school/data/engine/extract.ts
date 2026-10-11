@@ -22,7 +22,7 @@ export function extractAssignments(
   events: SchoolEvent[]
 ): SchoolAssignment[] {
   return events
-    .filter((event) => event.type === "assignment")
+    .filter((event) => ["assignment", "quiz", "exam", "discussion"].includes(event.type))
     .map((event) => ({
       id: event.id,
       title: event.title,
