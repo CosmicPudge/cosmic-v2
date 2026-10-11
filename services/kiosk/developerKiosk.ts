@@ -62,6 +62,20 @@ function providerErrorCategory(error: unknown): KioskProviderDiagnostic["categor
   return /401|403|unauthori[sz]ed|authentication|invalid credential|reconnect/i.test(message) ? "authentication-error" : "provider-error";
 }
 
+/** Canvas iCal sometimes supplies a date-only deadline as 00:00:00Z.
+ * For the USU kiosk, preserve that calendar date and use the usual end-of-day
+ * 11:59 PM deadline, rather than shifting it into the prior Mountain day.
+ * This only applies to the Canvas-iCal fallback, never timed assignments. */
+function kioskCanvasDueDate(due: Date, iCalFallback: boolean): Date {
+  if (!iCalFallback || due.getUTCHours() !== 0 || due.getUTCMinutes() !== 0 || due.getUTCSeconds() !== 0) return due;
+  const day = new Date(Date.UTC(due.getUTCFullYear(), due.getUTCMonth(), due.getUTCDate(), 12));
+  const label = new Intl.DateTimeFormat("en-US", { timeZone: "America/Denver", timeZoneName: "shortOffset" })
+    .formatToParts(day).find(part => part.type === "timeZoneName")?.value ?? "GMT-7";
+  const match = label.match(/GMT([+-])(\\d{1,2})(?::(\\d{2}))?/);
+  const offset = match ? (match[1] === "+" ? 1 : -1) * (Number(match[2]) * 60 + Number(match[3] ?? 0)) : -420;
+  return new Date(Date.UTC(due.getUTCFullYear(), due.getUTCMonth(), due.getUTCDate(), 23, 59) - offset * 60_000);
+}
+
 export function isDeveloperKioskEnabled(): boolean {
   return process.env.NODE_ENV !== "production" || process.env.COSMIC_KIOSK_ENABLED === "true" || process.env.COSMIC_DEV_KIOSK_ENABLED === "true";
 }
@@ -257,7 +271,7 @@ export async function getDeveloperKioskData(request?: Request, diagnostics?: Kio
       const connected = isDeveloperKioskSchoolConnected(school);
       result.school = {
         connected,
-        assignments: upcoming.slice(0, MAX_ASSIGNMENTS).map((item) => ({ id: item.id.slice(0, 160), title: item.title.slice(0, 240), due: item.dueAt!.toISOString(), ...(item.courseName ? { course: item.courseName.slice(0, 120) } : {}), completed: item.completionStatus === "completed" })),
+        assignments: upcoming.slice(0, MAX_ASSIGNMENTS).map((item) => ({ id: item.id.slice(0, 160), title: item.title.slice(0, 240), due: kioskCanvasDueDate(item.dueAt!, schoolUsesIcal).toISOString(), ...(item.courseName ? { course: item.courseName.slice(0, 120) } : {}), completed: item.completionStatus === "completed" })),
         classes: school.data.classes
           .filter((item) => item.end >= now)
           .filter((item) => !looksLikeAssignmentDeadline(item.name, item.start, item.end))
