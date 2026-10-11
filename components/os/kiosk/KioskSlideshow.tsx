@@ -103,7 +103,8 @@ export default function KioskSlideshow() {
   const onPointerDown = (event: React.PointerEvent<HTMLElement>) => {
     if (!event.isPrimary) return;
     pointerStart.current = { id: event.pointerId, x: event.clientX, y: event.clientY };
-    event.currentTarget.setPointerCapture?.(event.pointerId);
+    // Do not capture touches on the slide root: capture retargets button taps
+    // away from the Music controls on Chromium touchscreens.
   };
 
   const onPointerUp = (event: React.PointerEvent<HTMLElement>) => {
