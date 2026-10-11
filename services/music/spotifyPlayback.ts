@@ -11,7 +11,7 @@ export type SpotifyPlaybackItem = {
   show?: { name?: string; images?: { url: string; width?: number; height?: number }[] };
 };
 
-export type SpotifyPlaybackResponse = { is_playing?: boolean; progress_ms?: number; currently_playing_type?: string; item?: SpotifyPlaybackItem | null; device?: { name?: string; volume_percent?: number } };
+export type SpotifyPlaybackResponse = { context?: { type?: string; uri?: string; external_urls?: { spotify?: string } } | null;  is_playing?: boolean; progress_ms?: number; currently_playing_type?: string; item?: SpotifyPlaybackItem | null; device?: { name?: string; volume_percent?: number } };
 
 export type SpotifyFallbackStatus = "success" | "no_item" | "no_content" | "unauthorized" | "rate_limited" | "network_error" | "invalid_response" | "not_attempted";
 export type SpotifyFallbackResult = { status: SpotifyFallbackStatus; response?: SpotifyPlaybackResponse };
