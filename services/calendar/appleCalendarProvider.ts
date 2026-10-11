@@ -141,9 +141,12 @@ export class AppleCalendarProvider
     start: Date,
     end: Date
   ): Promise<CalendarEvent[]> {
+    let stage = "principal-discovery";
+    try {
     const discovery =
       await discoverCalDav(this.config);
 
+    stage = "calendar-discovery";
     const calendars =
       await discoverCalendars(
         this.config,
@@ -159,6 +162,7 @@ export class AppleCalendarProvider
 
     console.info(`[apple-caldav] discovery=ok calendars=${calendars.length} eventCalendars=${eventCalendars.length} personalMatches=${eventCalendars.filter((calendar) => ["not available", "stetson work", "school", "cosmic ai"].includes(calendar.displayName.trim().toLowerCase())).length}`);
 
+    stage = "event-fetch-or-normalization";
     const events =
       await Promise.all(
         eventCalendars.map(
@@ -230,6 +234,19 @@ export class AppleCalendarProvider
     };
 
     return normalized;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "";
+      const status = message.match(/(?:HTTP\s*|status\s*[:=]?\s*)(401|403|404|429|500|502|503|504)\b/i)?.[1] ?? "unknown";
+      const category = /401|403|unauthori[sz]ed|authentication|credential/i.test(message)
+        ? "authentication"
+        : /timeout|timed out|abort/i.test(message)
+          ? "timeout"
+          : /404|not found/i.test(message)
+            ? "not-found"
+            : "other";
+      console.error(`[apple-caldav] fetch=failed stage=${stage} category=${category} httpStatus=${status}`);
+      throw error;
+    }
   }
 
   invalidateCache(): void {
