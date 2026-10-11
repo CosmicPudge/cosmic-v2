@@ -49,6 +49,7 @@ export type KioskProviderDiagnostic = {
   accountMatched: boolean;
   source?: "account-provider" | "kiosk-ical" | "kiosk-canvas-ical";
   feedCount?: number;
+  feeds?: Array<{ feed: number; status: "connected" | "provider-error" | "parse-error"; reason?: string; httpStatus?: number }>;
   connectionType?: string;
   accountProviderSucceeded?: boolean;
   canvasIcalConfigured?: boolean;
@@ -231,7 +232,7 @@ export async function getDeveloperKioskData(request?: Request, diagnostics?: Kio
     } else {
       const fallback = await fetchKioskCalendarIcalFeeds(urls, fetch, calendarNames);
       const visibleEvents = fallback.events.filter((event) => event.end > now && event.start < end && !/^canvas(?:\s|$)/i.test(event.calendarName ?? "")).slice(0, MAX_EVENTS).map((event) => boundedEvent(event));
-      result.calendar = { connected: fallback.feedCount > 0, events: visibleEvents, ...(fallback.feedCount ? {} : { error: "Calendar feeds are temporarily unavailable." }), diagnostics: { category: fallback.feedCount ? "connected" : fallback.category, configured: true, accountMatched: Boolean(process.env.COSMIC_KIOSK_ACCOUNT_ID?.trim()), source: "kiosk-ical", feedCount: fallback.feedCount } };
+      result.calendar = { connected: fallback.feedCount > 0, events: visibleEvents, ...(fallback.feedCount ? {} : { error: "Calendar feeds are temporarily unavailable." }), diagnostics: { category: fallback.feedCount ? "connected" : fallback.category, configured: true, accountMatched: Boolean(process.env.COSMIC_KIOSK_ACCOUNT_ID?.trim()), source: "kiosk-ical", feedCount: fallback.feedCount, feeds: fallback.feedDiagnostics } };
       if (fallback.feedCount > 0) result.refreshDiagnostics.calendar = sceneRefreshDiagnostics(new Date().toISOString(), KIOSK_REFRESH_MS.calendar);
       traceKioskCalendar(fallback.feedCount > 0 ? "fetch=ok" : "fetch=failed", fallback.category);
       traceKioskCalendar(fallback.feedCount > 0 ? "parse=ok" : "aggregate=missing", fallback.category);
