@@ -57,11 +57,9 @@ export default function KioskSlideshow() {
   const [musicHold, setMusicHold] = useState(false);
   const [manualOverride, setManualOverride] = useState(false);
   const musicSessionActive = useRef(false);
-  const lastTrackId = useRef<string | undefined>(undefined);
   useEffect(() => {
     if (musicPlaying) {
       setMusicHold(true);
-      lastTrackId.current = music.playback?.track?.id ?? lastTrackId.current;
       if (!musicSessionActive.current) {
         musicSessionActive.current = true;
         setManualOverride(false);
@@ -74,14 +72,14 @@ export default function KioskSlideshow() {
     // A 204/empty response during song handoff, or a failed/rate-limited
     // request, is NOT evidence that the listener paused Spotify.
     if (!music.connected || music.requestError || music.providerError) return;
-    const hasPausedTrack = Boolean(music.playback?.track?.id);
-    const stablePauseMs = hasPausedTrack ? 12_000 : 90_000;
+    // Missing playback metadata is indeterminate, not a confirmed stop.
+    // Hold until Spotify reports a paused track consistently for a full minute.
+    if (!music.playback?.track?.id) return;
     const timer = window.setTimeout(() => {
       musicSessionActive.current = false;
-      lastTrackId.current = undefined;
       setMusicHold(false);
       setManualOverride(false);
-    }, stablePauseMs);
+    }, 60_000);
     return () => window.clearTimeout(timer);
   }, [musicPlaying, music.connected, music.requestError, music.providerError, music.playback?.track?.id, forcedIndex]);
   const pointerStart = useRef<{ id: number; x: number; y: number } | null>(null);
@@ -98,13 +96,13 @@ export default function KioskSlideshow() {
       return;
     }
 
-    if (musicHold && !manualOverride) return;
+    if (musicHold) return;
     const timer = window.setInterval(() => {
       setIndex((current) => (current + 1) % BUILD_SLIDES.length);
     }, ROTATION_MS);
 
     return () => window.clearInterval(timer);
-  }, [forcedIndex, rotationEpoch, musicHold, manualOverride]);
+  }, [forcedIndex, rotationEpoch, musicHold]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -157,6 +155,8 @@ export default function KioskSlideshow() {
       data-kiosk-part="11-of-11"
       data-kiosk-slide-index={index}
       data-kiosk-slide-count={BUILD_SLIDES.length}
+      data-kiosk-music-hold={musicHold ? "active" : "inactive"}
+      data-kiosk-music-playing={musicPlaying ? "yes" : "no"}
       onPointerDown={onPointerDown}
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerCancel}
