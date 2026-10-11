@@ -17,6 +17,7 @@ import CosmosNotesKioskScene from "@/components/os/widgets/notes/CosmosNotesKios
 import CosmosTasksKioskScene from "@/components/os/widgets/tasks/CosmosTasksKioskScene";
 import CosmosAIKioskScene from "@/components/os/widgets/assistant/CosmosAIKioskScene";
 import CosmosSystemKioskScene from "@/components/os/widgets/system/CosmosSystemKioskScene";
+import { useMusic } from "@/hooks/os/useMusic";
 import { WidgetProvider } from "@/components/os/ui/widget/WidgetContext";
 
 const BUILD_SLIDES = [
@@ -51,9 +52,18 @@ export default function KioskSlideshow() {
   const forcedIndex = BUILD_SLIDES.findIndex((slide) => slide.id === preview);
   const [index, setIndex] = useState(forcedIndex >= 0 ? forcedIndex : 0);
   const [rotationEpoch, setRotationEpoch] = useState(0);
+  const music = useMusic({ refreshMs: snapshot => snapshot?.playback.playing ? 500 : 3_000 });
+  const musicPlaying = Boolean(music.playback?.playing);
+  const [manualOverride, setManualOverride] = useState(false);
+  const previousPlaying = useRef(false);
+  useEffect(() => {
+    if (!musicPlaying || !previousPlaying.current) setManualOverride(false);
+    previousPlaying.current = musicPlaying;
+  }, [musicPlaying]);
   const pointerStart = useRef<{ id: number; x: number; y: number } | null>(null);
 
   const goTo = useCallback((direction: 1 | -1) => {
+    setManualOverride(true);
     setIndex((current) => (current + direction + BUILD_SLIDES.length) % BUILD_SLIDES.length);
     setRotationEpoch((value) => value + 1);
   }, []);
@@ -64,12 +74,13 @@ export default function KioskSlideshow() {
       return;
     }
 
+    if (musicPlaying && !manualOverride) return;
     const timer = window.setInterval(() => {
       setIndex((current) => (current + 1) % BUILD_SLIDES.length);
     }, ROTATION_MS);
 
     return () => window.clearInterval(timer);
-  }, [forcedIndex, rotationEpoch]);
+  }, [forcedIndex, rotationEpoch, musicPlaying, manualOverride]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
