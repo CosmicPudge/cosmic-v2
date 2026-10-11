@@ -37,6 +37,30 @@ async function spotifyQueue(accessToken: string) {
     return queue;
   } catch { return cached?.queue ?? []; }
 }
+const sessionCache = new Map<string, { expiresAt: number; session: import("@/core/contracts/Music").MusicSessionContext }>();
+async function spotifySessionContext(data: SpotifyPlaybackResponse, accessToken: string) {
+  const context = data.context;
+  if (!context?.uri || !["playlist", "album", "artist"].includes(context.type ?? "")) return undefined;
+  const type = context.type as "playlist" | "album" | "artist";
+  const id = context.uri.split(":")[2];
+  if (!id || !/^[a-zA-Z0-9]+$/.test(id)) return undefined;
+  const fallback = { type, title: type === "playlist" ? "Spotify playlist" : type === "album" ? (data.item?.album?.name ?? "Album") : "Spotify artist", spotifyUrl: context.external_urls?.spotify };
+  const cached = sessionCache.get(context.uri);
+  if (cached && cached.expiresAt > Date.now()) return cached.session;
+  try {
+    const endpoint = type === "playlist" ? "playlists" : type === "album" ? "albums" : "artists";
+    const response = await fetch(`https://api.spotify.com/v1/${endpoint}/${encodeURIComponent(id)}`, { headers: { Authorization: `Bearer ${accessToken}` }, cache: "no-store" });
+    if (!response.ok) throw new Error("Session metadata unavailable");
+    const info = await response.json() as { name?: string; images?: Array<{url:string}>; external_urls?:{spotify?:string} };
+    const session = { ...fallback, title: info.name || fallback.title, artworkUrl: info.images?.[0]?.url, spotifyUrl: info.external_urls?.spotify ?? fallback.spotifyUrl };
+    sessionCache.set(context.uri, { session, expiresAt: Date.now() + 300_000 });
+    if (sessionCache.size > 40) sessionCache.clear();
+    return session;
+  } catch {
+    sessionCache.set(context.uri, { session: fallback, expiresAt: Date.now() + 60_000 });
+    return fallback;
+  }
+}
 const artistCache = new Map<string, { profile?: MusicArtist; expiresAt: number }>();
 const artistRequests = new Map<string, Promise<Map<string, MusicArtist>>>();
 function trackSuffix(id?: string) { return id ? id.slice(-4) : "none"; }
@@ -204,7 +228,7 @@ async function snapshotWithToken(current: Token, refreshAccessToken?: () => Prom
     const rawProvider = resolved.fallback.status === "not_attempted" ? primaryRawProvider : spotifyRawPlaybackDiagnostics(payload, resolved.fallback);
     if (process.env.NODE_ENV !== "production") console.info(`[spotify-playback] requestStartedAt=${requestStartedAt} durationMs=${Date.now() - requestStartedMs} status=${response.status} itemPresent=${Boolean(payload.item)} itemType=${payload.currently_playing_type ?? payload.item?.type ?? (payload.item ? "track" : "none")} itemIdPresent=${Boolean(payload.item?.id)} itemNamePresent=${Boolean(payload.item?.name)} showPresent=${Boolean(payload.item?.show)} episodeImageCount=${payload.item?.images?.length ?? 0} showImageCount=${payload.item?.show?.images?.length ?? 0} durationPresent=${payload.item?.duration_ms !== undefined} progressMs=${payload.progress_ms ?? 0} isPlaying=${Boolean(payload.is_playing)}`);
     const snapshot = await normalizePlayback(resolved.data, current.access_token, refreshAccessToken);
-    if (snapshot.playback.track) snapshot.queue = await spotifyQueue(current.access_token);
+    if (snapshot.playback.track) { snapshot.queue = await spotifyQueue(current.access_token); snapshot.session = await spotifySessionContext(payload, current.access_token); }
     return { snapshot, rawProvider };
   } catch { return { snapshot: temporaryFailure("Spotify playback is temporarily unavailable.") }; }
 }
