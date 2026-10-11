@@ -126,7 +126,7 @@ export default function SportsKioskOverview() {
             {features.map((card) => card ? <FeatureEvent key={card.key} event={card.event} label={card.label} /> : null)}
           </div>
         </div>
-        <aside className="cosmos-sports-rail min-h-0 overflow-hidden rounded-[1.6vw] border border-violet-400/45 bg-[#100720]/80 p-[1.2vw] shadow-[inset_0_0_30px_rgba(124,58,237,.08)] backdrop-blur-md">
+        <aside className="cosmos-sports-rail flex min-h-0 flex-col overflow-hidden rounded-[1.6vw] border border-violet-400/45 bg-[#100720]/80 p-[1.2vw] shadow-[inset_0_0_30px_rgba(124,58,237,.08)] backdrop-blur-md">
           <div className="flex items-center justify-between border-b border-white/10 pb-3 text-[clamp(.7rem,1vw,.95rem)] uppercase tracking-[.23em] text-violet-100"><span>🏆 &nbsp; Around Your Sports</span><span className="text-white/55">Upcoming</span></div>
           <div className="mt-2 flex min-h-0 flex-1 flex-col overflow-y-auto">{league.length ? league.map((event) => <LeagueRow key={event.id} event={event} />) : <p className="py-12 text-center text-white/45">No other followed events right now.</p>}</div>
         </aside>
