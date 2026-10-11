@@ -21,8 +21,8 @@ export default function CosmosMusicKioskScene() {
 
   const art=track?.artworkUrl;
   return <section data-kiosk-rebuild="music" className="relative h-full w-full select-none overflow-hidden bg-[#08060b] text-white">
-    {art?<img src={art} alt="" className="absolute inset-0 h-full w-full scale-125 object-cover opacity-45 blur-[28px]"/>:<div className="absolute inset-0 bg-[url('/dashboard/music/concert-stage.webp')] bg-cover bg-center"/>}
-    <div className="absolute inset-0 bg-[linear-gradient(100deg,rgba(5,5,9,.72),rgba(6,8,16,.36)_50%,rgba(5,5,12,.74)),radial-gradient(circle_at_65%_48%,rgba(71,120,255,.24),transparent_34%)]"/>
+    {art?<img src={art} alt="" className="absolute inset-0 h-full w-full object-cover opacity-80 blur-[10px]"/>:<div className="absolute inset-0 bg-[url('/dashboard/music/concert-stage.webp')] bg-cover bg-center"/>}
+    <div className="absolute inset-0 bg-[linear-gradient(100deg,rgba(5,5,9,.76),rgba(6,8,16,.52)_50%,rgba(5,5,12,.78)),radial-gradient(circle_at_65%_48%,rgba(71,120,255,.24),transparent_34%)]"/>
     <div className="relative z-10 flex h-full min-h-0 flex-col px-[2.5vw] py-[2vh]">
       <header className="flex items-start justify-between">
         <div><div className="text-[clamp(1.7rem,3vw,3.2rem)] font-light tracking-[.28em]">COSMOS</div><div className="mt-1 pl-[6vw] text-[clamp(.7rem,1.1vw,1rem)] tracking-[.48em] text-white/65">MUSIC</div></div>
@@ -30,7 +30,7 @@ export default function CosmosMusicKioskScene() {
       </header>
       <div className="mt-[2vh] grid min-h-0 flex-1 grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)] grid-rows-[minmax(0,1fr)_82px] gap-[1vw] pb-[2.4vh]">
         <NowPlaying track={track} music={music} progress={progress}/>
-        <LyricsPanel track={track}/>
+        <LyricsPanel track={track} progress={progress}/>
         <Controls music={music}/>
         <SessionPanel session={music.snapshot?.session} track={track}/>
       </div>
@@ -41,12 +41,52 @@ export default function CosmosMusicKioskScene() {
 function Glass({children,className=""}:{children:React.ReactNode;className?:string}){return <div className={`overflow-hidden rounded-[1.5vw] border border-white/25 bg-[linear-gradient(135deg,rgba(28,29,39,.68),rgba(8,12,24,.58))] shadow-[inset_0_1px_0_rgba(255,255,255,.18),0_18px_50px_rgba(0,0,0,.28)] backdrop-blur-2xl ${className}`}>{children}</div>}
 function NowPlaying({track,music,progress}:{track?:MusicTrack;music:ReturnType<typeof useMusic>;progress:number}){
  const duration=music.playback?.durationMs??track?.durationMs??0; const ratio=duration?Math.min(100,progress/duration*100):0;
- return <Glass className="min-h-0 p-[1.5vw]"><div className="flex h-full min-h-0 gap-[1.5vw]">{track?.artworkUrl?<img src={track.artworkUrl} alt="" key={track?.id ?? "art"} className="aspect-square h-full max-h-full w-auto max-w-[30%] rounded-[.7vw] object-cover shadow-2xl motion-safe:animate-[kiosk-rebuild-slide-in_420ms_ease-out]"/>:<div className="aspect-square h-full max-h-full max-w-[30%] rounded-[.7vw] bg-white/10"/>}<div className="flex min-h-0 min-w-0 flex-1 flex-col justify-center"><p className="text-xs uppercase tracking-[.3em] text-white/65">Now Playing</p><h1 key={track?.id ?? "idle"} className="mt-1 line-clamp-2 text-[clamp(1rem,2.4vw,2rem)] font-medium leading-tight motion-safe:animate-[kiosk-rebuild-slide-in_420ms_ease-out]">{track?.title??(music.loading?"Loading…":"Nothing playing")}</h1><p className="mt-1 truncate text-[clamp(.8rem,1.5vw,1.3rem)] text-white/65">{track?.artists.join(", ")??"Start playback on Spotify"}</p>{track?.album?<p className="mt-1 truncate text-[clamp(.7rem,1vw,.85rem)] text-white/48">{track.album}</p>:null}<div className="mt-auto"><div className="h-[5px] overflow-hidden rounded-full bg-white/15"><div className="h-full rounded-full bg-[linear-gradient(90deg,#a5dcff,#7dd3fc)] shadow-[0_0_14px_rgba(125,211,252,.8)]" style={{width:`${ratio}%`}}/></div><div className="mt-2 flex justify-between text-sm tabular-nums text-white/55"><span>{fmt(progress)}</span><span>{fmt(duration)}</span></div></div></div></div></Glass>
+ const artistImage=track?.artistProfiles?.find(artist=>artist.imageUrl)?.imageUrl ?? track?.artworkUrl;
+ return <Glass className="min-h-0 p-[1.5vw]"><div className="flex h-full min-h-0 gap-[1.5vw]">{artistImage?<img src={artistImage} alt="" key={track?.id ?? "art"} className="aspect-square h-full max-h-full w-auto max-w-[30%] rounded-[.7vw] object-cover shadow-2xl motion-safe:animate-[kiosk-rebuild-slide-in_420ms_ease-out]"/>:<div className="aspect-square h-full max-h-full max-w-[30%] rounded-[.7vw] bg-white/10"/>}<div className="flex min-h-0 min-w-0 flex-1 flex-col justify-center"><p className="text-xs uppercase tracking-[.3em] text-white/65">Now Playing</p><h1 key={track?.id ?? "idle"} className="mt-1 line-clamp-2 text-[clamp(1rem,2.4vw,2rem)] font-medium leading-tight motion-safe:animate-[kiosk-rebuild-slide-in_420ms_ease-out]">{track?.title??(music.loading?"Loading…":"Nothing playing")}</h1><p className="mt-1 truncate text-[clamp(.8rem,1.5vw,1.3rem)] text-white/65">{track?.artists.join(", ")??"Start playback on Spotify"}</p>{track?.album?<p className="mt-1 truncate text-[clamp(.7rem,1vw,.85rem)] text-white/48">{track.album}</p>:null}<div className="mt-auto"><div className="h-[5px] overflow-hidden rounded-full bg-white/15"><div className="h-full rounded-full bg-[linear-gradient(90deg,#a5dcff,#7dd3fc)] shadow-[0_0_14px_rgba(125,211,252,.8)]" style={{width:`${ratio}%`}}/></div><div className="mt-2 flex justify-between text-sm tabular-nums text-white/55"><span>{fmt(progress)}</span><span>{fmt(duration)}</span></div></div></div></div></Glass>
 }
-function LyricsPanel({track}:{track?:MusicTrack}){
- return <Glass className="flex min-h-0 flex-col p-[1.2vw]"><p className="text-[clamp(.65rem,1vw,.85rem)] uppercase tracking-[.25em] text-white/65">Lyrics</p>
- <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 px-4 text-center"><p className="text-lg font-medium text-white/70">{track?"Lyrics not connected":"Nothing playing"}</p><p className="max-w-[24rem] text-sm leading-relaxed text-white/45">{track?"Spotify doesn’t provide lyrics through its Web API. Connect a licensed lyrics service to show synchronized lyrics here.":"Start playing a song to view its lyrics when a lyrics provider is connected."}</p></div>
- </Glass>
+type LyricLine={ms:number;text:string};
+type LyricsData={lines:LyricLine[];plain:string[];instrumental:boolean};
+const lyricCache=new Map<string,LyricsData|null>();
+function LyricsPanel({track,progress}:{track?:MusicTrack;progress:number}){
+ const [revision,setRevision]=useState(0);
+ const [loading,setLoading]=useState(false);
+ const id=track?.id,artist=track?.artists[0],title=track?.title,album=track?.album,duration=track?.durationMs;
+ useEffect(()=>{
+  if(!id||!artist||!title||lyricCache.has(id))return;
+  const ctrl=new AbortController();let live=true;
+  const get=async()=>{
+   setLoading(true);
+   try{
+    const query=new URLSearchParams({track_name:title,artist_name:artist});
+    if(album)query.set("album_name",album);
+    if(duration)query.set("duration",String(Math.round(duration/1000)));
+    const response=await fetch("https://lrclib.net/api/get?"+query,{signal:ctrl.signal,headers:{"Accept":"application/json","Lrclib-App-Id":"Cosmos-Kiosk/1.0"}});
+    if(!response.ok)throw new Error("No matching lyrics");
+    const data=await response.json() as {syncedLyrics?:string|null;plainLyrics?:string|null;instrumental?:boolean};
+    const lines=(data.syncedLyrics??"").split(/\r?\n/).flatMap(row=>{
+      const matches=[...row.matchAll(/\[(\d+):(\d{2})(?:\.(\d{1,3}))?\]/g)];
+      const text=row.replace(/\[(\d+):(\d{2})(?:\.(\d{1,3}))?\]/g,"").trim();
+      return text?matches.map(m=>({ms:(Number(m[1])*60+Number(m[2]))*1000+Number((m[3]??"0").padEnd(3,"0")),text})):[];
+    }).sort((x,y)=>x.ms-y.ms);
+    if(live){lyricCache.set(id,{lines,plain:(data.plainLyrics??"").split(/\r?\n/).filter(Boolean),instrumental:Boolean(data.instrumental)});setRevision(x=>x+1);}
+   }catch{if(live){lyricCache.set(id,null);setRevision(x=>x+1);}}
+   finally{if(live)setLoading(false);}
+  };
+  void get();
+  return()=>{live=false;ctrl.abort();};
+ },[id,artist,title,album,duration]);
+ void revision;
+ const data=id?lyricCache.get(id):undefined;
+ const active=data?.lines.reduce((n,line,i)=>line.ms<=progress?i:n,-1)??-1;
+ const shown=data?.lines.length?data.lines.slice(Math.max(0,active-2),Math.max(0,active-2)+5):[];
+ return <Glass className="flex min-h-0 flex-col p-[1.2vw]"><div className="flex items-center justify-between"><p className="text-xs uppercase tracking-[.25em] text-white/65">Lyrics</p><p className="text-[10px] text-white/40">LRCLIB</p></div>
+ <div className="mt-2 flex min-h-0 flex-1 flex-col justify-center gap-3 overflow-y-auto px-3 text-center" style={{touchAction:"pan-y"}}>
+ {!track?<p className="text-sm text-white/55">Start playback to view lyrics.</p>:data===undefined||loading&&!lyricCache.has(id!)?<p className="text-sm text-white/55">Finding lyrics…</p>:
+ data?.instrumental?<p className="text-sm text-white/55">Instrumental — no lyrics.</p>:
+ shown.length?shown.map((line,i)=><p key={line.ms+"-"+i} className={line.ms===data?.lines[active]?.ms?"text-base font-semibold text-white":"text-sm text-white/45"}>{line.text}</p>):
+ data?.plain.length?<div className="space-y-2 text-sm text-white/75">{data.plain.map((line,i)=><p key={i}>{line}</p>)}</div>:
+ <p className="text-sm text-white/55">Lyrics unavailable for this track.</p>}
+ </div></Glass>;
 }
 function Controls({music}:{music:ReturnType<typeof useMusic>}){const vol=music.playback?.volume??0;return <Glass className="flex min-h-0 items-center justify-between gap-2 px-[1.4vw]"><div className="flex items-center gap-[1vw]"><button aria-label="Previous track" className="flex h-11 w-11 items-center justify-center rounded-full active:bg-white/20 disabled:opacity-40" onClick={()=>music.previous()} disabled={music.actionLoading||!music.capabilities?.canSkipPrevious}><SkipBack size={25}/></button><button aria-label={music.playback?.playing?"Pause":"Play"} onClick={()=>music.playback?.playing?music.pause():music.play()} disabled={music.actionLoading||!music.connected} className="flex h-12 w-12 items-center justify-center rounded-full border border-sky-200/80 bg-white/10 shadow-[0_0_14px_rgba(125,211,252,.4)] active:bg-sky-300/25 disabled:opacity-40">{music.playback?.playing?<Pause/>:<Play/>}</button><button aria-label="Next track" className="flex h-11 w-11 items-center justify-center rounded-full active:bg-white/20 disabled:opacity-40" onClick={()=>music.next()} disabled={music.actionLoading||!music.capabilities?.canSkipNext}><SkipForward size={25}/></button></div><div className="flex min-w-0 items-center gap-2 text-xs text-white/65"><Volume2 size={17}/><span>{vol}%</span></div></Glass>}
 function SessionPanel({session,track}:{session?:import("@/core/contracts/Music").MusicSessionContext;track?:MusicTrack}){
