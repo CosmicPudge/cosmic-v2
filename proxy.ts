@@ -144,7 +144,7 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  if ((pathname === "/api/kiosk/data" || pathname === "/api/kiosk/diagnostics" || pathname === "/api/kiosk/auth-status" || pathname === "/api/sports" || pathname === "/api/music") && isDeveloperKioskRequest(request)) {
+  if ((pathname === "/api/kiosk/data" || pathname === "/api/kiosk/diagnostics" || pathname === "/api/kiosk/auth-status" || pathname === "/api/sports" || (pathname === "/api/music" || pathname === "/api/music/action")) && isDeveloperKioskRequest(request)) {
     return NextResponse.next();
   }
   // Local kiosk visual development must be able to reach the route-level
