@@ -13,6 +13,7 @@ export interface KioskCalendarIcalResult {
   events: CalendarEvent[];
   feedCount: number;
   category: KioskIcalFeedCategory;
+  feedDiagnostics: Array<{ feed: number; status: "connected" | "provider-error" | "parse-error"; reason?: string; httpStatus?: number }>;
 }
 
 export interface KioskCanvasIcalResult {
@@ -91,9 +92,16 @@ export async function fetchKioskCalendarIcalFeeds(
   const window = { start: new Date(), end: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) };
   const results = await Promise.all(urls.map(async (url, index) => {
     let body: string;
-    try { body = await fetchText(url, fetchImpl); } catch (error) { const message = error instanceof Error ? error.message : ""; const status = message.match(/HTTP (\\d{3})/)?.[1] ?? "unknown"; const category = /timeout|timed out|abort/i.test(message) ? "timeout" : /fetch failed|network|ENOTFOUND|ECONN|certificate/i.test(message) ? "network" : "other"; console.error(`[kiosk-ical] feed=${index + 1} fetch=failed category=${category} httpStatus=${status}`); return { events: [] as CalendarEvent[], category: "provider-error" as const }; }
-    try { return { events: parseKioskCalendarIcal(body, calendarNames[index] ?? `Kiosk calendar ${index + 1}`, window), category: "connected" as const }; }
-    catch { console.error(`[kiosk-ical] feed=${index + 1} parse=failed`); return { events: [] as CalendarEvent[], category: "parse-error" as const }; }
+    try { body = await fetchText(url, fetchImpl); }
+    catch (error) {
+      const message = error instanceof Error ? error.message : "";
+      const httpStatus = Number(message.match(/HTTP (\\d{3})/)?.[1]) || undefined;
+      const reason = /URL must use/i.test(message) ? "invalid-feed-url" : /abort|timeout/i.test(message) ? "timeout" : httpStatus ? "http-error" : /fetch failed|network|ENOTFOUND|ECONN|certificate/i.test(message) ? "network" : "fetch-error";
+      console.error(`[kiosk-ical] feed=${index + 1} fetch=failed reason=${reason} status=${httpStatus ?? "unknown"}`);
+      return { events: [] as CalendarEvent[], category: "provider-error" as const, diagnostic: { feed: index + 1, status: "provider-error" as const, reason, ...(httpStatus ? { httpStatus } : {}) } };
+    }
+    try { return { events: parseKioskCalendarIcal(body, calendarNames[index] ?? `Kiosk calendar ${index + 1}`, window), category: "connected" as const, diagnostic: { feed: index + 1, status: "connected" as const } }; }
+    catch { console.error(`[kiosk-ical] feed=${index + 1} parse=failed`); return { events: [] as CalendarEvent[], category: "parse-error" as const, diagnostic: { feed: index + 1, status: "parse-error" as const, reason: "invalid-ical" } }; }
   }));
   const successful = results.filter((result) => result.category === "connected");
   const seen = new Set<string>();
@@ -106,6 +114,7 @@ export async function fetchKioskCalendarIcalFeeds(
   return {
     events,
     feedCount: successful.length,
+    feedDiagnostics: results.map(result => result.diagnostic),
     category: successful.length ? "connected" : results.some((result) => result.category === "parse-error") ? "parse-error" : "provider-error",
   };
 }
