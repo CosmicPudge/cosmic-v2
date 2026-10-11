@@ -23,6 +23,20 @@ const caps: MusicCapabilities = { canPlay: true, canPause: true, canSkipNext: tr
 const disabledCaps: MusicCapabilities = { canPlay: false, canPause: false, canSkipNext: false, canSkipPrevious: false, canSeek: false, canSetVolume: false, canReadQueue: false };
 const ARTIST_CACHE_MS = 60 * 60 * 1000;
 const ARTIST_FAILURE_CACHE_MS = 60 * 1000;
+const queueCache = new Map<string, { expiresAt: number; queue: import("@/core/contracts/Music").MusicTrack[] }>();
+async function spotifyQueue(accessToken: string) {
+  const cached = queueCache.get(accessToken);
+  if (cached && cached.expiresAt > Date.now()) return cached.queue;
+  try {
+    const response = await fetch("https://api.spotify.com/v1/me/player/queue", { cache: "no-store", headers: { Authorization: `Bearer ${accessToken}` } });
+    if (!response.ok) return cached?.queue ?? [];
+    const payload = await response.json() as { queue?: Array<{ id?: string; name?: string; type?: string; uri?: string; duration_ms?: number; artists?: Array<{name?:string}>; album?: {name?:string; images?:Array<{url:string}>} }> };
+    const queue = (payload.queue ?? []).filter(t => t.id && t.name && t.type === "track").slice(0, 12).map(t => ({ id: t.id!, title: t.name!, artists: (t.artists ?? []).map(a => a.name).filter((x):x is string => Boolean(x)), album: t.album?.name, artworkUrl: t.album?.images?.[0]?.url, durationMs: t.duration_ms, provider: "spotify" as const, mediaType: "music" as const }));
+    queueCache.set(accessToken, { queue, expiresAt: Date.now() + 15_000 });
+    if (queueCache.size > 24) queueCache.clear();
+    return queue;
+  } catch { return cached?.queue ?? []; }
+}
 const artistCache = new Map<string, { profile?: MusicArtist; expiresAt: number }>();
 const artistRequests = new Map<string, Promise<Map<string, MusicArtist>>>();
 function trackSuffix(id?: string) { return id ? id.slice(-4) : "none"; }
@@ -189,7 +203,9 @@ async function snapshotWithToken(current: Token, refreshAccessToken?: () => Prom
     });
     const rawProvider = resolved.fallback.status === "not_attempted" ? primaryRawProvider : spotifyRawPlaybackDiagnostics(payload, resolved.fallback);
     if (process.env.NODE_ENV !== "production") console.info(`[spotify-playback] requestStartedAt=${requestStartedAt} durationMs=${Date.now() - requestStartedMs} status=${response.status} itemPresent=${Boolean(payload.item)} itemType=${payload.currently_playing_type ?? payload.item?.type ?? (payload.item ? "track" : "none")} itemIdPresent=${Boolean(payload.item?.id)} itemNamePresent=${Boolean(payload.item?.name)} showPresent=${Boolean(payload.item?.show)} episodeImageCount=${payload.item?.images?.length ?? 0} showImageCount=${payload.item?.show?.images?.length ?? 0} durationPresent=${payload.item?.duration_ms !== undefined} progressMs=${payload.progress_ms ?? 0} isPlaying=${Boolean(payload.is_playing)}`);
-    return { snapshot: await normalizePlayback(resolved.data, current.access_token, refreshAccessToken), rawProvider };
+    const snapshot = await normalizePlayback(resolved.data, current.access_token, refreshAccessToken);
+    if (snapshot.playback.track) snapshot.queue = await spotifyQueue(current.access_token);
+    return { snapshot, rawProvider };
   } catch { return { snapshot: temporaryFailure("Spotify playback is temporarily unavailable.") }; }
 }
 
@@ -303,16 +319,22 @@ export async function personalSnapshotWithDiagnostics() {
   } catch (error) { return { snapshot: disconnected(error instanceof Error ? error.message : "Spotify authorization needs to reconnect.") }; }
 }
 
-async function actionWithToken(current: Token, name: "play" | "pause" | "next" | "previous" | "seek" | "volume", value?: number) {
+async function actionWithToken(current: Token, name: "play" | "pause" | "next" | "previous" | "seek" | "volume" | "play-track", value?: number | string) {
+  if (name === "play-track") {
+    if (typeof value !== "string" || !/^[A-Za-z0-9]{22}$/.test(value)) throw new Error("Invalid track.");
+    const result = await fetch("https://api.spotify.com/v1/me/player/play", {method:"PUT",headers:{Authorization:`Bearer ${current.access_token}`,"Content-Type":"application/json"},body:JSON.stringify({uris:[`spotify:track:${value}`]})});
+    if (!result.ok) throw new Error(result.status === 404 ? "An active Spotify device is required." : "Spotify could not play this track.");
+    return;
+  }
   const paths = { play: ["PUT", "/me/player/play"], pause: ["PUT", "/me/player/pause"], next: ["POST", "/me/player/next"], previous: ["POST", "/me/player/previous"], seek: ["PUT", `/me/player/seek?position_ms=${value}`], volume: ["PUT", `/me/player/volume?volume_percent=${value}`] } as const;
   const [method, pathName] = paths[name];
   const response = await fetch(`https://api.spotify.com/v1${pathName}`, { method, headers: { Authorization: `Bearer ${current.access_token}` } });
   if (!response.ok) { if (response.status === 404) throw new Error("Spotify playback control requires an active Spotify device."); if (response.status === 403) throw new Error("Spotify playback control is unavailable for this account."); throw new Error("Spotify could not complete that playback action."); }
 }
 
-export async function accountAction(userId: string, name: "play" | "pause" | "next" | "previous" | "seek" | "volume", value?: number) { const owned = await ownedToken(userId); if (!owned) throw new Error("Spotify is not connected to this Cosmic account."); return actionWithToken(owned.token, name, value); }
-export async function action(name: "play" | "pause" | "next" | "previous" | "seek" | "volume", value?: number) { return actionWithToken(await token(), name, value); }
-export async function personalAction(name: "play" | "pause" | "next" | "previous" | "seek" | "volume", value?: number) {
+export async function accountAction(userId: string, name: "play" | "pause" | "next" | "previous" | "seek" | "volume" | "play-track", value?: number | string) { const owned = await ownedToken(userId); if (!owned) throw new Error("Spotify is not connected to this Cosmic account."); return actionWithToken(owned.token, name, value); }
+export async function action(name: "play" | "pause" | "next" | "previous" | "seek" | "volume" | "play-track", value?: number | string) { return actionWithToken(await token(), name, value); }
+export async function personalAction(name: "play" | "pause" | "next" | "previous" | "seek" | "volume" | "play-track", value?: number | string) {
   const current = await getPersonalSpotifyToken();
   if (!current) throw new Error("Spotify is not connected personally.");
   const resolved = current.expires_at && current.expires_at <= Date.now() + 60_000 ? await refreshPersonalSpotifyToken(current) : current;
