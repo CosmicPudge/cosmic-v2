@@ -64,9 +64,16 @@ export default function KioskSlideshow() {
   const [manualOverride, setManualOverride] = useState(false);
   const previousPlaying = useRef(false);
   useEffect(() => {
-    if (!musicPlaying || !previousPlaying.current) setManualOverride(false);
+    // A new playback session brings the kiosk to Music and holds rotation.
+    // A deliberate swipe releases that hold until playback stops and starts again.
+    if (musicPlaying && !previousPlaying.current) {
+      setManualOverride(false);
+      if (forcedIndex < 0) setIndex(BUILD_SLIDES.findIndex(slide => slide.id === "music"));
+      setRotationEpoch(value => value + 1);
+    }
+    if (!musicPlaying) setManualOverride(false);
     previousPlaying.current = musicPlaying;
-  }, [musicPlaying]);
+  }, [musicPlaying, forcedIndex]);
   const pointerStart = useRef<{ id: number; x: number; y: number } | null>(null);
 
   const goTo = useCallback((direction: 1 | -1) => {
