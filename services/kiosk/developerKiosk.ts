@@ -71,7 +71,7 @@ function kioskCanvasDueDate(due: Date, iCalFallback: boolean): Date {
   const day = new Date(Date.UTC(due.getUTCFullYear(), due.getUTCMonth(), due.getUTCDate(), 12));
   const label = new Intl.DateTimeFormat("en-US", { timeZone: "America/Denver", timeZoneName: "shortOffset" })
     .formatToParts(day).find(part => part.type === "timeZoneName")?.value ?? "GMT-7";
-  const match = label.match(/GMT([+-])(\\d{1,2})(?::(\\d{2}))?/);
+  const match = label.match(/GMT([+-])(\d{1,2})(?::(\d{2}))?/);
   const offset = match ? (match[1] === "+" ? 1 : -1) * (Number(match[2]) * 60 + Number(match[3] ?? 0)) : -420;
   return new Date(Date.UTC(due.getUTCFullYear(), due.getUTCMonth(), due.getUTCDate(), 23, 59) - offset * 60_000);
 }
@@ -263,7 +263,7 @@ export async function getDeveloperKioskData(request?: Request, diagnostics?: Kio
         schoolCache.set(accountId, { value: school, expiresAt: Date.now() + KIOSK_REFRESH_MS.school });
       }
       const schoolUsesIcal = school.kioskSource === "kiosk-canvas-ical";
-      const assignments = (school.snapshot.planningAssignments ?? []).filter((item) => isAssignmentActiveForPlanning(item) && (!schoolUsesIcal || (item.dueAt && item.dueAt >= now)));
+      const assignments = (school.snapshot.planningAssignments ?? []).map(item => item.dueAt && schoolUsesIcal ? { ...item, dueAt: kioskCanvasDueDate(item.dueAt, true) } : item).filter((item) => isAssignmentActiveForPlanning(item) && (!schoolUsesIcal || (item.dueAt && item.dueAt >= now)));
       const upcoming = assignments.filter((item) => item.dueAt && item.completionStatus !== "completed").sort((a, b) => a.dueAt!.getTime() - b.dueAt!.getTime());
       const overdueCount = schoolUsesIcal ? 0 : upcoming.filter((item) => item.dueAt! < now).length;
       const urgentHours = Math.max(1, Number(process.env.COSMIC_KIOSK_SCHOOL_URGENT_HOURS ?? 24));
