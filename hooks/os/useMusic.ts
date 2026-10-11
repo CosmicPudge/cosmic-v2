@@ -118,7 +118,7 @@ export function useMusic({ refreshMs, enabled = true }: UseMusicOptions = {}) {
   }, [scope.id]);
 
   const intervalMs = typeof refreshMs === "function" ? refreshMs(snapshot) : refreshMs;
-  const effectiveIntervalMs = intervalMs === undefined ? undefined : Math.max(intervalMs, musicBackoffMs(failureCount, retryAfterMs));
+  const effectiveIntervalMs = intervalMs === undefined ? undefined : failureCount === 0 ? intervalMs : Math.max(intervalMs, musicBackoffMs(failureCount, retryAfterMs));
   useVisiblePolling(refresh, effectiveIntervalMs ?? 0, { enabled: enabled && effectiveIntervalMs !== undefined }, "music");
 
   useEffect(() => {
