@@ -55,14 +55,12 @@ export default function KioskSlideshow() {
   const music = useMusic({ refreshMs: snapshot => snapshot?.playback.playing ? 500 : 3_000 });
   const musicPlaying = Boolean(music.playback?.playing);
   const [musicHold, setMusicHold] = useState(false);
-  const [manualOverride, setManualOverride] = useState(false);
   const musicSessionActive = useRef(false);
   useEffect(() => {
     if (musicPlaying) {
       setMusicHold(true);
       if (!musicSessionActive.current) {
         musicSessionActive.current = true;
-        setManualOverride(false);
         if (forcedIndex < 0) setIndex(BUILD_SLIDES.findIndex(slide => slide.id === "music"));
         setRotationEpoch(value => value + 1);
       }
@@ -78,14 +76,12 @@ export default function KioskSlideshow() {
     const timer = window.setTimeout(() => {
       musicSessionActive.current = false;
       setMusicHold(false);
-      setManualOverride(false);
     }, 60_000);
     return () => window.clearTimeout(timer);
   }, [musicPlaying, music.connected, music.requestError, music.providerError, music.playback?.track?.id, forcedIndex]);
   const pointerStart = useRef<{ id: number; x: number; y: number } | null>(null);
 
   const goTo = useCallback((direction: 1 | -1) => {
-    setManualOverride(true);
     setIndex((current) => (current + direction + BUILD_SLIDES.length) % BUILD_SLIDES.length);
     setRotationEpoch((value) => value + 1);
   }, []);
