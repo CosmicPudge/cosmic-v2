@@ -75,7 +75,10 @@ export function parseKioskCalendarIcal(ics: string, calendarName: string, window
 }
 
 async function fetchText(url: string, fetchImpl: typeof fetch) {
-  const parsed = new URL(url.replace(/^webcal:/i, "https:"));
+  const cleanUrl = url.trim().replace(/^["\x27]|["\x27]$/g, "").trim();
+  let parsed: URL;
+  try { parsed = new URL(cleanUrl.replace(/^webcal:/i, "https:")); }
+  catch { throw new Error("Invalid iCloud calendar URL format."); }
   if (parsed.protocol !== "https:" || !parsed.hostname.endsWith(".icloud.com")) {
     throw new Error("Kiosk iCal feed URL must use an iCloud HTTPS host.");
   }
@@ -95,8 +98,8 @@ export async function fetchKioskCalendarIcalFeeds(
     try { body = await fetchText(url, fetchImpl); }
     catch (error) {
       const message = error instanceof Error ? error.message : "";
-      const httpStatus = Number(message.match(/HTTP (\\d{3})/)?.[1]) || undefined;
-      const reason = /URL must use/i.test(message) ? "invalid-feed-url" : /abort|timeout/i.test(message) ? "timeout" : httpStatus ? "http-error" : /fetch failed|network|ENOTFOUND|ECONN|certificate/i.test(message) ? "network" : "fetch-error";
+      const httpStatus = Number(message.match(/HTTP (\d{3})/)?.[1]) || undefined;
+      const reason = /Invalid iCloud calendar URL format/i.test(message) ? "invalid-url-format" : /URL must use/i.test(message) ? "invalid-feed-url" : /abort|timeout/i.test(message) ? "timeout" : httpStatus ? "http-error" : /fetch failed|network|ENOTFOUND|ECONN|certificate/i.test(message) ? "network" : "fetch-error";
       console.error(`[kiosk-ical] feed=${index + 1} fetch=failed reason=${reason} status=${httpStatus ?? "unknown"}`);
       return { events: [] as CalendarEvent[], category: "provider-error" as const, diagnostic: { feed: index + 1, status: "provider-error" as const, reason, ...(httpStatus ? { httpStatus } : {}) } };
     }
