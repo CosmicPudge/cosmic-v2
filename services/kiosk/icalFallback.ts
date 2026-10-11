@@ -74,8 +74,12 @@ export function parseKioskCalendarIcal(ics: string, calendarName: string, window
 }
 
 async function fetchText(url: string, fetchImpl: typeof fetch) {
-  const response = await fetchWithTimeout(url, { cache: "no-store", headers: { Accept: "text/calendar" } }, undefined, fetchImpl);
-  if (!response.ok) throw new Error("Kiosk iCal feed unavailable.");
+  const parsed = new URL(url.replace(/^webcal:/i, "https:"));
+  if (parsed.protocol !== "https:" || !parsed.hostname.endsWith(".icloud.com")) {
+    throw new Error("Kiosk iCal feed URL must use an iCloud HTTPS host.");
+  }
+  const response = await fetchWithTimeout(parsed.toString(), { cache: "no-store", headers: { Accept: "text/calendar" } }, undefined, fetchImpl);
+  if (!response.ok) throw new Error(`Kiosk iCal feed HTTP ${response.status}`);
   return response.text();
 }
 
@@ -87,9 +91,9 @@ export async function fetchKioskCalendarIcalFeeds(
   const window = { start: new Date(), end: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) };
   const results = await Promise.all(urls.map(async (url, index) => {
     let body: string;
-    try { body = await fetchText(url, fetchImpl); } catch { return { events: [] as CalendarEvent[], category: "provider-error" as const }; }
+    try { body = await fetchText(url, fetchImpl); } catch (error) { const message = error instanceof Error ? error.message : ""; const status = message.match(/HTTP (\\d{3})/)?.[1] ?? "unknown"; const category = /timeout|timed out|abort/i.test(message) ? "timeout" : /fetch failed|network|ENOTFOUND|ECONN|certificate/i.test(message) ? "network" : "other"; console.error(`[kiosk-ical] feed=${index + 1} fetch=failed category=${category} httpStatus=${status}`); return { events: [] as CalendarEvent[], category: "provider-error" as const }; }
     try { return { events: parseKioskCalendarIcal(body, calendarNames[index] ?? `Kiosk calendar ${index + 1}`, window), category: "connected" as const }; }
-    catch { return { events: [] as CalendarEvent[], category: "parse-error" as const }; }
+    catch { console.error(`[kiosk-ical] feed=${index + 1} parse=failed`); return { events: [] as CalendarEvent[], category: "parse-error" as const }; }
   }));
   const successful = results.filter((result) => result.category === "connected");
   const seen = new Set<string>();
