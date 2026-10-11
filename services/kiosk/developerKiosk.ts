@@ -207,7 +207,7 @@ export async function getDeveloperKioskData(request?: Request, diagnostics?: Kio
       const personalEvents = events.filter((event) => isPersonalKioskCalendar(event.calendarName));
       // A subscriptions-only provider can initialize successfully, but it is not a personal calendar connection.
       // Fall back to the four explicitly configured personal iCal feeds when available.
-      if (!engineResult.context && personalEvents.length === 0) throw new Error("Private Apple calendar unavailable; check personal iCal fallback.");
+      if (personalEvents.length === 0) throw new Error("No personal events from account provider; use configured personal iCal feeds.");
       result.calendar = { connected: true, events: personalEvents.filter((event, index, list) => list.findIndex((item) => item.calendarName === event.calendarName && item.title === event.title && item.start.getTime() === event.start.getTime() && item.end.getTime() === event.end.getTime()) === index).slice(0, MAX_EVENTS).map((event) => boundedEvent(event)), diagnostics: { category: "connected", configured: true, accountMatched: Boolean(accountId), source: "account-provider", feedCount: 0, ...(engineResult.context?.connection?.providerType ? { connectionType: engineResult.context.connection.providerType } : {}) } };
       result.refreshDiagnostics.calendar = sceneRefreshDiagnostics(new Date().toISOString(), KIOSK_REFRESH_MS.calendar);
       traceKioskCalendar("fetch=ok");
