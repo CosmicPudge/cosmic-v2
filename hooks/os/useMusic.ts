@@ -125,7 +125,7 @@ export function useMusic({ refreshMs, enabled = true }: UseMusicOptions = {}) {
     if (process.env.NODE_ENV !== "production") console.info(`[use-music] hook-state trackPresent=${Boolean(snapshot?.playback.track)} trackIdSuffix=${snapshot?.playback.track?.id?.slice(-4) ?? "none"} title=${JSON.stringify(snapshot?.playback.track?.title ?? null)}`);
   }, [snapshot?.playback.track, snapshot?.playback.track?.id, snapshot?.playback.track?.title]);
 
-  const command = useCallback(async (action: string, value?: number) => {
+  const command = useCallback(async (action: string, value?: number | string) => {
     if (actionLoading) {
       return;
     }
@@ -179,5 +179,6 @@ export function useMusic({ refreshMs, enabled = true }: UseMusicOptions = {}) {
     previous: () => command("previous"),
     seek: (value: number) => command("seek", value),
     setVolume: (value: number) => command("volume", value),
+    playTrack: (id: string) => command("play-track", id),
   };
 }
