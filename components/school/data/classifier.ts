@@ -34,6 +34,10 @@ export function classifyEvent(
     description,
   ].filter(Boolean).join(" ").toLowerCase();
 
+  // Canvas iCal UIDs identify assignment records even when the title lacks
+  // "assignment" and the event has no URL or useful description.
+  if (/(?:^|[:/])event-assignment-\d+(?:$|[@:/._-])/i.test(metadata?.uid ?? "")) return "assignment";
+
   // Canvas assignment links are more reliable than natural-language title
   // matching (many assignments have titles such as "Reading Response 8").
   if (/\/assignments(?:\/|\?|$)/i.test(structuredText)) return "assignment";
