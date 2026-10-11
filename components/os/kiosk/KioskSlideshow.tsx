@@ -54,6 +54,13 @@ export default function KioskSlideshow() {
   const [rotationEpoch, setRotationEpoch] = useState(0);
   const music = useMusic({ refreshMs: snapshot => snapshot?.playback.playing ? 500 : 3_000 });
   const musicPlaying = Boolean(music.playback?.playing);
+  const [musicHold, setMusicHold] = useState(false);
+  useEffect(() => {
+    if (musicPlaying) { setMusicHold(true); return; }
+    // Avoid unwanted slide rotation during brief Spotify network gaps.
+    const timer = window.setTimeout(() => setMusicHold(false), 15_000);
+    return () => window.clearTimeout(timer);
+  }, [musicPlaying]);
   const [manualOverride, setManualOverride] = useState(false);
   const previousPlaying = useRef(false);
   useEffect(() => {
@@ -74,13 +81,13 @@ export default function KioskSlideshow() {
       return;
     }
 
-    if (musicPlaying && !manualOverride) return;
+    if (musicHold && !manualOverride) return;
     const timer = window.setInterval(() => {
       setIndex((current) => (current + 1) % BUILD_SLIDES.length);
     }, ROTATION_MS);
 
     return () => window.clearInterval(timer);
-  }, [forcedIndex, rotationEpoch, musicPlaying, manualOverride]);
+  }, [forcedIndex, rotationEpoch, musicHold, manualOverride]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
