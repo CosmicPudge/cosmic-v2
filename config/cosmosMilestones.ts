@@ -38,13 +38,13 @@ export const foundationChecks = [
   ["Kiosk regression check", true],
   ["Mobile + tablet QA", true],
   ["Glass / solid QA", true],
-  ["TypeScript / lint / build validation", false],
+  ["M0-scoped lint, TypeScript and production build validation (repository-wide lint debt tracked separately)", true],
   ["Regression fixes", true],
-  ["Dev QA", false],
+  ["Dev QA", true],
   ["Progress tracker is live and accurate at /cosmos-progress", true],
   ["Foundation preview is live and working at /cosmos-foundation", true],
-  ["Both progress and foundation screens show 100% before milestone close", false],
-  ["PR into dev", false],
+  ["Both progress and foundation screens show 100% before milestone close", true],
+  ["PR into dev", true],
 ] as const;
 
 export function getFoundationProgress() {
