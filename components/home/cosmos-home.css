@@ -89,3 +89,22 @@ html[data-cosmos-surface="solid"] .cosmos-home-card {background:#12102a;backdrop
 @media(prefers-reduced-transparency:reduce) {
   .cosmos-home-card{background:#12102a;backdrop-filter:none;-webkit-backdrop-filter:none;}
 }
+
+/* M1 Orbital View: use the approved local wallpaper instead of the CSS planet.
+   Scoped exclusively to Home; the shared M0 surface and shell remain unchanged. */
+.cosmos-home-orbit {
+  background: #030411 url("/wallpapers/home/orbital-view.png") center center / cover no-repeat;
+}
+.cosmos-home-orbit::before { content: none; }
+.cosmos-home-orbit-planet { display: none; }
+.cosmos-home-orbit-glow {
+  background:
+    linear-gradient(90deg, rgba(3,4,18,.38), transparent 54%),
+    linear-gradient(180deg, rgba(3,4,18,.10), rgba(3,4,18,.28) 100%);
+}
+@media (max-width: 1023px) {
+  .cosmos-home-orbit { background-position: 65% center; }
+}
+@media (max-width: 639px) {
+  .cosmos-home-orbit { background-position: 67% center; }
+}
