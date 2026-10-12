@@ -34,6 +34,7 @@ export default function Sidebar({ variant = "side" }: { variant?: "side" | "top"
   useEffect(() => {
     if (!open) return;
     const drawer = drawerRef.current;
+    const trigger = menuTriggerRef.current;
     const closeButton = drawer?.querySelector<HTMLButtonElement>('.cosmos-mobile-nav-panel-header button');
     closeButton?.focus();
     const handleKey = (event: KeyboardEvent) => {
@@ -57,7 +58,7 @@ export default function Sidebar({ variant = "side" }: { variant?: "side" | "top"
     document.addEventListener("keydown", handleKey);
     return () => {
       document.removeEventListener("keydown", handleKey);
-      menuTriggerRef.current?.focus();
+      trigger?.focus();
     };
   }, [open]);
 
