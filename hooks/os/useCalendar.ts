@@ -94,10 +94,16 @@ async function requestCalendarSnapshot(scopeId: string): Promise<CalendarSnapsho
   if (cached && cached.expiresAt > Date.now()) return cached.value;
   const pending = calendarRequests.get(scopeId);
   if (pending) return pending;
-  const request = fetch(kioskApiUrl("/api/calendar"), { credentials: "include", cache: "no-store" })
+  const request = fetch(kioskApiUrl("/api/calendar?cosmic-kiosk=1"), { credentials: "include", cache: "no-store" })
     .then(async (response) => {
       if (!response.ok) throw new Error("Calendar is temporarily unavailable.");
-      const snapshot = hydrateSnapshot(await response.json());
+      const body: unknown = await response.json();
+      if (!body || typeof body !== "object") throw new Error("Calendar returned an invalid response.");
+      const payload = body as Partial<CalendarResponse> & { error?: string };
+      if (!Array.isArray(payload.today) || !Array.isArray(payload.upcoming)) {
+        throw new Error(payload.error || "Calendar summary is temporarily unavailable.");
+      }
+      const snapshot = hydrateSnapshot(payload as CalendarResponse);
       calendarCache.set(scopeId, { value: snapshot, expiresAt: Date.now() + 60_000 });
       return snapshot;
     })
