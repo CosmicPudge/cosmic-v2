@@ -476,3 +476,27 @@ html[data-cosmos-surface="solid"] .cosmic-content-surface {
   box-shadow: inset 2px 0 0 #8753ff, 0 0 13px rgba(109, 50, 237, .12);
 }
 .cosmos-sidebar > div:last-child { padding-top: .65rem; }
+
+/* Approved reference: restrained sidebar typography, mono-line icons and small active pill. */
+.cosmos-sidebar { width: 11.5rem; flex-basis: 11.5rem; padding: .75rem .55rem; }
+.cosmos-sidebar .cosmos-brand { min-height: 3rem; gap: .55rem; padding: .38rem .55rem; }
+.cosmos-sidebar .cosmos-brand-mark { width: 1.65rem; height: 1.65rem; filter: drop-shadow(0 0 6px rgba(136, 76, 255, .7)); }
+.cosmos-sidebar .cosmos-brand-name { font-size: 1.12rem; font-weight: 650; letter-spacing: -.02em; }
+.cosmos-sidebar .cosmos-nav-item {
+  min-height: 2.18rem;
+  gap: .73rem;
+  padding: .36rem .65rem;
+  border-radius: .5rem;
+  color: #f1f0f7;
+  font-size: .75rem;
+  font-weight: 450;
+}
+.cosmos-sidebar .cosmos-reference-nav-icon { color: #f4f4ff; filter: none; }
+.cosmos-sidebar .cosmos-nav-item-active {
+  border-color: rgba(102, 51, 221, .48);
+  background: linear-gradient(95deg, rgba(81, 27, 184, .76), rgba(59, 24, 137, .64));
+  box-shadow: inset 2px 0 0 #6842ff;
+}
+.cosmos-sidebar nav { gap: .08rem; }
+.cosmos-sidebar > div:last-child { border-top-color: transparent; }
+.cosmos-sidebar > div:last-child .cosmos-nav-item { margin-top: .15rem; }
