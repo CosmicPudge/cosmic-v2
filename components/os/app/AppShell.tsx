@@ -69,8 +69,8 @@ export default function AppShell({ children, app }: AppShellProps) {
       <svg aria-hidden="true" focusable="false" width="0" height="0" className="pointer-events-none absolute">
         <defs>
           <filter id="cosmos-glass-refraction" x="-5%" y="-5%" width="110%" height="110%">
-            <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="7" result="glassNoise" />
-            <feDisplacementMap in="SourceGraphic" in2="glassNoise" scale="6" xChannelSelector="R" yChannelSelector="G" />
+            <feTurbulence type="fractalNoise" baseFrequency="0.012 0.025" numOctaves="2" seed="7" result="glassNoise" />
+            <feDisplacementMap in="SourceGraphic" in2="glassNoise" scale="16" xChannelSelector="R" yChannelSelector="G" />
           </filter>
         </defs>
       </svg>
