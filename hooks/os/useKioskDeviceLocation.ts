@@ -53,30 +53,48 @@ export default function useKioskDeviceLocation() {
     let checking = false;
     let lastBrowserSuccess = 0;
     let lastIpSuccess = 0;
+    let primaryCooldownUntil = 0;
 
     const resolveIp = async () => {
-      // Browser geolocation is more precise. Never replace a recent browser fix
-      // with city-level IP coordinates just because a later browser request fails.
+      // Don't overwrite a recent browser fix with a less accurate IP estimate.
       if (Date.now() - lastBrowserSuccess < GPS_MAX_AGE_MS) return;
-      try {
-        const response = await fetch("https://ipwho.is/", { cache: "no-store" });
-        if (!response.ok) return;
-        const result = await response.json() as {
-          success?: boolean; latitude?: number; longitude?: number;
-          city?: string; region?: string; country?: string; timezone?: { id?: string };
-        };
-        if (!active || result.success === false ||
+      const providers = [
+        { url: "https://ipwho.is/", name: "primary" },
+        { url: "https://ipapi.co/json/", name: "backup" },
+      ] as const;
+      for (const provider of providers) {
+        if (provider.name === "primary" && Date.now() < primaryCooldownUntil) continue;
+        try {
+          const controller = new AbortController();
+          const timer = window.setTimeout(() => controller.abort(), 7_000);
+          let response: Response;
+          try {
+            response = await fetch(provider.url, { cache: "no-store", signal: controller.signal });
+          } finally { window.clearTimeout(timer); }
+          if (response.status === 429) {
+            if (provider.name === "primary") primaryCooldownUntil = Date.now() + 60 * 60_000;
+            continue;
+          }
+          if (!response.ok) continue;
+          const result = await response.json() as {
+            success?: boolean; latitude?: number; longitude?: number;
+            city?: string; region?: string; country?: string; timezone?: string | { id?: string };
+          };
+          if (!active || result.success === false ||
             typeof result.latitude !== "number" || typeof result.longitude !== "number" ||
-            !isValidDeviceCoordinate(result.latitude, result.longitude)) return;
-        const next: DeviceLocationCandidate = {
-          latitude: result.latitude, longitude: result.longitude,
-          resolvedAt: new Date().toISOString(), city: result.city, region: result.region,
-          country: result.country, timezone: result.timezone?.id,
-          label: [result.city, result.region].filter(Boolean).join(", "),
-        };
-        lastIpSuccess = Date.now();
-        storeLocation(next, "ip");
-      } catch { /* Keep last-known location until a valid check succeeds. */ }
+            !isValidDeviceCoordinate(result.latitude, result.longitude)) continue;
+          const next: DeviceLocationCandidate = {
+            latitude: result.latitude, longitude: result.longitude,
+            resolvedAt: new Date().toISOString(), city: result.city, region: result.region,
+            country: result.country,
+            timezone: typeof result.timezone === "string" ? result.timezone : result.timezone?.id,
+            label: [result.city, result.region].filter(Boolean).join(", "),
+          };
+          lastIpSuccess = Date.now();
+          storeLocation(next, "ip");
+          return;
+        } catch { /* Try the next provider without discarding last-known coordinates. */ }
+      }
     };
 
     const check = async () => {
