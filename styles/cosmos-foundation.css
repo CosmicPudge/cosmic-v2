@@ -399,3 +399,60 @@ html[data-cosmos-surface="solid"] .cosmic-content-surface {
     animation: none;
   }
 }
+
+/* M0 visual rebuild — shared navigation aligned to approved Cosmos references. */
+.cosmos-sidebar {
+  width: 12.25rem;
+  flex: 0 0 12.25rem;
+  padding: 1.05rem .75rem;
+  background: linear-gradient(180deg, rgba(2, 3, 13, .96), rgba(5, 5, 21, .9));
+  border-right-color: rgba(165, 128, 255, .2);
+  box-shadow: 8px 0 45px rgba(0, 0, 0, .25);
+}
+.cosmos-brand {
+  gap: .65rem;
+  min-height: 3.5rem;
+  padding: .45rem .7rem;
+}
+.cosmos-brand-mark {
+  width: 2rem;
+  height: 2rem;
+  border: 0;
+  color: #a677ff;
+  background: transparent;
+  filter: drop-shadow(0 0 7px rgba(139, 92, 246, .85));
+}
+.cosmos-brand-name {
+  font-size: 1.3rem;
+  letter-spacing: -.035em;
+  font-weight: 700;
+}
+.cosmos-brand-tagline { display: none; }
+.cosmos-nav-item {
+  min-height: 2.7rem;
+  gap: .65rem;
+  padding: .47rem .65rem;
+  border-radius: .6rem;
+  color: rgba(245, 243, 255, .88);
+  font-size: .86rem;
+  font-weight: 450;
+}
+.cosmos-nav-item-active {
+  border-color: rgba(120, 65, 245, .36);
+  background: linear-gradient(100deg, rgba(78, 30, 201, .65), rgba(82, 28, 149, .37));
+  box-shadow: inset 2px 0 0 #8651ff, 0 0 22px rgba(111, 55, 255, .13);
+}
+.cosmos-sidebar .cosmos-kiosk-button {
+  margin-top: .6rem;
+  border-color: rgba(165, 128, 255, .15);
+}
+.cosmos-nav-item:focus-visible {
+  outline: 2px solid #9c81ff;
+  outline-offset: 2px;
+}
+@media (max-width: 1023px) {
+  .cosmos-mobile-nav { background: rgba(3, 5, 21, .94); }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .cosmos-sidebar, .cosmos-mobile-nav { backdrop-filter: none; -webkit-backdrop-filter: none; }
+}
