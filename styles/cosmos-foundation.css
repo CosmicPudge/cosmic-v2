@@ -927,3 +927,20 @@ html[data-cosmos-surface="glass"] .cosmic-panel.cosmos-card {
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
 }
+
+/* Experimental optical surface: restrict displacement to the pseudo layer.
+   The backing scene stays visible and readable content is never filtered. */
+html[data-cosmos-surface="glass"] .cosmic-panel.cosmos-card::before {
+  background:
+    linear-gradient(180deg, rgba(216,165,255,.16), transparent 13%),
+    radial-gradient(ellipse 42% 90% at 104% 55%, rgba(158,91,245,.075), transparent 80%);
+  filter: url("#cosmos-glass-refraction");
+  opacity: .65;
+}
+html[data-cosmos-surface="glass"] .cosmic-panel.cosmos-card::after {
+  background: linear-gradient(125deg, rgba(237,192,255,.24), transparent 12%, transparent 87%, rgba(168,95,241,.17));
+  box-shadow: inset 0 1px 0 rgba(239,207,255,.27), inset 0 -1px 0 rgba(122,66,223,.11);
+}
+@media (prefers-reduced-motion: reduce), (prefers-reduced-transparency: reduce) {
+  html[data-cosmos-surface="glass"] .cosmic-panel.cosmos-card::before { filter: none; }
+}
