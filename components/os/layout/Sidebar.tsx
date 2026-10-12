@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { BookOpen, CalendarDays, CarFront, CheckCheck, CircleHelp, Clapperboard, FileText, FolderKanban, GraduationCap, Heart, Home, LayoutGrid, Menu, Monitor, Plane, Settings, Sparkles, Trophy, Wallet, X, type LucideIcon } from "lucide-react";
+import { CalendarDays, CarFront, CheckCheck, CircleHelp, Clapperboard, FileText, FolderKanban, Heart, Home, LayoutGrid, Menu, Monitor, Plane, Settings, Sparkles, Trophy, Wallet, X, type LucideIcon } from "lucide-react";
 
 import { useOptionalBoot } from "@/components/os/boot/BootManager";
 import { useCosmicTransition } from "@/components/os/transition";
