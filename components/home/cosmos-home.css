@@ -1,0 +1,91 @@
+/* M1 Home only: page-specific orbital scene and card refinement.
+   Do not change or override the shared M0 navigation, top bar or surface tokens. */
+.cosmos-home-orbit {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at 76% 22%, rgba(125,80,230,.32), transparent 38%),
+    radial-gradient(ellipse at 42% 54%, rgba(44,54,128,.32), transparent 65%),
+    linear-gradient(135deg,#030310,#070819 52%,#0c0920);
+}
+.cosmos-home-orbit::before {
+  content:"";
+  position:absolute;
+  inset:0;
+  opacity:.62;
+  background-image:
+    radial-gradient(1px 1px at 7% 19%,white 98%,transparent),
+    radial-gradient(1px 1px at 27% 33%,#bdacff 98%,transparent),
+    radial-gradient(2px 2px at 64% 8%,#f8eaff 98%,transparent),
+    radial-gradient(1px 1px at 84% 47%,#cac6ff 98%,transparent),
+    radial-gradient(1px 1px at 46% 78%,#fff 98%,transparent),
+    radial-gradient(2px 2px at 94% 90%,#ae8bff 98%,transparent);
+  background-size:193px 163px,251px 213px,317px 277px,379px 293px,421px 337px,487px 397px;
+}
+.cosmos-home-orbit-planet {
+  position:absolute;
+  width:min(100vw,1180px);
+  aspect-ratio:1;
+  top:clamp(10px,7vh,100px);
+  right:clamp(-460px,-18vw,-80px);
+  border-radius:50%;
+  background:
+    radial-gradient(ellipse at 78% 23%,rgba(188,163,255,.54),transparent 30%),
+    radial-gradient(ellipse at 67% 40%,rgba(51,78,154,.52),transparent 36%),
+    repeating-radial-gradient(ellipse at 38% 69%,transparent 0 23px,rgba(150,142,238,.06) 25px 27px,transparent 29px 59px),
+    radial-gradient(circle at 80% 26%,#303765 0%,#0f1738 43%,#070b1d 66%,#030511 80%);
+  box-shadow:inset -24px 8px 85px rgba(0,0,0,.72),inset 23px 14px 38px rgba(194,174,255,.17),-8px -7px 35px rgba(141,116,255,.3),0 0 130px rgba(65,42,157,.16);
+  opacity:.88;
+}
+.cosmos-home-orbit-planet::before {
+  content:"";
+  position:absolute;
+  inset:-3px;
+  border-radius:50%;
+  border-top:3px solid rgba(201,193,255,.74);
+  border-left:1px solid rgba(90,107,196,.1);
+  box-shadow:0 -12px 55px rgba(160,121,255,.22);
+  transform:rotate(21deg);
+}
+.cosmos-home-orbit-glow {
+  position:absolute;
+  inset:0;
+  background:linear-gradient(90deg,rgba(3,3,16,.5) 0%,transparent 45%),linear-gradient(180deg,transparent 45%,rgba(3,3,16,.58) 100%);
+}
+.cosmos-home {isolation:isolate;}
+.cosmos-home-kicker {
+  font-size:10px;
+  font-weight:650;
+  text-transform:uppercase;
+  letter-spacing:.19em;
+  color:rgba(204,187,241,.68);
+}
+.cosmos-home-card {
+  background:rgba(17,10,43,.47);
+  border:1px solid rgba(189,145,252,.34);
+  box-shadow:inset 0 1px 0 rgba(232,202,255,.13),0 13px 40px rgba(4,2,17,.13);
+  -webkit-backdrop-filter:blur(11px) saturate(1.08);
+  backdrop-filter:blur(11px) saturate(1.08);
+}
+.cosmos-home-card-icon {
+  border:1px solid rgba(193,157,255,.25);
+  background:rgba(124,83,204,.15);
+}
+.cosmos-home-card-link:hover .cosmos-home-card {
+  border-color:rgba(217,174,255,.62);
+  background:rgba(41,20,84,.55);
+}
+html[data-cosmos-surface="solid"] .cosmos-home-card {background:#12102a;backdrop-filter:none;-webkit-backdrop-filter:none;}
+@media (max-width:1023px) {
+  .cosmos-home-orbit-planet{width:105vw;right:-46vw;top:17vh;}
+}
+@media (max-width:639px) {
+  .cosmos-home-orbit-planet{width:155vw;right:-94vw;top:13vh;}
+  .cosmos-home-orbit{background:radial-gradient(ellipse at 80% 26%,rgba(96,60,162,.32),transparent 60%),#040413;}
+}
+@media(prefers-reduced-transparency:reduce) {
+  .cosmos-home-card{background:#12102a;backdrop-filter:none;-webkit-backdrop-filter:none;}
+}
