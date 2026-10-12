@@ -28,6 +28,45 @@ const MAX_ASSIGNMENTS = 64;
 const KIOSK_DATA_PROVIDER_TIMEOUT_MS = 10_000;
 const schoolCache = new Map<string, { expiresAt: number; value: Awaited<ReturnType<typeof getDeveloperKioskSchoolData>> }>();
 
+const ICAL_HEALTHY_REFRESH_MS = 5 * 60_000;
+const ICAL_FAILURE_BACKOFF_MAX_MS = 60 * 60_000;
+type PersonalIcalResult = Awaited<ReturnType<typeof fetchKioskCalendarIcalFeeds>>;
+type PersonalIcalCache = { lastGood?: PersonalIcalResult; updatedAt?: number; nextAttemptAt: number; failures: number; pending?: Promise<PersonalIcalResult> };
+const personalIcalCache = new Map<string, PersonalIcalCache>();
+async function getResilientPersonalIcal(urls: string[], calendarNames: string[]) {
+  // Key by feed configuration without exposing URL values in logs or responses.
+  const key = JSON.stringify(urls);
+  const entry = personalIcalCache.get(key) ?? { nextAttemptAt: 0, failures: 0 };
+  personalIcalCache.set(key, entry);
+  const now = Date.now();
+  if (entry.pending) return { value: await entry.pending, stale: false, lastSuccessAt: entry.updatedAt };
+  if (now < entry.nextAttemptAt && entry.lastGood) return { value: entry.lastGood, stale: entry.failures > 0, lastSuccessAt: entry.updatedAt };
+  if (now < entry.nextAttemptAt) return { value: null, stale: true, lastSuccessAt: entry.updatedAt };
+  entry.pending = fetchKioskCalendarIcalFeeds(urls, fetch, calendarNames);
+  try {
+    const value = await entry.pending;
+    if (value.feedCount > 0) {
+      entry.lastGood = value;
+      entry.updatedAt = Date.now();
+      entry.failures = 0;
+      entry.nextAttemptAt = Date.now() + ICAL_HEALTHY_REFRESH_MS;
+      return { value, stale: false, lastSuccessAt: entry.updatedAt };
+    }
+    entry.failures += 1;
+    // A failed attempt must not trigger another round of four requests
+    // every time the kiosk's shared 30-second aggregate refresh runs.
+    entry.nextAttemptAt = Date.now() + Math.min(ICAL_FAILURE_BACKOFF_MAX_MS, 60_000 * 2 ** Math.min(entry.failures - 1, 6));
+    return { value: entry.lastGood ?? value, stale: true, lastSuccessAt: entry.updatedAt };
+  } catch {
+    entry.failures += 1;
+    entry.nextAttemptAt = Date.now() + Math.min(ICAL_FAILURE_BACKOFF_MAX_MS, 60_000 * 2 ** Math.min(entry.failures - 1, 6));
+    return { value: entry.lastGood ?? null, stale: true, lastSuccessAt: entry.updatedAt };
+  } finally {
+    entry.pending = undefined;
+  }
+}
+
+
 class KioskDataProviderTimeout extends Error {
   category = "timeout" as const;
 }
@@ -244,10 +283,11 @@ export async function getDeveloperKioskData(request?: Request, diagnostics?: Kio
       result.calendar = { connected: false, events: [], error: "Calendar is not configured.", diagnostics: { category: "configuration-error", configured: false, accountMatched: Boolean(process.env.COSMIC_KIOSK_ACCOUNT_ID?.trim()), source: "kiosk-ical", feedCount: 0 } };
       traceKioskCalendar("aggregate=missing", "configuration-error");
     } else {
-      const fallback = await fetchKioskCalendarIcalFeeds(urls, fetch, calendarNames);
+      const calendarAttempt = await getResilientPersonalIcal(urls, calendarNames);
+      const fallback = calendarAttempt.value ?? { events: [], feedCount: 0, category: "provider-error" as const, feedDiagnostics: [] };
       const visibleEvents = fallback.events.filter((event) => event.end > now && event.start < end && !/^canvas(?:\s|$)/i.test(event.calendarName ?? "")).slice(0, MAX_EVENTS).map((event) => boundedEvent(event));
-      result.calendar = { connected: fallback.feedCount > 0, events: visibleEvents, ...(fallback.feedCount ? {} : { error: "Calendar feeds are temporarily unavailable." }), diagnostics: { category: fallback.feedCount ? "connected" : fallback.category, configured: true, accountMatched: Boolean(process.env.COSMIC_KIOSK_ACCOUNT_ID?.trim()), source: "kiosk-ical", feedCount: fallback.feedCount, feeds: fallback.feedDiagnostics } };
-      if (fallback.feedCount > 0) result.refreshDiagnostics.calendar = sceneRefreshDiagnostics(new Date().toISOString(), KIOSK_REFRESH_MS.calendar);
+      result.calendar = { connected: fallback.feedCount > 0, events: visibleEvents, ...(calendarAttempt.stale ? { error: "Showing saved events while iCloud is unavailable." } : fallback.feedCount ? {} : { error: "Calendar feeds are temporarily unavailable." }), diagnostics: { category: fallback.feedCount ? "connected" : fallback.category, configured: true, accountMatched: Boolean(process.env.COSMIC_KIOSK_ACCOUNT_ID?.trim()), source: "kiosk-ical", feedCount: fallback.feedCount, feeds: fallback.feedDiagnostics } };
+      if (calendarAttempt.lastSuccessAt) result.refreshDiagnostics.calendar = sceneRefreshDiagnostics(new Date(calendarAttempt.lastSuccessAt).toISOString(), ICAL_HEALTHY_REFRESH_MS);
       traceKioskCalendar(fallback.feedCount > 0 ? "fetch=ok" : "fetch=failed", fallback.category);
       traceKioskCalendar(fallback.feedCount > 0 ? "parse=ok" : "aggregate=missing", fallback.category);
     }
