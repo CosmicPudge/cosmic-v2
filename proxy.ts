@@ -77,6 +77,13 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // Local visual previews may fetch non-sensitive weather without a session.
+  // All deployed environments continue through account/device authorization.
+  if (pathname === "/api/weather" && process.env.NODE_ENV === "development"
+    && ["localhost", "127.0.0.1"].includes(request.nextUrl.hostname)) {
+    return NextResponse.next();
+  }
+
   if (pathname === "/api/dev/auth-diagnostics" && isDeveloperKioskRequest(request)) {
     return NextResponse.next();
   }
