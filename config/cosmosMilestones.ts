@@ -35,16 +35,16 @@ export const foundationChecks = [
   ["Live weather in top bar", true],
   ["Existing-page shell compatibility", true],
   ["School compatibility", true],
-  ["Kiosk regression check", true],
+  ["Kiosk regression check", false],
   ["Mobile + tablet QA", true],
   ["Glass / solid QA", true],
-  ["TypeScript / lint / build validation", true],
+  ["TypeScript / lint / build validation", false],
   ["Regression fixes", true],
-  ["Dev QA", true],
+  ["Dev QA", false],
   ["Progress tracker is live and accurate at /cosmos-progress", true],
   ["Foundation preview is live and working at /cosmos-foundation", true],
-  ["Both progress and foundation screens show 100% before milestone close", true],
-  ["PR into dev", true],
+  ["Both progress and foundation screens show 100% before milestone close", false],
+  ["PR into dev", false],
 ] as const;
 
 export function getFoundationProgress() {
