@@ -733,237 +733,96 @@ html[data-cosmos-surface="solid"] .cosmos-nav-item-active {
   html:not([data-cosmos-surface="glass"]) .cosmos-page-tabs { background: #14132f; }
 }
 
-/* M0 violet liquid-glass: translucent colored lens with dynamic specular reflection.
-   Large container is clear to prevent stacked tints on interior cards. */
+/* Cosmos liquid-glass material, aligned to the approved concept image.
+   Clear centers, violet meniscus, soft reflection, no fuzzy blobs or diagonal stripes. */
 html[data-cosmos-surface="glass"] {
-  --cosmos-surface: rgba(94, 46, 187, .075);
-  --cosmos-surface-strong: rgba(81, 35, 162, .115);
+  --cosmos-surface: rgba(90,43,178,.045);
+  --cosmos-surface-strong: rgba(81,35,160,.085);
 }
-html[data-cosmos-surface="glass"] .cosmic-content-surface {
-  background: linear-gradient(145deg, rgba(95, 46, 190, .045), rgba(62, 24, 126, .018));
-  border-color: rgba(164, 120, 249, .16);
-  box-shadow: inset 0 1px 0 rgba(194, 148, 255, .12), 0 15px 44px rgba(0,0,0,.11);
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
+html[data-cosmos-surface="glass"] .cosmic-content-surface.cosmic-page-content {
+  background: linear-gradient(145deg,rgba(113,63,211,.055),rgba(39,17,85,.015) 55%,rgba(104,51,198,.045)) !important;
+  border-color: rgba(197,158,255,.29);
+  box-shadow: inset 0 2px 1px rgba(227,197,255,.3),inset 0 -1px 0 rgba(163,107,241,.22),0 15px 37px rgba(1,0,12,.17);
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
 }
-html[data-cosmos-surface="glass"] .cosmos-card,
-html[data-cosmos-surface="glass"] .cosmos-mobile-nav,
-html[data-cosmos-surface="glass"] .cosmos-reference-search,
-html[data-cosmos-surface="glass"] .cosmos-page-tabs {
-  position: relative;
+html[data-cosmos-surface="glass"] .cosmic-panel.cosmos-card {
   isolation: isolate;
-  background: linear-gradient(145deg, rgba(125, 74, 225, .18), rgba(74, 34, 151, .095) 48%, rgba(117, 61, 211, .14));
-  border: 1px solid rgba(177, 125, 255, .23);
-  box-shadow:
-    inset 0 1px 0 rgba(213,177,255,.29),
-    inset 1px 0 0 rgba(175,129,241,.13),
-    inset 0 -1px 0 rgba(117,75,191,.19),
-    0 10px 27px rgba(3,0,16,.13);
-  backdrop-filter: blur(.5px) saturate(1.18);
-  -webkit-backdrop-filter: blur(.5px) saturate(1.18);
+  position: relative;
+  background: linear-gradient(140deg,rgba(158,103,244,.11),rgba(73,32,147,.024) 48%,rgba(129,73,220,.07)) !important;
+  background-color: transparent !important;
+  border: 1px solid rgba(195,151,255,.39) !important;
+  box-shadow: inset 0 2px 1px rgba(242,213,255,.41),inset 1px 0 1px rgba(190,145,255,.16),inset 0 -2px 1px rgba(179,108,255,.26),0 10px 27px rgba(4,0,22,.21),0 0 9px rgba(124,54,225,.09) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
 }
-/* A moving light reflection is cast over the colored lens, not the text.
-   Coordinates are updated by pointer movement on the shared app shell. */
-html[data-cosmos-surface="glass"] .cosmos-card::before {
+html[data-cosmos-surface="glass"] .cosmic-panel.cosmos-card::before {
   content: "";
   position: absolute;
   inset: 0;
   border-radius: inherit;
   pointer-events: none;
   z-index: 0;
-  background:
-    radial-gradient(ellipse 75% 26% at 45% -11%, rgba(214,160,255,.16), transparent 80%),
-    radial-gradient(210px circle at var(--glass-reflect-x, 75%) var(--glass-reflect-y, 0%), rgba(231,187,255,.18), rgba(164,103,250,.06) 43%, transparent 80%);
-  box-shadow: inset 0 0 0 1px rgba(232,192,255,.05);
-}
-html[data-cosmos-surface="glass"] .cosmos-card > * { position: relative; }
-html[data-cosmos-surface="glass"] .cosmos-page-tab-active {
-  background: linear-gradient(145deg, rgba(141,85,239,.62), rgba(90,49,202,.54));
-  border-color: rgba(196,150,255,.45);
-  box-shadow: inset 0 1px 0 rgba(236,203,255,.36), 0 0 0 1px rgba(141,89,233,.22), 0 0 13px rgba(135,63,246,.29);
-}
-html[data-cosmos-surface="glass"] .cosmos-sidebar {
-  background: linear-gradient(180deg, rgba(7,4,24,.85), rgba(10,4,30,.79));
-  backdrop-filter: blur(5px);
-  -webkit-backdrop-filter: blur(5px);
-}
-@media (prefers-reduced-motion: reduce) {
-  html[data-cosmos-surface="glass"] .cosmos-card::before {
-    background: radial-gradient(ellipse 75% 26% at 45% -11%, rgba(214,160,255,.13), transparent 80%);
-  }
-}
-@media (prefers-reduced-transparency: reduce) {
-  html[data-cosmos-surface="glass"] .cosmos-card,
-  html[data-cosmos-surface="glass"] .cosmic-content-surface,
-  html[data-cosmos-surface="glass"] .cosmos-mobile-nav,
-  html[data-cosmos-surface="glass"] .cosmos-reference-search,
-  html[data-cosmos-surface="glass"] .cosmos-page-tabs {
-    background: #150c2e;
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
-  }
-}
-
-/* M0 visible-through-glass pass: retain violet optics, reveal actual scene below. */
-.cosmos-cinematic-scene {
-  height: min(1100px, 115vh);
-  -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 34%, rgba(0,0,0,.8) 63%, transparent 100%);
-  mask-image: linear-gradient(180deg, #000 0%, #000 34%, rgba(0,0,0,.8) 63%, transparent 100%);
-}
-.cosmos-cinematic-image {
-  background-position: center top;
-  background-size: 100% auto;
-}
-.cosmos-cinematic-overlay {
-  background: linear-gradient(90deg, rgba(3,4,17,.6), rgba(3,4,17,.27) 41%, rgba(3,4,17,.12)),
-    linear-gradient(180deg, rgba(3,4,17,.12), rgba(3,4,17,.12) 36%, rgba(3,4,17,.75) 100%);
-}
-html[data-cosmos-surface="glass"] .cosmos-card {
-  background: linear-gradient(135deg, rgba(126,71,218,.105), rgba(88,44,168,.048) 53%, rgba(119,59,218,.085));
-  border-color: rgba(183,127,255,.21);
-  backdrop-filter: blur(0px) saturate(1.09);
-  -webkit-backdrop-filter: blur(0px) saturate(1.09);
-  box-shadow: inset 0 1px 0 rgba(224,188,255,.3), inset 0 -1px 0 rgba(151,92,227,.13), 0 12px 30px rgba(0,0,0,.12);
-}
-html[data-cosmos-surface="glass"] .cosmic-content-surface {
-  background: rgba(43,18,102,.025);
-  border-color: rgba(178,126,255,.14);
-  box-shadow: inset 0 1px 0 rgba(202,169,255,.12);
-}
-@media (max-width: 767px) {
-  .cosmos-cinematic-scene { height: min(850px, 115vh); }
-  .cosmos-cinematic-image { background-size: auto 820px; background-position: 65% top; }
-}
-@media (prefers-reduced-transparency: reduce) {
-  html[data-cosmos-surface="glass"] .cosmos-card,
-  html[data-cosmos-surface="glass"] .cosmic-content-surface { background: #150c2e; }
-}
-
-/* M0 glass material correction: override the actual design-system cosmic-panel paint.
-   Tint belongs to the meniscus/rim, not as a full card fill. */
-html[data-cosmos-surface="glass"] .cosmic-panel.cosmos-card,
-html[data-cosmos-surface="glass"] .cosmic-panel.cosmos-card.cosmos-card-surface {
-  background: linear-gradient(140deg, rgba(106,58,209,.062), rgba(61,25,138,.018) 52%, rgba(132,75,226,.047)) !important;
-  background-color: transparent !important;
-  border: 1px solid rgba(171,105,248,.25) !important;
-  box-shadow: inset 0 1px 0 rgba(232,183,255,.33), inset 0 -1px 0 rgba(117,60,220,.14), 0 9px 26px rgba(0,0,0,.16) !important;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-}
-html[data-cosmos-surface="glass"] .cosmic-content-surface.cosmic-page-content {
-  background: rgba(44,15,91,.018) !important;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-}
-html[data-cosmos-surface="glass"] .cosmic-panel.cosmos-card::before {
-  background:
-    radial-gradient(170px 95px at var(--glass-reflect-x, 75%) var(--glass-reflect-y, 0%), rgba(229,183,255,.24), rgba(193,124,255,.075) 34%, transparent 74%),
-    radial-gradient(ellipse 60% 34% at 37% -21%, rgba(236,196,255,.14), transparent 72%);
-  box-shadow: inset 0 0 0 1px rgba(226,163,255,.035);
+  background: radial-gradient(ellipse 60% 30% at var(--glass-reflect-x,70%) var(--glass-reflect-y,-15px),rgba(242,203,255,.075),transparent 75%),linear-gradient(180deg,rgba(240,202,255,.08),transparent 17%);
+  filter: none;
 }
 html[data-cosmos-surface="glass"] .cosmic-panel.cosmos-card::after {
   content: "";
   position: absolute;
   inset: 0;
+  padding: 2px;
   border-radius: inherit;
   pointer-events: none;
-  background: linear-gradient(108deg, rgba(223,177,255,.15), transparent 15%, transparent 83%, rgba(156,92,237,.1));
-  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  background: linear-gradient(130deg,rgba(255,234,255,.47),rgba(200,149,255,.14) 19%,transparent 35%,transparent 69%,rgba(204,139,255,.25) 90%,rgba(255,227,255,.45));
+  -webkit-mask: linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
-  padding: 2px;
 }
-@media (prefers-reduced-transparency: reduce) {
-  html[data-cosmos-surface="glass"] .cosmic-panel.cosmos-card,
-  html[data-cosmos-surface="glass"] .cosmic-panel.cosmos-card.cosmos-card-surface,
-  html[data-cosmos-surface="glass"] .cosmic-content-surface.cosmic-page-content {
-    background: #150c2e !important;
-  }
-}
-
-/* M0 sharp liquid reflections — defined optical streaks, no frosted bloom. */
-html[data-cosmos-surface="glass"] .cosmic-panel.cosmos-card,
-html[data-cosmos-surface="glass"] .cosmic-panel.cosmos-card.cosmos-card-surface {
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-}
-html[data-cosmos-surface="glass"] .cosmic-panel.cosmos-card::before {
-  background:
-    radial-gradient(ellipse 57px 13px at var(--glass-reflect-x, 75%) var(--glass-reflect-y, 0%), rgba(239,199,255,.36) 0%, rgba(203,135,255,.17) 42%, transparent 95%),
-    linear-gradient(109deg, transparent 5%, rgba(229,176,255,.06) 13%, transparent 24%),
-    linear-gradient(180deg, rgba(224,164,255,.085), transparent 12%);
-  filter: none;
-  box-shadow: inset 0 1px 0 rgba(245,212,255,.17);
-}
-html[data-cosmos-surface="glass"] .cosmic-panel.cosmos-card::after {
-  background: linear-gradient(112deg, rgba(237,202,255,.22), transparent 13%, transparent 83%, rgba(196,121,255,.16));
-  filter: none;
-}
+html[data-cosmos-surface="glass"] .cosmic-panel.cosmos-card > * { position: relative; }
 html[data-cosmos-surface="glass"] .cosmos-reference-search,
 html[data-cosmos-surface="glass"] .cosmos-page-tabs,
 html[data-cosmos-surface="glass"] .cosmos-mobile-nav {
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
+  background: linear-gradient(125deg,rgba(157,101,246,.17),rgba(56,26,116,.065) 56%,rgba(147,83,239,.12));
+  border-color: rgba(211,170,255,.36);
+  box-shadow: inset 0 1px 1px rgba(244,212,255,.35),inset 0 -1px 0 rgba(155,84,255,.21),0 8px 24px rgba(1,0,13,.19);
+  backdrop-filter: blur(1px);
+  -webkit-backdrop-filter: blur(1px);
 }
-@media (prefers-reduced-motion: reduce) {
-  html[data-cosmos-surface="glass"] .cosmic-panel.cosmos-card::before {
-    background: linear-gradient(180deg, rgba(224,164,255,.085), transparent 12%);
-  }
+html[data-cosmos-surface="glass"] .cosmos-page-tab-active {
+  background: linear-gradient(160deg,rgba(163,93,251,.8),rgba(96,47,209,.65));
+  border-color: rgba(244,207,255,.55);
+  box-shadow: inset 0 1px 0 rgba(255,240,255,.4),0 0 12px rgba(144,69,242,.35);
 }
-
-/* M0 final optical-edge refinement: eliminate floating hotspots. */
-html[data-cosmos-surface="glass"] .cosmic-panel.cosmos-card::before {
-  background:
-    linear-gradient(180deg, rgba(223,172,255,.15) 0%, rgba(202,143,255,.035) 7%, transparent 18%),
-    linear-gradient(113deg, transparent 15%, rgba(233,192,255,.065) 22%, rgba(243,214,255,.17) 23%, rgba(243,214,255,.04) 24%, transparent 33%);
-  box-shadow: inset 0 1px 0 rgba(245,216,255,.23);
-  filter: none;
+html[data-cosmos-surface="glass"] .cosmos-sidebar {
+  background: linear-gradient(180deg,rgba(7,4,24,.83),rgba(7,4,23,.76));
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
 }
-html[data-cosmos-surface="glass"] .cosmic-panel.cosmos-card::after {
-  background: linear-gradient(115deg, rgba(239,197,255,.3), transparent 11%, transparent 86%, rgba(168,96,248,.2));
-  filter: none;
+/* The planetary landscape remains behind the cards so transparency reads visibly. */
+.cosmos-cinematic-scene {
+  height: min(1100px,115vh);
+  mask-image: linear-gradient(180deg,#000 0%,#000 34%,rgba(0,0,0,.8) 63%,transparent 100%);
+  -webkit-mask-image: linear-gradient(180deg,#000 0%,#000 34%,rgba(0,0,0,.8) 63%,transparent 100%);
 }
-html[data-cosmos-surface="glass"] .cosmic-panel.cosmos-card {
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
+.cosmos-cinematic-image { background-size: 100% auto; background-position: center top; }
+.cosmos-cinematic-overlay {
+  background: linear-gradient(90deg,rgba(3,4,17,.6),rgba(3,4,17,.27) 41%,rgba(3,4,17,.12)),linear-gradient(180deg,rgba(3,4,17,.12),rgba(3,4,17,.12) 36%,rgba(3,4,17,.75) 100%);
 }
-
-/* Experimental optical surface: restrict displacement to the pseudo layer.
-   The backing scene stays visible and readable content is never filtered. */
-html[data-cosmos-surface="glass"] .cosmic-panel.cosmos-card::before {
-  background:
-    linear-gradient(180deg, rgba(216,165,255,.16), transparent 13%),
-    radial-gradient(ellipse 42% 90% at 104% 55%, rgba(158,91,245,.075), transparent 80%);
-  filter: url("#cosmos-glass-refraction");
-  opacity: .65;
+@media (max-width:767px) {
+  .cosmos-cinematic-scene { height: min(850px,115vh); }
+  .cosmos-cinematic-image { background-size: auto 820px; background-position: 65% top; }
 }
-html[data-cosmos-surface="glass"] .cosmic-panel.cosmos-card::after {
-  background: linear-gradient(125deg, rgba(237,192,255,.24), transparent 12%, transparent 87%, rgba(168,95,241,.17));
-  box-shadow: inset 0 1px 0 rgba(239,207,255,.27), inset 0 -1px 0 rgba(122,66,223,.11);
+@media (prefers-reduced-motion:reduce) {
+  html[data-cosmos-surface="glass"] .cosmic-panel.cosmos-card::before { background:linear-gradient(180deg,rgba(240,202,255,.08),transparent 17%); }
 }
-@media (prefers-reduced-motion: reduce), (prefers-reduced-transparency: reduce) {
-  html[data-cosmos-surface="glass"] .cosmic-panel.cosmos-card::before { filter: none; }
-}
-
-/* Experimental backdrop refraction: optical distortion only on an inset edge band.
-   Browsers lacking SVG backdrop-filter support retain the existing sharp glass rim.
-   Never filter content nodes: their text/icons remain unwarped. */
-@supports (backdrop-filter: url("#cosmos-glass-refraction")) {
-  html[data-cosmos-surface="glass"] .cosmic-panel.cosmos-card::before {
-    background: rgba(130, 79, 220, .025);
-    filter: none;
-    opacity: 1;
-    -webkit-backdrop-filter: url("#cosmos-glass-refraction");
-    backdrop-filter: url("#cosmos-glass-refraction");
-    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-    -webkit-mask-composite: xor;
-    mask-composite: exclude;
-    padding: 9px;
-  }
-}
-@media (prefers-reduced-motion: reduce), (prefers-reduced-transparency: reduce) {
-  html[data-cosmos-surface="glass"] .cosmic-panel.cosmos-card::before {
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
+@media (prefers-reduced-transparency:reduce) {
+  html[data-cosmos-surface="glass"] .cosmic-panel.cosmos-card,
+  html[data-cosmos-surface="glass"] .cosmic-content-surface.cosmic-page-content,
+  html[data-cosmos-surface="glass"] .cosmos-reference-search,
+  html[data-cosmos-surface="glass"] .cosmos-page-tabs,
+  html[data-cosmos-surface="glass"] .cosmos-mobile-nav {
+    background: #140c2e !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
   }
 }
