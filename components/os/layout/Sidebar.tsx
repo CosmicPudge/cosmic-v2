@@ -78,12 +78,13 @@ export default function Sidebar({ variant = "side" }: { variant?: "side" | "top"
           </Link>
           <button
             type="button"
-            className="cosmos-icon-button"
-            aria-label={open ? "Close navigation" : "Open navigation"}
+            className={`cosmos-icon-button ${open ? "invisible" : ""}`}
+            disabled={open}
+            aria-label="Open navigation"
             aria-expanded={open}
             onClick={() => setOpen((value) => !value)}
           >
-            {open ? <X size={21} /> : <Menu size={21} />}
+            <Menu size={21} />
           </button>
         </div>
         {open && (
