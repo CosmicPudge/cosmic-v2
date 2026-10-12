@@ -57,7 +57,16 @@ export default function KioskSlideshow() {
   const forcedIndex = BUILD_SLIDES.findIndex((slide) => slide.id === preview);
   const [index, setIndex] = useState(forcedIndex >= 0 ? forcedIndex : 0);
   const [rotationEpoch, setRotationEpoch] = useState(0);
-  const music = useMusic({ refreshMs: snapshot => snapshot?.playback.playing ? 500 : 20_000 });
+  // Local kiosk time: daytime 07:00–22:00 inclusive; overnight starts 22:01.
+  // The header clock ticks once a second, so crossing either boundary
+  // updates useMusic's polling interval without a kiosk restart.
+  const localMinute = headerClock ? headerClock.getHours() * 60 + headerClock.getMinutes() : new Date().getHours() * 60 + new Date().getMinutes();
+  const daytimeMusicPolling = localMinute >= 7 * 60 && localMinute <= 22 * 60;
+  const music = useMusic({
+    refreshMs: snapshot => daytimeMusicPolling
+      ? (snapshot?.playback.playing ? 500 : 30_000)
+      : (snapshot?.playback.playing ? 300_000 : 120_000),
+  });
   const musicPlaying = Boolean(music.playback?.playing);
   const [musicHold, setMusicHold] = useState(false);
   const musicSessionActive = useRef(false);
