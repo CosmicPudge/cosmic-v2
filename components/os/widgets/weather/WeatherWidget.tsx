@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import useLocation from "@/hooks/os/useLocation";
-import { MapPin } from "lucide-react";
+import { Cloud, CloudDrizzle, CloudFog, CloudLightning, CloudMoon, CloudRain, CloudSnow, CloudSun, MapPin, Moon, Sun, Wind } from "lucide-react";
 import useWeather from "@/hooks/os/useWeather";
 import type { WeatherData } from "@/engines/environment";
 
@@ -90,6 +90,20 @@ export default function WeatherWidget() {
       </WidgetFooter>
     </Widget>
   );
+}
+
+function KioskWeatherIcon({ condition, isDay, size }: { condition: string; isDay: boolean; size: number }) {
+  const mapped = mapWeatherCondition(condition);
+  const Icon = mapped === "clear" ? (isDay ? Sun : Moon)
+    : mapped === "partly-cloudy" ? (isDay ? CloudSun : CloudMoon)
+    : mapped === "cloudy" ? Cloud
+    : mapped === "rain" || mapped === "showers" ? CloudRain
+    : mapped === "snow" || mapped === "blizzard" ? CloudSnow
+    : mapped === "thunderstorm" || mapped === "thunder-rain" ? CloudLightning
+    : mapped === "fog" ? CloudFog
+    : mapped === "wind" ? Wind
+    : CloudDrizzle;
+  return <Icon size={size} strokeWidth={1.8} aria-label={condition} role="img" />;
 }
 
 function KioskWeatherScene({
@@ -183,7 +197,7 @@ function KioskWeatherScene({
         <>
           <div className="cosmos-kiosk-weather-hero">
             <div className="cosmos-kiosk-weather-icon">
-              <WeatherIcon condition={mapWeatherCondition(weather.condition)} isDay={isDay} size={112} />
+              <KioskWeatherIcon condition={weather.condition} isDay={isDay} size={112} />
             </div>
             <div>
               <p className="cosmos-kiosk-weather-temp">{Math.round(weather.temp)}°</p>
@@ -208,8 +222,8 @@ function KioskWeatherScene({
               {forecast.map((hour, index) => (
                 <div className="cosmos-kiosk-weather-hour" key={`${hour.time}-${index}`}>
                   <p>{hour.time}</p>
-                  <WeatherIcon
-                    condition={mapWeatherCondition(hour.icon)}
+                  <KioskWeatherIcon
+                    condition={hour.icon}
                     isDay={hourIsDay(hour.icon, currentHour + index)}
                     size={38}
                   />
