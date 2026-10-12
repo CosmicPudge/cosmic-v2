@@ -7,7 +7,7 @@ import { getSchoolAssignment } from "@/services/school/assignmentRepository";
 import { interpretSchoolAssignment } from "@/services/school/ai/service";
 import { assertSameOrigin } from "@/services/security/origin";
 
-type Context = { params: Promise<{ assignmentId: string }> };
+type Context = { params: Promise<{ id: string }> };
 
 function assignmentFromInput(id: string, input: NonNullable<ReturnType<typeof parseSchoolAssignmentInterpretationInput>>): SchoolPlanningAssignment {
   const now = new Date();
@@ -25,7 +25,7 @@ export async function POST(request: Request, context: Context) {
   try {
     assertSameOrigin(request);
     const access = await requireSchoolAccessContext(request);
-    const assignmentId = (await context.params).assignmentId;
+    const assignmentId = (await context.params).id;
     if (!assignmentId || assignmentId.length > 300) return NextResponse.json({ error: "Invalid assignment." }, { status: 400 });
     if (!SCHOOL_AI_ENABLED) return NextResponse.json({ error: "school_ai_disabled" }, { status: 503 });
     const body = await request.json() as { input?: unknown };
