@@ -70,7 +70,7 @@ export default function Sidebar({ variant = "side" }: { variant?: "side" | "top"
       <aside ref={navigationRef} data-cosmic-navigation className="cosmos-mobile-nav lg:hidden">
         <div className="flex items-center justify-between gap-3">
           <Link href="/os" className="cosmos-brand" aria-label="Cosmos home">
-            <span className="cosmos-brand-mark" aria-hidden="true"><Sparkles size={23} strokeWidth={2.5} /></span>
+            <span className="cosmos-brand-mark" aria-hidden="true"><Sparkles size={20} strokeWidth={2.2} /></span>
             <span>
               <span className="cosmos-brand-name">COSMOS</span>
               <span className="cosmos-brand-tagline">Everything in orbit.</span>
@@ -103,7 +103,7 @@ export default function Sidebar({ variant = "side" }: { variant?: "side" | "top"
       className="cosmos-sidebar hidden lg:flex"
     >
       <Link href="/os" className="cosmos-brand" aria-label="Cosmos home">
-        <span className="cosmos-brand-mark" aria-hidden="true"><Sparkles size={23} strokeWidth={2.5} /></span>
+        <span className="cosmos-brand-mark" aria-hidden="true"><Sparkles size={20} strokeWidth={2.2} /></span>
         <span className="min-w-0">
           <span className="cosmos-brand-name">COSMOS</span>
           <span className="cosmos-brand-tagline">Everything in orbit.</span>
