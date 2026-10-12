@@ -2,11 +2,15 @@
 
 import Link from "next/link";
 import { CloudSun, Search } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 
 import WeatherIcon from "@/components/os/ui/WeatherIcon";
 import { useSearchRuntime } from "@/components/apps/search/SearchProvider";
 import useWeather from "@/hooks/os/useWeather";
+
+const subscribeHydration = () => () => {};
+const getClientSnapshot = () => true;
+const getServerSnapshot = () => false;
 
 function TopBarClock() {
   const [now, setNow] = useState<Date | null>(null);
@@ -31,8 +35,7 @@ function TopBarClock() {
 export default function CosmosTopBar() {
   const { openSearch } = useSearchRuntime();
   const { weather, loading: weatherLoading, error: weatherError } = useWeather();
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => { setMounted(true); }, []);
+  const mounted = useSyncExternalStore(subscribeHydration, getClientSnapshot, getServerSnapshot);
   const visibleWeather = mounted ? weather : null;
   const visibleLoading = mounted ? weatherLoading : true;
   const visibleError = mounted ? weatherError : null;
