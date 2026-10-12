@@ -933,42 +933,34 @@ html[data-cosmos-surface="glass"] .cosmos-mobile-nav {
   .cosmos-shell-workspace .cosmos-page-slot { scroll-behavior: auto; }
 }
 
-/* Experimental visible refraction: reconstruct the same stationary wallpaper on the
-   edge layer and displace only those pixels. Unlike backdrop-filter: url(...),
-   filter: url(...) processes an actual image and works in Chromium.
-   Text and interactive children remain untouched. */
+/* Performance-first single-tone glass: one consistent lens, no duplicated image
+   texture or expensive per-card SVG displacement during scrolling. */
+html[data-cosmos-surface="glass"] .cosmic-panel.cosmos-card {
+  background: rgba(105, 58, 192, .095) !important;
+  border-color: rgba(194, 149, 255, .34) !important;
+  box-shadow: inset 0 1px 0 rgba(238, 205, 255, .31),
+    inset 0 -1px 0 rgba(164, 102, 247, .21),
+    0 8px 22px rgba(6, 2, 24, .14) !important;
+}
 html[data-cosmos-surface="glass"] .cosmic-panel.cosmos-card::before {
   inset: 0;
-  padding: 13px;
-  opacity: .82;
-  border-radius: inherit;
-  background-image: url("/cosmos/cinematic/violet-planet-over-alien-mountains.png");
-  background-attachment: fixed;
-  background-position: center top;
-  background-size: 100vw auto;
-  background-repeat: no-repeat;
-  background-color: transparent;
-  filter: url("#cosmos-glass-refraction");
-  -webkit-mask-image: linear-gradient(#000 0 0),linear-gradient(#000 0 0);
-  -webkit-mask-origin: content-box,border-box;
-  -webkit-mask-clip: content-box,border-box;
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
+  padding: 0;
+  opacity: 1;
+  background: linear-gradient(180deg, rgba(228,184,255,.065), transparent 17%);
+  background-image: none;
+  background-attachment: scroll;
+  filter: none;
+  -webkit-mask-image: none;
+  mask-image: none;
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
 }
-@media (max-width: 767px) {
-  html[data-cosmos-surface="glass"] .cosmic-panel.cosmos-card::before {
-    background-size: auto 820px;
-    background-position: 65% top;
-  }
+html[data-cosmos-surface="glass"] .cosmic-panel.cosmos-card::after {
+  padding: 1px;
+  background: linear-gradient(125deg, rgba(248,220,255,.38), rgba(186,128,255,.12) 28%,
+    rgba(143,86,218,.12) 68%, rgba(232,190,255,.3));
 }
-@media (prefers-reduced-motion: reduce), (prefers-reduced-transparency: reduce) {
-  html[data-cosmos-surface="glass"] .cosmic-panel.cosmos-card::before {
-    background-image: none;
-    filter: none;
-    -webkit-mask-image: none;
-    mask-image: none;
-    opacity: 0;
-  }
+/* Leave the backdrop in place and allow fast, native scrolling. */
+@media (prefers-reduced-transparency: reduce) {
+  html[data-cosmos-surface="glass"] .cosmic-panel.cosmos-card { background: #140c2e !important; }
 }
