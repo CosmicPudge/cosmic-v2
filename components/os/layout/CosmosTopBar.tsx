@@ -58,7 +58,7 @@ export default function CosmosTopBar() {
           </span>
           <span className="cosmos-reference-weather-info">
             <span className="cosmos-reference-temperature">{visibleLoading && !visibleWeather ? "—°" : visibleWeather ? `${Math.round(visibleWeather.temp)}°` : "—°"}</span>
-            <span className="cosmos-reference-weather-location">{visibleWeather?.condition ? weather.condition : visibleLoading ? "Loading weather" : visibleError ? "Weather unavailable" : "Location unavailable"}
+            <span className="cosmos-reference-weather-location">{visibleWeather?.condition ? visibleWeather.condition : visibleLoading ? "Loading weather" : visibleError ? "Weather unavailable" : "Location unavailable"}
             {visibleWeather?.city && <span className="cosmos-reference-weather-city">{visibleWeather.city}</span>}</span>
           </span>
         </Link>
