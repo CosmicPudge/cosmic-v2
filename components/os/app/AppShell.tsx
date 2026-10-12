@@ -65,6 +65,15 @@ export default function AppShell({ children, app }: AppShellProps) {
       data-cosmic-app={pageApp}
       className="cosmic-site-shell cosmos-app-shell relative min-h-screen text-white outline-none"
     >
+      {/* Displacement affects only the glass optical layer, never its text or controls. */}
+      <svg aria-hidden="true" focusable="false" width="0" height="0" className="pointer-events-none absolute">
+        <defs>
+          <filter id="cosmos-glass-refraction" x="-5%" y="-5%" width="110%" height="110%">
+            <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="7" result="glassNoise" />
+            <feDisplacementMap in="SourceGraphic" in2="glassNoise" scale="6" xChannelSelector="R" yChannelSelector="G" />
+          </filter>
+        </defs>
+      </svg>
       <div className="cosmic-stars pointer-events-none absolute inset-0" />
       <div className="cosmos-cinematic-scene pointer-events-none absolute inset-x-0 top-0" aria-hidden="true">
         <div className="cosmos-cinematic-image" />
