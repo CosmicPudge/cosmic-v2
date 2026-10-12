@@ -38,7 +38,7 @@ export const foundationChecks = [
   ["Kiosk regression check", true],
   ["Mobile + tablet QA", true],
   ["Glass / solid QA", true],
-  ["TypeScript / lint / build validation", true],
+  ["M0-scoped lint, TypeScript and production build validation (repository-wide lint debt tracked separately)", true],
   ["Regression fixes", true],
   ["Dev QA", true],
   ["Progress tracker is live and accurate at /cosmos-progress", true],

@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Keep the development indicator from obscuring the bottom sidebar settings link.
+  devIndicators: false,
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "a.espncdn.com" },

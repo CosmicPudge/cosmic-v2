@@ -3,7 +3,10 @@ import { kioskBootId, requireAuthenticatedSession } from "@/services/auth/server
 
 export async function GET(request: Request) {
   const bootId = kioskBootId(request);
-  try {
+  // Allow local UI previews without a signed-in account. Production remains authenticated.
+  const hostname = new URL(request.url).hostname;
+  const localPreview = process.env.NODE_ENV === "development" && (hostname === "localhost" || hostname === "127.0.0.1");
+  if (!localPreview) try {
     const session = await requireAuthenticatedSession(request, { allowDevice: true, bootId });
     if (process.env.NODE_ENV !== "production") console.info(`[weather] route-auth=accepted sessionType=${session.sessionType ?? "user"} bootPresent=${Boolean(bootId)}`);
   } catch (error) {

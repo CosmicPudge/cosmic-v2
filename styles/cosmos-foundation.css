@@ -399,3 +399,759 @@ html[data-cosmos-surface="solid"] .cosmic-content-surface {
     animation: none;
   }
 }
+
+/* M0 visual rebuild — shared navigation aligned to approved Cosmos references. */
+.cosmos-sidebar {
+  width: 12.25rem;
+  flex: 0 0 12.25rem;
+  padding: 1.05rem .75rem;
+  background: linear-gradient(180deg, rgba(2, 3, 13, .96), rgba(5, 5, 21, .9));
+  border-right-color: rgba(165, 128, 255, .2);
+  box-shadow: 8px 0 45px rgba(0, 0, 0, .25);
+}
+.cosmos-brand {
+  gap: .65rem;
+  min-height: 3.5rem;
+  padding: .45rem .7rem;
+}
+.cosmos-brand-mark {
+  width: 2rem;
+  height: 2rem;
+  border: 0;
+  color: #a677ff;
+  background: transparent;
+  filter: drop-shadow(0 0 7px rgba(139, 92, 246, .85));
+}
+.cosmos-brand-name {
+  font-size: 1.3rem;
+  letter-spacing: -.035em;
+  font-weight: 700;
+}
+.cosmos-brand-tagline { display: none; }
+.cosmos-nav-item {
+  min-height: 2.7rem;
+  gap: .65rem;
+  padding: .47rem .65rem;
+  border-radius: .6rem;
+  color: rgba(245, 243, 255, .88);
+  font-size: .86rem;
+  font-weight: 450;
+}
+.cosmos-nav-item-active {
+  border-color: rgba(120, 65, 245, .36);
+  background: linear-gradient(100deg, rgba(78, 30, 201, .65), rgba(82, 28, 149, .37));
+  box-shadow: inset 2px 0 0 #8651ff, 0 0 22px rgba(111, 55, 255, .13);
+}
+.cosmos-sidebar .cosmos-kiosk-button {
+  margin-top: .6rem;
+  border-color: rgba(165, 128, 255, .15);
+}
+.cosmos-nav-item:focus-visible {
+  outline: 2px solid #9c81ff;
+  outline-offset: 2px;
+}
+@media (max-width: 1023px) {
+  .cosmos-mobile-nav { background: rgba(3, 5, 21, .94); }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .cosmos-sidebar, .cosmos-mobile-nav { backdrop-filter: none; -webkit-backdrop-filter: none; }
+}
+
+/* M0 sidebar screenshot refinement: compact reference proportions. */
+.cosmos-sidebar { width: 11.65rem; flex-basis: 11.65rem; padding: .8rem .65rem; }
+.cosmos-sidebar .cosmos-brand { min-height: 3.1rem; padding: .35rem .5rem; }
+.cosmos-sidebar .cosmos-brand-name { font-size: 1.12rem; letter-spacing: -.035em; }
+.cosmos-sidebar .cosmos-brand-mark { width: 1.7rem; height: 1.7rem; }
+.cosmos-sidebar .cosmos-nav-item {
+  min-height: 2.28rem;
+  gap: .55rem;
+  padding: .35rem .55rem;
+  border-radius: .48rem;
+  font-size: .8rem;
+  line-height: 1.15rem;
+}
+.cosmos-sidebar nav { display: flex; flex-direction: column; gap: .14rem; }
+.cosmos-sidebar .cosmos-nav-item-active {
+  background: linear-gradient(100deg, rgba(83, 27, 198, .7), rgba(64, 24, 127, .5));
+  box-shadow: inset 2px 0 0 #8753ff, 0 0 13px rgba(109, 50, 237, .12);
+}
+.cosmos-sidebar > div:last-child { padding-top: .65rem; }
+
+/* Approved reference: restrained sidebar typography, mono-line icons and small active pill. */
+.cosmos-sidebar { width: 11.5rem; flex-basis: 11.5rem; padding: .75rem .55rem; }
+.cosmos-sidebar .cosmos-brand { min-height: 3rem; gap: .55rem; padding: .38rem .55rem; }
+.cosmos-sidebar .cosmos-brand-mark { width: 1.65rem; height: 1.65rem; filter: drop-shadow(0 0 6px rgba(136, 76, 255, .7)); }
+.cosmos-sidebar .cosmos-brand-name { font-size: 1.12rem; font-weight: 650; letter-spacing: -.02em; }
+.cosmos-sidebar .cosmos-nav-item {
+  min-height: 2.18rem;
+  gap: .73rem;
+  padding: .36rem .65rem;
+  border-radius: .5rem;
+  color: #f1f0f7;
+  font-size: .75rem;
+  font-weight: 450;
+}
+.cosmos-sidebar .cosmos-reference-nav-icon { color: #f4f4ff; filter: none; }
+.cosmos-sidebar .cosmos-nav-item-active {
+  border-color: rgba(102, 51, 221, .48);
+  background: linear-gradient(95deg, rgba(81, 27, 184, .76), rgba(59, 24, 137, .64));
+  box-shadow: inset 2px 0 0 #6842ff;
+}
+.cosmos-sidebar nav { gap: .08rem; }
+.cosmos-sidebar > div:last-child { border-top-color: transparent; }
+.cosmos-sidebar > div:last-child .cosmos-nav-item { margin-top: .15rem; }
+
+/* M0 Sidebar final reference polish */
+.cosmos-sidebar .cosmos-brand { gap: .48rem; }
+.cosmos-sidebar .cosmos-brand-mark {
+  width: 1.45rem;
+  height: 1.45rem;
+  filter: drop-shadow(0 0 4px rgba(136, 76, 255, .58));
+}
+.cosmos-sidebar .cosmos-brand-name {
+  font-size: 1.04rem;
+  font-weight: 650;
+  letter-spacing: -.025em;
+}
+.cosmos-sidebar .cosmos-nav-item-active {
+  border-color: rgba(93, 48, 197, .35);
+  background: linear-gradient(100deg, rgba(70, 24, 165, .6), rgba(55, 19, 121, .44));
+  box-shadow: inset 2px 0 0 rgba(109, 64, 249, .82);
+}
+
+/* M0 top bar — cinematic reference, using real clock/search/weather. */
+.cosmos-reference-topbar {
+  position: relative;
+  top: auto;
+  margin-top: 0;
+  min-height: 4.3rem;
+  justify-content: space-between;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  padding: .7rem 0 .45rem;
+}
+.cosmos-reference-search {
+  width: min(32rem, 42%);
+  min-height: 2.75rem;
+  border-radius: 999px;
+  border: 1px solid rgba(178, 156, 244, .3);
+  background: linear-gradient(95deg, rgba(16, 20, 49, .81), rgba(33, 22, 74, .64));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.07), 0 6px 25px rgba(0,0,0,.15);
+  padding: .6rem 1rem;
+  color: #d6d2eb;
+  font-size: .84rem;
+  font-weight: 400;
+}
+.cosmos-reference-search:hover { border-color: rgba(180, 153, 255, .6); }
+.cosmos-reference-shortcut {
+  margin-left: auto;
+  padding: .22rem .42rem;
+  border-radius: .4rem;
+  background: rgba(170, 149, 235, .13);
+  color: #c5bbdd;
+  font-size: .7rem;
+}
+.cosmos-reference-topbar-right { display: flex; align-items: center; gap: 1.15rem; margin-left: auto; }
+.cosmos-reference-clock { display: flex; flex-direction: column; align-items: flex-end; gap: .1rem; white-space: nowrap; }
+.cosmos-reference-date { font-size: .82rem; color: #f3efff; }
+.cosmos-reference-time { font-size: 1.55rem; font-weight: 650; line-height: 1.1; letter-spacing: -.025em; color: white; font-variant-numeric: tabular-nums; }
+.cosmos-reference-weather-divider { height: 2.8rem; width: 1px; background: rgba(215, 205, 255, .35); }
+.cosmos-reference-weather { display: flex; align-items: center; gap: .65rem; min-width: 7.8rem; color: white; }
+.cosmos-reference-weather-icon { display: flex; align-items: center; color: #e7e3ff; }
+.cosmos-reference-weather-info { display: flex; flex-direction: column; gap: .15rem; }
+.cosmos-reference-temperature { font-size: 1.35rem; font-weight: 600; line-height: 1; }
+.cosmos-reference-weather-location { max-width: 8.5rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .67rem; color: #b5b1ce; }
+@media (max-width: 900px) {
+  .cosmos-reference-search { width: min(23rem, 42%); }
+  .cosmos-reference-topbar-right { gap: .75rem; }
+  .cosmos-reference-time { font-size: 1.2rem; }
+}
+@media (max-width: 639px) {
+  .cosmos-reference-topbar { flex-wrap: wrap; gap: .65rem; padding-top: .25rem; }
+  .cosmos-reference-search { order: 2; width: 100%; min-height: 2.65rem; }
+  .cosmos-reference-topbar-right { width: 100%; order: 1; justify-content: flex-end; gap: .8rem; }
+  .cosmos-reference-date { font-size: .72rem; }
+  .cosmos-reference-time { font-size: 1.18rem; }
+  .cosmos-reference-weather-divider { height: 2.3rem; }
+  .cosmos-reference-weather { min-width: 0; }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .cosmos-reference-search { background: #171633; }
+}
+
+/* M0 topbar: reference-fit refinements */
+.cosmos-reference-topbar { padding-top: .65rem; }
+.cosmos-reference-search {
+  border-color: rgba(185, 161, 255, .38);
+  background: linear-gradient(100deg, rgba(16, 20, 52, .85), rgba(40, 24, 80, .68));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.09), 0 7px 23px rgba(4, 2, 22, .24);
+}
+.cosmos-reference-search > svg { flex-shrink: 0; color: #f3f0ff; }
+.cosmos-reference-time { font-size: 1.65rem; }
+.cosmos-reference-weather-icon { min-width: 2.3rem; justify-content: center; }
+.cosmos-reference-weather-info { gap: .12rem; }
+.cosmos-reference-weather-city {
+  color: #a9a5bd;
+  max-width: 9rem;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: .65rem;
+}
+@media (max-width: 900px) { .cosmos-reference-time { font-size: 1.27rem; } }
+@media (max-width: 639px) { .cosmos-reference-time { font-size: 1.18rem; } }
+
+/* Keep temperature, condition, and location readable as three distinct rows. */
+.cosmos-reference-weather-info { min-width: 0; align-items: flex-start; }
+.cosmos-reference-weather-location,
+.cosmos-reference-weather-city { display: block; line-height: 1.2; }
+.cosmos-reference-weather { gap: .75rem; }
+
+/* M0 shared header — typography, glowing outline icon, and reference segmented tabs. */
+.cosmos-page-header { margin-bottom: 1rem; padding: .65rem 0 .15rem; }
+.cosmos-reference-header-identity { display: flex; align-items: center; gap: 1rem; min-width: 0; }
+.cosmos-reference-header-icon {
+  display: grid; place-items: center; flex: 0 0 auto; width: 3.25rem; height: 3.25rem;
+  color: #a987ff; filter: drop-shadow(0 0 8px rgba(137,77,255,.74));
+}
+.cosmos-reference-header-icon svg { width: 2.75rem; height: 2.75rem; stroke-width: 1.8; }
+.cosmos-page-title { font-size: clamp(2rem, 3.15vw, 2.85rem); letter-spacing: -.037em; font-weight: 720; line-height: 1.06; }
+.cosmos-page-subtitle { margin-top: .35rem; font-size: clamp(.87rem, 1.2vw, 1.05rem); line-height: 1.38; color: #abaaca; }
+.cosmos-page-tabs {
+  display: flex; align-items: center; width: fit-content; max-width: 100%;
+  gap: .12rem; margin-top: 1.1rem; padding: .18rem; overflow-x: auto;
+  border: 1px solid rgba(164,138,243,.22); border-radius: 999px;
+  background: linear-gradient(100deg, rgba(15,16,45,.83), rgba(37,23,78,.67));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.035);
+}
+.cosmos-page-tab {
+  min-width: 6.1rem; padding: .56rem 1rem; border-radius: 999px; white-space: nowrap;
+  font-size: .76rem; font-weight: 480; color: #e4def5;
+}
+.cosmos-page-tab:hover { background: rgba(129,96,226,.12); color: white; }
+.cosmos-page-tab-active,
+.cosmos-page-tab-active:hover {
+  border-color: rgba(219,208,255,.8);
+  background: linear-gradient(180deg, rgba(120,100,255,.92), rgba(60,55,180,.9));
+  color: white;
+  box-shadow: 0 0 0 1px rgba(180,163,255,.47), 0 0 10px rgba(131,106,255,.9), inset 0 1px 4px rgba(255,255,255,.24);
+}
+@media (max-width: 639px) {
+  .cosmos-reference-header-identity { gap: .65rem; }
+  .cosmos-reference-header-icon { width: 2.6rem; height: 2.6rem; }
+  .cosmos-reference-header-icon svg { width: 2.25rem; height: 2.25rem; }
+  .cosmos-page-title { font-size: 2.1rem; }
+  .cosmos-page-tab { min-width: 4.6rem; padding: .5rem .75rem; }
+}
+@media (prefers-reduced-transparency: reduce) { .cosmos-page-tabs { background: #11112f; } }
+
+/* M0 final header polish after visual review. */
+.cosmos-reference-header-identity { align-items: center; gap: .72rem; }
+.cosmos-reference-header-icon { width: 2.8rem; height: 2.8rem; }
+.cosmos-reference-header-icon svg { width: 2.5rem; height: 2.5rem; }
+.cosmos-reference-header-actions { padding-top: .35rem; }
+.cosmos-page-tabs { gap: .22rem; }
+.cosmos-page-tab { min-width: 6.55rem; padding-inline: 1.1rem; }
+.cosmos-page-tab-active,
+.cosmos-page-tab-active:hover {
+  box-shadow: 0 0 0 1px rgba(180,163,255,.36), 0 0 7px rgba(131,106,255,.65), inset 0 1px 3px rgba(255,255,255,.18);
+}
+@media (max-width: 639px) {
+  .cosmos-reference-header-identity { gap: .6rem; }
+  .cosmos-page-tab { min-width: 4.6rem; padding-inline: .8rem; }
+}
+
+/* M0 cinematic scene: generated art asset instead of CSS geometry. */
+.cosmos-app-shell { isolation: isolate; }
+.cosmos-cinematic-scene {
+  z-index: 0;
+  height: clamp(380px, 39vw, 560px);
+  overflow: hidden;
+  opacity: .98;
+  mask-image: linear-gradient(to bottom, #000 0%, #000 68%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 68%, transparent 100%);
+}
+.cosmos-cinematic-image {
+  position: absolute;
+  inset: 0;
+  background-image: url("/cosmos/cinematic/violet-planet-over-alien-mountains.png");
+  background-position: center 21%;
+  background-size: cover;
+  background-repeat: no-repeat;
+  filter: saturate(1.02) brightness(.74);
+}
+.cosmos-cinematic-overlay {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 31% 38% at 94% 9%, rgba(3,4,17,.48), transparent 95%),
+    linear-gradient(90deg, rgba(3,4,17,.72) 0%, rgba(3,4,17,.43) 31%, transparent 72%),
+    linear-gradient(180deg, rgba(3,4,17,.2) 0%, transparent 34%, rgba(3,4,17,.56) 100%);
+}
+@media (max-width: 767px) {
+  .cosmos-cinematic-scene { height: 320px; opacity: .85; }
+  .cosmos-cinematic-image { background-position: 64% 24%; filter: saturate(1.02) brightness(.68); }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .cosmos-cinematic-scene { opacity: .65; }
+}
+
+/* M0 appearance parity: Solid must be genuinely opaque, including reference UI. */
+html[data-cosmos-surface="solid"] .cosmos-card,
+html[data-cosmos-surface="solid"] .cosmic-content-surface,
+html[data-cosmos-surface="solid"] .cosmos-mobile-nav {
+  background: #0b0d24;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+html[data-cosmos-surface="solid"] .cosmos-sidebar {
+  background: #060717;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+html[data-cosmos-surface="solid"] .cosmos-reference-search {
+  background: #161633;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+html[data-cosmos-surface="solid"] .cosmos-page-tabs {
+  background: #14132f;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+html[data-cosmos-surface="solid"] .cosmos-reference-shortcut {
+  background: #30274f;
+}
+html[data-cosmos-surface="solid"] .cosmos-nav-item-active {
+  background: #22154d;
+}
+@media (prefers-reduced-transparency: reduce) {
+  html:not([data-cosmos-surface="glass"]) .cosmos-reference-search { background: #161633; }
+  html:not([data-cosmos-surface="glass"]) .cosmos-page-tabs { background: #14132f; }
+}
+
+/* Cosmos liquid-glass material, aligned to the approved concept image.
+   Clear centers, violet meniscus, soft reflection, no fuzzy blobs or diagonal stripes. */
+html[data-cosmos-surface="glass"] {
+  --cosmos-surface: rgba(90,43,178,.045);
+  --cosmos-surface-strong: rgba(81,35,160,.085);
+}
+html[data-cosmos-surface="glass"] .cosmic-content-surface.cosmic-page-content {
+  background: linear-gradient(145deg,rgba(113,63,211,.055),rgba(39,17,85,.015) 55%,rgba(104,51,198,.045)) !important;
+  border-color: rgba(197,158,255,.29);
+  box-shadow: inset 0 2px 1px rgba(227,197,255,.3),inset 0 -1px 0 rgba(163,107,241,.22),0 15px 37px rgba(1,0,12,.17);
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+html[data-cosmos-surface="glass"] .cosmic-panel.cosmos-card {
+  isolation: isolate;
+  position: relative;
+  background: linear-gradient(140deg,rgba(158,103,244,.11),rgba(73,32,147,.024) 48%,rgba(129,73,220,.07)) !important;
+  background-color: transparent !important;
+  border: 1px solid rgba(195,151,255,.39) !important;
+  box-shadow: inset 0 2px 1px rgba(242,213,255,.41),inset 1px 0 1px rgba(190,145,255,.16),inset 0 -2px 1px rgba(179,108,255,.26),0 10px 27px rgba(4,0,22,.21),0 0 9px rgba(124,54,225,.09) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+html[data-cosmos-surface="glass"] .cosmic-panel.cosmos-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 0;
+  background: radial-gradient(ellipse 60% 30% at var(--glass-reflect-x,70%) var(--glass-reflect-y,-15px),rgba(242,203,255,.075),transparent 75%),linear-gradient(180deg,rgba(240,202,255,.08),transparent 17%);
+  filter: none;
+}
+html[data-cosmos-surface="glass"] .cosmic-panel.cosmos-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  padding: 2px;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(130deg,rgba(255,234,255,.47),rgba(200,149,255,.14) 19%,transparent 35%,transparent 69%,rgba(204,139,255,.25) 90%,rgba(255,227,255,.45));
+  -webkit-mask: linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+}
+html[data-cosmos-surface="glass"] .cosmic-panel.cosmos-card > * { position: relative; }
+html[data-cosmos-surface="glass"] .cosmos-reference-search,
+html[data-cosmos-surface="glass"] .cosmos-page-tabs,
+html[data-cosmos-surface="glass"] .cosmos-mobile-nav {
+  background: linear-gradient(125deg,rgba(157,101,246,.17),rgba(56,26,116,.065) 56%,rgba(147,83,239,.12));
+  border-color: rgba(211,170,255,.36);
+  box-shadow: inset 0 1px 1px rgba(244,212,255,.35),inset 0 -1px 0 rgba(155,84,255,.21),0 8px 24px rgba(1,0,13,.19);
+  backdrop-filter: blur(1px);
+  -webkit-backdrop-filter: blur(1px);
+}
+html[data-cosmos-surface="glass"] .cosmos-page-tab-active {
+  background: linear-gradient(160deg,rgba(163,93,251,.8),rgba(96,47,209,.65));
+  border-color: rgba(244,207,255,.55);
+  box-shadow: inset 0 1px 0 rgba(255,240,255,.4),0 0 12px rgba(144,69,242,.35);
+}
+html[data-cosmos-surface="glass"] .cosmos-sidebar {
+  background: linear-gradient(180deg,rgba(7,4,24,.83),rgba(7,4,23,.76));
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+/* The planetary landscape remains behind the cards so transparency reads visibly. */
+.cosmos-cinematic-scene {
+  height: min(1100px,115vh);
+  mask-image: linear-gradient(180deg,#000 0%,#000 34%,rgba(0,0,0,.8) 63%,transparent 100%);
+  -webkit-mask-image: linear-gradient(180deg,#000 0%,#000 34%,rgba(0,0,0,.8) 63%,transparent 100%);
+}
+.cosmos-cinematic-image { background-size: 100% auto; background-position: center top; }
+.cosmos-cinematic-overlay {
+  background: linear-gradient(90deg,rgba(3,4,17,.6),rgba(3,4,17,.27) 41%,rgba(3,4,17,.12)),linear-gradient(180deg,rgba(3,4,17,.12),rgba(3,4,17,.12) 36%,rgba(3,4,17,.75) 100%);
+}
+@media (max-width:767px) {
+  .cosmos-cinematic-scene { height: min(850px,115vh); }
+  .cosmos-cinematic-image { background-size: auto 820px; background-position: 65% top; }
+}
+@media (prefers-reduced-motion:reduce) {
+  html[data-cosmos-surface="glass"] .cosmic-panel.cosmos-card::before { background:linear-gradient(180deg,rgba(240,202,255,.08),transparent 17%); }
+}
+@media (prefers-reduced-transparency:reduce) {
+  html[data-cosmos-surface="glass"] .cosmic-panel.cosmos-card,
+  html[data-cosmos-surface="glass"] .cosmic-content-surface.cosmic-page-content,
+  html[data-cosmos-surface="glass"] .cosmos-reference-search,
+  html[data-cosmos-surface="glass"] .cosmos-page-tabs,
+  html[data-cosmos-surface="glass"] .cosmos-mobile-nav {
+    background: #140c2e !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+}
+
+/* M0 shared shell: carry the approved violet liquid-glass material into navigation
+   and toolbar without adding an opaque panel behind the artwork. */
+html[data-cosmos-surface="glass"] .cosmos-sidebar {
+  background: linear-gradient(165deg,rgba(132,75,213,.13),rgba(38,18,86,.055) 52%,rgba(101,49,184,.11)) !important;
+  border: 1px solid rgba(202,156,255,.36);
+  border-left: 0;
+  border-radius: 0 1.35rem 1.35rem 0;
+  box-shadow: inset -2px 0 1px rgba(216,163,255,.29),inset 0 1px 0 rgba(232,201,255,.22),9px 0 32px rgba(3,0,17,.15);
+  backdrop-filter: blur(1px) saturate(1.1);
+  -webkit-backdrop-filter: blur(1px) saturate(1.1);
+}
+html[data-cosmos-surface="glass"] .cosmos-sidebar::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(115deg,rgba(238,206,255,.13),transparent 26%,transparent 78%,rgba(185,117,255,.12));
+  opacity: .6;
+}
+html[data-cosmos-surface="glass"] .cosmos-sidebar > * { position: relative; z-index: 1; }
+html[data-cosmos-surface="glass"] .cosmos-sidebar .cosmos-nav-item-active {
+  border-color: rgba(218,164,255,.32);
+  background: linear-gradient(115deg,rgba(141,75,239,.41),rgba(74,34,165,.25));
+  box-shadow: inset 0 1px 0 rgba(231,190,255,.2),inset 2px 0 0 rgba(193,132,255,.7);
+}
+html[data-cosmos-surface="glass"] .cosmos-reference-topbar {
+  /* Keep the topbar itself unobtrusive; glass belongs to the controls. */
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+html[data-cosmos-surface="glass"] .cosmos-reference-search,
+html[data-cosmos-surface="glass"] .cosmos-reference-topbar-right {
+  background: linear-gradient(140deg,rgba(145,82,229,.13),rgba(54,24,119,.04) 52%,rgba(120,64,215,.1));
+  border: 1px solid rgba(208,159,255,.34);
+  box-shadow: inset 0 1px 0 rgba(241,210,255,.28),inset 0 -1px 0 rgba(170,99,255,.18),0 7px 23px rgba(2,0,16,.13);
+  backdrop-filter: blur(1px);
+  -webkit-backdrop-filter: blur(1px);
+}
+html[data-cosmos-surface="glass"] .cosmos-reference-topbar-right {
+  padding: .38rem .75rem;
+  border-radius: 1.25rem;
+}
+html[data-cosmos-surface="glass"] .cosmos-reference-weather-divider {
+  background: rgba(218,175,255,.35);
+}
+html[data-cosmos-surface="glass"] .cosmos-mobile-nav {
+  border-color: rgba(208,159,255,.34);
+  background: linear-gradient(145deg,rgba(116,62,209,.19),rgba(28,12,65,.12));
+  box-shadow: inset 0 1px 0 rgba(239,211,255,.3),0 8px 28px rgba(3,0,18,.15);
+}
+@media (max-width: 767px) {
+  html[data-cosmos-surface="glass"] .cosmos-reference-topbar-right { padding: .3rem .6rem; }
+}
+@media (prefers-reduced-transparency: reduce) {
+  html[data-cosmos-surface="glass"] .cosmos-sidebar,
+  html[data-cosmos-surface="glass"] .cosmos-reference-search,
+  html[data-cosmos-surface="glass"] .cosmos-reference-topbar-right,
+  html[data-cosmos-surface="glass"] .cosmos-mobile-nav {
+    background: #140c2e !important;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}
+
+/* M0 scroll architecture: fixed wallpaper and chrome; only the workspace scrolls. */
+.cosmos-app-shell { height: 100dvh; overflow: hidden; }
+.cosmos-app-shell .cosmos-cinematic-scene,
+.cosmos-app-shell .cosmic-stars { position: fixed; }
+.cosmos-shell-layout { height: 100%; min-height: 0; }
+.cosmos-shell-workspace { height: 100%; min-height: 0; overflow: hidden; }
+.cosmos-shell-workspace > .cosmos-reference-topbar {
+  flex: none;
+  z-index: 30;
+}
+.cosmos-shell-workspace > .cosmos-page-slot {
+  min-height: 0;
+  flex: 1;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(176,120,255,.36) transparent;
+  padding-bottom: 1.25rem;
+}
+.cosmos-shell-workspace .cosmic-content-surface.cosmic-page-content {
+  overflow: visible;
+  min-height: 0;
+}
+/* Sidebar remains a fixed-height rail; only long navigation itself scrolls. */
+.cosmos-app-shell .cosmos-sidebar { position: relative; top: auto; height: 100%; flex-shrink: 0; }
+/* Small viewing refinements: keep content panels from touching the scrollbar or viewport edge. */
+.cosmos-shell-workspace .cosmos-page-slot > * { min-width: 0; }
+@media (max-width:1023px) {
+  .cosmos-app-shell { display: flex; flex-direction: column; }
+  .cosmos-app-shell .cosmos-mobile-shell { flex: none; }
+  .cosmos-app-shell .cosmos-shell-layout { flex: 1; min-height: 0; }
+  .cosmos-app-shell .cosmos-shell-workspace { height: 100%; }
+}
+@media (prefers-reduced-motion:reduce) {
+  .cosmos-shell-workspace .cosmos-page-slot { scroll-behavior: auto; }
+}
+
+/* Performance-first single-tone glass: one consistent lens, no duplicated image
+   texture or expensive per-card SVG displacement during scrolling. */
+html[data-cosmos-surface="glass"] .cosmic-panel.cosmos-card {
+  background: rgba(105, 58, 192, .095) !important;
+  border-color: rgba(194, 149, 255, .34) !important;
+  box-shadow: inset 0 1px 0 rgba(238, 205, 255, .31),
+    inset 0 -1px 0 rgba(164, 102, 247, .21),
+    0 8px 22px rgba(6, 2, 24, .14) !important;
+}
+html[data-cosmos-surface="glass"] .cosmic-panel.cosmos-card::before {
+  inset: 0;
+  padding: 0;
+  opacity: 1;
+  background: linear-gradient(180deg, rgba(228,184,255,.065), transparent 17%);
+  background-image: none;
+  background-attachment: scroll;
+  filter: none;
+  -webkit-mask-image: none;
+  mask-image: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+html[data-cosmos-surface="glass"] .cosmic-panel.cosmos-card::after {
+  padding: 1px;
+  background: linear-gradient(125deg, rgba(248,220,255,.38), rgba(186,128,255,.12) 28%,
+    rgba(143,86,218,.12) 68%, rgba(232,190,255,.3));
+}
+/* Leave the backdrop in place and allow fast, native scrolling. */
+@media (prefers-reduced-transparency: reduce) {
+  html[data-cosmos-surface="glass"] .cosmic-panel.cosmos-card { background: #140c2e !important; }
+}
+
+/* M0 responsive QA pass: safe viewports, measured spacing, readable glass. */
+.cosmos-shell-workspace > .cosmos-page-slot {
+  padding-inline: 2px;
+  padding-bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px));
+}
+.cosmos-shell-workspace .cosmic-content-surface.cosmic-page-content {
+  max-width: 100%;
+}
+html[data-cosmos-surface="glass"] .cosmic-content-surface.cosmic-page-content {
+  border-color: rgba(196,151,255,.2);
+  box-shadow: inset 0 1px 0 rgba(221,184,255,.16), 0 11px 29px rgba(1,0,12,.11);
+}
+html[data-cosmos-surface="glass"] .cosmic-panel.cosmos-card {
+  border-color: rgba(194,149,255,.28) !important;
+}
+.cosmos-state,
+.cosmos-card .text-white\/40,
+.cosmos-card .text-white\/45 { text-shadow: 0 1px 8px rgba(2,0,18,.5); }
+@media (max-width: 1023px) {
+  .cosmos-app-shell .cosmos-mobile-shell {
+    padding-top: max(.75rem, env(safe-area-inset-top, 0px));
+  }
+  .cosmos-shell-workspace > .cosmos-reference-topbar {
+    padding-top: .4rem;
+  }
+  .cosmos-shell-workspace > .cosmos-page-slot {
+    padding-top: .6rem;
+  }
+}
+@media (max-width: 639px) {
+  .cosmos-app-shell .cosmos-mobile-shell { padding-inline: .75rem; }
+  .cosmos-shell-workspace { padding-inline: .75rem; }
+  .cosmos-reference-topbar { gap: .5rem; }
+  .cosmos-reference-search { min-width: 0; }
+  .cosmos-reference-topbar-right { max-width: 100%; }
+  .cosmos-reference-weather-city { max-width: 6rem; }
+  .cosmos-page-header { margin-bottom: .75rem; }
+  .cosmos-page-tabs { max-width: 100%; }
+  .cosmos-shell-workspace .cosmic-content-surface.cosmic-page-content {
+    border-radius: 1rem;
+  }
+  .cosmos-shell-workspace .cosmos-card { border-radius: 1rem; }
+}
+@media (max-width: 380px) {
+  .cosmos-reference-date { font-size: .64rem; }
+  .cosmos-reference-time { font-size: 1rem; }
+  .cosmos-reference-temperature { font-size: 1.05rem; }
+  .cosmos-reference-topbar-right { gap: .55rem; }
+  .cosmos-reference-weather { gap: .35rem; }
+}
+
+/* M0 screenshot QA: compact mobile header and avoid tall stacks before first widget. */
+@media (max-width: 639px) {
+  .cosmos-app-shell .cosmos-mobile-shell { padding-top: .5rem; padding-bottom: 0; }
+  .cosmos-mobile-nav { padding: .55rem .7rem; }
+  .cosmos-mobile-nav .cosmos-brand { padding-block: .2rem; }
+  .cosmos-reference-topbar { gap: .45rem; padding-block: .45rem; }
+  .cosmos-reference-topbar-right { padding: .25rem .55rem !important; min-height: 2.8rem; }
+  .cosmos-reference-date { font-size: .65rem; }
+  .cosmos-reference-time { font-size: 1.05rem; }
+  .cosmos-reference-temperature { font-size: 1rem; }
+  .cosmos-reference-weather-city { display: none; }
+  .cosmos-reference-weather-icon { min-width: 1.7rem; }
+  .cosmos-reference-weather { gap: .3rem; }
+  .cosmos-reference-search { min-height: 2.45rem; padding-block: .45rem; }
+  .cosmos-shell-workspace > .cosmos-page-slot { padding-top: .2rem; }
+  .cosmos-page-header { padding-top: .35rem; margin-bottom: .65rem; }
+  .cosmos-reference-header-identity { align-items: flex-start; gap: .55rem; }
+  .cosmos-reference-header-icon { width: 2rem; height: 2rem; margin-top: .8rem; }
+  .cosmos-reference-header-icon svg { width: 1.9rem; height: 1.9rem; }
+  .cosmos-page-title { font-size: 2rem; }
+  .cosmos-page-subtitle { font-size: .82rem; line-height: 1.4; margin-top: .35rem; }
+  .cosmos-reference-header-actions { padding-top: 0; }
+  .cosmos-reference-header-actions > div {
+    justify-content: flex-start;
+    gap: .4rem;
+  }
+  .cosmos-reference-header-actions a { padding: .45rem .7rem; font-size: .75rem; }
+  .cosmos-page-tabs { margin-top: .65rem; gap: .1rem; }
+  .cosmos-page-tab { min-width: 0; flex: 1 0 auto; padding: .42rem .55rem; font-size: .7rem; }
+  .cosmos-shell-workspace .cosmic-page-content > div { padding: .75rem; }
+}
+@media (min-width: 640px) and (max-width: 1023px) {
+  .cosmos-page-header { margin-bottom: .75rem; }
+  .cosmos-reference-header-actions > div { justify-content: flex-start; }
+  .cosmos-reference-header-actions { padding-top: 0; }
+  .cosmos-shell-workspace > .cosmos-page-slot { padding-top: .3rem; }
+}
+
+/* M0 390px QA: reduce nesting and reclaim usable mobile viewport space. */
+@media (max-width: 639px) {
+  .cosmos-app-shell .cosmos-mobile-shell { padding-top: .35rem; }
+  .cosmos-mobile-nav { padding-block: .4rem; }
+  .cosmos-reference-topbar { padding-block: .25rem; min-height: 0; }
+  .cosmos-reference-topbar-right { min-height: 2.55rem; }
+  .cosmos-reference-search { min-height: 2.25rem; }
+  .cosmos-page-header { margin-bottom: .4rem; padding-top: .2rem; }
+  .cosmos-reference-header-identity { gap: .4rem; }
+  .cosmos-page-subtitle { line-height: 1.35; }
+  .cosmos-reference-header-actions > div { row-gap: .3rem; }
+  .cosmos-page-tabs { margin-top: .45rem; padding-bottom: 0; }
+  .cosmos-shell-workspace .cosmic-page-content > div {
+    padding: .5rem;
+    row-gap: .75rem;
+  }
+  .cosmos-shell-workspace .cosmic-page-content .cosmos-card {
+    padding: .9rem;
+  }
+  html[data-cosmos-surface="glass"] .cosmic-content-surface.cosmic-page-content {
+    border-color: rgba(196,151,255,.12);
+    box-shadow: inset 0 1px 0 rgba(221,184,255,.11);
+  }
+}
+
+/* M0 tablet/mobile navigation QA: overlay drawer instead of layout expansion. */
+.cosmos-mobile-nav-drawer { position: fixed; inset: 0; z-index: 100; }
+.cosmos-mobile-nav-scrim { position: absolute; inset: 0; width: 100%; background: rgba(2,2,15,.48); cursor: default; }
+.cosmos-mobile-nav-panel {
+  position: absolute; top: max(.75rem,env(safe-area-inset-top,0px));
+  bottom: max(.75rem,env(safe-area-inset-bottom,0px)); left: .75rem;
+  width: min(22rem,calc(100vw - 1.5rem));
+  display: flex; flex-direction: column; min-height: 0;
+  padding: .9rem; border: 1px solid rgba(201,157,255,.37); border-radius: 1.25rem;
+  background: rgba(9,7,31,.94); color: white;
+  box-shadow: inset 0 1px 0 rgba(238,200,255,.22), 0 20px 65px rgba(0,0,0,.4);
+}
+.cosmos-mobile-nav-panel-header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .1rem .15rem .75rem; border-bottom: 1px solid rgba(194,150,255,.16); }
+.cosmos-mobile-nav-panel-scroll { overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; min-height: 0; padding-top: .65rem; scrollbar-width: thin; scrollbar-color: rgba(191,150,255,.4) transparent; }
+html[data-cosmos-surface="glass"] .cosmos-mobile-nav-panel {
+  background: linear-gradient(160deg,rgba(30,17,72,.88),rgba(9,7,31,.91));
+  backdrop-filter: blur(9px) saturate(1.15);
+  -webkit-backdrop-filter: blur(9px) saturate(1.15);
+}
+html[data-cosmos-surface="solid"] .cosmos-mobile-nav-panel { background: #0d0b27; backdrop-filter: none; }
+@media (min-width: 640px) and (max-width:1023px) {
+  .cosmos-mobile-nav-panel { width: min(23rem,calc(100vw - 1.5rem)); }
+}
+@media (prefers-reduced-transparency: reduce) {
+  html[data-cosmos-surface="glass"] .cosmos-mobile-nav-panel { background: #0d0b27; backdrop-filter: none; -webkit-backdrop-filter: none; }
+}
+
+/* M0 final background coverage: viewport-fixed, responsive artwork with no lower void.
+   Override previous hero-height masks and fixed-pixel image sizing. */
+.cosmos-app-shell .cosmos-cinematic-scene {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100dvh;
+  min-height: 100%;
+  overflow: hidden;
+  opacity: 1;
+  mask-image: none;
+  -webkit-mask-image: none;
+}
+.cosmos-app-shell .cosmos-cinematic-image {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center 32%;
+  background-repeat: no-repeat;
+}
+.cosmos-app-shell .cosmos-cinematic-overlay {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg,rgba(3,4,17,.48),rgba(3,4,17,.2) 45%,rgba(3,4,17,.12)),
+    linear-gradient(180deg,rgba(3,4,17,.12) 0%,rgba(3,4,17,.15) 40%,rgba(3,4,17,.4) 100%);
+}
+@media (max-width: 1180px) {
+  .cosmos-app-shell .cosmos-cinematic-image { background-position: 58% 30%; }
+}
+@media (max-width: 900px) {
+  .cosmos-app-shell .cosmos-cinematic-image { background-position: 62% 28%; }
+}
+@media (max-width: 767px) {
+  .cosmos-app-shell .cosmos-cinematic-image {
+    background-size: cover;
+    background-position: 66% 27%;
+    filter: saturate(1.02) brightness(.87);
+  }
+}
+@media (max-width: 520px) {
+  .cosmos-app-shell .cosmos-cinematic-image { background-position: 70% 26%; }
+}
+@media (max-width: 420px) {
+  .cosmos-app-shell .cosmos-cinematic-image { background-position: 72% 25%; }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .cosmos-app-shell .cosmos-cinematic-scene { opacity: .75; }
+}

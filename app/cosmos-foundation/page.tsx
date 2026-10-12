@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, CalendarDays, CheckCircle2, CircleDollarSign, Gauge, GraduationCap, HeartPulse, ListTodo, Wrench } from "lucide-react";
+import { ArrowRight, CalendarDays, CheckCircle2, CircleDollarSign, Gauge, GraduationCap, HeartPulse, ListTodo, Sparkles, Wrench } from "lucide-react";
 
 import AppShell from "@/components/os/app/AppShell";
 import AppHeader from "@/components/os/app/AppHeader";
@@ -26,6 +26,7 @@ export default function CosmosFoundationPreviewPage() {
   return (
     <AppShell>
       <AppHeader
+        icon={<Sparkles />}
         eyebrow="Milestone 0 · Foundation Preview"
         title="Cosmos"
         subtitle="A live visual sandbox for the shared shell, navigation, top bar, glass system, cards, status patterns, and responsive behavior."
