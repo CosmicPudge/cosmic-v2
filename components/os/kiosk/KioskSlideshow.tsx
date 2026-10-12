@@ -60,7 +60,8 @@ export default function KioskSlideshow() {
   // Local kiosk time: daytime 07:00–22:00 inclusive; overnight starts 22:01.
   // The header clock ticks once a second, so crossing either boundary
   // updates useMusic's polling interval without a kiosk restart.
-  const localMinute = headerClock ? headerClock.getHours() * 60 + headerClock.getMinutes() : new Date().getHours() * 60 + new Date().getMinutes();
+  const localTime = new Date(headerClock ?? Date.now());
+  const localMinute = localTime.getHours() * 60 + localTime.getMinutes();
   const daytimeMusicPolling = localMinute >= 7 * 60 && localMinute <= 22 * 60;
   const music = useMusic({
     refreshMs: snapshot => daytimeMusicPolling
