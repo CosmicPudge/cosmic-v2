@@ -669,7 +669,7 @@ html[data-cosmos-surface="solid"] .cosmic-content-surface {
 .cosmos-app-shell { isolation: isolate; }
 .cosmos-cinematic-scene {
   z-index: 0;
-  height: clamp(340px, 36vw, 520px);
+  height: clamp(380px, 39vw, 560px);
   overflow: hidden;
   opacity: .98;
   mask-image: linear-gradient(to bottom, #000 0%, #000 68%, transparent 100%);
@@ -679,20 +679,21 @@ html[data-cosmos-surface="solid"] .cosmic-content-surface {
   position: absolute;
   inset: 0;
   background-image: url("/cosmos/cinematic/violet-planet-over-alien-mountains.png");
-  background-position: center 43%;
+  background-position: center 21%;
   background-size: cover;
   background-repeat: no-repeat;
-  filter: saturate(1.03) brightness(.78);
+  filter: saturate(1.02) brightness(.74);
 }
 .cosmos-cinematic-overlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(90deg, rgba(3,4,17,.7) 0%, rgba(3,4,17,.42) 30%, transparent 72%),
-    linear-gradient(180deg, rgba(3,4,17,.18) 0%, transparent 35%, rgba(3,4,17,.54) 100%);
+  background: radial-gradient(ellipse 31% 38% at 94% 9%, rgba(3,4,17,.48), transparent 95%),
+    linear-gradient(90deg, rgba(3,4,17,.72) 0%, rgba(3,4,17,.43) 31%, transparent 72%),
+    linear-gradient(180deg, rgba(3,4,17,.2) 0%, transparent 34%, rgba(3,4,17,.56) 100%);
 }
 @media (max-width: 767px) {
   .cosmos-cinematic-scene { height: 320px; opacity: .85; }
-  .cosmos-cinematic-image { background-position: 64% 42%; filter: saturate(1.02) brightness(.68); }
+  .cosmos-cinematic-image { background-position: 64% 24%; filter: saturate(1.02) brightness(.68); }
 }
 @media (prefers-reduced-transparency: reduce) {
   .cosmos-cinematic-scene { opacity: .65; }
