@@ -964,3 +964,54 @@ html[data-cosmos-surface="glass"] .cosmic-panel.cosmos-card::after {
 @media (prefers-reduced-transparency: reduce) {
   html[data-cosmos-surface="glass"] .cosmic-panel.cosmos-card { background: #140c2e !important; }
 }
+
+/* M0 responsive QA pass: safe viewports, measured spacing, readable glass. */
+.cosmos-shell-workspace > .cosmos-page-slot {
+  padding-inline: 2px;
+  padding-bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px));
+}
+.cosmos-shell-workspace .cosmic-content-surface.cosmic-page-content {
+  max-width: 100%;
+}
+html[data-cosmos-surface="glass"] .cosmic-content-surface.cosmic-page-content {
+  border-color: rgba(196,151,255,.2);
+  box-shadow: inset 0 1px 0 rgba(221,184,255,.16), 0 11px 29px rgba(1,0,12,.11);
+}
+html[data-cosmos-surface="glass"] .cosmic-panel.cosmos-card {
+  border-color: rgba(194,149,255,.28) !important;
+}
+.cosmos-state,
+.cosmos-card .text-white\/40,
+.cosmos-card .text-white\/45 { text-shadow: 0 1px 8px rgba(2,0,18,.5); }
+@media (max-width: 1023px) {
+  .cosmos-app-shell .cosmos-mobile-shell {
+    padding-top: max(.75rem, env(safe-area-inset-top, 0px));
+  }
+  .cosmos-shell-workspace > .cosmos-reference-topbar {
+    padding-top: .4rem;
+  }
+  .cosmos-shell-workspace > .cosmos-page-slot {
+    padding-top: .6rem;
+  }
+}
+@media (max-width: 639px) {
+  .cosmos-app-shell .cosmos-mobile-shell { padding-inline: .75rem; }
+  .cosmos-shell-workspace { padding-inline: .75rem; }
+  .cosmos-reference-topbar { gap: .5rem; }
+  .cosmos-reference-search { min-width: 0; }
+  .cosmos-reference-topbar-right { max-width: 100%; }
+  .cosmos-reference-weather-city { max-width: 6rem; }
+  .cosmos-page-header { margin-bottom: .75rem; }
+  .cosmos-page-tabs { max-width: 100%; }
+  .cosmos-shell-workspace .cosmic-content-surface.cosmic-page-content {
+    border-radius: 1rem;
+  }
+  .cosmos-shell-workspace .cosmos-card { border-radius: 1rem; }
+}
+@media (max-width: 380px) {
+  .cosmos-reference-date { font-size: .64rem; }
+  .cosmos-reference-time { font-size: 1rem; }
+  .cosmos-reference-temperature { font-size: 1.05rem; }
+  .cosmos-reference-topbar-right { gap: .55rem; }
+  .cosmos-reference-weather { gap: .35rem; }
+}
