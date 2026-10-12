@@ -112,7 +112,7 @@ export function useDeveloperKioskData({ enabled: requestedEnabled, poll = true }
           const body = await response.json() as Partial<DeveloperKioskData>;
           for (const service of ["weather", "calendar", "school"] as const) traceKioskHealth(service, "response", { status: response.status, present: body[service] !== undefined });
           return normalizeKioskData(mergeKioskData(prior, body));
-        }).then((value) => { cached = value; return value; }).finally(() => { request = null; });
+        }).finally(() => { request = null; });
         const value = await request;
         const displayValue: DeveloperKioskData = {
           ...value,
@@ -120,6 +120,10 @@ export function useDeveloperKioskData({ enabled: requestedEnabled, poll = true }
           calendar: value.calendar.connected || !prior?.calendar.connected ? value.calendar : { ...prior.calendar, error: value.calendar.error, diagnostics: value.calendar.diagnostics },
           school: value.school.connected || !prior?.school.connected ? value.school : { ...prior.school, error: value.school.error, diagnostics: value.school.diagnostics },
         };
+        // Preserve last usable calendar and school scenes across consecutive
+        // provider failures. Keep `value` untouched for honest health reporting.
+        // A failed aggregate must not replace the shared display cache.
+        cached = displayValue;
         if (currentRequestToken !== lastHealthReportToken) {
           lastHealthReportToken = currentRequestToken;
           // Health must describe this response, not a stale display fallback merged into it.
