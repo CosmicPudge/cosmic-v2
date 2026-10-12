@@ -2,7 +2,7 @@
 
 import type { BackgroundApp } from "@/components/os/backgrounds/types";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type PointerEvent } from "react";
 
 import Sidebar from "@/components/os/layout/Sidebar";
 import CosmosTopBar from "@/components/os/layout/CosmosTopBar";
@@ -37,6 +37,18 @@ export default function AppShell({ children, app }: AppShellProps) {
 
   useRouteReadiness(app ? `/${app}` : pathname);
 
+  const updateReflection = (event: PointerEvent<HTMLElement>) => {
+    if (event.pointerType === "touch") return;
+    const element = event.target;
+    if (!(element instanceof Element)) return;
+    const card = element.closest<HTMLElement>(".cosmos-card");
+    if (!card) return;
+    const rect = card.getBoundingClientRect();
+    card.style.setProperty("--glass-reflect-x", String(event.clientX - rect.left) + "px");
+    card.style.setProperty("--glass-reflect-y", String(event.clientY - rect.top) + "px");
+  };
+
+
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
       if (document.activeElement === document.body) mainRef.current?.focus();
@@ -49,6 +61,7 @@ export default function AppShell({ children, app }: AppShellProps) {
       ref={mainRef}
       tabIndex={-1}
       id="main-content"
+      onPointerMove={updateReflection}
       data-cosmic-app={pageApp}
       className="cosmic-site-shell cosmos-app-shell relative min-h-screen text-white outline-none"
     >
