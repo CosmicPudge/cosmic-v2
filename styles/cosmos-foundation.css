@@ -1078,3 +1078,30 @@ html[data-cosmos-surface="glass"] .cosmic-panel.cosmos-card {
     box-shadow: inset 0 1px 0 rgba(221,184,255,.11);
   }
 }
+
+/* M0 tablet/mobile navigation QA: overlay drawer instead of layout expansion. */
+.cosmos-mobile-nav-drawer { position: fixed; inset: 0; z-index: 100; }
+.cosmos-mobile-nav-scrim { position: absolute; inset: 0; width: 100%; background: rgba(2,2,15,.48); cursor: default; }
+.cosmos-mobile-nav-panel {
+  position: absolute; top: max(.75rem,env(safe-area-inset-top,0px));
+  bottom: max(.75rem,env(safe-area-inset-bottom,0px)); left: .75rem;
+  width: min(22rem,calc(100vw - 1.5rem));
+  display: flex; flex-direction: column; min-height: 0;
+  padding: .9rem; border: 1px solid rgba(201,157,255,.37); border-radius: 1.25rem;
+  background: rgba(9,7,31,.94); color: white;
+  box-shadow: inset 0 1px 0 rgba(238,200,255,.22), 0 20px 65px rgba(0,0,0,.4);
+}
+.cosmos-mobile-nav-panel-header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .1rem .15rem .75rem; border-bottom: 1px solid rgba(194,150,255,.16); }
+.cosmos-mobile-nav-panel-scroll { overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; min-height: 0; padding-top: .65rem; scrollbar-width: thin; scrollbar-color: rgba(191,150,255,.4) transparent; }
+html[data-cosmos-surface="glass"] .cosmos-mobile-nav-panel {
+  background: linear-gradient(160deg,rgba(30,17,72,.88),rgba(9,7,31,.91));
+  backdrop-filter: blur(9px) saturate(1.15);
+  -webkit-backdrop-filter: blur(9px) saturate(1.15);
+}
+html[data-cosmos-surface="solid"] .cosmos-mobile-nav-panel { background: #0d0b27; backdrop-filter: none; }
+@media (min-width: 640px) and (max-width:1023px) {
+  .cosmos-mobile-nav-panel { width: min(23rem,calc(100vw - 1.5rem)); }
+}
+@media (prefers-reduced-transparency: reduce) {
+  html[data-cosmos-surface="glass"] .cosmos-mobile-nav-panel { background: #0d0b27; backdrop-filter: none; -webkit-backdrop-filter: none; }
+}
