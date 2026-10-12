@@ -54,9 +54,8 @@ export default function AppShell({ children, app }: AppShellProps) {
     >
       <div className="cosmic-stars pointer-events-none absolute inset-0" />
       <div className="cosmos-cinematic-scene pointer-events-none absolute inset-x-0 top-0" aria-hidden="true">
-        <div className="cosmos-cinematic-nebula" />
-        <div className="cosmos-cinematic-planet" />
-        <div className="cosmos-cinematic-horizon" />
+        <div className="cosmos-cinematic-image" />
+        <div className="cosmos-cinematic-overlay" />
       </div>
 
       <div className="cosmos-mobile-shell relative z-20 p-3 lg:hidden">
