@@ -51,7 +51,7 @@ export default function Sidebar({ variant = "side" }: { variant?: "side" | "top"
           >
             <CosmicIcon
               icon={item.icon}
-              size={25}
+              size={19}
               state={active ? "active" : "idle"}
               className="shrink-0"
             />
@@ -120,13 +120,6 @@ export default function Sidebar({ variant = "side" }: { variant?: "side" | "top"
 
       <div className="mt-5 border-t border-white/10 pt-3">
         {settingsNavigation}
-        <button type="button" onClick={enterManual} className="cosmos-kiosk-button w-full">
-          <MonitorUp size={17} />
-          Kiosk mode
-        </button>
-        <p className="mt-3 px-2 text-[10px] uppercase tracking-[0.18em] text-white/35">
-          Cosmos · personal workspace
-        </p>
       </div>
     </aside>
   );
