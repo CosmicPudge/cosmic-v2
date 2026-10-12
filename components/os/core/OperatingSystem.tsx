@@ -36,6 +36,10 @@ function Desktop() {
   return (
     <div data-cosmic-os-root className="cosmic-os-root cosmic-site-shell cosmos-app-shell relative min-h-screen w-full text-white">
       <div className="cosmic-stars pointer-events-none absolute inset-0" />
+      <div className="cosmos-cinematic-scene pointer-events-none fixed inset-0" aria-hidden="true">
+        <div className="cosmos-cinematic-image" />
+        <div className="cosmos-cinematic-overlay" />
+      </div>
       <div className="cosmos-mobile-shell relative z-20 p-3 lg:hidden">
         <Sidebar variant="top" />
       </div>
