@@ -1155,3 +1155,20 @@ html[data-cosmos-surface="solid"] .cosmos-mobile-nav-panel { background: #0d0b27
 @media (prefers-reduced-transparency: reduce) {
   .cosmos-app-shell .cosmos-cinematic-scene { opacity: .75; }
 }
+
+/* Home uses the shared cinematic wallpaper. Preserve the approved artwork URL,
+   with a committed Cosmos scene as fallback when the primary asset is absent. */
+.cosmos-app-shell .cosmos-cinematic-image {
+  background-image:
+    url("/cosmos/cinematic/violet-planet-over-alien-mountains.png"),
+    url("/kiosk/scenes/clock/clock-cosmic-night.png");
+  background-size: cover, cover;
+  background-position: center 32%, center center;
+  background-repeat: no-repeat, no-repeat;
+}
+@media (max-width: 900px) {
+  .cosmos-app-shell .cosmos-cinematic-image { background-position: 62% 28%, 60% center; }
+}
+@media (max-width: 520px) {
+  .cosmos-app-shell .cosmos-cinematic-image { background-position: 70% 26%, 65% center; }
+}
