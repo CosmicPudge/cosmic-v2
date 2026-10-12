@@ -87,9 +87,18 @@ export default function Sidebar({ variant = "side" }: { variant?: "side" | "top"
           </button>
         </div>
         {open && (
-          <div className="mt-3 max-h-[70vh] overflow-y-auto border-t border-white/10 pt-3">
-            {primaryNavigation}
-            <div className="mt-3 border-t border-white/10 pt-3">{settingsNavigation}</div>
+          <div className="cosmos-mobile-nav-drawer" role="dialog" aria-modal="true" aria-label="Cosmos navigation">
+            <button type="button" className="cosmos-mobile-nav-scrim" aria-label="Close navigation" onClick={() => setOpen(false)} />
+            <div className="cosmos-mobile-nav-panel">
+              <div className="cosmos-mobile-nav-panel-header">
+                <span className="cosmos-brand-name">COSMOS</span>
+                <button type="button" className="cosmos-icon-button" aria-label="Close navigation" onClick={() => setOpen(false)}><X size={21} /></button>
+              </div>
+              <div className="cosmos-mobile-nav-panel-scroll">
+                {primaryNavigation}
+                <div className="mt-3 border-t border-white/10 pt-3">{settingsNavigation}</div>
+              </div>
+            </div>
           </div>
         )}
       </aside>
