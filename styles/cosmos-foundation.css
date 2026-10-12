@@ -1105,3 +1105,11 @@ html[data-cosmos-surface="solid"] .cosmos-mobile-nav-panel { background: #0d0b27
 @media (prefers-reduced-transparency: reduce) {
   html[data-cosmos-surface="glass"] .cosmos-mobile-nav-panel { background: #0d0b27; backdrop-filter: none; -webkit-backdrop-filter: none; }
 }
+
+/* M0 drawer clarity: menu remains glass-tinted but underlying text cannot bleed through. */
+.cosmos-mobile-nav-scrim { background: rgba(2, 2, 15, .65); }
+html[data-cosmos-surface="glass"] .cosmos-mobile-nav-panel {
+  background: linear-gradient(155deg, rgba(21, 13, 51, .985), rgba(10, 8, 30, .985)) !important;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
