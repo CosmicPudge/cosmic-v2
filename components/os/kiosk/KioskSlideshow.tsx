@@ -57,7 +57,7 @@ export default function KioskSlideshow() {
   const forcedIndex = BUILD_SLIDES.findIndex((slide) => slide.id === preview);
   const [index, setIndex] = useState(forcedIndex >= 0 ? forcedIndex : 0);
   const [rotationEpoch, setRotationEpoch] = useState(0);
-  const music = useMusic({ refreshMs: snapshot => snapshot?.playback.playing ? 500 : 3_000 });
+  const music = useMusic({ refreshMs: snapshot => snapshot?.playback.playing ? 10_000 : 20_000 });
   const musicPlaying = Boolean(music.playback?.playing);
   const [musicHold, setMusicHold] = useState(false);
   const musicSessionActive = useRef(false);

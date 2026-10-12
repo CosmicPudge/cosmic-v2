@@ -64,6 +64,14 @@ export function useMusic({ refreshMs, enabled = true }: UseMusicOptions = {}) {
         }
 
         const next = await response.json() as MusicSnapshot;
+        // The server may receive Spotify HTTP 429 but return a valid MusicSnapshot
+        // with HTTP 200. Treat that as a polling failure so our existing retry
+        // backoff applies instead of hammering Spotify indefinitely.
+        if (next.error && /rate.limit/i.test(next.error)) {
+          const failure = new Error(next.error) as Error & { retryAfterMs?: number };
+          failure.retryAfterMs = 60_000;
+          throw failure;
+        }
         if (requestSequence < latestAcceptedSequenceRef.current) return;
         latestAcceptedSequenceRef.current = requestSequence;
         if (process.env.NODE_ENV !== "production") console.info(`[use-music] direct-response trackPresent=${Boolean(next.playback.track)} trackIdSuffix=${next.playback.track?.id?.slice(-4) ?? "none"} title=${JSON.stringify(next.playback.track?.title ?? null)}`);
