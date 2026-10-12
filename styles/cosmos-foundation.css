@@ -1015,3 +1015,41 @@ html[data-cosmos-surface="glass"] .cosmic-panel.cosmos-card {
   .cosmos-reference-topbar-right { gap: .55rem; }
   .cosmos-reference-weather { gap: .35rem; }
 }
+
+/* M0 screenshot QA: compact mobile header and avoid tall stacks before first widget. */
+@media (max-width: 639px) {
+  .cosmos-app-shell .cosmos-mobile-shell { padding-top: .5rem; padding-bottom: 0; }
+  .cosmos-mobile-nav { padding: .55rem .7rem; }
+  .cosmos-mobile-nav .cosmos-brand { padding-block: .2rem; }
+  .cosmos-reference-topbar { gap: .45rem; padding-block: .45rem; }
+  .cosmos-reference-topbar-right { padding: .25rem .55rem !important; min-height: 2.8rem; }
+  .cosmos-reference-date { font-size: .65rem; }
+  .cosmos-reference-time { font-size: 1.05rem; }
+  .cosmos-reference-temperature { font-size: 1rem; }
+  .cosmos-reference-weather-city { display: none; }
+  .cosmos-reference-weather-icon { min-width: 1.7rem; }
+  .cosmos-reference-weather { gap: .3rem; }
+  .cosmos-reference-search { min-height: 2.45rem; padding-block: .45rem; }
+  .cosmos-shell-workspace > .cosmos-page-slot { padding-top: .2rem; }
+  .cosmos-page-header { padding-top: .35rem; margin-bottom: .65rem; }
+  .cosmos-reference-header-identity { align-items: flex-start; gap: .55rem; }
+  .cosmos-reference-header-icon { width: 2rem; height: 2rem; margin-top: .8rem; }
+  .cosmos-reference-header-icon svg { width: 1.9rem; height: 1.9rem; }
+  .cosmos-page-title { font-size: 2rem; }
+  .cosmos-page-subtitle { font-size: .82rem; line-height: 1.4; margin-top: .35rem; }
+  .cosmos-reference-header-actions { padding-top: 0; }
+  .cosmos-reference-header-actions > div {
+    justify-content: flex-start;
+    gap: .4rem;
+  }
+  .cosmos-reference-header-actions a { padding: .45rem .7rem; font-size: .75rem; }
+  .cosmos-page-tabs { margin-top: .65rem; gap: .1rem; }
+  .cosmos-page-tab { min-width: 0; flex: 1 0 auto; padding: .42rem .55rem; font-size: .7rem; }
+  .cosmos-shell-workspace .cosmic-page-content > div { padding: .75rem; }
+}
+@media (min-width: 640px) and (max-width: 1023px) {
+  .cosmos-page-header { margin-bottom: .75rem; }
+  .cosmos-reference-header-actions > div { justify-content: flex-start; }
+  .cosmos-reference-header-actions { padding-top: 0; }
+  .cosmos-shell-workspace > .cosmos-page-slot { padding-top: .3rem; }
+}
