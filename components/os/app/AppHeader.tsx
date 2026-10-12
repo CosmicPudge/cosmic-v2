@@ -28,7 +28,7 @@ export default function AppHeader({
 }: AppHeaderProps) {
   return (
     <header className="cosmos-page-header">
-      <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
+      <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
         <div className="cosmos-reference-header-identity">
           {icon && <div className="cosmos-reference-header-icon" aria-hidden="true">{icon}</div>}
           <div className="min-w-0">
@@ -37,7 +37,7 @@ export default function AppHeader({
             {subtitle && <p className="cosmos-page-subtitle">{subtitle}</p>}
           </div>
         </div>
-        {rightContent && <div className="shrink-0">{rightContent}</div>}
+        {rightContent && <div className="cosmos-reference-header-actions shrink-0">{rightContent}</div>}
       </div>
 
       {tabs && tabs.length > 0 && (
