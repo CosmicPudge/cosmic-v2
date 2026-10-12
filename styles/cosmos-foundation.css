@@ -665,69 +665,35 @@ html[data-cosmos-surface="solid"] .cosmic-content-surface {
   .cosmos-page-tab { min-width: 4.6rem; padding-inline: .8rem; }
 }
 
-/* M0 cinematic composition — restrained page atmosphere, not a flat oversized disc. */
+/* M0 cinematic scene: generated art asset instead of CSS geometry. */
 .cosmos-app-shell { isolation: isolate; }
 .cosmos-cinematic-scene {
   z-index: 0;
-  height: clamp(265px, 27vw, 385px);
+  height: clamp(340px, 36vw, 520px);
   overflow: hidden;
-  opacity: .92;
-  background:
-    radial-gradient(ellipse 35% 60% at 75% 34%, rgba(149, 43, 205, .22), transparent 75%),
-    radial-gradient(ellipse 28% 65% at 54% 0%, rgba(84, 48, 188, .24), transparent 78%),
-    linear-gradient(180deg, rgba(6, 6, 29, .22), rgba(5, 5, 22, .06) 55%, transparent);
-  -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 71%, transparent 100%);
-  mask-image: linear-gradient(180deg, #000 0%, #000 71%, transparent 100%);
+  opacity: .98;
+  mask-image: linear-gradient(to bottom, #000 0%, #000 68%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 68%, transparent 100%);
 }
-.cosmos-cinematic-nebula {
-  position: absolute;
-  inset: -8% -5% 8% 28%;
-  background:
-    radial-gradient(ellipse 12% 55% at 68% 28%, rgba(237, 79, 225, .5), transparent 79%),
-    radial-gradient(ellipse 28% 45% at 76% 10%, rgba(127, 45, 238, .32), transparent 75%),
-    radial-gradient(ellipse 22% 50% at 44% 49%, rgba(74, 53, 186, .31), transparent 76%),
-    radial-gradient(ellipse 28% 36% at 95% 59%, rgba(133, 40, 192, .25), transparent 82%);
-  filter: blur(27px);
-  transform: rotate(-11deg);
-}
-.cosmos-cinematic-planet {
-  position: absolute;
-  width: clamp(220px, 25vw, 385px);
-  aspect-ratio: 1;
-  top: clamp(44px, 5.5vw, 86px);
-  right: clamp(8%, 15vw, 22%);
-  border-radius: 50%;
-  background:
-    radial-gradient(ellipse at 25% 21%, rgba(116, 161, 243, .38), transparent 29%),
-    repeating-linear-gradient(167deg, transparent 0 17px, rgba(118, 107, 184, .055) 18px 21px, transparent 24px 35px),
-    radial-gradient(circle at 27% 19%, #515eab, #242557 38%, #0a0c2d 68%, #030512 94%);
-  border-top: 1px solid rgba(190, 167, 255, .66);
-  border-left: 1px solid rgba(110, 124, 226, .25);
-  box-shadow: 0 -8px 31px rgba(135, 74, 236, .35), 0 0 80px rgba(183, 58, 245, .14), inset -27px -34px 50px rgba(1, 2, 12, .83);
-  opacity: .66;
-}
-.cosmos-cinematic-horizon {
-  position: absolute;
-  inset: auto -1% 10% -1%;
-  height: 34%;
-  background:
-    linear-gradient(175deg, rgba(137, 72, 178, .52), rgba(35, 22, 91, .82) 45%, rgba(4, 5, 20, .96) 91%);
-  clip-path: polygon(0 84%, 5% 74%, 8% 81%, 13% 46%, 17% 68%, 20% 56%, 26% 86%, 32% 54%, 36% 79%, 43% 67%, 47% 82%, 53% 46%, 56% 68%, 60% 23%, 64% 74%, 69% 60%, 75% 81%, 79% 57%, 83% 73%, 88% 37%, 92% 71%, 97% 56%, 100% 74%, 100% 100%, 0 100%);
-  opacity: .44;
-}
-.cosmos-cinematic-scene::after {
-  content: "";
+.cosmos-cinematic-image {
   position: absolute;
   inset: 0;
-  background:
-    linear-gradient(90deg, rgba(4, 5, 18, .66), transparent 45%, rgba(4, 5, 18, .13) 92%),
-    linear-gradient(180deg, rgba(2, 3, 11, .19), transparent 44%, rgba(2, 3, 11, .22));
+  background-image: url("/cosmos/cinematic/violet-planet-over-alien-mountains.png");
+  background-position: center 43%;
+  background-size: cover;
+  background-repeat: no-repeat;
+  filter: saturate(1.03) brightness(.78);
+}
+.cosmos-cinematic-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(3,4,17,.7) 0%, rgba(3,4,17,.42) 30%, transparent 72%),
+    linear-gradient(180deg, rgba(3,4,17,.18) 0%, transparent 35%, rgba(3,4,17,.54) 100%);
 }
 @media (max-width: 767px) {
-  .cosmos-cinematic-scene { height: 280px; opacity: .67; }
-  .cosmos-cinematic-planet { width: 220px; right: -5%; top: 67px; }
-  .cosmos-cinematic-horizon { height: 28%; }
+  .cosmos-cinematic-scene { height: 320px; opacity: .85; }
+  .cosmos-cinematic-image { background-position: 64% 42%; filter: saturate(1.02) brightness(.68); }
 }
 @media (prefers-reduced-transparency: reduce) {
-  .cosmos-cinematic-scene { opacity: .4; }
+  .cosmos-cinematic-scene { opacity: .65; }
 }
