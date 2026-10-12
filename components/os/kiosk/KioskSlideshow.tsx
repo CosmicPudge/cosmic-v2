@@ -65,7 +65,7 @@ export default function KioskSlideshow() {
   const music = useMusic({
     refreshMs: snapshot => daytimeMusicPolling
       ? (snapshot?.playback.playing ? 500 : 30_000)
-      : (snapshot?.playback.playing ? 300_000 : 120_000),
+      : (snapshot?.playback.playing ? 300_000 : 1_800_000),
   });
   const musicPlaying = Boolean(music.playback?.playing);
   const [musicHold, setMusicHold] = useState(false);
