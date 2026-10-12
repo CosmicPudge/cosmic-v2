@@ -610,3 +610,41 @@ html[data-cosmos-surface="solid"] .cosmic-content-surface {
 .cosmos-reference-weather-location,
 .cosmos-reference-weather-city { display: block; line-height: 1.2; }
 .cosmos-reference-weather { gap: .75rem; }
+
+/* M0 shared header — typography, glowing outline icon, and reference segmented tabs. */
+.cosmos-page-header { margin-bottom: 1rem; padding: .65rem 0 .15rem; }
+.cosmos-reference-header-identity { display: flex; align-items: center; gap: 1rem; min-width: 0; }
+.cosmos-reference-header-icon {
+  display: grid; place-items: center; flex: 0 0 auto; width: 3.25rem; height: 3.25rem;
+  color: #a987ff; filter: drop-shadow(0 0 8px rgba(137,77,255,.74));
+}
+.cosmos-reference-header-icon svg { width: 2.75rem; height: 2.75rem; stroke-width: 1.8; }
+.cosmos-page-title { font-size: clamp(2rem, 3.15vw, 2.85rem); letter-spacing: -.037em; font-weight: 720; line-height: 1.06; }
+.cosmos-page-subtitle { margin-top: .35rem; font-size: clamp(.87rem, 1.2vw, 1.05rem); line-height: 1.38; color: #abaaca; }
+.cosmos-page-tabs {
+  display: flex; align-items: center; width: fit-content; max-width: 100%;
+  gap: .12rem; margin-top: 1.1rem; padding: .18rem; overflow-x: auto;
+  border: 1px solid rgba(164,138,243,.22); border-radius: 999px;
+  background: linear-gradient(100deg, rgba(15,16,45,.83), rgba(37,23,78,.67));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.035);
+}
+.cosmos-page-tab {
+  min-width: 6.1rem; padding: .56rem 1rem; border-radius: 999px; white-space: nowrap;
+  font-size: .76rem; font-weight: 480; color: #e4def5;
+}
+.cosmos-page-tab:hover { background: rgba(129,96,226,.12); color: white; }
+.cosmos-page-tab-active,
+.cosmos-page-tab-active:hover {
+  border-color: rgba(219,208,255,.8);
+  background: linear-gradient(180deg, rgba(120,100,255,.92), rgba(60,55,180,.9));
+  color: white;
+  box-shadow: 0 0 0 1px rgba(180,163,255,.47), 0 0 10px rgba(131,106,255,.9), inset 0 1px 4px rgba(255,255,255,.24);
+}
+@media (max-width: 639px) {
+  .cosmos-reference-header-identity { gap: .65rem; }
+  .cosmos-reference-header-icon { width: 2.6rem; height: 2.6rem; }
+  .cosmos-reference-header-icon svg { width: 2.25rem; height: 2.25rem; }
+  .cosmos-page-title { font-size: 2.1rem; }
+  .cosmos-page-tab { min-width: 4.6rem; padding: .5rem .75rem; }
+}
+@media (prefers-reduced-transparency: reduce) { .cosmos-page-tabs { background: #11112f; } }
