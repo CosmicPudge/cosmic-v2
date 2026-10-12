@@ -3,19 +3,23 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { Menu, MonitorUp, Sparkles, X } from "lucide-react";
+import { BookOpen, CalendarDays, CarFront, CheckCheck, CircleHelp, Clapperboard, FileText, FolderKanban, GraduationCap, Heart, Home, LayoutGrid, Menu, Monitor, Plane, Settings, Sparkles, Trophy, Wallet, X, type LucideIcon } from "lucide-react";
 
-import { CosmicIcon } from "@/components/cosmic-icons";
 import { useOptionalBoot } from "@/components/os/boot/BootManager";
 import { useCosmicTransition } from "@/components/os/transition";
-import { useKioskPresentation } from "@/hooks/os/useKioskPresentation";
 import { cosmosNavigation, cosmosNavigationItemForPath } from "@/config/cosmosNavigation";
+
+const sidebarIcons: Record<string, LucideIcon> = {
+  home: Home, school: LayoutGrid, calendar: CalendarDays, tasks: CheckCheck,
+  projects: FolderKanban, notes: FileText, finance: Wallet, health: Heart,
+  garage: CarFront, sports: Trophy, media: Clapperboard, cosmic: Sparkles,
+  devices: Monitor, settings: Settings, travel: Plane,
+};
 
 export default function Sidebar({ variant = "side" }: { variant?: "side" | "top" }) {
   const pathname = usePathname() ?? "/os";
   const boot = useOptionalBoot();
   const { prefetch } = useCosmicTransition();
-  const { enterManual } = useKioskPresentation();
   const [open, setOpen] = useState(false);
   const navigationRef = useRef<HTMLElement>(null);
   const activeItem = cosmosNavigationItemForPath(pathname);
@@ -38,6 +42,7 @@ export default function Sidebar({ variant = "side" }: { variant?: "side" | "top"
     <nav className="space-y-1" aria-label={label}>
       {items.map((item) => {
         const active = activeItem?.id === item.id;
+        const NavIcon = sidebarIcons[item.id] ?? CircleHelp;
         return (
           <Link
             key={item.id}
@@ -49,12 +54,7 @@ export default function Sidebar({ variant = "side" }: { variant?: "side" | "top"
             onClick={() => setOpen(false)}
             className={`cosmos-nav-item ${active ? "cosmos-nav-item-active" : ""}`}
           >
-            <CosmicIcon
-              icon={item.icon}
-              size={19}
-              state={active ? "active" : "idle"}
-              className="shrink-0"
-            />
+            <NavIcon size={20} strokeWidth={1.9} aria-hidden="true" className="cosmos-reference-nav-icon shrink-0" />
             <span className="truncate">{item.name}</span>
           </Link>
         );
@@ -90,10 +90,6 @@ export default function Sidebar({ variant = "side" }: { variant?: "side" | "top"
           <div className="mt-3 max-h-[70vh] overflow-y-auto border-t border-white/10 pt-3">
             {primaryNavigation}
             <div className="mt-3 border-t border-white/10 pt-3">{settingsNavigation}</div>
-            <button type="button" onClick={enterManual} className="cosmos-kiosk-button mt-3 w-full">
-              <MonitorUp size={17} />
-              Kiosk mode
-            </button>
           </div>
         )}
       </aside>
@@ -114,7 +110,7 @@ export default function Sidebar({ variant = "side" }: { variant?: "side" | "top"
         </span>
       </Link>
 
-      <div className="mt-7 min-h-0 flex-1 overflow-y-auto pr-1">
+      <div className="mt-5 min-h-0 flex-1 overflow-y-auto pr-1">
         {primaryNavigation}
       </div>
 
