@@ -93,7 +93,7 @@ export default function WeatherWidget() {
 }
 
 function KioskWeatherIcon({ condition, isDay, size }: { condition: string; isDay: boolean; size: number }) {
-  const code = /^\\d{2}[dn]$/.test(condition) ? condition.slice(0, 2) : null;
+  const code = /^\d{2}[dn]$/.test(condition) ? condition.slice(0, 2) : null;
   const mapped = code === "01" ? "clear"
     : code === "02" ? "partly-cloudy"
     : code === "03" || code === "04" ? "cloudy"
@@ -169,7 +169,7 @@ function KioskWeatherScene({
     return () => {active=false;window.clearInterval(interval);};
   }, [coords?.lat,coords?.lon]);
   const forecast = liveHourly
-    ? [...(weather ? [{time:"Now",temp:weather.temp,icon:"03d"}] : []), ...liveHourly].slice(0,6)
+    ? [...(weather ? [{time:"Now",temp:weather.temp,icon:weather.condition}] : []), ...liveHourly].slice(0,6)
     : (weather?.hourlyForecast ?? []).slice(0,6);
 
   const currentHour = now !== null ? new Date(now).getHours() : new Date().getHours();
