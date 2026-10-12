@@ -2,6 +2,7 @@ export const cosmosMilestones = [
   "Shared Foundation",
   "Home",
   "School",
+  "Devices / Kiosk",
   "Calendar",
   "Tasks",
   "Projects",
@@ -12,7 +13,6 @@ export const cosmosMilestones = [
   "Sports",
   "Media",
   "Cosmic AI",
-  "Devices / Kiosk",
   "Settings",
   "Final Integration + Polish",
 ] as const;
@@ -142,3 +142,121 @@ export function getSchoolProgress() {
   const total = schoolChecks.length;
   return { completed, total, percent: Math.round((completed / total) * 100) };
 }
+
+
+// M4 starts with only verifiable foundation checks marked complete.
+export const calendarChecks = [
+  [
+    "M3 completed and M4 isolated on dedicated branch",
+    true
+  ],
+  [
+    "Existing Calendar routes, contracts and services audited",
+    true
+  ],
+  [
+    "Approved Month-first desktop and mobile visual target",
+    true
+  ],
+  [
+    "Dedicated /cosmos-calendar local preview",
+    false
+  ],
+  [
+    "Shared Cosmos shell and responsive navigation",
+    false
+  ],
+  [
+    "Month view and calendar cell event overflow",
+    false
+  ],
+  [
+    "Week timeline view",
+    false
+  ],
+  [
+    "Day timeline view",
+    false
+  ],
+  [
+    "Agenda view grouped by date",
+    false
+  ],
+  [
+    "Date navigation and selected-day sidebar",
+    false
+  ],
+  [
+    "Source and category filtering",
+    false
+  ],
+  [
+    "Account-owned subscriptions and Apple provider reading",
+    false
+  ],
+  [
+    "Canvas schedule and assignment integration",
+    false
+  ],
+  [
+    "Recurrence, timezone and DST verification",
+    false
+  ],
+  [
+    "Event creation on writable account calendars",
+    false
+  ],
+  [
+    "Event editing and deletion with access checks",
+    false
+  ],
+  [
+    "Read-only subscription and school event handling",
+    false
+  ],
+  [
+    "Provider statuses and iCloud HTTP 503 degraded states",
+    false
+  ],
+  [
+    "No synthetic calendar entries or leaked subscription URLs",
+    false
+  ],
+  [
+    "Desktop, tablet, mobile, glass and solid QA",
+    false
+  ],
+  [
+    "Accessibility, keyboard and reduced motion QA",
+    false
+  ],
+  [
+    "TypeScript, lint, unit tests and build pass",
+    false
+  ],
+  [
+    "Home, School and Kiosk regression checks",
+    false
+  ],
+  [
+    "Local visual and functional acceptance at 100%",
+    false
+  ],
+  [
+    "Deploy once to dev at local 100%",
+    false
+  ],
+  [
+    "Final live QA on verified deployment",
+    false
+  ],
+  [
+    "Update /cosmos-progress accurately",
+    false
+  ],
+  [
+    "Merge M4 PR into dev",
+    false
+  ]
+] as const;
+export function getCalendarProgress() { const completed = calendarChecks.filter(([,done])=>done).length; const total=calendarChecks.length; return {completed,total,percent:Math.round(100*completed/total)}; }

@@ -8,6 +8,8 @@ import {
   homeChecks,
   getSchoolProgress,
   schoolChecks,
+  calendarChecks,
+  getCalendarProgress,
 } from "@/config/cosmosMilestones";
 
 type ProgressPageProps = {
@@ -16,16 +18,17 @@ type ProgressPageProps = {
 
 export default async function CosmosProgressPage({ searchParams }: ProgressPageProps) {
   const params = await searchParams;
-  const requested = Number(params?.milestone ?? 2);
+  const requested = Number(params?.milestone ?? 4);
   const milestoneIndex = Number.isInteger(requested) && requested >= 0 && requested < cosmosMilestones.length ? requested : 1;
 
   const milestoneName = cosmosMilestones[milestoneIndex];
   const isFoundation = milestoneIndex === 0;
   const isHome = milestoneIndex === 1;
   const isSchool = milestoneIndex === 2;
-  const checks = isFoundation ? foundationChecks : isHome ? homeChecks : isSchool ? schoolChecks : [];
-  const progress = isFoundation ? getFoundationProgress() : isHome ? getHomeProgress() : isSchool ? getSchoolProgress() : { completed: 0, total: 0, percent: 0 };
-  const status = progress.percent === 100 ? "Complete" : milestoneIndex === 2 ? "In progress" : milestoneIndex < 2 ? "Complete" : "Not started";
+  const isCalendar = milestoneIndex === 4;
+  const checks = isFoundation ? foundationChecks : isHome ? homeChecks : isSchool ? schoolChecks : isCalendar ? calendarChecks : [];
+  const progress = isFoundation ? getFoundationProgress() : isHome ? getHomeProgress() : isSchool ? getSchoolProgress() : isCalendar ? getCalendarProgress() : { completed: 0, total: 0, percent: 0 };
+  const status = milestoneIndex <= 3 ? "Complete" : isCalendar ? "In progress" : "Not started";
 
   return (
     <main className="min-h-screen bg-[#030511] px-5 py-8 text-white sm:px-8 lg:px-12">
@@ -51,7 +54,7 @@ export default async function CosmosProgressPage({ searchParams }: ProgressPageP
                 ? "Home is complete and merged into dev."
                 : milestoneIndex === 2
                   ? progress.percent === 100 ? "School is complete. Milestone 3 can begin after the dev merge is verified." : "School is being built now. Every check below must be complete before Milestone 3 begins."
-                  : "This milestone has not started yet. Cosmos moves forward one milestone at a time."}
+                  : milestoneIndex === 3 ? "The Raspberry Pi kiosk milestone is complete." : isCalendar ? "Calendar is being developed locally on its dedicated branch. No deployment until all checks pass." : "This milestone has not started yet. Cosmos moves forward one milestone at a time."}
           </p>
           <div className="text-left md:text-right">
             <p className="text-5xl font-semibold tabular-nums">{progress.percent}%</p>
@@ -100,8 +103,8 @@ export default async function CosmosProgressPage({ searchParams }: ProgressPageP
           <nav className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4" aria-label="Cosmos milestones">
             {cosmosMilestones.map((name, index) => {
               const selected = index === milestoneIndex;
-              const complete = index < 2;
-              const current = index === 2;
+              const complete = index <= 3;
+              const current = index === 4;
               return (
                 <Link
                   key={name}
