@@ -1053,3 +1053,28 @@ html[data-cosmos-surface="glass"] .cosmic-panel.cosmos-card {
   .cosmos-reference-header-actions { padding-top: 0; }
   .cosmos-shell-workspace > .cosmos-page-slot { padding-top: .3rem; }
 }
+
+/* M0 390px QA: reduce nesting and reclaim usable mobile viewport space. */
+@media (max-width: 639px) {
+  .cosmos-app-shell .cosmos-mobile-shell { padding-top: .35rem; }
+  .cosmos-mobile-nav { padding-block: .4rem; }
+  .cosmos-reference-topbar { padding-block: .25rem; min-height: 0; }
+  .cosmos-reference-topbar-right { min-height: 2.55rem; }
+  .cosmos-reference-search { min-height: 2.25rem; }
+  .cosmos-page-header { margin-bottom: .4rem; padding-top: .2rem; }
+  .cosmos-reference-header-identity { gap: .4rem; }
+  .cosmos-page-subtitle { line-height: 1.35; }
+  .cosmos-reference-header-actions > div { row-gap: .3rem; }
+  .cosmos-page-tabs { margin-top: .45rem; padding-bottom: 0; }
+  .cosmos-shell-workspace .cosmic-page-content > div {
+    padding: .5rem;
+    row-gap: .75rem;
+  }
+  .cosmos-shell-workspace .cosmic-page-content .cosmos-card {
+    padding: .9rem;
+  }
+  html[data-cosmos-surface="glass"] .cosmic-content-surface.cosmic-page-content {
+    border-color: rgba(196,151,255,.12);
+    box-shadow: inset 0 1px 0 rgba(221,184,255,.11);
+  }
+}
