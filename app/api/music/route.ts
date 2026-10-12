@@ -9,11 +9,21 @@ import { isDeveloperKioskRequest } from "@/services/kiosk/developerKiosk";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
+function musicResponse(result: { snapshot: unknown; retryAfterSeconds?: number; diagnostics?: unknown }, includeDiagnostics = false) {
+  const throttled = typeof result.retryAfterSeconds === "number" && result.retryAfterSeconds > 0;
+  return NextResponse.json(includeDiagnostics ? { ...(result.snapshot as object), diagnostics: result.diagnostics } : result.snapshot, {
+    status: throttled ? 429 : 200,
+    headers: {
+      "Cache-Control": "private, no-store, no-cache, must-revalidate, max-age=0",
+      ...(throttled ? { "Retry-After": String(result.retryAfterSeconds) } : {}),
+    },
+  });
+}
 function musicLog(message: string) { if (process.env.NODE_ENV !== "production") console.info(`[kiosk-music] ${message}`); }
 export async function GET(request: Request) {
   if (resolvePrivateRequestContext(request, "private-personal")) {
     const result = await personalSnapshotWithDiagnostics();
-    return NextResponse.json(result.snapshot, { headers: { "Cache-Control": "private, no-store, no-cache, must-revalidate, max-age=0" } });
+    return musicResponse(result);
   }
   if (isDeveloperKioskRequest(request)) {
     const accountId = process.env.COSMIC_KIOSK_ACCOUNT_ID?.trim();
@@ -22,11 +32,11 @@ export async function GET(request: Request) {
     // Production still requires an explicit kiosk account.
     if (!accountId && process.env.NODE_ENV !== "production") {
       const result = await personalSnapshotWithDiagnostics();
-      return NextResponse.json(result.snapshot, { headers: { "Cache-Control": "private, no-store, no-cache, must-revalidate, max-age=0" } });
+      return musicResponse(result);
     }
     if (!accountId) return NextResponse.json({ provider: "spotify", configured: spotifyConfigured(), connected: false, capabilities: {}, playback: { playing: false, positionMs: 0, updatedAt: "" }, error: "Developer music account is not configured.", diagnostics: { category: "configuration-error", providerFound: false, ownerMatch: false, tokenRecordFound: false } }, { headers: { "Cache-Control": "no-store" } });
     const result = await developerKioskSnapshotWithDiagnostics(accountId);
-    return NextResponse.json({ ...result.snapshot, diagnostics: result.diagnostics }, { headers: { "Cache-Control": "private, no-store, no-cache, must-revalidate, max-age=0" } });
+    return musicResponse(result, true);
   }
   const session = await requireAuthenticatedSession(request, { allowDevice: true, bootId: kioskBootId(request) });
   musicLog(`session=${session.sessionType ?? "user"} ownerResolved=${Boolean(session.account.id)}`);
@@ -38,5 +48,5 @@ export async function GET(request: Request) {
   if (process.env.NODE_ENV !== "production") musicLog(`returnedTrackPresent=${Boolean(trackId)} trackIdSuffix=${trackId ? trackId.slice(-4) : "none"}`);
   const providerDiagnostics = musicPlaybackDiagnostics(snapshot.playback);
   const responsePayload = { ...snapshot, diagnostics: { rawProvider: result.rawProvider ?? null, provider: providerDiagnostics, response: musicPlaybackDiagnostics(JSON.parse(JSON.stringify(snapshot.playback)) as typeof snapshot.playback) } };
-  return NextResponse.json(responsePayload, { headers: { "Cache-Control": "private, no-store, no-cache, must-revalidate, max-age=0" } });
+  return NextResponse.json(responsePayload, { status: result.retryAfterSeconds ? 429 : 200, headers: { "Cache-Control": "private, no-store, no-cache, must-revalidate, max-age=0", ...(result.retryAfterSeconds ? { "Retry-After": String(result.retryAfterSeconds) } : {}) } });
 }

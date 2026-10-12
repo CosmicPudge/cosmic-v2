@@ -207,16 +207,31 @@ async function normalizePlayback(data: SpotifyPlaybackResponse, accessToken: str
   return { provider: "spotify", configured: true, connected: true, capabilities: caps, playback: normalized.playback };
 }
 
-type SpotifySnapshotResult = { snapshot: MusicSnapshot; rawProvider?: ReturnType<typeof spotifyRawPlaybackDiagnostics> };
+type SpotifySnapshotResult = { snapshot: MusicSnapshot; rawProvider?: ReturnType<typeof spotifyRawPlaybackDiagnostics>; retryAfterSeconds?: number };
+const playbackCooldowns = new Map<string, number>();
+function spotifyRetrySeconds(value: string | null): number {
+  if (!value) return 60;
+  const parsed = Number(value);
+  if (Number.isFinite(parsed) && parsed >= 0) return Math.max(1, Math.min(3600, Math.ceil(parsed)));
+  const until = Date.parse(value);
+  return Number.isFinite(until) ? Math.max(1, Math.min(3600, Math.ceil((until - Date.now()) / 1000))) : 60;
+}
 
 async function snapshotWithToken(current: Token, refreshAccessToken?: () => Promise<string>): Promise<SpotifySnapshotResult> {
   try {
+    const remaining = (playbackCooldowns.get(current.access_token) ?? 0) - Date.now();
+    if (remaining > 0) return { snapshot: temporaryFailure("Spotify is rate limited. Retrying automatically."), retryAfterSeconds: Math.ceil(remaining / 1000) };
     const requestStartedAt = new Date().toISOString();
     const requestStartedMs = Date.now();
     const response = await fetch("https://api.spotify.com/v1/me/player", { cache: "no-store", headers: { Authorization: `Bearer ${current.access_token}` } });
     if (response.status === 204) { if (process.env.NODE_ENV !== "production") console.info(`[spotify-playback] requestStartedAt=${requestStartedAt} durationMs=${Date.now() - requestStartedMs} status=204 itemPresent=false itemType=none trackIdSuffix=none progressMs=0 isPlaying=false`); return { snapshot: { provider: "spotify", configured: true, connected: true, capabilities: caps, playback: { playing: false, positionMs: 0, updatedAt: new Date().toISOString() } } }; }
     if (response.status === 401) return { snapshot: disconnected("Spotify authorization needs to reconnect.") };
-    if (response.status === 429) return { snapshot: temporaryFailure("Spotify is rate limited. Retrying automatically.") };
+    if (response.status === 429) {
+      const retryAfterSeconds = spotifyRetrySeconds(response.headers.get("Retry-After"));
+      playbackCooldowns.set(current.access_token, Date.now() + retryAfterSeconds * 1000);
+      return { snapshot: temporaryFailure("Spotify is rate limited. Retrying automatically."), retryAfterSeconds };
+    }
+    playbackCooldowns.delete(current.access_token);
     if (response.status >= 500) return { snapshot: temporaryFailure("Spotify is temporarily unavailable. Retrying automatically.") };
     if (!response.ok) return { snapshot: temporaryFailure("Spotify playback is temporarily unavailable.") };
     const payload = await response.json() as SpotifyPlaybackResponse;
