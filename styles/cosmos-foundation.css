@@ -1105,3 +1105,53 @@ html[data-cosmos-surface="solid"] .cosmos-mobile-nav-panel { background: #0d0b27
 @media (prefers-reduced-transparency: reduce) {
   html[data-cosmos-surface="glass"] .cosmos-mobile-nav-panel { background: #0d0b27; backdrop-filter: none; -webkit-backdrop-filter: none; }
 }
+
+/* M0 final background coverage: viewport-fixed, responsive artwork with no lower void.
+   Override previous hero-height masks and fixed-pixel image sizing. */
+.cosmos-app-shell .cosmos-cinematic-scene {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100dvh;
+  min-height: 100%;
+  overflow: hidden;
+  opacity: 1;
+  mask-image: none;
+  -webkit-mask-image: none;
+}
+.cosmos-app-shell .cosmos-cinematic-image {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center 32%;
+  background-repeat: no-repeat;
+}
+.cosmos-app-shell .cosmos-cinematic-overlay {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg,rgba(3,4,17,.48),rgba(3,4,17,.2) 45%,rgba(3,4,17,.12)),
+    linear-gradient(180deg,rgba(3,4,17,.12) 0%,rgba(3,4,17,.15) 40%,rgba(3,4,17,.4) 100%);
+}
+@media (max-width: 1180px) {
+  .cosmos-app-shell .cosmos-cinematic-image { background-position: 58% 30%; }
+}
+@media (max-width: 900px) {
+  .cosmos-app-shell .cosmos-cinematic-image { background-position: 62% 28%; }
+}
+@media (max-width: 767px) {
+  .cosmos-app-shell .cosmos-cinematic-image {
+    background-size: cover;
+    background-position: 66% 27%;
+    filter: saturate(1.02) brightness(.87);
+  }
+}
+@media (max-width: 520px) {
+  .cosmos-app-shell .cosmos-cinematic-image { background-position: 70% 26%; }
+}
+@media (max-width: 420px) {
+  .cosmos-app-shell .cosmos-cinematic-image { background-position: 72% 25%; }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .cosmos-app-shell .cosmos-cinematic-scene { opacity: .75; }
+}
