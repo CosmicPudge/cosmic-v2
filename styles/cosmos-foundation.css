@@ -733,124 +733,60 @@ html[data-cosmos-surface="solid"] .cosmos-nav-item-active {
   html:not([data-cosmos-surface="glass"]) .cosmos-page-tabs { background: #14132f; }
 }
 
-/* M0 clear-glass pass: let the cinematic artwork show through shared surfaces. */
+/* M0 glass: lightly tinted, optically clear iPhone-inspired surface system.
+   Shared panel and child cards intentionally have different optical strengths. */
 html[data-cosmos-surface="glass"] {
-  --cosmos-surface: rgba(12, 13, 31, .19);
-  --cosmos-surface-strong: rgba(13, 14, 37, .27);
+  --cosmos-surface: rgba(185, 171, 230, .065);
+  --cosmos-surface-strong: rgba(165, 155, 218, .09);
+  --cosmos-glass-rim: rgba(241, 234, 255, .18);
+}
+html[data-cosmos-surface="glass"] .cosmic-content-surface {
+  /* Clear outer window: do not double tint or blur the child cards. */
+  position: relative;
+  background: linear-gradient(145deg, rgba(180, 169, 218, .055), rgba(110, 92, 154, .025));
+  border: 1px solid rgba(227, 215, 255, .16);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.14), 0 15px 44px rgba(0,0,0,.13);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 html[data-cosmos-surface="glass"] .cosmos-card,
-html[data-cosmos-surface="glass"] .cosmic-content-surface,
-html[data-cosmos-surface="glass"] .cosmos-mobile-nav {
-  background: linear-gradient(140deg, rgba(54, 42, 91, .12), rgba(5, 8, 25, .22));
-  border-color: rgba(199, 182, 255, .24);
-  box-shadow: 0 14px 40px rgba(0, 0, 0, .16), inset 0 1px 0 rgba(255, 255, 255, .13);
-  backdrop-filter: blur(7px) saturate(1.18);
-  -webkit-backdrop-filter: blur(7px) saturate(1.18);
-}
-html[data-cosmos-surface="glass"] .cosmos-reference-search,
-html[data-cosmos-surface="glass"] .cosmos-page-tabs {
-  background: linear-gradient(115deg, rgba(47, 34, 88, .23), rgba(35, 23, 81, .18));
-  border-color: rgba(202, 182, 255, .35);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .13), 0 8px 25px rgba(3, 3, 15, .12);
-  backdrop-filter: blur(9px) saturate(1.15);
-  -webkit-backdrop-filter: blur(9px) saturate(1.15);
-}
-/* Keep the text/navigation sidebar dark enough for contrast. */
-html[data-cosmos-surface="glass"] .cosmos-sidebar {
-  background: linear-gradient(180deg, rgba(3, 4, 17, .76), rgba(4, 5, 19, .68));
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-}
-/* Respect explicit platform accessibility preferences in either mode. */
-@media (prefers-reduced-transparency: reduce) {
-  html[data-cosmos-surface="glass"] .cosmos-card,
-  html[data-cosmos-surface="glass"] .cosmic-content-surface,
-  html[data-cosmos-surface="glass"] .cosmos-mobile-nav,
-  html[data-cosmos-surface="glass"] .cosmos-reference-search,
-  html[data-cosmos-surface="glass"] .cosmos-page-tabs {
-    background: #0c0d25;
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
-  }
-}
-
-/* M0 liquid-glass experiment — optical rim, clear center, soft caustic lighting.
-   CSS approximation of the supplied mobile reference; no fake heavy opaque fill. */
-html[data-cosmos-surface="glass"] .cosmos-card,
-html[data-cosmos-surface="glass"] .cosmic-content-surface,
 html[data-cosmos-surface="glass"] .cosmos-mobile-nav,
 html[data-cosmos-surface="glass"] .cosmos-reference-search,
 html[data-cosmos-surface="glass"] .cosmos-page-tabs {
-  background:
-    radial-gradient(ellipse 78% 75% at 9% 0%, rgba(255,255,255,.13), transparent 65%),
-    linear-gradient(152deg, rgba(220,208,255,.085), rgba(122,105,179,.055) 48%, rgba(236,231,255,.075));
-  border: 1px solid rgba(237,226,255,.32);
-  box-shadow:
-    inset 0 1.5px 1px rgba(255,255,255,.3),
-    inset 1px 0 1px rgba(255,255,255,.13),
-    inset -1px -1px 1px rgba(218,208,255,.14),
-    0 1px 2px rgba(0,0,0,.21),
-    0 12px 34px rgba(0,0,0,.12);
-  backdrop-filter: blur(3px) saturate(1.35) brightness(1.07);
-  -webkit-backdrop-filter: blur(3px) saturate(1.35) brightness(1.07);
-}
-html[data-cosmos-surface="glass"] .cosmos-card,
-html[data-cosmos-surface="glass"] .cosmic-content-surface {
   position: relative;
+  background:
+    linear-gradient(138deg, rgba(224, 211, 255, .12) 0%, rgba(174, 156, 214, .085) 37%, rgba(228, 216, 255, .065) 100%);
+  border: 1px solid rgba(239, 230, 255, .21);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.32),
+    inset 1px 0 0 rgba(255,255,255,.12),
+    inset 0 -1px 0 rgba(213,199,255,.07),
+    0 10px 28px rgba(0,0,0,.13);
+  backdrop-filter: blur(.6px) saturate(1.07);
+  -webkit-backdrop-filter: blur(.6px) saturate(1.07);
 }
-/* Narrow curved lens edge: retains click/scroll behavior and pointer hit targets. */
-html[data-cosmos-surface="glass"] .cosmos-card::before,
-html[data-cosmos-surface="glass"] .cosmic-content-surface::before {
+/* Only a slim specular rim; avoid cloudy gradients across the center. */
+html[data-cosmos-surface="glass"] .cosmos-card::before {
   content: "";
   position: absolute;
   inset: 0;
   border-radius: inherit;
   pointer-events: none;
-  z-index: 0;
   background:
-    radial-gradient(ellipse 95% 55% at 48% -31%, rgba(255,255,255,.19), transparent 74%),
-    radial-gradient(ellipse 55% 47% at 104% 99%, rgba(220,207,255,.1), transparent 75%);
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,.045);
+    radial-gradient(ellipse 65% 30% at 50% -19%, rgba(255,255,255,.13), transparent 78%),
+    radial-gradient(ellipse 32% 28% at 103% 103%, rgba(238,219,255,.07), transparent 76%);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.025);
 }
-html[data-cosmos-surface="glass"] .cosmos-card > *,
-html[data-cosmos-surface="glass"] .cosmic-content-surface > * { position: relative; }
 html[data-cosmos-surface="glass"] .cosmos-page-tab-active {
-  background: linear-gradient(160deg, rgba(175,159,255,.58), rgba(88,74,211,.52));
-  box-shadow: inset 0 1px 1px rgba(255,255,255,.48), 0 0 0 1px rgba(211,201,255,.4), 0 0 12px rgba(145,109,255,.35);
+  background: linear-gradient(155deg, rgba(181,164,255,.48), rgba(113,89,226,.4));
+  border-color: rgba(245,236,255,.44);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.42), 0 0 0 1px rgba(181,162,255,.17), 0 0 11px rgba(146,111,255,.3);
 }
-@media (prefers-reduced-transparency: reduce) {
-  html[data-cosmos-surface="glass"] .cosmos-card,
-  html[data-cosmos-surface="glass"] .cosmic-content-surface,
-  html[data-cosmos-surface="glass"] .cosmos-mobile-nav,
-  html[data-cosmos-surface="glass"] .cosmos-reference-search,
-  html[data-cosmos-surface="glass"] .cosmos-page-tabs {
-    background: #0c0d25;
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
-  }
-}
-
-/* M0 optical clarity pass: transparent centers, edge-only highlights. */
-html[data-cosmos-surface="glass"] .cosmos-card,
-html[data-cosmos-surface="glass"] .cosmic-content-surface,
-html[data-cosmos-surface="glass"] .cosmos-mobile-nav,
-html[data-cosmos-surface="glass"] .cosmos-reference-search,
-html[data-cosmos-surface="glass"] .cosmos-page-tabs {
-  background: linear-gradient(125deg, rgba(238,229,255,.035), rgba(255,255,255,.012) 48%, rgba(213,193,255,.025));
-  border-color: rgba(237,232,255,.36);
-  backdrop-filter: blur(.35px) saturate(1.06);
-  -webkit-backdrop-filter: blur(.35px) saturate(1.06);
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.36),
-    inset 1px 0 0 rgba(255,255,255,.13),
-    inset 0 -1px 0 rgba(213,200,255,.12),
-    0 12px 34px rgba(0,0,0,.13);
-}
-html[data-cosmos-surface="glass"] .cosmos-card::before,
-html[data-cosmos-surface="glass"] .cosmic-content-surface::before {
-  background:
-    radial-gradient(ellipse 80% 35% at 44% -28%, rgba(255,255,255,.15), transparent 82%),
-    radial-gradient(ellipse 24% 40% at 102% 100%, rgba(243,225,255,.065), transparent 85%);
+html[data-cosmos-surface="glass"] .cosmos-sidebar {
+  /* Darker than cards because it is a persistent text/navigation rail. */
+  background: linear-gradient(180deg, rgba(4,5,18,.82), rgba(5,6,20,.76));
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
 }
 @media (prefers-reduced-transparency: reduce) {
   html[data-cosmos-surface="glass"] .cosmos-card,
