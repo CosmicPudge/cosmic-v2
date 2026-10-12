@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { Menu, MonitorUp, X } from "lucide-react";
+import { Menu, MonitorUp, Sparkles, X } from "lucide-react";
 
 import { CosmicIcon } from "@/components/cosmic-icons";
 import { useOptionalBoot } from "@/components/os/boot/BootManager";
@@ -34,9 +34,9 @@ export default function Sidebar({ variant = "side" }: { variant?: "side" | "top"
     return () => document.removeEventListener("keydown", escape);
   }, [open]);
 
-  const navigation = (
-    <nav className="space-y-1" aria-label="Cosmos navigation">
-      {cosmosNavigation.map((item) => {
+  const renderNavigation = (items: typeof cosmosNavigation, label: string) => (
+    <nav className="space-y-1" aria-label={label}>
+      {items.map((item) => {
         const active = activeItem?.id === item.id;
         return (
           <Link
@@ -62,12 +62,15 @@ export default function Sidebar({ variant = "side" }: { variant?: "side" | "top"
     </nav>
   );
 
+  const primaryNavigation = renderNavigation(cosmosNavigation.filter((item) => item.id !== "settings"), "Cosmos navigation");
+  const settingsNavigation = renderNavigation(cosmosNavigation.filter((item) => item.id === "settings"), "Cosmos settings");
+
   if (variant === "top") {
     return (
       <aside ref={navigationRef} data-cosmic-navigation className="cosmos-mobile-nav lg:hidden">
         <div className="flex items-center justify-between gap-3">
           <Link href="/os" className="cosmos-brand" aria-label="Cosmos home">
-            <span className="cosmos-brand-mark" aria-hidden="true">◎</span>
+            <span className="cosmos-brand-mark" aria-hidden="true"><Sparkles size={23} strokeWidth={2.5} /></span>
             <span>
               <span className="cosmos-brand-name">COSMOS</span>
               <span className="cosmos-brand-tagline">Everything in orbit.</span>
@@ -85,7 +88,8 @@ export default function Sidebar({ variant = "side" }: { variant?: "side" | "top"
         </div>
         {open && (
           <div className="mt-3 max-h-[70vh] overflow-y-auto border-t border-white/10 pt-3">
-            {navigation}
+            {primaryNavigation}
+            <div className="mt-3 border-t border-white/10 pt-3">{settingsNavigation}</div>
             <button type="button" onClick={enterManual} className="cosmos-kiosk-button mt-3 w-full">
               <MonitorUp size={17} />
               Kiosk mode
@@ -103,7 +107,7 @@ export default function Sidebar({ variant = "side" }: { variant?: "side" | "top"
       className="cosmos-sidebar hidden lg:flex"
     >
       <Link href="/os" className="cosmos-brand" aria-label="Cosmos home">
-        <span className="cosmos-brand-mark" aria-hidden="true">◎</span>
+        <span className="cosmos-brand-mark" aria-hidden="true"><Sparkles size={23} strokeWidth={2.5} /></span>
         <span className="min-w-0">
           <span className="cosmos-brand-name">COSMOS</span>
           <span className="cosmos-brand-tagline">Everything in orbit.</span>
@@ -111,10 +115,11 @@ export default function Sidebar({ variant = "side" }: { variant?: "side" | "top"
       </Link>
 
       <div className="mt-7 min-h-0 flex-1 overflow-y-auto pr-1">
-        {navigation}
+        {primaryNavigation}
       </div>
 
-      <div className="mt-5 border-t border-white/10 pt-4">
+      <div className="mt-5 border-t border-white/10 pt-3">
+        {settingsNavigation}
         <button type="button" onClick={enterManual} className="cosmos-kiosk-button w-full">
           <MonitorUp size={17} />
           Kiosk mode
