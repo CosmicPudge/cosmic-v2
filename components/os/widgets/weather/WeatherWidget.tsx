@@ -129,7 +129,7 @@ function KioskWeatherScene({
 }) {
   const now = useClockTick(30_000);
   const isDay = weather?.sunrise && weather?.sunset
-    ? now >= weather.sunrise * 1000 && now < weather.sunset * 1000
+    ? (now ?? Date.now()) >= weather.sunrise * 1000 && (now ?? Date.now()) < weather.sunset * 1000
     : scene.id.endsWith("day");
   // Provider entries may start hours ahead (for example 7 PM at 1 PM).
   // Never relabel a future forecast entry as current conditions.
