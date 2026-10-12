@@ -604,3 +604,9 @@ html[data-cosmos-surface="solid"] .cosmic-content-surface {
 }
 @media (max-width: 900px) { .cosmos-reference-time { font-size: 1.27rem; } }
 @media (max-width: 639px) { .cosmos-reference-time { font-size: 1.18rem; } }
+
+/* Keep temperature, condition, and location readable as three distinct rows. */
+.cosmos-reference-weather-info { min-width: 0; align-items: flex-start; }
+.cosmos-reference-weather-location,
+.cosmos-reference-weather-city { display: block; line-height: 1.2; }
+.cosmos-reference-weather { gap: .75rem; }
