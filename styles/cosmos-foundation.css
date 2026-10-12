@@ -648,3 +648,19 @@ html[data-cosmos-surface="solid"] .cosmic-content-surface {
   .cosmos-page-tab { min-width: 4.6rem; padding: .5rem .75rem; }
 }
 @media (prefers-reduced-transparency: reduce) { .cosmos-page-tabs { background: #11112f; } }
+
+/* M0 final header polish after visual review. */
+.cosmos-reference-header-identity { align-items: center; gap: .72rem; }
+.cosmos-reference-header-icon { width: 2.8rem; height: 2.8rem; }
+.cosmos-reference-header-icon svg { width: 2.5rem; height: 2.5rem; }
+.cosmos-reference-header-actions { padding-top: .35rem; }
+.cosmos-page-tabs { gap: .22rem; }
+.cosmos-page-tab { min-width: 6.55rem; padding-inline: 1.1rem; }
+.cosmos-page-tab-active,
+.cosmos-page-tab-active:hover {
+  box-shadow: 0 0 0 1px rgba(180,163,255,.36), 0 0 7px rgba(131,106,255,.65), inset 0 1px 3px rgba(255,255,255,.18);
+}
+@media (max-width: 639px) {
+  .cosmos-reference-header-identity { gap: .6rem; }
+  .cosmos-page-tab { min-width: 4.6rem; padding-inline: .8rem; }
+}
