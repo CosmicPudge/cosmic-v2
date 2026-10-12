@@ -838,3 +838,45 @@ html[data-cosmos-surface="glass"] .cosmic-content-surface {
   html[data-cosmos-surface="glass"] .cosmos-card,
   html[data-cosmos-surface="glass"] .cosmic-content-surface { background: #150c2e; }
 }
+
+/* M0 glass material correction: override the actual design-system cosmic-panel paint.
+   Tint belongs to the meniscus/rim, not as a full card fill. */
+html[data-cosmos-surface="glass"] .cosmic-panel.cosmos-card,
+html[data-cosmos-surface="glass"] .cosmic-panel.cosmos-card.cosmos-card-surface {
+  background: linear-gradient(140deg, rgba(106,58,209,.062), rgba(61,25,138,.018) 52%, rgba(132,75,226,.047)) !important;
+  background-color: transparent !important;
+  border: 1px solid rgba(171,105,248,.25) !important;
+  box-shadow: inset 0 1px 0 rgba(232,183,255,.33), inset 0 -1px 0 rgba(117,60,220,.14), 0 9px 26px rgba(0,0,0,.16) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+html[data-cosmos-surface="glass"] .cosmic-content-surface.cosmic-page-content {
+  background: rgba(44,15,91,.018) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+html[data-cosmos-surface="glass"] .cosmic-panel.cosmos-card::before {
+  background:
+    radial-gradient(170px 95px at var(--glass-reflect-x, 75%) var(--glass-reflect-y, 0%), rgba(229,183,255,.24), rgba(193,124,255,.075) 34%, transparent 74%),
+    radial-gradient(ellipse 60% 34% at 37% -21%, rgba(236,196,255,.14), transparent 72%);
+  box-shadow: inset 0 0 0 1px rgba(226,163,255,.035);
+}
+html[data-cosmos-surface="glass"] .cosmic-panel.cosmos-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(108deg, rgba(223,177,255,.15), transparent 15%, transparent 83%, rgba(156,92,237,.1));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  padding: 2px;
+}
+@media (prefers-reduced-transparency: reduce) {
+  html[data-cosmos-surface="glass"] .cosmic-panel.cosmos-card,
+  html[data-cosmos-surface="glass"] .cosmic-panel.cosmos-card.cosmos-card-surface,
+  html[data-cosmos-surface="glass"] .cosmic-content-surface.cosmic-page-content {
+    background: #150c2e !important;
+  }
+}
