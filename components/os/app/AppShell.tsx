@@ -63,7 +63,7 @@ export default function AppShell({ children, app }: AppShellProps) {
       id="main-content"
       onPointerMove={updateReflection}
       data-cosmic-app={pageApp}
-      className="cosmic-site-shell cosmos-app-shell relative min-h-screen text-white outline-none"
+      className="cosmic-site-shell cosmos-app-shell relative h-dvh overflow-hidden text-white outline-none"
     >
       {/* Displacement affects only the glass optical layer, never its text or controls. */}
       <svg aria-hidden="true" focusable="false" width="0" height="0" className="pointer-events-none absolute">
@@ -74,8 +74,8 @@ export default function AppShell({ children, app }: AppShellProps) {
           </filter>
         </defs>
       </svg>
-      <div className="cosmic-stars pointer-events-none absolute inset-0" />
-      <div className="cosmos-cinematic-scene pointer-events-none absolute inset-x-0 top-0" aria-hidden="true">
+      <div className="cosmic-stars pointer-events-none fixed inset-0" />
+      <div className="cosmos-cinematic-scene pointer-events-none fixed inset-x-0 top-0" aria-hidden="true">
         <div className="cosmos-cinematic-image" />
         <div className="cosmos-cinematic-overlay" />
       </div>
@@ -84,9 +84,9 @@ export default function AppShell({ children, app }: AppShellProps) {
         <Sidebar variant="top" />
       </div>
 
-      <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-[1920px]">
+      <div className="cosmos-shell-layout relative z-10 mx-auto flex h-full min-h-0 w-full max-w-[1920px]">
         <Sidebar />
-        <div className="min-w-0 flex-1 px-3 pb-5 sm:px-5 lg:px-6 lg:pb-6">
+        <div className="cosmos-shell-workspace flex min-h-0 min-w-0 flex-1 flex-col px-3 sm:px-5 lg:px-6">
           <CosmosTopBar />
           <div className="cosmos-page-slot">{children}</div>
         </div>
