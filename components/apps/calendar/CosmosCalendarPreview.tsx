@@ -39,7 +39,7 @@ export default function CosmosCalendarPreview(){
  const days=Array.from({length:42},(_,i)=>{const d=new Date(gridStart);d.setDate(gridStart.getDate()+i);return d});
  const chosen=(byDay.get(selected)??[]).slice().sort((a,b)=>new Date(a.start).getTime()-new Date(b.start).getTime());
  function shift(delta:number){setMonth(new Date(month.getFullYear(),month.getMonth()+delta,1))}
- return <section className="min-h-screen space-y-5 pb-12 text-white">
+ return <section className="min-h-screen space-y-5 pt-16 pb-12 text-white sm:pt-20 lg:pt-24">
   <div className="flex flex-wrap items-center justify-between gap-4">
    <div><p className="text-xs font-semibold uppercase tracking-[.22em] text-violet-300">COSMOS / CALENDAR</p><h1 className="mt-2 text-3xl font-semibold">Calendar</h1><p className="mt-1 text-sm text-white/50">Your time, all in one place</p></div>
    <div className="rounded-2xl border border-violet-300/20 bg-violet-500/10 p-3"><CalendarDays className="text-violet-300"/></div>
