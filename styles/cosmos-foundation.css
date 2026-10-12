@@ -894,3 +894,41 @@ html[data-cosmos-surface="glass"] .cosmos-mobile-nav {
     -webkit-backdrop-filter: none;
   }
 }
+
+/* M0 scroll architecture: fixed wallpaper and chrome; only the workspace scrolls. */
+.cosmos-app-shell { height: 100dvh; overflow: hidden; }
+.cosmos-app-shell .cosmos-cinematic-scene,
+.cosmos-app-shell .cosmic-stars { position: fixed; }
+.cosmos-shell-layout { height: 100%; min-height: 0; }
+.cosmos-shell-workspace { height: 100%; min-height: 0; overflow: hidden; }
+.cosmos-shell-workspace > .cosmos-reference-topbar {
+  flex: none;
+  z-index: 30;
+}
+.cosmos-shell-workspace > .cosmos-page-slot {
+  min-height: 0;
+  flex: 1;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(176,120,255,.36) transparent;
+  padding-bottom: 1.25rem;
+}
+.cosmos-shell-workspace .cosmic-content-surface.cosmic-page-content {
+  overflow: visible;
+  min-height: 0;
+}
+/* Sidebar remains a fixed-height rail; only long navigation itself scrolls. */
+.cosmos-app-shell .cosmos-sidebar { position: relative; top: auto; height: 100%; flex-shrink: 0; }
+/* Small viewing refinements: keep content panels from touching the scrollbar or viewport edge. */
+.cosmos-shell-workspace .cosmos-page-slot > * { min-width: 0; }
+@media (max-width:1023px) {
+  .cosmos-app-shell { display: flex; flex-direction: column; }
+  .cosmos-app-shell .cosmos-mobile-shell { flex: none; }
+  .cosmos-app-shell .cosmos-shell-layout { flex: 1; min-height: 0; }
+  .cosmos-app-shell .cosmos-shell-workspace { height: 100%; }
+}
+@media (prefers-reduced-motion:reduce) {
+  .cosmos-shell-workspace .cosmos-page-slot { scroll-behavior: auto; }
+}
