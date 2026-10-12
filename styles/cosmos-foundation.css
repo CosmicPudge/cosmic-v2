@@ -698,3 +698,37 @@ html[data-cosmos-surface="solid"] .cosmic-content-surface {
 @media (prefers-reduced-transparency: reduce) {
   .cosmos-cinematic-scene { opacity: .65; }
 }
+
+/* M0 appearance parity: Solid must be genuinely opaque, including reference UI. */
+html[data-cosmos-surface="solid"] .cosmos-card,
+html[data-cosmos-surface="solid"] .cosmic-content-surface,
+html[data-cosmos-surface="solid"] .cosmos-mobile-nav {
+  background: #0b0d24;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+html[data-cosmos-surface="solid"] .cosmos-sidebar {
+  background: #060717;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+html[data-cosmos-surface="solid"] .cosmos-reference-search {
+  background: #161633;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+html[data-cosmos-surface="solid"] .cosmos-page-tabs {
+  background: #14132f;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+html[data-cosmos-surface="solid"] .cosmos-reference-shortcut {
+  background: #30274f;
+}
+html[data-cosmos-surface="solid"] .cosmos-nav-item-active {
+  background: #22154d;
+}
+@media (prefers-reduced-transparency: reduce) {
+  html:not([data-cosmos-surface="glass"]) .cosmos-reference-search { background: #161633; }
+  html:not([data-cosmos-surface="glass"]) .cosmos-page-tabs { background: #14132f; }
+}
