@@ -7,6 +7,7 @@ import type {
 import { getWeatherAlerts } from "./providers/NWSProvider";
 import { getOpenWeather } from "./providers/OpenWeatherProvider";
 import { getOpenMeteo } from "./providers/OpenMeteoProvider";
+import { getOpenMeteoCurrent } from "./providers/OpenMeteoCurrentProvider";
 import { getOpenWeatherAirQuality } from "./providers/OpenWeatherAirQualityProvider";
 import { getAstronomy } from "./providers/AstronomyProvider";
 import { mergeEnvironment } from "./utils/buildEnvironment";
@@ -71,12 +72,10 @@ async function loadEnvironment(lat: number, lon: number): Promise<WeatherData> {
     getAstronomy(lat, lon),
   ]);
 
-  // Current weather is required
-  if (currentResult.status !== "fulfilled") {
-    throw currentResult.reason;
-  }
-
-  const current: CurrentWeather = currentResult.value;
+  // Prefer OpenWeather when configured. Fall back to keyless Open-Meteo current conditions.
+  const current: CurrentWeather = currentResult.status === "fulfilled"
+    ? currentResult.value
+    : await getOpenMeteoCurrent(lat, lon);
 
   const forecast: ForecastData =
     forecastResult.status === "fulfilled"
