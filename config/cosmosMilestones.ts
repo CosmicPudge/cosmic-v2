@@ -35,7 +35,7 @@ export const foundationChecks = [
   ["Live weather in top bar", true],
   ["Existing-page shell compatibility", true],
   ["School compatibility", true],
-  ["Kiosk regression check", false],
+  ["Kiosk regression check", true],
   ["Mobile + tablet QA", true],
   ["Glass / solid QA", true],
   ["TypeScript / lint / build validation", false],
