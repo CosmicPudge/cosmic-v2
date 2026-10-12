@@ -93,7 +93,15 @@ export default function WeatherWidget() {
 }
 
 function KioskWeatherIcon({ condition, isDay, size }: { condition: string; isDay: boolean; size: number }) {
-  const mapped = mapWeatherCondition(condition);
+  const code = /^\\d{2}[dn]$/.test(condition) ? condition.slice(0, 2) : null;
+  const mapped = code === "01" ? "clear"
+    : code === "02" ? "partly-cloudy"
+    : code === "03" || code === "04" ? "cloudy"
+    : code === "09" || code === "10" ? "rain"
+    : code === "11" ? "thunderstorm"
+    : code === "13" ? "snow"
+    : code === "50" ? "fog"
+    : mapWeatherCondition(condition);
   const Icon = mapped === "clear" ? (isDay ? Sun : Moon)
     : mapped === "partly-cloudy" ? (isDay ? CloudSun : CloudMoon)
     : mapped === "cloudy" ? Cloud
