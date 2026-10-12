@@ -944,3 +944,26 @@ html[data-cosmos-surface="glass"] .cosmic-panel.cosmos-card::after {
 @media (prefers-reduced-motion: reduce), (prefers-reduced-transparency: reduce) {
   html[data-cosmos-surface="glass"] .cosmic-panel.cosmos-card::before { filter: none; }
 }
+
+/* Experimental backdrop refraction: optical distortion only on an inset edge band.
+   Browsers lacking SVG backdrop-filter support retain the existing sharp glass rim.
+   Never filter content nodes: their text/icons remain unwarped. */
+@supports (backdrop-filter: url("#cosmos-glass-refraction")) {
+  html[data-cosmos-surface="glass"] .cosmic-panel.cosmos-card::before {
+    background: rgba(130, 79, 220, .025);
+    filter: none;
+    opacity: 1;
+    -webkit-backdrop-filter: url("#cosmos-glass-refraction");
+    backdrop-filter: url("#cosmos-glass-refraction");
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    padding: 9px;
+  }
+}
+@media (prefers-reduced-motion: reduce), (prefers-reduced-transparency: reduce) {
+  html[data-cosmos-surface="glass"] .cosmic-panel.cosmos-card::before {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}
