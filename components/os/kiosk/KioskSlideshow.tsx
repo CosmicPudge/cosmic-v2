@@ -61,8 +61,10 @@ export default function KioskSlideshow() {
   const musicPlaying = Boolean(music.playback?.playing);
   const [musicHold, setMusicHold] = useState(false);
   const musicSessionActive = useRef(false);
+  const lastMusicPlayingAt = useRef<number | null>(null);
   useEffect(() => {
     if (musicPlaying) {
+      lastMusicPlayingAt.current = Date.now();
       setMusicHold(true);
       if (!musicSessionActive.current) {
         musicSessionActive.current = true;
@@ -72,16 +74,17 @@ export default function KioskSlideshow() {
       return;
     }
     if (!musicSessionActive.current) return;
-    // A 204/empty response during song handoff, or a failed/rate-limited
-    // request, is NOT evidence that the listener paused Spotify.
-    if (!music.connected || music.requestError || music.providerError) return;
-    // Missing playback metadata is indeterminate, not a confirmed stop.
-    // Hold until Spotify reports a paused track consistently for a full minute.
-    if (!music.playback?.track?.id) return;
+    // Transient Spotify 204 / missing metadata must not release playback
+    // immediately, but it must not freeze the kiosk indefinitely either.
+    // Keep the last confirmed-playing time, and release after a full minute
+    // without a playing report even if the provider stays unavailable.
+    const elapsed = Date.now() - (lastMusicPlayingAt.current ?? Date.now());
     const timer = window.setTimeout(() => {
       musicSessionActive.current = false;
+      lastMusicPlayingAt.current = null;
       setMusicHold(false);
-    }, 60_000);
+      setRotationEpoch(value => value + 1);
+    }, Math.max(0, 60_000 - elapsed));
     return () => window.clearTimeout(timer);
   }, [musicPlaying, music.connected, music.requestError, music.providerError, music.playback?.track?.id, forcedIndex]);
   const pointerStart = useRef<{ id: number; x: number; y: number } | null>(null);
