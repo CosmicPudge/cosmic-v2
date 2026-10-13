@@ -1,729 +1,202 @@
 "use client";
 
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
-
-import { dashboardWidgets } from "@/config/widgets";
-import { WIDGET_REGISTRY } from "@/components/dashboard/layout/widgetRegistry";
-import { useSports } from "@/hooks/os/useSports";
-import type {
-  SportKind,
-  SportsEvent,
-} from "@/core/contracts/Sports";
-
-import KioskSlide from "./KioskSlide";
-import { useKioskAmbientFrame } from "./KioskAmbientFrame";
-import KioskSportsOverride from "./KioskSportsOverride";
-import KioskSceneFrame from "@/components/os/widgets/shared/KioskSceneFrame";
-
-import {
-  KIOSK_SLIDE_DURATION_MS,
-  KIOSK_TRANSITION_DURATION_MS,
-} from "./kioskConfig";
-import { KioskSlideshowProvider } from "./KioskSlideshowContext";
-import type { KioskSlideshowPauseReason } from "@/core/contracts/Kiosk";
-import { useEntitlements } from "@/hooks/os/useEntitlements";
-import { resolveKioskSwipeDirection, shouldResetKioskRotationAfterSwipe } from "./kioskSlideshowInteraction";
-import { createKioskSportsTestEvent, parseKioskSportsTestOverride } from "./kioskSportsTestOverride";
-import { KIOSK_MUSIC_PLAYBACK_STALE_MS, shouldPauseKioskForMusic } from "./kioskMusicRotation";
-import { normalizeKioskSportsEvent, selectKioskSportsEvent } from "@/services/sports/kioskSelection";
-import { FOOTBALL_FINAL_HOLD_MS } from "@/services/sports/football/lifecycle";
-import { musicRefreshMs, sportsRefreshMs } from "@/services/kiosk/refreshPolicy";
+import useKioskDeviceLocation from "@/hooks/os/useKioskDeviceLocation";
+import useWeather from "@/hooks/os/useWeather";
 import { useDeveloperKioskData } from "@/hooks/os/useDeveloperKioskData";
+import { useClockTick } from "@/hooks/os/useClock";
+
+import ClockWidget from "@/components/os/widgets/clock/ClockWidget";
+import WeatherWidget from "@/components/os/widgets/weather/WeatherWidget";
+import CalendarWidget from "@/components/os/widgets/calendar/CalendarWidget";
+import SchoolCalendarKioskWidget from "@/components/os/widgets/school/SchoolCalendarKioskWidget";
+import SportsKioskOverview from "@/components/os/widgets/sports/SportsKioskOverview";
+import CosmosMusicKioskScene from "@/components/os/widgets/music/CosmosMusicKioskScene";
+import CosmosGarageKioskScene from "@/components/os/widgets/garage/CosmosGarageKioskScene";
+import CosmosNotesKioskScene from "@/components/os/widgets/notes/CosmosNotesKioskScene";
+import CosmosTasksKioskScene from "@/components/os/widgets/tasks/CosmosTasksKioskScene";
+import CosmosAIKioskScene from "@/components/os/widgets/assistant/CosmosAIKioskScene";
+import CosmosSystemKioskScene from "@/components/os/widgets/system/CosmosSystemKioskScene";
 import { useMusic } from "@/hooks/os/useMusic";
-import { useKioskRuntimeReady } from "./KioskRuntimeContext";
-import { startKioskResource } from "@/services/kiosk/resourceLifecycle";
+import { WidgetProvider } from "@/components/os/ui/widget/WidgetContext";
 
-const TEST_SPORTS: SportKind[] = [
-  "nfl",
-  "mlb",
-  "f1",
-  "nascar",
-  "college-football",
-];
+const BUILD_SLIDES = [
+  { id: "clock", component: ClockWidget },
+  { id: "weather", component: WeatherWidget },
+  { id: "calendar", component: CalendarWidget },
+  { id: "school-calendar", component: SchoolCalendarKioskWidget },
+  { id: "sports", component: SportsKioskOverview },
+  { id: "music", component: CosmosMusicKioskScene },
+  { id: "garage", component: CosmosGarageKioskScene },
+  { id: "notes", component: CosmosNotesKioskScene },
+  { id: "tasks", component: CosmosTasksKioskScene },
+  { id: "cosmic-ai", component: CosmosAIKioskScene },
+  { id: "system", component: CosmosSystemKioskScene },
+] as const;
 
-function isTestSport(
-  value: string | null,
-): value is SportKind {
-  return (
-    value !== null &&
-    TEST_SPORTS.includes(value as SportKind)
-  );
-}
+const ROTATION_MS = 120_000;
+const SWIPE_THRESHOLD_PX = 55;
 
-function createTestEvent(
-  sport: SportKind,
-): SportsEvent {
-  const now = new Date();
-
-  switch (sport) {
-    case "nfl":
-      return {
-        id: "kiosk-test-nfl",
-        sport: "nfl",
-        title: "Green Bay Packers vs Chicago Bears",
-        start: now,
-        status: "live",
-        statusDetail: "3rd Quarter · 4:22",
-        awayTeam: {
-          name: "Chicago Bears",
-          abbreviation: "CHI",
-          score: 17,
-        },
-        homeTeam: {
-          name: "Green Bay Packers",
-          abbreviation: "GB",
-          score: 24,
-        },
-        venue: "Lambeau Field",
-        broadcast: "Kiosk Test",
-        source: "kiosk-test",
-      };
-
-    case "mlb":
-      return {
-        id: "kiosk-test-mlb",
-        sport: "mlb",
-        title: "Cleveland Guardians vs Los Angeles Angels",
-        start: now,
-        status: "live",
-        statusDetail: "Top 10th · 1 Out",
-        awayTeam: {
-          name: "Cleveland Guardians",
-          abbreviation: "CLE",
-          score: 8,
-        },
-        homeTeam: {
-          name: "Los Angeles Angels",
-          abbreviation: "LAA",
-          score: 6,
-        },
-        venue: "Angel Stadium",
-        broadcast: "Kiosk Test",
-        source: "kiosk-test",
-      };
-
-    case "f1":
-      return {
-        id: "kiosk-test-f1",
-        sport: "f1",
-        title: "Formula 1 Grand Prix",
-        start: now,
-        status: "live",
-        statusDetail: "Lap 38 / 57",
-        venue: "Kiosk Test Circuit",
-        broadcast: "Kiosk Test",
-        source: "kiosk-test",
-        metadata: {
-          sessionType: "Race",
-          sessionKind: "race",
-          track: "Kiosk Test Circuit",
-        },
-      };
-
-    case "nascar":
-      return {
-        id: "kiosk-test-nascar",
-        sport: "nascar",
-        title: "NASCAR Cup Series",
-        start: now,
-        status: "live",
-        statusDetail: "Lap 167 / 267 · Stage 3",
-        venue: "Kiosk Test Speedway",
-        broadcast: "Kiosk Test",
-        source: "kiosk-test",
-        metadata: {
-          sessionType: "Race",
-          track: "Kiosk Test Speedway",
-        },
-      };
-
-    default:
-      throw new Error(
-        "Unsupported kiosk test sport.",
-      );
-  }
-}
-
-type SportsPresentationState = {
-  event: SportsEvent;
-  kind: "live";
-  phase: "entering" | "active" | "exiting";
-};
-
+/**
+ * M3 visual rebuild shell.
+ *
+ * Only approved/rebuilt scenes belong here. Each completed reference is added
+ * to this list. The active set currently contains Clock and Weather.
+ */
 export default function KioskSlideshow() {
+  useKioskDeviceLocation();
+  const headerClock = useClockTick(1_000);
+  const headerWeather = useWeather({ enabled: true });
+  const kioskData = useDeveloperKioskData();
+  const sharedWeather = kioskData.data?.weather ?? null;
+  const displayWeather = sharedWeather ?? headerWeather.weather;
+  const displayCity = sharedWeather?.city ?? (kioskData.data?.location?.label !== "Location unavailable" ? kioskData.data?.location?.label : undefined) ?? headerWeather.weather?.city;
   const searchParams = useSearchParams();
-  const sponsorDemo = process.env.NODE_ENV !== "production" && searchParams.get("kioskDemo") === "sponsor";
-  return sponsorDemo ? <KioskSponsorDemo /> : <KioskNormalSlideshow />;
-}
-
-function KioskNormalSlideshow() {
-  const searchParams = useSearchParams();
-  const { setPersistentClockHidden } = useKioskAmbientFrame();
-  const { data: entitlements } = useEntitlements();
-  const standaloneDeveloperKiosk = typeof window !== "undefined" && window.location.pathname === "/kiosk";
-  const kioskRuntimeReady = useKioskRuntimeReady();
-  const manualSportsOverride = useMemo(() => parseKioskSportsTestOverride(searchParams, typeof window !== "undefined" ? window.location.hostname : "", typeof window !== "undefined" ? window.location.pathname : "") , [searchParams]);
-
-  const { data: sportsData } = useSports({
-    kioskEligibility: standaloneDeveloperKiosk,
-    enabled: kioskRuntimeReady,
-    refreshMs: (snapshot) => sportsRefreshMs(snapshot),
+  const preview = process.env.NODE_ENV !== "production" ? searchParams.get("slide") : null;
+  const forcedIndex = BUILD_SLIDES.findIndex((slide) => slide.id === preview);
+  const [index, setIndex] = useState(forcedIndex >= 0 ? forcedIndex : 0);
+  const [rotationEpoch, setRotationEpoch] = useState(0);
+  // Local kiosk time: daytime 07:00–22:00 inclusive; overnight starts 22:01.
+  // The header clock ticks once a second, so crossing either boundary
+  // updates useMusic's polling interval without a kiosk restart.
+  const localTime = new Date(headerClock ?? Date.now());
+  const localMinute = localTime.getHours() * 60 + localTime.getMinutes();
+  const daytimeMusicPolling = localMinute >= 7 * 60 && localMinute <= 22 * 60;
+  const music = useMusic({
+    refreshMs: snapshot => daytimeMusicPolling
+      ? (snapshot?.playback.playing ? 500 : 30_000)
+      : (snapshot?.playback.playing ? 300_000 : 1_800_000),
   });
-
-  const widgets = useMemo(() => {
-    const developerOrder = ["clock", "weather", "calendar", "school", "sports", "music", "notifications", "system"];
-    return dashboardWidgets
-      .filter((widget) => (standaloneDeveloperKiosk ? developerOrder.includes(widget.id) : (widget.id !== "school" || entitlements.features["school.basic"])) &&
-        WIDGET_REGISTRY.some(
-          (entry) =>
-            entry.id === widget.id &&
-            entry.enabled,
-        ),
-      )
-      .sort((a, b) => standaloneDeveloperKiosk ? developerOrder.indexOf(a.id) - developerOrder.indexOf(b.id) : a.priority - b.priority);
-  }, [entitlements.features, standaloneDeveloperKiosk]);
-
-  const testSportParam = searchParams.get("simulate-sport") ?? searchParams.get("kiosk-sport-test");
-
-  const testModeAllowed =
-    process.env.NODE_ENV !== "production";
-
-  const testLiveEvent =
-    useMemo(() => {
-      if (!testModeAllowed) {
-        return null;
-      }
-
-      if (
-        testSportParam === "none"
-      ) {
-        return null;
-      }
-
-      if (
-        !isTestSport(
-          testSportParam,
-        )
-      ) {
-        return null;
-      }
-
-      return createTestEvent(
-        testSportParam,
-      );
-    }, [
-      testModeAllowed,
-      testSportParam,
-    ]);
-
-  const sportsSelection = useMemo(() => {
-    if (manualSportsOverride) return normalizeKioskSportsEvent(createKioskSportsTestEvent(manualSportsOverride));
-    if (
-      testModeAllowed &&
-      testSportParam === "none"
-    ) {
-      return null;
-    }
-
-    if (testLiveEvent) {
-      return normalizeKioskSportsEvent(testLiveEvent);
-    }
-
-    if (!sportsData) {
-      return null;
-    }
-
-    return selectKioskSportsEvent([...sportsData.live, ...sportsData.upcoming, ...sportsData.featured]);
-  }, [
-    manualSportsOverride,
-    sportsData,
-    testLiveEvent,
-    testModeAllowed,
-    testSportParam,
-  ]);
-
-  const [dismissedSportsEventId, setDismissedSportsEventId] = useState<string | null>(null);
-  const finalDwellEventRef = useRef<string | null>(null);
-  const finalDwellTimerRef = useRef<number | null>(null);
-  const finalDwellEventId = sportsSelection?.lifecycleState === "final" ? sportsSelection.event.id : null;
+  const musicPlaying = Boolean(music.playback?.playing);
+  const [musicHold, setMusicHold] = useState(false);
+  const musicSessionActive = useRef(false);
+  const lastMusicPlayingAt = useRef<number | null>(null);
   useEffect(() => {
-    if (!finalDwellEventId) {
-      if (finalDwellTimerRef.current !== null) window.clearTimeout(finalDwellTimerRef.current);
-      finalDwellTimerRef.current = null;
-      finalDwellEventRef.current = null;
-      return;
-    }
-    if (finalDwellEventRef.current === finalDwellEventId) return;
-    if (finalDwellTimerRef.current !== null) window.clearTimeout(finalDwellTimerRef.current);
-    finalDwellEventRef.current = finalDwellEventId;
-    finalDwellTimerRef.current = window.setTimeout(() => {
-      setDismissedSportsEventId(finalDwellEventId);
-      finalDwellTimerRef.current = null;
-    }, FOOTBALL_FINAL_HOLD_MS);
-    return () => {
-      if (finalDwellTimerRef.current !== null) window.clearTimeout(finalDwellTimerRef.current);
-      finalDwellTimerRef.current = null;
-    };
-  }, [finalDwellEventId]);
-  const sportsAttentionEvent = sportsSelection && sportsSelection.lifecycleState && sportsSelection.lifecycleState !== "upcoming" && sportsSelection.lifecycleState !== "postgame" && sportsSelection.event.id !== dismissedSportsEventId ? sportsSelection.event : null;
-
-  const [currentIndex, setCurrentIndex] =
-    useState(0);
-
-  const [
-    previousIndex,
-    setPreviousIndex,
-  ] = useState<number | null>(null);
-
-  const intervalRef = useRef<number | null>(null);
-  const transitionTimeoutRef = useRef<number | null>(null);
-  const transitionLockRef = useRef(false);
-  const gestureRef = useRef<{ pointerId: number; startX: number; startY: number; lastX: number; lastY: number } | null>(null);
-  const [timerEpoch, setTimerEpoch] = useState(0);
-  const [manualPaused, setManualPaused] = useState(false);
-  const [holdMusicWhilePlaying, setHoldMusicWhilePlaying] = useState(false);
-  const [musicSources, setMusicSources] = useState<Record<string, { playing: boolean; lastSeenAt: number }>>({});
-  const musicSourceTimersRef = useRef<Record<string, number>>({});
-  // Presentation-only phases keep a sports eligibility refresh from hard-swapping the scene tree.
-  const [sportsPresentation, setSportsPresentation] = useState<SportsPresentationState | null>(null);
-  const sportsPresentationTransitionRef = useRef<number | null>(null);
-  const appliedCommandRevisionRef = useRef(0);
-  const bootId = searchParams.get("cosmic-boot")?.trim() ?? "";
-  const setMusicPlaying = useCallback((source: string, playing: boolean) => {
-    const lastSeenAt = Date.now();
-    const existingTimer = musicSourceTimersRef.current[source];
-    if (existingTimer !== undefined) window.clearTimeout(existingTimer);
-    if (playing) {
-      musicSourceTimersRef.current[source] = window.setTimeout(() => {
-        setMusicSources((current) => current[source]?.lastSeenAt === lastSeenAt ? { ...current, [source]: { playing: false, lastSeenAt } } : current);
-        delete musicSourceTimersRef.current[source];
-      }, KIOSK_MUSIC_PLAYBACK_STALE_MS);
-    } else {
-      delete musicSourceTimersRef.current[source];
-    }
-    setMusicSources((current) => current[source]?.playing === playing && current[source]?.lastSeenAt === lastSeenAt ? current : { ...current, [source]: { playing, lastSeenAt } });
-  }, []);
-  const pause = useCallback(() => { setManualPaused(true); }, []);
-  const resume = useCallback(() => { setManualPaused(false); setTimerEpoch((epoch) => epoch + 1); }, []);
-  const togglePause = useCallback(() => { setManualPaused((current) => !current); setTimerEpoch((epoch) => epoch + 1); }, []);
-  const safeCurrentIndex = widgets.length > 0
-    ? Math.min(currentIndex, widgets.length - 1)
-    : 0;
-  const safePreviousIndex = previousIndex !== null && previousIndex < widgets.length
-    ? previousIndex
-    : null;
-  const currentWidget = widgets[safeCurrentIndex];
-  const musicPlayingSource = Object.values(musicSources).find((source) => source.playing);
-  const musicHold = standaloneDeveloperKiosk
-    ? shouldPauseKioskForMusic({ standalone: true, scene: currentWidget?.id, playing: Boolean(musicPlayingSource), lastSeenAt: musicPlayingSource?.lastSeenAt })
-    : holdMusicWhilePlaying && Boolean(musicPlayingSource);
-  const paused = manualPaused || musicHold;
-  const pauseReason: KioskSlideshowPauseReason = manualPaused ? "manual" : musicHold ? "music-playing" : null;
-
-  const goToRelativeSlide = useCallback((direction: 1 | -1, resetTimer: boolean) => {
-    if (widgets.length <= 1 || transitionLockRef.current) return false;
-    if (sportsPresentation?.kind === "live") setDismissedSportsEventId(sportsPresentation.event.id);
-    if (sportsPresentation) setSportsPresentation(null);
-
-    transitionLockRef.current = true;
-    setCurrentIndex((current) => {
-      const from = Math.min(Math.max(current, 0), widgets.length - 1);
-      const to = (from + direction + widgets.length) % widgets.length;
-      setPreviousIndex(from);
-      if (process.env.NODE_ENV !== "production") console.info(`[kiosk-swipe] ${direction === 1 ? "left next" : "right previous"}`);
-      return to;
-    });
-    if (resetTimer && shouldResetKioskRotationAfterSwipe()) setTimerEpoch((epoch) => epoch + 1);
-    if (transitionTimeoutRef.current !== null) window.clearTimeout(transitionTimeoutRef.current);
-    transitionTimeoutRef.current = window.setTimeout(() => {
-      setPreviousIndex(null);
-      transitionLockRef.current = false;
-      transitionTimeoutRef.current = null;
-    }, KIOSK_TRANSITION_DURATION_MS);
-    return true;
-  }, [sportsPresentation, widgets.length]);
-
-  useEffect(() => {
-    const syncTimeout = window.setTimeout(() => {
-      if (sportsAttentionEvent) {
-        setSportsPresentation((current) => {
-          if (!current) return { event: sportsAttentionEvent, kind: "live", phase: "entering" };
-          if (current.phase === "exiting") return { event: sportsAttentionEvent, kind: "live", phase: "entering" };
-          return current.event.id === sportsAttentionEvent.id
-            ? current
-            : { event: sportsAttentionEvent, kind: "live", phase: current.phase };
-        });
-      } else {
-        setSportsPresentation((current) => {
-          if (!current || current.phase === "exiting") return current;
-          return { ...current, phase: "exiting" };
-        });
-      }
-    }, 0);
-
-    return () => window.clearTimeout(syncTimeout);
-  }, [sportsAttentionEvent]);
-
-  useEffect(() => {
-    if (!sportsPresentation) return;
-
-    if (sportsPresentationTransitionRef.current !== null) {
-      window.clearTimeout(sportsPresentationTransitionRef.current);
-      sportsPresentationTransitionRef.current = null;
-    }
-
-    if (sportsPresentation.phase === "entering") {
-      sportsPresentationTransitionRef.current = window.setTimeout(() => {
-        setSportsPresentation((current) => current?.phase === "entering" ? { ...current, phase: "active" } : current);
-        sportsPresentationTransitionRef.current = null;
-      }, KIOSK_TRANSITION_DURATION_MS);
-    } else if (sportsPresentation.phase === "exiting") {
-      sportsPresentationTransitionRef.current = window.setTimeout(() => {
-        setSportsPresentation(null);
-        sportsPresentationTransitionRef.current = null;
-      }, KIOSK_TRANSITION_DURATION_MS);
-    }
-
-    return () => {
-      if (sportsPresentationTransitionRef.current !== null) {
-        window.clearTimeout(sportsPresentationTransitionRef.current);
-        sportsPresentationTransitionRef.current = null;
-      }
-    };
-  }, [sportsPresentation]);
-
-  useEffect(() => {
-    if (sportsAttentionEvent || sportsPresentation || paused) {
-      return;
-    }
-
-    if (widgets.length <= 1) {
-      return;
-    }
-
-    intervalRef.current =
-      window.setInterval(() => {
-        goToRelativeSlide(1, false);
-      }, KIOSK_SLIDE_DURATION_MS);
-
-    if (process.env.NODE_ENV !== "production") console.info("[kiosk-slideshow] interval-start");
-
-    return () => {
-      if (intervalRef.current !== null) {
-        window.clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
-      if (process.env.NODE_ENV !== "production") console.info("[kiosk-slideshow] interval-stop");
-    };
-  }, [
-    sportsAttentionEvent,
-    sportsPresentation,
-    paused,
-    goToRelativeSlide,
-    timerEpoch,
-    widgets.length,
-  ]);
-
-  useEffect(() => () => {
-    if (transitionTimeoutRef.current !== null) window.clearTimeout(transitionTimeoutRef.current);
-    transitionTimeoutRef.current = null;
-    if (sportsPresentationTransitionRef.current !== null) window.clearTimeout(sportsPresentationTransitionRef.current);
-    sportsPresentationTransitionRef.current = null;
-    if (finalDwellTimerRef.current !== null) window.clearTimeout(finalDwellTimerRef.current);
-    finalDwellTimerRef.current = null;
-    Object.values(musicSourceTimersRef.current).forEach((timer) => window.clearTimeout(timer));
-    musicSourceTimersRef.current = {};
-    transitionLockRef.current = false;
-  }, []);
-
-  const stateRef = useRef({ currentSlide: "", paused, pauseReason });
-  useEffect(() => {
-    stateRef.current = { currentSlide: currentWidget?.id ?? "", paused, pauseReason };
-  }, [currentWidget?.id, paused, pauseReason]);
-
-  useEffect(() => {
-    if (!bootId) return;
-    let cancelled = false;
-    let inFlight = false;
-    let controller: AbortController | null = null;
-    const stopResource = startKioskResource("kiosk-control");
-    const sync = async () => {
-      if (inFlight) return;
-      inFlight = true;
-      controller = new AbortController();
-      const timeout = window.setTimeout(() => controller?.abort(), 4_000);
-      try {
-        const response = await fetch(`/api/devices/kiosk-control?cosmic-kiosk=1&cosmic-boot=${encodeURIComponent(bootId)}`, { cache: "no-store", credentials: "include", signal: controller.signal });
-        if (!response.ok || cancelled) return;
-        const state = await response.json() as { paused: boolean; pauseReason: KioskSlideshowPauseReason; holdMusicWhilePlaying: boolean; command?: "pause" | "resume" | "next" | "previous" | null; commandRevision: number; appliedCommandRevision: number };
-        setHoldMusicWhilePlaying(state.holdMusicWhilePlaying);
-        let nextPaused = stateRef.current.paused;
-        let nextReason = stateRef.current.pauseReason;
-        if (state.pauseReason === "manual" || (state.pauseReason === null && state.command === "resume")) {
-          nextPaused = state.paused;
-          nextReason = state.pauseReason;
-          setManualPaused(state.paused && state.pauseReason === "manual");
-        }
-        if (state.command && state.commandRevision > appliedCommandRevisionRef.current && state.commandRevision > state.appliedCommandRevision) {
-          appliedCommandRevisionRef.current = state.commandRevision;
-          if (state.command === "pause") { nextPaused = true; nextReason = "manual"; setManualPaused(true); }
-          if (state.command === "resume") { nextPaused = false; nextReason = null; setManualPaused(false); setTimerEpoch((epoch) => epoch + 1); }
-          if (state.command === "next") goToRelativeSlide(1, true);
-          if (state.command === "previous") goToRelativeSlide(-1, true);
-        } else {
-          appliedCommandRevisionRef.current = Math.max(appliedCommandRevisionRef.current, state.appliedCommandRevision);
-        }
-        await fetch(`/api/devices/kiosk-control?cosmic-kiosk=1&cosmic-boot=${encodeURIComponent(bootId)}`, { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include", body: JSON.stringify({ action: "report", currentSlide: stateRef.current.currentSlide, paused: nextPaused, pauseReason: nextReason, appliedCommandRevision: appliedCommandRevisionRef.current }), signal: controller.signal });
-      } catch { /* A transient control failure must not interrupt the kiosk. */ }
-      finally { window.clearTimeout(timeout); controller = null; inFlight = false; }
-    };
-    void sync();
-    const interval = window.setInterval(() => void sync(), 1500);
-    return () => { cancelled = true; window.clearInterval(interval); controller?.abort(); stopResource(); };
-  }, [bootId, goToRelativeSlide]);
-
-  const handlePointerDown = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
-    if (widgets.length <= 1 || (event.pointerType === "mouse" && event.button !== 0)) return;
-    event.preventDefault();
-    gestureRef.current = {
-      pointerId: event.pointerId,
-      startX: event.clientX,
-      startY: event.clientY,
-      lastX: event.clientX,
-      lastY: event.clientY,
-    };
-    event.currentTarget.setPointerCapture(event.pointerId);
-  }, [widgets.length]);
-
-  const handlePointerMove = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
-    const gesture = gestureRef.current;
-    if (!gesture || gesture.pointerId !== event.pointerId) return;
-    gesture.lastX = event.clientX;
-    gesture.lastY = event.clientY;
-  }, []);
-
-  const finishPointerGesture = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
-    const gesture = gestureRef.current;
-    if (!gesture || gesture.pointerId !== event.pointerId) return;
-    gestureRef.current = null;
-    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
-
-    const deltaX = gesture.lastX - gesture.startX;
-    const deltaY = gesture.lastY - gesture.startY;
-    const threshold = Math.max(50, window.innerWidth * 0.05);
-    const direction = resolveKioskSwipeDirection(deltaX, deltaY, threshold);
-    if (direction === null) return;
-    goToRelativeSlide(direction, true);
-  }, [goToRelativeSlide]);
-
-  useEffect(() => {
-    setPersistentClockHidden(!sportsAttentionEvent && !sportsPresentation && currentWidget?.id === "clock");
-    return () => setPersistentClockHidden(false);
-  }, [currentWidget?.id, sportsAttentionEvent, setPersistentClockHidden, sportsPresentation]);
-
-  if (widgets.length === 0) {
-    return (
-      <div className="grid min-h-[100dvh] place-items-center px-6 text-center">
-        <div>
-          <p className="text-sm font-semibold uppercase tracking-[0.22em] text-cyan-100/45">
-            Cosmic Kiosk
-          </p>
-
-          <h1 className="mt-3 text-3xl font-bold text-white/90">
-            No kiosk slides available
-          </h1>
-
-          <p className="mt-2 text-sm text-white/40">
-            Enable at least one
-            dashboard widget.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  const previousWidget = safePreviousIndex !== null ? widgets[safePreviousIndex] : null;
-
-  if (process.env.NODE_ENV !== "production" && searchParams.get("cosmic-test-crash") === "root") {
-    throw new Error("Development kiosk root crash test");
-  }
-
-  if (!currentWidget) {
-    return null;
-  }
-
-  const control = { currentSlide: currentWidget.id, paused, pauseReason, pause, resume, togglePause, setMusicPlaying };
-  return (
-    <KioskSlideshowProvider value={control}>
-    <KioskRuntimeData enabled={kioskRuntimeReady} />
-    <div
-      className="kiosk-slideshow absolute inset-0 h-[100dvh] w-[100dvw] overflow-hidden"
-      onPointerDown={handlePointerDown}
-      onPointerMove={handlePointerMove}
-      onPointerUp={finishPointerGesture}
-      onPointerCancel={finishPointerGesture}
-      style={{ touchAction: "pan-y", userSelect: "none", WebkitUserSelect: "none", WebkitTouchCallout: "none" }}
-      onDragStart={(event) => event.preventDefault()}
-      aria-label="Cosmic kiosk slideshow"
-    >
-      <div className={`kiosk-sports-transition-layer kiosk-sports-transition-normal ${sportsPresentation ? `kiosk-sports-transition-normal-${sportsPresentation.phase}` : ""}`}>
-        {previousWidget ? (
-          <KioskSlide
-            key={`previous-${previousWidget.id}-${safePreviousIndex}`}
-            widget={previousWidget}
-            active={false}
-            exiting
-          />
-        ) : null}
-
-        <KioskSlide
-          key={`current-${currentWidget.id}-${currentIndex}`}
-          widget={currentWidget}
-          active
-          exiting={false}
-        />
-      </div>
-
-      {sportsPresentation ? (
-        <div className={`kiosk-sports-transition-layer kiosk-sports-transition-sports kiosk-sports-transition-sports-${sportsPresentation.phase}`} aria-hidden={sportsPresentation.phase !== "active"}>
-          <KioskSportsOverride event={sportsPresentation.event} visible={sportsPresentation.phase === "active"} />
-        </div>
-      ) : null}
-
-      <span className="sr-only" aria-live="polite">Current kiosk scene: {currentWidget.id}</span>
-      {paused ? <span className="pointer-events-none absolute right-5 top-5 z-30 rounded-full border border-white/15 bg-black/35 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-white/65 backdrop-blur-sm">Paused</span> : null}
-      {manualSportsOverride ? <span className="pointer-events-none absolute bottom-5 right-5 z-30 rounded-full border border-amber-200/30 bg-black/45 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-amber-100/85 backdrop-blur-sm">TEST OVERRIDE</span> : null}
-    </div>
-    </KioskSlideshowProvider>
-  );
-}
-
-function KioskRuntimeData({ enabled }: { enabled: boolean }) {
-  useDeveloperKioskData({ enabled, poll: true });
-  useMusic({ enabled, refreshMs: (snapshot) => musicRefreshMs(true, snapshot?.playback.playing === true) });
-  useEffect(() => {
-    if (process.env.NODE_ENV !== "production") {
-      const state = enabled ? "start" : "stop";
-      const reason = enabled ? "auth-established" : "auth-not-established";
-      console.info(`[kiosk-runtime] auth=${enabled ? "established" : "checking"} runtimeReady=${enabled}`);
-      console.info(`[kiosk-data] poller=${state} reason=${reason}`);
-      console.info(`[sports] poller=${state} reason=${reason}`);
-      console.info(`[music] poller=${state} reason=${reason}`);
-    }
-  }, [enabled]);
-  return null;
-}
-
-type DemoStep =
-  | { id: "clock" | "weather" | "calendar" | "notifications" | "music" | "system"; duration: number }
-  | { id: "sports" | "resilience"; duration: number };
-
-const SPONSOR_DEMO_STEPS: DemoStep[] = [
-  { id: "clock", duration: 10_000 },
-  { id: "weather", duration: 10_000 },
-  { id: "calendar", duration: 10_000 },
-  { id: "notifications", duration: 10_000 },
-  { id: "music", duration: 10_000 },
-  { id: "sports", duration: 10_000 },
-  { id: "system", duration: 10_000 },
-  { id: "resilience", duration: 6_000 },
-  { id: "clock", duration: 10_000 },
-];
-
-function KioskSponsorDemo() {
-  const searchParams = useSearchParams();
-  const { setPersistentClockHidden } = useKioskAmbientFrame();
-  const loop = searchParams.get("loop") === "1";
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [previousIndex, setPreviousIndex] = useState<number | null>(null);
-  const [paused, setPaused] = useState(false);
-  const [completed, setCompleted] = useState(false);
-  const transitionTimeoutRef = useRef<number | null>(null);
-  const steps = SPONSOR_DEMO_STEPS;
-  const currentStep = steps[currentIndex];
-  const previousStep = previousIndex === null ? null : steps[previousIndex];
-  const widgets = useMemo(() => dashboardWidgets.filter((widget) => ["clock", "weather", "calendar", "notifications", "music", "system"].includes(widget.id) && WIDGET_REGISTRY.some((entry) => entry.id === widget.id && entry.enabled)), []);
-  const widgetById = useMemo(() => new Map(widgets.map((widget) => [widget.id, widget])), [widgets]);
-
-  const advance = useCallback(() => {
-    if (paused || completed || transitionTimeoutRef.current !== null) return;
-    const nextIndex = currentIndex + 1;
-    if (nextIndex >= steps.length) {
-      if (loop) {
-        setPreviousIndex(currentIndex);
-        setCurrentIndex(0);
-        transitionTimeoutRef.current = window.setTimeout(() => {
-          setPreviousIndex(null);
-          transitionTimeoutRef.current = null;
-        }, KIOSK_TRANSITION_DURATION_MS);
-      } else {
-        setCompleted(true);
+    if (musicPlaying) {
+      lastMusicPlayingAt.current = Date.now();
+      setMusicHold(true);
+      if (!musicSessionActive.current) {
+        musicSessionActive.current = true;
+        if (forcedIndex < 0) setIndex(BUILD_SLIDES.findIndex(slide => slide.id === "music"));
+        setRotationEpoch(value => value + 1);
       }
       return;
     }
-    setPreviousIndex(currentIndex);
-    setCurrentIndex(nextIndex);
-    transitionTimeoutRef.current = window.setTimeout(() => {
-      setPreviousIndex(null);
-      transitionTimeoutRef.current = null;
-    }, KIOSK_TRANSITION_DURATION_MS);
-  }, [completed, currentIndex, loop, paused, steps.length]);
-
-  useEffect(() => {
-    if (paused || completed) return;
-    const timer = window.setTimeout(advance, currentStep.duration);
+    if (!musicSessionActive.current) return;
+    // Transient Spotify 204 / missing metadata must not release playback
+    // immediately, but it must not freeze the kiosk indefinitely either.
+    // Keep the last confirmed-playing time, and release after a full minute
+    // without a playing report even if the provider stays unavailable.
+    const elapsed = Date.now() - (lastMusicPlayingAt.current ?? Date.now());
+    const timer = window.setTimeout(() => {
+      musicSessionActive.current = false;
+      lastMusicPlayingAt.current = null;
+      setMusicHold(false);
+      setRotationEpoch(value => value + 1);
+    }, Math.max(0, 60_000 - elapsed));
     return () => window.clearTimeout(timer);
-  }, [advance, completed, currentStep.duration, paused]);
+  }, [musicPlaying, music.connected, music.requestError, music.providerError, music.playback?.track?.id, forcedIndex]);
+  const pointerStart = useRef<{ id: number; x: number; y: number } | null>(null);
 
-  useEffect(() => () => {
-    if (transitionTimeoutRef.current !== null) window.clearTimeout(transitionTimeoutRef.current);
+  const goTo = useCallback((direction: 1 | -1) => {
+    setIndex((current) => (current + direction + BUILD_SLIDES.length) % BUILD_SLIDES.length);
+    setRotationEpoch((value) => value + 1);
   }, []);
 
   useEffect(() => {
-    setPersistentClockHidden(currentStep.id !== "clock");
-    return () => setPersistentClockHidden(false);
-  }, [currentStep.id, setPersistentClockHidden]);
+    if (forcedIndex >= 0) {
+      setIndex(forcedIndex);
+      return;
+    }
 
-  const currentWidget = widgetById.get(currentStep.id);
-  const previousWidget = previousStep ? widgetById.get(previousStep.id) : undefined;
-  const control = {
-    currentSlide: currentStep.id,
-    paused,
-    pauseReason: paused ? "manual" as const : null,
-    pause: () => setPaused(true),
-    resume: () => { setPaused(false); setCompleted(false); },
-    togglePause: () => setPaused((value) => !value),
-    setMusicPlaying: () => undefined,
+    if (musicHold) return;
+    const timer = window.setInterval(() => {
+      setIndex((current) => (current + 1) % BUILD_SLIDES.length);
+    }, ROTATION_MS);
+
+    return () => window.clearInterval(timer);
+  }, [forcedIndex, rotationEpoch, musicHold]);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (target?.matches("input, textarea, select, [contenteditable=true]")) return;
+
+      if (event.key === "ArrowRight") {
+        event.preventDefault();
+        goTo(1);
+      } else if (event.key === "ArrowLeft") {
+        event.preventDefault();
+        goTo(-1);
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [goTo]);
+
+  const onPointerDown = (event: React.PointerEvent<HTMLElement>) => {
+    if (!event.isPrimary) return;
+    pointerStart.current = { id: event.pointerId, x: event.clientX, y: event.clientY };
+    // Do not capture touches on the slide root: capture retargets button taps
+    // away from the Music controls on Chromium touchscreens.
   };
 
-  return (
-    <KioskSlideshowProvider value={control}>
-      <div className="kiosk-slideshow absolute inset-0 h-[100dvh] w-[100dvw] overflow-hidden" aria-label="Cosmic sponsor presentation">
-        {previousWidget ? <KioskSlide key={`demo-previous-${previousWidget.id}-${previousIndex}`} widget={previousWidget} active={false} exiting /> : null}
-        {currentWidget ? <KioskSlide key={`demo-current-${currentWidget.id}-${currentIndex}`} widget={currentWidget} active exiting={false} /> : null}
-        {previousStep?.id === "sports" ? <div className="kiosk-sports-transition-layer kiosk-sports-transition-sports kiosk-sports-transition-sports-exiting"><KioskSportsOverride event={createTestEvent("nfl")} /></div> : null}
-        {currentStep.id === "sports" ? <div className="kiosk-sports-transition-layer kiosk-sports-transition-sports kiosk-sports-transition-sports-entering"><KioskSportsOverride event={createTestEvent("nfl")} /></div> : null}
-        {previousStep?.id === "resilience" ? <div className="kiosk-demo-transition-layer kiosk-demo-transition-exit"><KioskDemoResilienceScene initiallyRecovered /></div> : null}
-        {currentStep.id === "resilience" ? <div className="kiosk-demo-transition-layer kiosk-demo-transition-enter"><KioskDemoResilienceScene /></div> : null}
-        {completed ? <span className="sr-only" aria-live="polite">Sponsor presentation complete</span> : null}
-      </div>
-    </KioskSlideshowProvider>
-  );
-}
+  const onPointerUp = (event: React.PointerEvent<HTMLElement>) => {
+    const start = pointerStart.current;
+    pointerStart.current = null;
+    if (!start || start.id !== event.pointerId) return;
 
-function KioskDemoResilienceScene({ initiallyRecovered = false }: { initiallyRecovered?: boolean }) {
-  const [recovered, setRecovered] = useState(initiallyRecovered);
-  useEffect(() => {
-    if (initiallyRecovered) return;
-    const timer = window.setTimeout(() => setRecovered(true), 2_500);
-    return () => window.clearTimeout(timer);
-  }, [initiallyRecovered]);
-  return <KioskSceneFrame scene="system" eyebrow="COSMIC • SYSTEM" title={recovered ? "Recovered" : "Reconnecting"} subtitle={recovered ? "Display status is current again." : "Cosmic will reconnect automatically."}><div className="kiosk-native-scene-details"><span>{recovered ? "Connection restored" : "Refreshing display state"}</span></div></KioskSceneFrame>;
+    const dx = event.clientX - start.x;
+    const dy = event.clientY - start.y;
+    if (Math.abs(dx) < SWIPE_THRESHOLD_PX || Math.abs(dx) <= Math.abs(dy)) return;
+
+    goTo(dx < 0 ? 1 : -1);
+  };
+
+  const onPointerCancel = () => {
+    pointerStart.current = null;
+  };
+
+  const active = BUILD_SLIDES[index] ?? BUILD_SLIDES[0];
+  const ActiveSlide = active.component;
+
+  return (
+    <main
+      className="fixed inset-0 h-[100dvh] w-[100dvw] touch-pan-y overflow-hidden bg-black"
+      data-kiosk-rebuild={active.id}
+      data-kiosk-part="11-of-11"
+      data-kiosk-slide-index={index}
+      data-kiosk-slide-count={BUILD_SLIDES.length}
+      data-kiosk-music-hold={musicHold ? "active" : "inactive"}
+      data-kiosk-music-playing={musicPlaying ? "yes" : "no"}
+      data-kiosk-location-source={kioskData.data?.location?.source ?? "unknown"}
+      data-kiosk-location-city={displayCity ?? "unknown"}
+      onPointerDown={onPointerDown}
+      onPointerUp={onPointerUp}
+      onPointerCancel={onPointerCancel}
+    >
+      <div
+        key={active.id}
+        className="h-full w-full animate-[kiosk-rebuild-slide-in_420ms_cubic-bezier(.22,.61,.36,1)] motion-reduce:animate-none"
+      >
+        <WidgetProvider size="medium" presentation="kiosk" active>
+          <ActiveSlide />
+        </WidgetProvider>
+      </div>
+
+      {active.id !== "clock" && active.id !== "weather" && (
+        <div className={`pointer-events-none absolute right-[3.4vw] z-50 flex items-start gap-[1.3vw] text-right text-white drop-shadow-lg ${active.id === "system" ? "top-[2vh] [&_.kiosk-header-date]:text-[10px] [&_.kiosk-header-time]:text-[20px] [&_.kiosk-header-weather]:text-[20px] [&_.kiosk-header-detail]:text-[10px] [&_.kiosk-header-detail]:leading-tight" : "top-[3.8vh]"}`}>
+          <div><div className="kiosk-header-date text-xs tracking-wider">{headerClock ? new Intl.DateTimeFormat(undefined, { weekday: "short", month: "short", day: "numeric" }).format(headerClock) : ""}</div><div className="kiosk-header-time text-2xl tabular-nums">{headerClock ? new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" }).format(headerClock) : "--:--"}</div></div>
+          <div className="border-l border-white/25 pl-[1.3vw]"><div className="kiosk-header-weather text-2xl font-semibold">{displayWeather ? `${Math.round(displayWeather.temp)}°` : "--°"}</div><div className="kiosk-header-detail text-xs">{displayWeather?.condition ?? "Weather unavailable"}</div><div className="kiosk-header-detail text-xs opacity-70">{displayCity ?? ""}</div></div>
+        </div>
+      )}
+      <div className="cosmos-kiosk-slide-dots" aria-label={`Slide ${index + 1} of ${BUILD_SLIDES.length}`}>
+        {BUILD_SLIDES.map((slide, slideIndex) => (
+          <span key={slide.id} className={slideIndex === index ? "is-active" : ""} />
+        ))}
+      </div>
+    </main>
+  );
 }
