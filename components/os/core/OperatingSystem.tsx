@@ -34,19 +34,19 @@ export default function OperatingSystem() {
 
 function Desktop() {
   return (
-    <div data-cosmic-os-root className="cosmic-os-root cosmic-site-shell cosmos-app-shell relative min-h-screen w-full text-white">
+    <div data-cosmic-os-root className="cosmic-os-root cosmic-site-shell cosmos-app-shell cosmos-home-scroll-shell relative flex h-dvh w-full flex-col overflow-hidden text-white">
       <div className="cosmos-home-orbit" aria-hidden="true">
         <div className="cosmos-home-orbit-planet" />
         <div className="cosmos-home-orbit-glow" />
       </div>
-      <div className="cosmos-mobile-shell relative z-20 p-3 lg:hidden">
+      <div className="cosmos-mobile-shell relative z-20 shrink-0 p-3 lg:hidden">
         <Sidebar variant="top" />
       </div>
-      <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-[1920px]">
+      <div className="relative z-10 mx-auto flex min-h-0 w-full max-w-[1920px] flex-1">
         <Sidebar />
-        <div className="min-w-0 flex-1 px-3 pb-5 sm:px-5 lg:px-6 lg:pb-6">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col px-3 sm:px-5 lg:px-6">
           <CosmosTopBar />
-          <div data-cosmic-workspace className="cosmic-os-workspace cosmos-page-slot">
+          <div data-cosmic-workspace className="cosmic-os-workspace cosmos-page-slot min-h-0 flex-1 overflow-y-auto overscroll-contain pb-5 lg:pb-6">
             <DashboardBoundary><CosmosHome /></DashboardBoundary>
           </div>
         </div>
