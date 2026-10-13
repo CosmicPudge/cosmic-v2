@@ -4,12 +4,12 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import useKioskDeviceLocation from "@/hooks/os/useKioskDeviceLocation";
 import { DashboardReadinessProvider } from "@/components/dashboard/readiness/DashboardReadiness";
-import KioskAmbientFrame from "./KioskAmbientFrame";
 import KioskSlideshow from "./KioskSlideshow";
 import { KioskRuntimeProvider } from "./KioskRuntimeContext";
 import { ConnectionHealthProvider } from "@/services/kiosk/ConnectionHealthProvider";
 import KioskDiagnosticsView from "./KioskDiagnosticsView";
 import { isKioskDiagnosticsRequested, kioskDiagnosticsRenderState } from "./kioskDiagnosticsPolicy";
+import CosmosKioskLoadingScreen from "./CosmosKioskLoadingScreen";
 
 export default function StandaloneDesktopKiosk() {
   const searchParams = useSearchParams();
@@ -94,9 +94,9 @@ export default function StandaloneDesktopKiosk() {
   return (
     <div className="fixed inset-0 z-[100] h-[100dvh] w-[100dvw] overflow-hidden bg-[#02040e] text-white" data-desktop-kiosk>
       <KioskRuntimeProvider ready={runtimeReady}>
-        {renderState === "establishing-session" ? <div className="grid min-h-[100dvh] place-items-center bg-[#02040e] text-sm text-white/55">Establishing kiosk session…</div> : null}
+        {renderState === "establishing-session" ? <CosmosKioskLoadingScreen label="Connecting your display" /> : null}
         {renderState === "diagnostics" ? <KioskDiagnosticsView /> : null}
-        {renderState === "normal" ? <ConnectionHealthProvider><DashboardReadinessProvider criticalWidgetIds={[]}><KioskAmbientFrame><KioskSlideshow /></KioskAmbientFrame></DashboardReadinessProvider></ConnectionHealthProvider> : null}
+        {renderState === "normal" ? <ConnectionHealthProvider><DashboardReadinessProvider criticalWidgetIds={[]}><KioskSlideshow /></DashboardReadinessProvider></ConnectionHealthProvider> : null}
       </KioskRuntimeProvider>
       <span className="sr-only">Cosmic developer kiosk presentation.</span>
     </div>
