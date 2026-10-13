@@ -254,7 +254,7 @@ export function CosmicTransitionProvider({ children }: { children: ReactNode }) 
   const routeEntries = ROUTE_READINESS.map(([route, label, critical]) => ({ route, label, critical: [...critical], ready: Boolean(routeStates[route]?.ready), status: routeStates[route]?.status ?? "pending" })) satisfies RouteReadinessEntry[];
   const value = useMemo(() => ({ mode, intensity, pathname, destination: pendingDestination ?? routeLabel(pathname), bootComplete, bootOffline, reducedMotion, visible, progress, tasks, routeEntries, metrics, debugMode, dashboardReadiness, setDashboardReadiness: updateDashboardReadiness, markRouteReady, setRouteTask, prefetch }), [bootComplete, bootOffline, dashboardReadiness, debugMode, intensity, markRouteReady, metrics, mode, pathname, pendingDestination, prefetch, progress, reducedMotion, routeEntries, setRouteTask, tasks, updateDashboardReadiness, visible]);
 
-  return <TransitionContext.Provider value={value}>{children}<CosmicTransitionSurface key={`${pathname}-${visible}-${bootComplete}`} /></TransitionContext.Provider>;
+  return <TransitionContext.Provider value={value}>{children}{process.env.NODE_ENV === "production" ? <CosmicTransitionSurface key={`${pathname}-${visible}-${bootComplete}`} /> : null}</TransitionContext.Provider>;
 }
 
 export function useCosmicTransition() {
