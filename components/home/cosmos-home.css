@@ -115,3 +115,18 @@ html[data-cosmos-surface="solid"] .cosmos-home-card {background:#12102a;backdrop
   -webkit-backdrop-filter: none !important;
   backdrop-filter: none !important;
 }
+
+/* M1 viewport behavior approved in M0: only the dashboard content scrolls.
+   Wallpaper remains fixed; sidebar and toolbar stay visible. */
+.cosmos-home-scroll-shell [data-cosmic-workspace] {
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+.cosmos-home-scroll-shell .cosmos-reference-topbar {
+  flex-shrink: 0;
+}
