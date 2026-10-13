@@ -67,8 +67,9 @@
   background:rgba(17,10,43,.47);
   border:1px solid rgba(189,145,252,.34);
   box-shadow:inset 0 1px 0 rgba(232,202,255,.13),0 13px 40px rgba(4,2,17,.13);
-  -webkit-backdrop-filter:blur(11px) saturate(1.08);
-  backdrop-filter:blur(11px) saturate(1.08);
+  /* M0's clear glass rule: tint is transparent, scenery stays sharp. */
+  -webkit-backdrop-filter:none;
+  backdrop-filter:none;
 }
 .cosmos-home-card-icon {
   border:1px solid rgba(193,157,255,.25);
@@ -107,4 +108,10 @@ html[data-cosmos-surface="solid"] .cosmos-home-card {background:#12102a;backdrop
 }
 @media (max-width: 639px) {
   .cosmos-home-orbit { background-position: 67% center; }
+}
+
+/* Ensure shared .cosmos-card blur cannot override M1 Home clear glass. */
+.cosmos-home .cosmos-card.cosmos-home-card {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
 }
