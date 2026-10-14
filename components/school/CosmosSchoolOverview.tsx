@@ -118,7 +118,8 @@ export default function CosmosSchoolOverview({ preview = false }: { preview?: bo
 
   const manualSchedule = getWeeklySchedule(courses, term, new Date(now));
   const todayClasses = manualSchedule.filter((item) => item.start.toDateString() === new Date(now).toDateString()).map((item) => ({ id: `${item.course.id}-${item.start.toISOString()}`, name: item.course.code || item.course.name, start: item.start, end: item.end, location: item.location }));
-  const nextClass = manualSchedule.find((item) => item.end.getTime() > now);
+  const currentClass = manualSchedule.find((item) => item.start.getTime() <= now && item.end.getTime() > now);
+  const nextClass = manualSchedule.find((item) => item.start.getTime() > now);
 
   const workload = Array.from({ length: 7 }, (_, offset) => {
     const date = new Date(now);
