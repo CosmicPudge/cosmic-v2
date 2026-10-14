@@ -43,7 +43,7 @@ export default function AssignmentDetailPage({ params }: { params: Promise<{ ass
   });
   const resolution = resolveAssignmentDetail({ assignmentId, localReady: local.ready, providerLoading: loading, localAssignments: local.data.assignments, courses: local.data.courses, terms: local.data.terms, providerCourses: snapshot?.canvasCourses ?? [], providerAssignments: [...(snapshot?.planningAssignments ?? []), ...feedAssignments] });
   if (resolution.state === "loading") return <p role="status" className="py-16 text-sm text-white/50">Loading assignment…</p>;
-  if (resolution.state === "not-found") return <div className="rounded-2xl border border-white/10 bg-white/5 p-6 text-white/60"><p>Assignment not found in the current School data.</p><Link href="/school/assignments" className="mt-4 inline-block text-sky-100/80">← Back to assignments</Link></div>;
+  if (resolution.state === "not-found") return <div className="rounded-2xl border border-white/10 bg-white/5 p-6 text-white/60"><p>Assignment not found in the current School data.</p><p className="mt-2 text-xs text-white/45">Local feed diagnostic: {snapshot?.assignments?.length ?? 0} calendar assignments available · {feedAssignments.length} detail records · route type: {assignmentId.startsWith("canvas-calendar:") ? "Canvas Calendar" : "Other"}. No private URL is shown.</p><Link href="/school/assignments" className="mt-4 inline-block text-sky-100/80">← Back to assignments</Link></div>;
   const { assignment: item, courseIdentity } = resolution;
   const intelligence = analysis?.id === item.id ? analysis.intelligence : item.intelligence;
   const intelligenceStale = Boolean(intelligence?.generatedAt && (item.sourceUpdatedAt ?? item.updatedAt).getTime() > Date.parse(intelligence.generatedAt) + 1_000);
