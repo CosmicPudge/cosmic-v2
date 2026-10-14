@@ -44,15 +44,18 @@ function MetricCard({
   detail,
   icon: Icon,
   loading,
+  href,
 }: {
   label: string;
   value: string;
   detail: string;
   icon: typeof GraduationCap;
   loading?: boolean;
+  href: string;
 }) {
   return (
-    <CosmicCard className="p-5">
+    <Link href={href} className="block h-full rounded-2xl focus-visible:outline-2 focus-visible:outline-violet-300">
+    <CosmicCard className="h-full p-5 transition-colors hover:border-violet-300/50">
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/35">{label}</p>
@@ -64,6 +67,7 @@ function MetricCard({
         </div>
       </div>
     </CosmicCard>
+    </Link>
   );
 }
 
@@ -154,20 +158,20 @@ export default function CosmosSchoolOverview({ preview = false }: { preview?: bo
       ) : null}
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <MetricCard label="Current GPA" value={gpa !== undefined ? gpa.toFixed(2) : "—"} detail={gpa !== undefined ? "Calculated from manually entered letter grades" : "Enter course grades to calculate GPA"} icon={TrendingUp} loading={loading && !data} />
-        <MetricCard label="Next class" value={nextClass ? formatTime(nextClass.start) : "Clear"} detail={nextClass ? (nextClass.course.code || nextClass.course.name) : "Add weekly meetings to your courses"} icon={Clock3} loading={loading && !data} />
-        <MetricCard label="Due soon" value={String(dueSoon)} detail="Canvas calendar + manually entered assignments" icon={CheckCircle2} loading={loading && !data} />
-        <MetricCard label="Credits" value={String(credits)} detail={term ? `Enrolled credits · ${term.name}` : "Add courses to track credits"} icon={GraduationCap} loading={!local.ready} />
+        <MetricCard label="Current GPA" value={gpa !== undefined ? gpa.toFixed(2) : "—"} detail={gpa !== undefined ? "Calculated from manually entered letter grades" : "Enter course grades to calculate GPA"} icon={TrendingUp} href="/school/grades" loading={loading && !data} />
+        <MetricCard label="Next class" value={nextClass ? formatTime(nextClass.start) : "Clear"} detail={nextClass ? (nextClass.course.code || nextClass.course.name) : "Add weekly meetings to your courses"} icon={Clock3} href="/school/schedule" loading={loading && !data} />
+        <MetricCard label="Due soon" value={String(dueSoon)} detail="Canvas calendar + manually entered assignments" icon={CheckCircle2} href="/school/assignments" loading={loading && !data} />
+        <MetricCard label="Credits" value={String(credits)} detail={term ? `Enrolled credits · ${term.name}` : "Add courses to track credits"} icon={GraduationCap} href="/school/courses" loading={!local.ready} />
       </div>
 
-      <div className="mt-6 grid gap-4 xl:grid-cols-[1.15fr_.85fr]">
-        <CosmicCard className="overflow-hidden">
+      <div className="mt-5 grid gap-4 xl:grid-cols-3">
+        <div className="min-w-0"><CosmicCard className="overflow-hidden h-full">
           <div className="flex items-end justify-between gap-4 p-5 sm:p-6">
             <div>
               <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-violet-200/55">Today</p>
               <h2 className="mt-1 text-xl font-semibold tracking-tight text-white">Today&apos;s classes</h2>
             </div>
-            <Link href="/school/calendar" className="text-sm text-cyan-100/65 hover:text-white">Open calendar</Link>
+            <Link href="/school/calendar" className="text-sm text-cyan-100/65 hover:text-white">Full schedule</Link>
           </div>
 
           {loading && !data ? (
@@ -184,33 +188,8 @@ export default function CosmosSchoolOverview({ preview = false }: { preview?: bo
           )) : (
             <p className="border-t border-white/[0.07] px-5 py-6 text-sm text-white/45 sm:px-6">No classes scheduled today. Add meeting times under Courses.</p>
           )}
-        </CosmicCard>
-
-        <CosmicCard className="p-5 sm:p-6">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-fuchsia-200/50">Next 7 days</p>
-              <h2 className="mt-1 text-xl font-semibold tracking-tight text-white">Weekly workload</h2>
-            </div>
-            <CalendarDays size={20} className="text-fuchsia-100/70" />
-          </div>
-          <p className="mt-2 text-xs text-white/45">Assignment deadlines per day · not recorded study time</p>
-          <div className="mt-6 grid grid-cols-7 gap-2">
-            {workload.map((item) => (
-              <div key={item.label} className="flex min-w-0 flex-col items-center gap-2">
-                <div className="flex h-28 w-full items-end rounded-lg border border-white/[0.06] bg-white/[0.025] p-1">
-                  <div className="w-full rounded-md bg-gradient-to-t from-violet-500/75 to-cyan-300/65" style={{ height: `${Math.max(8, (item.count / maxWorkload) * 100)}%` }} />
-                </div>
-                <span className="text-[10px] text-white/35">{item.label}</span>
-                <span className="text-xs font-semibold tabular-nums text-white/65">{item.count}</span>
-              </div>
-            ))}
-          </div>
-        </CosmicCard>
-      </div>
-
-      <div className="mt-4 grid gap-4 xl:grid-cols-[1.2fr_.8fr]">
-        <CosmicCard className="overflow-hidden">
+        </CosmicCard></div>
+        <div className="min-w-0"><CosmicCard className="overflow-hidden h-full">
           <div className="flex items-end justify-between gap-4 p-5 sm:p-6">
             <div>
               <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-cyan-200/50">Assignments</p>
@@ -232,10 +211,33 @@ export default function CosmosSchoolOverview({ preview = false }: { preview?: bo
               <ArrowUpRight size={15} className="text-white/20 transition group-hover:text-white/60" />
             </Link>
           ))}
-          {!openAssignments.length ? <p className="border-t border-white/[0.07] px-5 py-6 text-sm text-white/45 sm:px-6">No open assignments found.</p> : null}
-        </CosmicCard>
+          {!openAssignments.length ? <p className="border-t border-white/[0.07] px-5 py-6 text-sm text-white/45 sm:px-6">No assignments yet. Connect your Canvas calendar or add assignments manually.</p> : null}
+        </CosmicCard></div>
+        <div className="min-w-0"><CosmicCard className="p-5 sm:p-6 h-full">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-fuchsia-200/50">Next 7 days</p>
+              <h2 className="mt-1 text-xl font-semibold tracking-tight text-white">Weekly workload</h2>
+            </div>
+            <CalendarDays size={20} className="text-fuchsia-100/70" />
+          </div>
+          <p className="mt-2 text-xs text-white/45">Assignment deadlines per day · not recorded study time</p>
+          <div className="mt-6 grid grid-cols-7 gap-2">
+            {workload.map((item) => (
+              <div key={item.label} className="flex min-w-0 flex-col items-center gap-2">
+                <div className="flex h-28 w-full items-end rounded-lg border border-white/[0.06] bg-white/[0.025] p-1">
+                  <div className="w-full rounded-md bg-gradient-to-t from-violet-500/75 to-cyan-300/65" style={{ height: `${Math.max(8, (item.count / maxWorkload) * 100)}%` }} />
+                </div>
+                <span className="text-[10px] text-white/35">{item.label}</span>
+                <span className="text-xs font-semibold tabular-nums text-white/65">{item.count}</span>
+              </div>
+            ))}
+          </div>
+        </CosmicCard></div>
+      </div>
 
-        <CosmicCard className="overflow-hidden">
+      <div className="mt-4 grid gap-4 xl:grid-cols-[1.7fr_1fr]">
+        <div className="min-w-0"><CosmicCard className="overflow-hidden h-full">
           <div className="flex items-end justify-between gap-4 p-5 sm:p-6">
             <div>
               <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-200/50">Courses</p>
@@ -255,10 +257,8 @@ export default function CosmosSchoolOverview({ preview = false }: { preview?: bo
             </Link>
           ))}
           {!courses.length ? <p className="border-t border-white/[0.07] px-5 py-6 text-sm text-white/45 sm:px-6">No courses saved yet. Add courses manually from the Courses tab.</p> : null}
-        </CosmicCard>
-      </div>
-
-      <CosmicCard className="mt-4 overflow-hidden">
+        </CosmicCard></div>
+        <div className="min-w-0"><CosmicCard className="overflow-hidden h-full">
         <div className="flex items-end justify-between gap-4 p-5 sm:p-6">
           <div>
             <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-200/50">Feedback & announcements</p>
@@ -276,7 +276,9 @@ export default function CosmosSchoolOverview({ preview = false }: { preview?: bo
           </div>
         ))}
         {!data?.announcements?.length ? <p className="border-t border-white/[0.07] px-5 py-6 text-sm text-white/45 sm:px-6">No recent announcements available. Feedback must be entered manually.</p> : null}
-      </CosmicCard>
+      </CosmicCard></div>
+      </div>
+
     </div>
   );
 }
