@@ -57,8 +57,8 @@ function hydrateSnapshot(
   snapshot: CalendarResponse
 ): CalendarSnapshot {
   return {
-    today: snapshot.today.map(hydrateEvent),
-    upcoming: snapshot.upcoming.map(hydrateEvent),
+    today: (Array.isArray(snapshot.today) ? snapshot.today : []).map(hydrateEvent),
+    upcoming: (Array.isArray(snapshot.upcoming) ? snapshot.upcoming : []).map(hydrateEvent),
     ...(snapshot.currentEvent
       ? {
           currentEvent: hydrateEvent(

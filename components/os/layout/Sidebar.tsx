@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { createPortal } from "react-dom";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { CalendarDays, CarFront, CheckCheck, CircleHelp, Clapperboard, FileText, FolderKanban, Heart, Home, LayoutGrid, Menu, Monitor, Plane, Settings, Sparkles, Trophy, Wallet, X, type LucideIcon } from "lucide-react";
@@ -93,7 +94,7 @@ export default function Sidebar({ variant = "side" }: { variant?: "side" | "top"
     return (
       <aside ref={navigationRef} data-cosmic-navigation className="cosmos-mobile-nav lg:hidden">
         <div className="flex items-center justify-between gap-3">
-          <Link href="/os" className="cosmos-brand" aria-label="Cosmos home">
+          <Link href="/os" className={`cosmos-brand ${open ? "invisible" : ""}`} aria-label="Cosmos home">
             <span className="cosmos-brand-mark" aria-hidden="true"><Sparkles size={20} strokeWidth={2.2} /></span>
             <span>
               <span className="cosmos-brand-name">COSMOS</span>
@@ -112,7 +113,7 @@ export default function Sidebar({ variant = "side" }: { variant?: "side" | "top"
             <Menu size={21} />
           </button>
         </div>
-        {open && (
+        {open && typeof document !== "undefined" && createPortal(
           <div ref={drawerRef} className="cosmos-mobile-nav-drawer" role="dialog" aria-modal="true" aria-label="Cosmos navigation">
             <button type="button" className="cosmos-mobile-nav-scrim" aria-label="Close navigation" onClick={() => setOpen(false)} />
             <div className="cosmos-mobile-nav-panel">
@@ -125,7 +126,8 @@ export default function Sidebar({ variant = "side" }: { variant?: "side" | "top"
                 <div className="mt-3 border-t border-white/10 pt-3">{settingsNavigation}</div>
               </div>
             </div>
-          </div>
+          </div>,
+          document.body
         )}
       </aside>
     );

@@ -4,7 +4,6 @@ import { Component, type ErrorInfo, type ReactNode } from "react";
 
 import "@/apps";
 
-import ModeManager from "./ModeManager";
 import { OSProvider } from "./OSProvider";
 import { BootProvider } from "@/components/os/boot/BootManager";
 import { WindowProvider } from "@/components/os/window";
@@ -24,7 +23,6 @@ export default function OperatingSystem() {
     <OSProvider>
       <BootProvider>
         <WindowProvider>
-          <ModeManager />
           <Desktop />
         </WindowProvider>
       </BootProvider>
