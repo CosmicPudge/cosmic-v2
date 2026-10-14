@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { ArrowLeft, CalendarClock, ExternalLink } from "lucide-react";
 import { use, useState } from "react";
-import type { SchoolAssignmentIntelligence } from "@/core/contracts/SchoolPlanning";
+import type { SchoolAssignmentIntelligence, SchoolPlanningAssignment } from "@/core/contracts/SchoolPlanning";
+import { resolveCanvasAssignment } from "@/services/school/courseResolution";
 import { SCHOOL_AI_ENABLED } from "@/services/school/capabilities";
 import { useSchool } from "@/components/school/context/SchoolDataContext";
 import { AssignmentPlanningEditor } from "@/components/school/AssignmentPlanningEditor";
@@ -18,7 +19,29 @@ export default function AssignmentDetailPage({ params }: { params: Promise<{ ass
   const { assignmentId } = use(params);
   const { snapshot, local, loading } = useSchool();
   const [analysis, setAnalysis] = useState<{ id: string; intelligence: SchoolAssignmentIntelligence }>();
-  const resolution = resolveAssignmentDetail({ assignmentId, localReady: local.ready, providerLoading: loading, localAssignments: local.data.assignments, courses: local.data.courses, terms: local.data.terms, providerCourses: snapshot?.canvasCourses ?? [], providerAssignments: snapshot?.planningAssignments ?? [] });
+  const feedAssignments: SchoolPlanningAssignment[] = (snapshot?.assignments ?? []).map((item) => {
+    const matched = resolveCanvasAssignment(item.title, local.data.courses, local.data.terms);
+    const event = snapshot?.events.find((entry) => entry.id === item.id);
+    const isAllDay = item.allDay || event?.allDay;
+    return {
+      id: "canvas-calendar:" + item.id,
+      accountId: "local",
+      title: matched?.displayTitle || item.title,
+      rawTitle: item.title,
+      sourceType: "canvas-calendar",
+      externalId: item.id,
+      ...(matched?.course ? { courseId: matched.course.id, courseName: matched.course.name } : matched?.descriptor ? { courseName: matched.descriptor.courseCode } : item.course ? { courseName: item.course } : {}),
+      ...(isAllDay ? { description: "Calendar date only · exact submission time not provided." } : {}),
+      dueAt: isAllDay ? new Date(item.due.getFullYear(), item.due.getMonth(), item.due.getDate(), 23, 59, 59) : item.due,
+      completionStatus: item.completed ? "completed" : "upcoming",
+      planningStatus: "not_started",
+      priority: "normal",
+      ...(item.sourceUrl ? { canvasUrl: item.sourceUrl } : {}),
+      createdAt: item.due,
+      updatedAt: item.due,
+    };
+  });
+  const resolution = resolveAssignmentDetail({ assignmentId, localReady: local.ready, providerLoading: loading, localAssignments: local.data.assignments, courses: local.data.courses, terms: local.data.terms, providerCourses: snapshot?.canvasCourses ?? [], providerAssignments: [...(snapshot?.planningAssignments ?? []), ...feedAssignments] });
   if (resolution.state === "loading") return <p role="status" className="py-16 text-sm text-white/50">Loading assignment…</p>;
   if (resolution.state === "not-found") return <div className="rounded-2xl border border-white/10 bg-white/5 p-6 text-white/60"><p>Assignment not found in the current School data.</p><Link href="/school/assignments" className="mt-4 inline-block text-sky-100/80">← Back to assignments</Link></div>;
   const { assignment: item, courseIdentity } = resolution;
