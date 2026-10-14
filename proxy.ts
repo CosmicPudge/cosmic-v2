@@ -174,6 +174,29 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // Local M1 QA: allow the Projects UI, never its private APIs.
+  if (
+    process.env.NODE_ENV === "development" &&
+    ["localhost", "127.0.0.1"].includes(request.nextUrl.hostname) &&
+    !isApi &&
+    (pathname === "/projects" || pathname.startsWith("/projects/"))
+  ) {
+    return NextResponse.next();
+  }
+
+  // Local Cosmos UI development: allow page navigation without sign-in.
+  // Never bypass authentication for APIs or deployed environments.
+  if (
+    process.env.NODE_ENV === "development" &&
+    ["localhost", "127.0.0.1"].includes(request.nextUrl.hostname) &&
+    !isApi &&
+    !pathname.startsWith("/admin") &&
+    !pathname.startsWith("/activate") &&
+    !pathname.startsWith("/account")
+  ) {
+    return NextResponse.next();
+  }
+
   // The normal Cosmic shell is a personal application. Keep this exemption
   // below the kiosk branch and above account-backed request authorization so
   // device mode and private APIs retain their existing boundaries.
