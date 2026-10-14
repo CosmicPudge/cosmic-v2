@@ -21,6 +21,7 @@ import FoundationSurfaceToggle from "@/components/os/ui/FoundationSurfaceToggle"
 import FoundationViewportIndicator from "@/components/os/ui/FoundationViewportIndicator";
 import Skeleton from "@/components/os/ui/Skeleton";
 import { useSchool } from "@/components/school/context/SchoolDataContext";
+import { getWeeklySchedule } from "@/components/school/data/weeklySchedule";
 
 
 
@@ -83,6 +84,11 @@ export default function CosmosSchoolOverview({ preview = false }: { preview?: bo
     [local.data.courses, term],
   );
   const credits = courses.reduce((sum, course) => sum + (course.credits ?? 0), 0);
+  const recordedGrades = local.data.grades.filter((grade) => courses.some((course) => course.id === grade.courseId));
+  const gradePoints: Record<string, number> = { "A+":4, A:4, "A-":3.7, "B+":3.3, B:3, "B-":2.7, "C+":2.3, C:2, "C-":1.7, "D+":1.3, D:1, "D-":0.7, F:0 };
+  const gradedCourses = courses.flatMap((course) => { const grade = recordedGrades.find((item) => item.courseId === course.id && item.letter && gradePoints[item.letter.toUpperCase()] !== undefined); return grade ? [{ credits: course.credits ?? 0, points: gradePoints[grade.letter!.toUpperCase()] }] : []; });
+  const gradedCredits = gradedCourses.reduce((sum, grade) => sum + grade.credits, 0);
+  const manualGpa = gradedCredits > 0 ? gradedCourses.reduce((sum, grade) => sum + grade.credits * grade.points, 0) / gradedCredits : undefined;
 
   const assignments = useMemo(() => {
     const remote = data?.assignments ?? [];
@@ -103,12 +109,9 @@ export default function CosmosSchoolOverview({ preview = false }: { preview?: bo
     .sort((a, b) => a.due.getTime() - b.due.getTime());
   const dueSoon = openAssignments.filter((item) => dueWithin(item.due, 7, now)).length;
 
-  const todayClasses = (data?.classes ?? [])
-    .filter((item) => item.start.toDateString() === new Date(now).toDateString())
-    .sort((a, b) => a.start.getTime() - b.start.getTime());
-  const nextClass = (data?.classes ?? [])
-    .filter((item) => item.start.getTime() >= now)
-    .sort((a, b) => a.start.getTime() - b.start.getTime())[0];
+  const manualSchedule = getWeeklySchedule(courses, term, new Date(now));
+  const todayClasses = manualSchedule.filter((item) => item.start.toDateString() === new Date(now).toDateString()).map((item) => ({ id: `${item.course.id}-${item.start.toISOString()}`, name: item.course.code || item.course.name, start: item.start, end: item.end, location: item.location }));
+  const nextClass = manualSchedule.find((item) => item.start.getTime() > now);
 
   const workload = Array.from({ length: 7 }, (_, offset) => {
     const date = new Date(now);
@@ -121,21 +124,22 @@ export default function CosmosSchoolOverview({ preview = false }: { preview?: bo
   });
   const maxWorkload = Math.max(1, ...workload.map((item) => item.count));
 
-  const gpa = data?.stats.gpa;
+  const gpa = manualGpa;
   const providerHealthy = !error && snapshot?.sourceStatus?.canvas !== "error";
-  const sourceLabel = snapshot?.sourceStatus?.canvas === "healthy" ? "Canvas connected" : snapshot?.sourceStatus?.canvas === "error" ? "Canvas issue" : "Local + calendar data";
+  const sourceLabel = snapshot?.sourceStatus?.canvas === "healthy" ? "Canvas calendar active" : snapshot?.sourceStatus?.canvas === "error" ? "Canvas calendar unavailable" : "Manual data + optional Canvas calendar";
 
   return (
     <div className="mx-auto w-full max-w-[1500px] pb-10">
       <AppHeader
         eyebrow={term ? `School · ${term.name}` : "School"}
         title="School"
-        subtitle="Courses, assignments, schedule, progress, and feedback in one academic command center."
+        subtitle="Your classes, assignments, and academic tools."
         rightContent={
           <div className="flex flex-wrap items-center justify-end gap-2">
             {preview ? <FoundationViewportIndicator /> : null}
             {preview ? <FoundationSurfaceToggle /> : null}
             {preview ? <StatusChip variant="primary">Milestone 2 preview</StatusChip> : null}
+            <label className="flex items-center gap-2 text-sm text-white/70"><span className="sr-only">Academic term</span><select aria-label="Academic term" value={term?.id ?? ""} onChange={(event) => local.setActiveTerm(event.target.value)} className="rounded-xl border border-violet-300/30 bg-[#130b2d]/80 px-3 py-2 text-white"><option value="" disabled>{term ? "Select term" : "No term yet"}</option>{local.data.terms.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
             <StatusChip variant={providerHealthy ? "success" : "warning"}>{sourceLabel}</StatusChip>
           </div>
         }
@@ -150,10 +154,10 @@ export default function CosmosSchoolOverview({ preview = false }: { preview?: bo
       ) : null}
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <MetricCard label="Current GPA" value={gpa !== undefined ? gpa.toFixed(2) : "—"} detail={gpa !== undefined ? "Current academic snapshot" : "Grade data not available"} icon={TrendingUp} loading={loading && !data} />
-        <MetricCard label="Next class" value={nextClass ? formatTime(nextClass.start) : "Clear"} detail={nextClass ? nextClass.name : "No upcoming class found"} icon={Clock3} loading={loading && !data} />
-        <MetricCard label="Due soon" value={String(dueSoon)} detail="Assignments due in the next 7 days" icon={CheckCircle2} loading={loading && !data} />
-        <MetricCard label="Credits" value={String(credits)} detail={term ? `Tracked for ${term.name}` : "Current tracked courses"} icon={GraduationCap} loading={!local.ready} />
+        <MetricCard label="Current GPA" value={gpa !== undefined ? gpa.toFixed(2) : "—"} detail={gpa !== undefined ? "Calculated from manually entered letter grades" : "Enter course grades to calculate GPA"} icon={TrendingUp} loading={loading && !data} />
+        <MetricCard label="Next class" value={nextClass ? formatTime(nextClass.start) : "Clear"} detail={nextClass ? (nextClass.course.code || nextClass.course.name) : "Add weekly meetings to your courses"} icon={Clock3} loading={loading && !data} />
+        <MetricCard label="Due soon" value={String(dueSoon)} detail="Canvas calendar + manually entered assignments" icon={CheckCircle2} loading={loading && !data} />
+        <MetricCard label="Credits" value={String(credits)} detail={term ? `Enrolled credits · ${term.name}` : "Add courses to track credits"} icon={GraduationCap} loading={!local.ready} />
       </div>
 
       <div className="mt-6 grid gap-4 xl:grid-cols-[1.15fr_.85fr]">
@@ -178,7 +182,7 @@ export default function CosmosSchoolOverview({ preview = false }: { preview?: bo
               <span className="shrink-0 text-xs text-white/55">{formatTime(item.start)}–{formatTime(item.end)}</span>
             </div>
           )) : (
-            <p className="border-t border-white/[0.07] px-5 py-6 text-sm text-white/45 sm:px-6">No classes are scheduled for today.</p>
+            <p className="border-t border-white/[0.07] px-5 py-6 text-sm text-white/45 sm:px-6">No classes scheduled today. Add meeting times under Courses.</p>
           )}
         </CosmicCard>
 
@@ -190,6 +194,7 @@ export default function CosmosSchoolOverview({ preview = false }: { preview?: bo
             </div>
             <CalendarDays size={20} className="text-fuchsia-100/70" />
           </div>
+          <p className="mt-2 text-xs text-white/45">Assignment deadlines per day · not recorded study time</p>
           <div className="mt-6 grid grid-cols-7 gap-2">
             {workload.map((item) => (
               <div key={item.label} className="flex min-w-0 flex-col items-center gap-2">
@@ -249,7 +254,7 @@ export default function CosmosSchoolOverview({ preview = false }: { preview?: bo
               <ArrowUpRight size={15} className="text-white/20 transition group-hover:text-white/60" />
             </Link>
           ))}
-          {!courses.length ? <p className="border-t border-white/[0.07] px-5 py-6 text-sm text-white/45 sm:px-6">No current courses are saved yet.</p> : null}
+          {!courses.length ? <p className="border-t border-white/[0.07] px-5 py-6 text-sm text-white/45 sm:px-6">No courses saved yet. Add courses manually from the Courses tab.</p> : null}
         </CosmicCard>
       </div>
 
@@ -270,7 +275,7 @@ export default function CosmosSchoolOverview({ preview = false }: { preview?: bo
             <p className="mt-2 line-clamp-2 text-sm leading-5 text-white/45">{announcement.body}</p>
           </div>
         ))}
-        {!data?.announcements?.length ? <p className="border-t border-white/[0.07] px-5 py-6 text-sm text-white/45 sm:px-6">No recent announcements are available.</p> : null}
+        {!data?.announcements?.length ? <p className="border-t border-white/[0.07] px-5 py-6 text-sm text-white/45 sm:px-6">No recent announcements available. Feedback must be entered manually.</p> : null}
       </CosmicCard>
     </div>
   );
