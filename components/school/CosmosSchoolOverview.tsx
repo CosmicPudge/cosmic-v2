@@ -17,6 +17,7 @@ import AppHeader from "@/components/os/app/AppHeader";
 import CosmicCard from "@/design-system/components/CosmicCard";
 import StatusChip from "@/components/os/ui/StatusChip";
 import SchoolTabs from "@/components/school/SchoolTabs";
+import SchoolPersonalTracking from "@/components/school/SchoolPersonalTracking";
 import FoundationSurfaceToggle from "@/components/os/ui/FoundationSurfaceToggle";
 import FoundationViewportIndicator from "@/components/os/ui/FoundationViewportIndicator";
 import Skeleton from "@/components/os/ui/Skeleton";
@@ -333,6 +334,7 @@ export default function CosmosSchoolOverview({ preview = false }: { preview?: bo
       </CosmicCard></div>
       </div>
 
+      <SchoolPersonalTracking scopeId={local.scope.id} termId={term?.id} courses={courses} />
     </div>
   );
 }
