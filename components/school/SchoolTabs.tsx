@@ -9,6 +9,10 @@ const tabs = [
   { label: "Assignments", href: "/school/assignments" },
   { label: "Calendar", href: "/school/calendar" },
   { label: "Analytics", href: "/school/analytics" },
+  { label: "Grades", href: "/school/grades" },
+  { label: "Schedule", href: "/school/schedule" },
+  { label: "Goals", href: "/school/goals" },
+  { label: "Settings", href: "/school/settings" },
 ] as const;
 
 export default function SchoolTabs() {
