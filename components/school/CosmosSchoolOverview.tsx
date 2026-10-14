@@ -90,7 +90,7 @@ export default function CosmosSchoolOverview({ preview = false }: { preview?: bo
   const credits = courses.reduce((sum, course) => sum + (course.credits ?? 0), 0);
   const recordedGrades = local.data.grades.filter((grade) => courses.some((course) => course.id === grade.courseId));
   const gradePoints: Record<string, number> = { "A+":4, A:4, "A-":3.7, "B+":3.3, B:3, "B-":2.7, "C+":2.3, C:2, "C-":1.7, "D+":1.3, D:1, "D-":0.7, F:0 };
-  const gradedCourses = courses.flatMap((course) => { const grade = recordedGrades.find((item) => item.courseId === course.id && item.letter && gradePoints[item.letter.toUpperCase()] !== undefined); return grade ? [{ credits: course.credits ?? 0, points: gradePoints[grade.letter!.toUpperCase()] }] : []; });
+  const gradedCourses = courses.flatMap((course) => { const grade = [...recordedGrades].reverse().find((item) => item.courseId === course.id && item.letter && gradePoints[item.letter.toUpperCase()] !== undefined); return grade ? [{ credits: course.credits ?? 0, points: gradePoints[grade.letter!.toUpperCase()] }] : []; });
   const gradedCredits = gradedCourses.reduce((sum, grade) => sum + grade.credits, 0);
   const manualGpa = gradedCredits > 0 ? gradedCourses.reduce((sum, grade) => sum + grade.credits * grade.points, 0) / gradedCredits : undefined;
 
@@ -115,7 +115,7 @@ export default function CosmosSchoolOverview({ preview = false }: { preview?: bo
 
   const manualSchedule = getWeeklySchedule(courses, term, new Date(now));
   const todayClasses = manualSchedule.filter((item) => item.start.toDateString() === new Date(now).toDateString()).map((item) => ({ id: `${item.course.id}-${item.start.toISOString()}`, name: item.course.code || item.course.name, start: item.start, end: item.end, location: item.location }));
-  const nextClass = manualSchedule.find((item) => item.start.getTime() > now);
+  const nextClass = manualSchedule.find((item) => item.end.getTime() > now);
 
   const workload = Array.from({ length: 7 }, (_, offset) => {
     const date = new Date(now);
@@ -151,6 +151,14 @@ export default function CosmosSchoolOverview({ preview = false }: { preview?: bo
 
       <SchoolTabs />
 
+      {local.ready && !local.data.terms.length ? (
+        <div className="mb-4 flex flex-col gap-3 rounded-2xl border border-violet-300/30 bg-violet-900/20 p-4 text-sm text-white/80 sm:flex-row sm:items-center sm:justify-between">
+          <div><p className="font-semibold text-white">Set up your School workspace</p><p className="mt-1 text-white/60">Create an academic term first, then add courses, meeting times, and grades. Canvas Calendar can supply assignment deadlines separately.</p></div>
+          <Link href="/school/settings" className="shrink-0 rounded-xl border border-violet-300/40 px-4 py-2 text-center font-medium text-white hover:bg-violet-300/10">Create term</Link>
+        </div>
+      ) : null}
+
+
       {error ? (
         <div role="status" className="mb-5 rounded-xl border border-amber-300/15 bg-amber-400/[0.05] px-4 py-3 text-sm text-amber-50/75">
           Some connected School data is unavailable. Local academic data is still shown where possible.
@@ -159,7 +167,7 @@ export default function CosmosSchoolOverview({ preview = false }: { preview?: bo
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <MetricCard label="Current GPA" value={gpa !== undefined ? gpa.toFixed(2) : "—"} detail={gpa !== undefined ? "Calculated from manually entered letter grades" : "Enter course grades to calculate GPA"} icon={TrendingUp} href="/school/grades" loading={loading && !data} />
-        <MetricCard label="Next class" value={nextClass ? formatTime(nextClass.start) : "Clear"} detail={nextClass ? (nextClass.course.code || nextClass.course.name) : "Add weekly meetings to your courses"} icon={Clock3} href="/school/schedule" loading={loading && !data} />
+        <MetricCard label="Next class" value={nextClass ? (nextClass.start.getTime() <= now ? "In class" : formatTime(nextClass.start)) : "Clear"} detail={nextClass ? (nextClass.course.code || nextClass.course.name) : "Add weekly meetings to your courses"} icon={Clock3} href="/school/schedule" loading={loading && !data} />
         <MetricCard label="Due soon" value={String(dueSoon)} detail="Canvas calendar + manually entered assignments" icon={CheckCircle2} href="/school/assignments" loading={loading && !data} />
         <MetricCard label="Credits" value={String(credits)} detail={term ? `Enrolled credits · ${term.name}` : "Add courses to track credits"} icon={GraduationCap} href="/school/courses" loading={!local.ready} />
       </div>
@@ -174,7 +182,7 @@ export default function CosmosSchoolOverview({ preview = false }: { preview?: bo
             <Link href="/school/calendar" className="text-sm text-cyan-100/65 hover:text-white">Full schedule</Link>
           </div>
 
-          {loading && !data ? (
+          {!local.ready ? (
             <div className="space-y-2 px-5 pb-5 sm:px-6"><Skeleton className="h-16" /><Skeleton className="h-16" /></div>
           ) : todayClasses.length ? todayClasses.map((item) => (
             <div key={item.id} className="flex items-center gap-3 border-t border-white/[0.07] px-5 py-4 sm:px-6">
