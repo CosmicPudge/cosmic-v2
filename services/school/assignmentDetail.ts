@@ -14,7 +14,9 @@ export function assignmentDetailCourseHref(identity: SchoolCourseIdentity) {
 }
 
 function normalizeAssignmentRouteId(value: string) {
-  return value.replace(/^manual%3a/i, "manual:");
+  // Next.js may supply either an already-decoded parameter or an encoded
+  // pathname segment. Decode at most once (malformed %-escapes remain literal).
+  try { return decodeURIComponent(value); } catch { return value; }
 }
 
 export type AssignmentDetailResolution =
@@ -38,7 +40,16 @@ export function resolveAssignmentDetail(input: {
   const isManualRoute = assignmentId.startsWith("manual:");
   const localId = isManualRoute ? assignmentId.slice("manual:".length) : assignmentId;
   const localAssignment = input.localAssignments.find((assignment) => assignment.id === localId);
-  const providerAssignment = input.providerAssignments.find((assignment) => assignment.id === assignmentId);
+  const providerAssignment = input.providerAssignments.find((assignment) => {
+    if (assignment.id === assignmentId) return true;
+    // Personal Canvas feeds can carry their provider prefix within the UID.
+    // Compare the exact external event UID only within the Canvas namespace.
+    if (!assignmentId.startsWith("canvas-calendar:") || assignment.sourceType !== "canvas-calendar") return false;
+    const routeUid = assignmentId.slice("canvas-calendar:".length);
+    return assignment.externalId === routeUid ||
+      assignment.id === routeUid ||
+      assignment.id === "canvas-calendar:" + routeUid;
+  });
 
   // Keep manual URLs in their own ID namespace so local UUIDs cannot collide
   // with a provider assignment ID. Other IDs retain provider-first behavior.
