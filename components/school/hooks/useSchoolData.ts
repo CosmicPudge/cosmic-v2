@@ -100,7 +100,7 @@ export function useSchoolData({ enabled = true }: UseSchoolDataOptions = {}) {
     return () => { canceled = true; window.removeEventListener("cosmic:school-refresh", refresh); };
   }, [accountBacked, enabled]);
 
-  const baseSnapshot = useMemo(() => !enabled || !accountBacked ? null : snapshot ?? (data ? buildSchoolSnapshot(data) : null), [accountBacked, data, enabled, snapshot]);
+  const baseSnapshot = useMemo(() => !enabled ? null : accountBacked ? (snapshot ?? (data ? buildSchoolSnapshot(data) : null)) : (localCanvasData ? buildSchoolSnapshot(localCanvasData) : null), [accountBacked, data, enabled, snapshot, localCanvasData]);
   const normalizedSnapshot = useMemo(() => {
     if (!baseSnapshot) return null;
     return {
