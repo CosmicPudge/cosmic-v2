@@ -43,7 +43,7 @@ export function assignmentWorkloadLabel(assignment: SchoolPlanningAssignment, no
 function dueSoon(assignment: SchoolPlanningAssignment, now: Date): boolean {
   if (!isAssignmentActiveForPlanning(assignment) || !hasValidDueDate(assignment) || isAssignmentOverdue(assignment, now)) return false;
   const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const end = new Date(start); end.setDate(end.getDate() + 4);
+  const end = new Date(start); end.setDate(end.getDate() + 8);
   return assignment.dueAt! < end;
 }
 
