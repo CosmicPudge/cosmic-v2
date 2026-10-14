@@ -22,6 +22,7 @@ import FoundationViewportIndicator from "@/components/os/ui/FoundationViewportIn
 import Skeleton from "@/components/os/ui/Skeleton";
 import { useSchool } from "@/components/school/context/SchoolDataContext";
 import { getWeeklySchedule } from "@/components/school/data/weeklySchedule";
+import { resolveCanvasAssignment, normalizeCourseCode } from "@/services/school/courseResolution";
 
 
 
@@ -98,7 +99,14 @@ export default function CosmosSchoolOverview({ preview = false }: { preview?: bo
   const manualGpa = gradedCredits > 0 ? gradedCourses.reduce((sum, grade) => sum + grade.credits * grade.points, 0) / gradedCredits : undefined;
 
   const assignments = useMemo(() => {
-    const remote = data?.assignments ?? [];
+    const remote = (data?.assignments ?? []).map((item) => {
+      const event = data?.events.find((entry) => entry.id === item.id);
+      const resolved = resolveCanvasAssignment(item.title, courses, local.data.terms);
+      const byCode = courses.find((course) => normalizeCourseCode(course.code) === normalizeCourseCode(item.course));
+      const byId = courses.find((course) => course.id === item.courseId);
+      const course = resolved?.course ?? byId ?? byCode;
+      return { ...item, title: resolved?.displayTitle || item.title, course: course?.code || course?.name || resolved?.descriptor.courseCode || item.course, allDay: item.allDay || event?.allDay };
+    });
     const localAssignments = local.data.assignments.map((item) => ({
       id: item.id,
       title: item.title,
@@ -109,7 +117,7 @@ export default function CosmosSchoolOverview({ preview = false }: { preview?: bo
     }));
     const merged = [...remote, ...localAssignments];
     return [...new Map(merged.map((item) => [item.id, item])).values()];
-  }, [courses, data?.assignments, local.data.assignments]);
+  }, [courses, data?.assignments, data?.events, local.data.assignments, local.data.terms]);
 
   const openAssignments = assignments
     .filter((item) => !item.completed && item.due.getTime() >= now)
@@ -235,15 +243,15 @@ export default function CosmosSchoolOverview({ preview = false }: { preview?: bo
             <Link href="/school/assignments" className="text-sm text-cyan-100/65 hover:text-white">View all</Link>
           </div>
           {openAssignments.slice(0, 6).map((item) => (
-            <Link key={item.id} href={`/school/assignments/${encodeURIComponent(item.id)}`} className="group flex items-center gap-3 border-t border-white/[0.07] px-5 py-4 transition hover:bg-white/[0.025] sm:px-6">
+            <Link key={item.id} href={`/school/assignments/${encodeURIComponent(item.id)}`} className="group flex items-center gap-3 border-t border-white/[0.07] px-5 py-4 transition hover:bg-white/[0.025] sm:px-6" title={item.title}>
               <CheckCircle2 size={17} className="shrink-0 text-violet-100/65" />
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-white/85">{item.title}</p>
+                <p className="line-clamp-2 text-sm font-medium text-white/85" title={item.title}>{item.title}</p>
                 <p className="mt-1 truncate text-xs text-white/40">{item.course || "Course"} · {item.priority} priority</p>
               </div>
               <div className="shrink-0 text-right">
                 <p className="text-xs text-white/60">{formatDate(item.due)}</p>
-                <p className="mt-1 text-[10px] text-white/35">{formatTime(item.due)}</p>
+                <p className="mt-1 text-[10px] text-white/35">{"allDay" in item && item.allDay ? "All day" : formatTime(item.due)}</p>
               </div>
               <ArrowUpRight size={15} className="text-white/20 transition group-hover:text-white/60" />
             </Link>
