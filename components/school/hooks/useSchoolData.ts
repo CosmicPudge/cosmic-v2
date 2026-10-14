@@ -28,6 +28,8 @@ export function useSchoolData({ enabled = true }: UseSchoolDataOptions = {}) {
   const [recommendationNarration, setRecommendationNarration] = useState<RecommendationNarration | null>(null);
 
   const [loading, setLoading] = useState(true);
+  const [localCanvasData, setLocalCanvasData] = useState<SchoolDashboardData | null>(null);
+  const [localCanvasError, setLocalCanvasError] = useState<string>();
 
   const [error, setError] = useState<string>();
 
@@ -74,6 +76,30 @@ export function useSchoolData({ enabled = true }: UseSchoolDataOptions = {}) {
     return () => window.removeEventListener("cosmic:school-refresh", refresh);
   }, [accountBacked, enabled, recordFailure, recordSuccess]);
 
+  useEffect(() => {
+    if (!enabled || accountBacked || process.env.NODE_ENV !== "development") return;
+    let canceled = false;
+    async function loadLocalCalendar() {
+      const url = window.localStorage.getItem("cosmos.school.canvas.ical.local");
+      if (!url) { setLocalCanvasData(null); setLocalCanvasError(undefined); return; }
+      try {
+        const res = await fetch("/api/school/canvas/local-feed", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ feedUrl: url }), cache: "no-store",
+        });
+        const body = await res.json() as { data?: Parameters<typeof hydrateSchoolDashboard>[0]; error?: string };
+        if (!res.ok || !body.data) throw new Error(body.error ?? "Canvas calendar import failed.");
+        if (!canceled) { setLocalCanvasData(hydrateSchoolDashboard(body.data)); setLocalCanvasError(undefined); }
+      } catch (err) {
+        if (!canceled) { setLocalCanvasError(err instanceof Error ? err.message : "Canvas calendar unavailable."); setLocalCanvasData(null); }
+      }
+    }
+    void loadLocalCalendar();
+    const refresh = () => void loadLocalCalendar();
+    window.addEventListener("cosmic:school-refresh", refresh);
+    return () => { canceled = true; window.removeEventListener("cosmic:school-refresh", refresh); };
+  }, [accountBacked, enabled]);
+
   const baseSnapshot = useMemo(() => !enabled || !accountBacked ? null : snapshot ?? (data ? buildSchoolSnapshot(data) : null), [accountBacked, data, enabled, snapshot]);
   const normalizedSnapshot = useMemo(() => {
     if (!baseSnapshot) return null;
@@ -93,7 +119,7 @@ export function useSchoolData({ enabled = true }: UseSchoolDataOptions = {}) {
     }, [data, enabled, normalizedSnapshot]);
 
   return {
-    data: enabled && accountBacked ? data : null,
+    data: enabled ? (accountBacked ? data : localCanvasData) : null,
 
     intelligence,
 
@@ -101,7 +127,7 @@ export function useSchoolData({ enabled = true }: UseSchoolDataOptions = {}) {
 
     loading: enabled && accountBacked ? loading : false,
 
-    error: enabled && accountBacked ? error : undefined,
+    error: enabled ? (accountBacked ? error : localCanvasError) : undefined,
 
     recommendationNarration: enabled && accountBacked ? recommendationNarration : null,
 
