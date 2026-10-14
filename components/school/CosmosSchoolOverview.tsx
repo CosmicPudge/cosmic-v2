@@ -253,17 +253,26 @@ export default function CosmosSchoolOverview({ preview = false }: { preview?: bo
             </div>
             <Link href="/school/courses" className="text-sm text-cyan-100/65 hover:text-white">Courses</Link>
           </div>
-          {courses.slice(0, 6).map((course) => (
-            <Link key={course.id} href={`/school/courses/${encodeURIComponent(course.id)}`} className="group flex items-center gap-3 border-t border-white/[0.07] px-5 py-4 transition hover:bg-white/[0.025] sm:px-6">
-              <div className="h-8 w-1 rounded-full bg-gradient-to-b from-violet-400 to-cyan-300" />
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-white/85">{course.code || course.name}</p>
-                <p className="mt-1 truncate text-xs text-white/40">{course.code ? course.name : course.instructor || "Course details"}</p>
-              </div>
-              <span className="text-xs text-white/40">{course.credits ? `${course.credits} cr` : ""}</span>
-              <ArrowUpRight size={15} className="text-white/20 transition group-hover:text-white/60" />
-            </Link>
-          ))}
+          {courses.length ? (
+            <div className="grid gap-3 border-t border-white/[0.07] p-4 sm:grid-cols-2 lg:grid-cols-3">
+              {courses.slice(0, 6).map((course, index) => {
+                const related = openAssignments.filter((item) => item.course && (item.course === course.code || item.course === course.name)).length;
+                const grade = [...recordedGrades].reverse().find((item) => item.courseId === course.id && item.letter);
+                const next = manualSchedule.find((item) => item.course.id === course.id && item.end.getTime() > now);
+                return <Link key={course.id} href={`/school/courses/${encodeURIComponent(course.id)}`} className="group min-w-0 overflow-hidden rounded-xl border border-violet-300/20 bg-violet-950/20 transition hover:border-violet-300/50">
+                  <div className="relative flex h-20 items-end overflow-hidden bg-gradient-to-br from-indigo-900/65 via-violet-700/30 to-fuchsia-950/40 p-3">
+                    <span className="absolute right-3 top-2 text-4xl font-black text-white/[0.06]">{String(index + 1).padStart(2, "0")}</span>
+                    <span className="relative truncate text-sm font-semibold text-white">{course.code || course.name}</span>
+                  </div>
+                  <div className="space-y-2 p-3">
+                    <p className="truncate text-xs text-white/60" title={course.name}>{course.name}</p>
+                    <div className="flex items-center justify-between gap-2 text-xs"><span className="font-semibold text-violet-100">{grade?.letter ? `Grade ${grade.letter}` : "Grade not entered"}</span><span className="text-white/50">{course.credits ?? "—"} cr</span></div>
+                    <div className="flex items-center justify-between gap-2 text-[11px] text-white/45"><span>{related} pending assignments</span><span className="truncate">{next ? formatDate(next.start) : "No meeting"}</span></div>
+                  </div>
+                </Link>;
+              })}
+            </div>
+          ) : null}
           {!courses.length ? <p className="border-t border-white/[0.07] px-5 py-6 text-sm text-white/45 sm:px-6">No courses saved yet. Add courses manually from the Courses tab.</p> : null}
         </CosmicCard></div>
         <div className="min-w-0"><CosmicCard className="overflow-hidden h-full">
