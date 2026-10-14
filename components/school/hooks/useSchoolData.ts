@@ -30,6 +30,7 @@ export function useSchoolData({ enabled = true }: UseSchoolDataOptions = {}) {
   const [loading, setLoading] = useState(true);
   const [localCanvasData, setLocalCanvasData] = useState<SchoolDashboardData | null>(null);
   const [localCanvasError, setLocalCanvasError] = useState<string>();
+  const [localCanvasLoading, setLocalCanvasLoading] = useState(true);
 
   const [error, setError] = useState<string>();
 
@@ -81,7 +82,8 @@ export function useSchoolData({ enabled = true }: UseSchoolDataOptions = {}) {
     let canceled = false;
     async function loadLocalCalendar() {
       const url = window.localStorage.getItem("cosmos.school.canvas.ical.local");
-      if (!url) { setLocalCanvasData(null); setLocalCanvasError(undefined); return; }
+      if (!url) { setLocalCanvasData(null); setLocalCanvasError(undefined); setLocalCanvasLoading(false); return; }
+      setLocalCanvasLoading(true);
       try {
         const res = await fetch("/api/school/canvas/local-feed", {
           method: "POST", headers: { "Content-Type": "application/json" },
@@ -92,7 +94,7 @@ export function useSchoolData({ enabled = true }: UseSchoolDataOptions = {}) {
         if (!canceled) { setLocalCanvasData(hydrateSchoolDashboard(body.data)); setLocalCanvasError(undefined); }
       } catch (err) {
         if (!canceled) { setLocalCanvasError(err instanceof Error ? err.message : "Canvas calendar unavailable."); setLocalCanvasData(null); }
-      }
+      } finally { if (!canceled) setLocalCanvasLoading(false); }
     }
     void loadLocalCalendar();
     const refresh = () => void loadLocalCalendar();
@@ -125,7 +127,7 @@ export function useSchoolData({ enabled = true }: UseSchoolDataOptions = {}) {
 
     snapshot: normalizedSnapshot,
 
-    loading: enabled && accountBacked ? loading : false,
+    loading: enabled ? (accountBacked ? loading : localCanvasLoading) : false,
 
     error: enabled ? (accountBacked ? error : localCanvasError) : undefined,
 
