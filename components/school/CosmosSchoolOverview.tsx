@@ -112,7 +112,7 @@ export default function CosmosSchoolOverview({ preview = false }: { preview?: bo
   }, [courses, data?.assignments, local.data.assignments]);
 
   const openAssignments = assignments
-    .filter((item) => !item.completed)
+    .filter((item) => !item.completed && item.due.getTime() >= now)
     .sort((a, b) => a.due.getTime() - b.due.getTime());
   const dueSoon = openAssignments.filter((item) => dueWithin(item.due, 7, now)).length;
 
