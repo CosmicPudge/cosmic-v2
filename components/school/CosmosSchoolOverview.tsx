@@ -45,6 +45,7 @@ function MetricCard({
   icon: Icon,
   loading,
   href,
+  children,
 }: {
   label: string;
   value: string;
@@ -52,6 +53,7 @@ function MetricCard({
   icon: typeof GraduationCap;
   loading?: boolean;
   href: string;
+  children?: React.ReactNode;
 }) {
   return (
     <Link href={href} className="block h-full rounded-2xl focus-visible:outline-2 focus-visible:outline-violet-300">
@@ -66,6 +68,7 @@ function MetricCard({
           <Icon size={20} />
         </div>
       </div>
+      {children}
     </CosmicCard>
     </Link>
   );
@@ -129,6 +132,27 @@ export default function CosmosSchoolOverview({ preview = false }: { preview?: bo
   const maxWorkload = Math.max(1, ...workload.map((item) => item.count));
 
   const gpa = manualGpa;
+  const [gpaHistory, setGpaHistory] = useState<Array<{ date: string; value: number }>>([]);
+  const historyKey = "cosmos-school-gpa-" + local.scope.id + "-" + (term?.id ?? "none");
+  useEffect(() => {
+    if (!local.ready) return;
+    try {
+      const raw: unknown = JSON.parse(window.localStorage.getItem(historyKey) || "[]");
+      setGpaHistory(Array.isArray(raw) ? raw.filter((entry): entry is {date:string;value:number} =>
+        entry !== null && typeof entry === "object" && typeof entry.date === "string" &&
+        typeof entry.value === "number" && Number.isFinite(entry.value)).slice(-90) : []);
+    } catch { setGpaHistory([]); }
+  }, [historyKey, local.ready]);
+  useEffect(() => {
+    if (!local.ready || now === 0 || gpa === undefined || !term) return;
+    const date = new Date(now).toLocaleDateString("en-CA");
+    setGpaHistory((old) => {
+      const next = [...old.filter((point) => point.date !== date), {date, value:gpa}].sort((a,b) => a.date.localeCompare(b.date)).slice(-90);
+      if (JSON.stringify(old) === JSON.stringify(next)) return old;
+      try { window.localStorage.setItem(historyKey, JSON.stringify(next)); } catch {}
+      return next;
+    });
+  }, [gpa, historyKey, local.ready, now, term]);
   const providerHealthy = !error && snapshot?.sourceStatus?.canvas !== "error";
   const sourceLabel = snapshot?.sourceStatus?.canvas === "healthy" ? "Canvas calendar active" : snapshot?.sourceStatus?.canvas === "error" ? "Canvas calendar unavailable" : "Manual data + optional Canvas calendar";
 
@@ -166,8 +190,12 @@ export default function CosmosSchoolOverview({ preview = false }: { preview?: bo
       ) : null}
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <MetricCard label="Current GPA" value={gpa !== undefined ? gpa.toFixed(2) : "—"} detail={gpa !== undefined ? "Calculated from manually entered letter grades" : "Enter course grades to calculate GPA"} icon={TrendingUp} href="/school/grades" loading={loading && !data} />
-        <MetricCard label="Next class" value={nextClass ? (nextClass.start.getTime() <= now ? "In class" : formatTime(nextClass.start)) : "Clear"} detail={nextClass ? (nextClass.course.code || nextClass.course.name) : "Add weekly meetings to your courses"} icon={Clock3} href="/school/schedule" loading={loading && !data} />
+        <MetricCard label="Estimated semester GPA" value={gpa !== undefined ? gpa.toFixed(2) : "—"} detail={gpa !== undefined ? gradedCredits + " graded credits · not official cumulative GPA" : "Enter course letter grades to estimate GPA"} icon={TrendingUp} href="/school/grades" loading={!local.ready}>
+          {gpaHistory.length >= 2 ? <svg viewBox="0 0 200 44" className="mt-3 h-11 w-full" role="img" aria-label="Historical estimated semester GPA"><polyline fill="none" stroke="#a78bfa" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" points={gpaHistory.map((point, index) => `${2 + index / Math.max(1, gpaHistory.length - 1) * 196},${42 - Math.max(0, Math.min(4,point.value))/4*40}`).join(" ")} /></svg> : <p className="mt-3 text-[11px] text-white/45">Trend available after two days of GPA records.</p>}
+        </MetricCard>
+        <MetricCard label={currentClass ? "Current class" : "Next class"} value={currentClass ? "In class" : nextClass ? formatTime(nextClass.start) : "Clear"} detail={currentClass ? (currentClass.course.code || currentClass.course.name) + " · until " + formatTime(currentClass.end) : nextClass ? (nextClass.course.code || nextClass.course.name) + " · " + formatDate(nextClass.start) : "No upcoming class scheduled"} icon={Clock3} href="/school/schedule" loading={!local.ready}>
+          {currentClass && nextClass ? <p className="mt-3 text-xs text-violet-100/75">Up next: {nextClass.course.code || nextClass.course.name} at {formatTime(nextClass.start)}</p> : null}
+        </MetricCard>
         <MetricCard label="Due soon" value={String(dueSoon)} detail="Canvas calendar + manually entered assignments" icon={CheckCircle2} href="/school/assignments" loading={loading && !data} />
         <MetricCard label="Credits" value={String(credits)} detail={term ? `Enrolled credits · ${term.name}` : "Add courses to track credits"} icon={GraduationCap} href="/school/courses" loading={!local.ready} />
       </div>
@@ -185,10 +213,10 @@ export default function CosmosSchoolOverview({ preview = false }: { preview?: bo
           {!local.ready ? (
             <div className="space-y-2 px-5 pb-5 sm:px-6"><Skeleton className="h-16" /><Skeleton className="h-16" /></div>
           ) : todayClasses.length ? todayClasses.map((item) => (
-            <div key={item.id} className="flex items-center gap-3 border-t border-white/[0.07] px-5 py-4 sm:px-6">
+            <div key={item.id} className={`flex items-center gap-3 border-t px-5 py-4 sm:px-6 ${item.start.getTime() <= now && item.end.getTime() > now ? "border-violet-300/45 bg-violet-400/15" : item.start.getTime() > now && nextClass?.start.getTime() === item.start.getTime() ? "border-violet-300/20 bg-violet-400/[0.07]" : "border-white/[0.07]"}`}>
               <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-cyan-400/[0.07] text-cyan-100"><BookOpen size={17} /></div>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-white/85">{item.name}</p>
+                <p className="truncate text-sm font-medium text-white/85">{item.name} {item.start.getTime() <= now && item.end.getTime() > now ? <span className="ml-2 text-xs text-violet-200">Now</span> : item.start.getTime() > now && nextClass?.start.getTime() === item.start.getTime() ? <span className="ml-2 text-xs text-white/70">Next</span> : null}</p>
                 <p className="mt-1 truncate text-xs text-white/40">{item.location || "Location unavailable"}</p>
               </div>
               <span className="shrink-0 text-xs text-white/55">{formatTime(item.start)}–{formatTime(item.end)}</span>
