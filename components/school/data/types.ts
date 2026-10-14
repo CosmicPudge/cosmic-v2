@@ -103,6 +103,8 @@ export interface SchoolAssignment {
   title: string;
 
   due: Date;
+  allDay?: boolean;
+  courseId?: string;
 
   course?: string;
 
