@@ -128,7 +128,8 @@ export default function GradeCsvImport({ courses, grades, saveGrade, removeGrade
           line.midY>=top&&line.midY<bottom&&line.right<weight.x&&
           !/^(Group|Weight|Total)\b/i.test(line.text)&&
           !/^\d{1,3}\s*%$/.test(line.text));
-        const name=candidates.map(line=>line.text).join(" ").replace(/\s+/g," ").trim();
+        const inlineName=weight.text.replace(/\s*\d{1,3}\s*%\s*$/,"").trim();
+        const name=[...candidates.map(line=>line.text),inlineName].filter(Boolean).join(" ").replace(/\s+/g," ").trim();
         if(name&&!parsed.some(item=>item.name.toLowerCase()===name.toLowerCase()))
           parsed.push({name,weight:weight.weight});
       }
