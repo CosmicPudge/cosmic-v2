@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import type { Course, Grade } from "@/core/contracts/School";
+import { courseGradeKey, COURSE_GRADE_CHANGED } from "@/services/school/courseGradeSummary";
 
-type Candidate = { courseId: string; courseCode: string; grade: Grade; valid: boolean; issue?: string; selected: boolean };
+type Candidate = { courseId: string; courseCode: string; grade: Grade; valid: boolean; issue?: string; selected: boolean; group?: string };
 function parseCsv(text: string): string[][] {
   const rows: string[][] = []; let row: string[] = [], cell = "", quoted = false;
   for (let i = 0; i < text.length; i++) {
@@ -26,7 +27,7 @@ const clean = (v: string) => v.toUpperCase().replace(/[^A-Z0-9]/g, "");
 const tokens = (v: string) => v.toUpperCase().match(/[A-Z]+|\d+/g)?.join(" ") ?? "";
 const field = "w-full rounded-lg border border-violet-200/20 bg-[#160e30] px-3 py-2 text-sm text-white";
 const example = 'course,assignment,letter,earned,possible\nCHEM 1210,Course grade,B+,,\nMATH 1060,Quiz 1,,18,20';
-export default function GradeCsvImport({ courses, grades, saveGrade }: { courses: Course[]; grades: Grade[]; saveGrade: (grade: Grade) => void }) {
+export default function GradeCsvImport({ courses, grades, saveGrade, scopeId }: { courses: Course[]; grades: Grade[]; saveGrade: (grade: Grade) => void; scopeId: string }) {
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [message, setMessage] = useState("");
   const [fileName, setFileName] = useState("");
@@ -83,7 +84,7 @@ export default function GradeCsvImport({ courses, grades, saveGrade }: { courses
       if (pdf.numPages > 30) throw new Error("PDF must have 30 pages or fewer.");
       const matchedCourse = courses.find((course) => course.id === pdfCourseId);
       if (!matchedCourse) throw new Error("Choose a valid course.");
-      const records: Array<{label:string;earned:number;possible:number}> = [];
+      const records: Array<{label:string;earned:number;possible:number;group?:string}> = [];
       let canvasTotal: string | undefined;
       for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber++) {
         const page = await pdf.getPage(pageNumber);
@@ -138,7 +139,9 @@ export default function GradeCsvImport({ courses, grades, saveGrade }: { courses
           const preceding = candidateLines.filter((line) => line.y > score.y + 6);
           const selected = [...preceding.slice(-2), ...sameLine].sort((a,b) => b.y - a.y);
           const label = selected.map((line) => line.text).join(" ").replace(/\s+(?:Sep|Oct|Nov|Dec|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug)\s+\d{1,2}\s+by\b.*$/i, "").trim();
-          if (label && !/^\d/.test(label) && label.length <= 180) records.push({ label, earned: score.earned, possible: score.possible });
+          const below = lines.filter((line) => line.y < score.y - 5 && line.y > score.y - 32).sort((a,b) => b.y - a.y);
+          const group = below.map((line)=>line.text).find((text)=>groupLabel.test(text));
+          if (label && !/^\\d/.test(label) && label.length <= 180) records.push({ label, earned: score.earned, possible: score.possible, ...(group?{group}:{}) });
         }
         const totals = fragments.map((part) => part.text).filter((t) => /^\d+(?:\.\d+)?%$/.test(t));
         if (totals.length) canvasTotal = totals[totals.length - 1];
@@ -154,7 +157,7 @@ export default function GradeCsvImport({ courses, grades, saveGrade }: { courses
         const suspicious=/[\u2580-\u259f\u25a0-\u25ff\uE000-\uF8FF]|\b(?:Sep|Oct|Nov|Dec|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug)\s+\d{1,2}\b|\b(?:am|pm)\b|\b(?:Lecture Assignments|Math Primer Assignments|Weekly Progress Reports)\b|\b(?:by|Submitted|Status|Score)\b/i.test(label);
         seen.add(key);
         const issue=suspicious?"PDF row text appears merged; do not import":duplicate?"Already imported or duplicated":undefined;
-        return { courseId:pdfCourseId,courseCode:matchedCourse.code||matchedCourse.name,
+        return { courseId:pdfCourseId,courseCode:matchedCourse.code||matchedCourse.name, group:record.group,
           grade:{id:crypto.randomUUID(),courseId:pdfCourseId,label,earnedPoints:record.earned,possiblePoints:record.possible},
           valid:!issue,selected:!issue,...(issue?{issue}:{}) };
       });
@@ -166,8 +169,30 @@ export default function GradeCsvImport({ courses, grades, saveGrade }: { courses
   function importSelected() {
     if (!confirmed) return;
     const selected = candidates.filter((item) => item.valid && item.selected);
+    // Use existing records for mapping when a PDF is re-imported.
+    // Their IDs remain stable; their scores must never be overwritten.
+    const mapping = candidates.filter((item) => item.group && (item.valid && item.selected || item.issue === "Already imported or duplicated"));
+    const course = courses.find((item) => item.id === pdfCourseId);
+    if (course && mapping.length) {
+      const key = courseGradeKey(scopeId,course);
+      try {
+        const current = JSON.parse(window.localStorage.getItem(key)||"null") as {groups?:Array<{id:string;name:string;weight:number|null}>;assignments?:Record<string,string>}|null;
+        const groups = Array.isArray(current?.groups)?[...current.groups]:[];
+        const assignments = {...(current?.assignments??{})};
+        for(const entry of mapping) {
+          const name = entry.group!;
+          let group = groups.find((item)=>item.name.trim().toLowerCase()===name.trim().toLowerCase());
+          if(!group){group={id:crypto.randomUUID(),name,weight:null};groups.push(group);}
+          const existing = grades.find((item)=>item.courseId===entry.courseId&&(item.label??"").trim().toLowerCase()===(entry.grade.label??"").trim().toLowerCase());
+          const id = existing?.id??entry.grade.id;
+          if(id && !assignments[id])assignments[id]=group.id;
+        }
+        window.localStorage.setItem(key,JSON.stringify({groups,assignments}));
+        window.dispatchEvent(new Event(COURSE_GRADE_CHANGED));
+      }catch{setMessage("Grades were not saved because the local grading structure could not be read.");return;}
+    }
     selected.forEach((item) => saveGrade(item.grade));
-    setMessage("Saved " + selected.length + " reviewed grade records to this School workspace.");
+    setMessage("Saved "+selected.length+" new grade records and recognized "+new Set(mapping.map((item)=>item.group)).size+" grading groups. New groups have unknown weights until you enter them.");
     setCandidates([]); setConfirmed(false);
   }
   function downloadTemplate() {
@@ -175,6 +200,7 @@ export default function GradeCsvImport({ courses, grades, saveGrade }: { courses
     const href = URL.createObjectURL(blob); const a=document.createElement("a"); a.href=href; a.download="cosmos-grade-import-template.csv"; a.click(); URL.revokeObjectURL(href);
   }
   const selectedCount=candidates.filter((c)=>c.valid&&c.selected).length;
+  const mappedCount=candidates.filter((c)=>c.group && (c.selected || c.issue==="Already imported or duplicated")).length;
   return <section className="rounded-2xl border border-violet-200/20 bg-violet-950/15 p-5">
     <h2 className="text-lg font-semibold text-white">Import grades from a file</h2>
     <p className="mt-2 text-sm text-white/60">Offline PDF or CSV import for your own course grades and assignment scores. No Canvas account access required. This runs locally in your browser; review each matched grade before saving. This is not an official transcript import.</p>
@@ -198,11 +224,11 @@ export default function GradeCsvImport({ courses, grades, saveGrade }: { courses
       <div className="max-h-80 space-y-2 overflow-auto">
       {candidates.map((candidate,i)=><label key={i} className="flex items-start gap-3 rounded-lg border border-white/10 p-3 text-sm text-white/75">
         <input type="checkbox" className="mt-1" disabled={!candidate.valid} checked={candidate.selected} onChange={(e)=>setCandidates((old)=>old.map((v,j)=>i===j?{...v,selected:e.target.checked}:v))}/>
-        <span className="min-w-0 break-words"><span className="font-semibold">{candidate.courseCode}</span> · {candidate.grade.label} · {candidate.grade.letter ?? (candidate.grade.earnedPoints ?? "—")+"/"+(candidate.grade.possiblePoints??"—")}{candidate.issue && <span className="block text-amber-200">Skipped: {candidate.issue}</span>}</span>
+        <span className="min-w-0 break-words"><span className="font-semibold">{candidate.courseCode}</span> · {candidate.grade.label}{candidate.group ? " · Group: "+candidate.group : ""} · {candidate.grade.letter ?? (candidate.grade.earnedPoints ?? "—")+"/"+(candidate.grade.possiblePoints??"—")}{candidate.issue && <span className="block text-amber-200">Skipped: {candidate.issue}</span>}</span>
       </label>)}
       </div>
       <label className="flex items-start gap-2 text-sm text-white/70"><input type="checkbox" className="mt-1" checked={confirmed} onChange={(e)=>setConfirmed(e.target.checked)}/> I reviewed the selected grades and want to save them to Cosmos.</label>
-      <button type="button" disabled={!confirmed||selectedCount===0} onClick={importSelected} className="rounded-lg border border-violet-300/40 px-4 py-2 text-sm text-white disabled:opacity-40">Save {selectedCount} selected grades</button>
+      <button type="button" disabled={!confirmed||(selectedCount===0&&mappedCount===0)} onClick={importSelected} className="rounded-lg border border-violet-300/40 px-4 py-2 text-sm text-white disabled:opacity-40">Save {selectedCount} grades and recognized groups</button>
     </div>}
   </section>;
 }
