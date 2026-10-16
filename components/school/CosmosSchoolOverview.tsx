@@ -300,7 +300,7 @@ export default function CosmosSchoolOverview({ preview = false }: { preview?: bo
               {courses.map((course, index) => {
                 const related = openAssignments.filter((item) => item.course && (item.course === course.code || item.course === course.name)).length;
                 const grade = courseSummaries.find((item) => item.course.id === course.id)?.summary;
-                const next = manualSchedule.find((item) => item.course.id === course.id && item.end.getTime() > now);
+                const next = openAssignments.find((item) => item.course && normalizeCourseCode(item.course) === normalizeCourseCode(course.code || course.name));
                 return <Link key={course.id} href={`/school/courses/${encodeURIComponent(course.id)}`} className="group min-w-0 overflow-hidden rounded-xl border border-violet-300/20 bg-violet-950/20 transition hover:border-violet-300/50">
                   <div className="relative flex h-20 items-end overflow-hidden bg-gradient-to-br from-indigo-900/65 via-violet-700/30 to-fuchsia-950/40 p-3">
                     <span className="absolute right-3 top-2 text-4xl font-black text-white/[0.06]">{String(index + 1).padStart(2, "0")}</span>
@@ -309,7 +309,7 @@ export default function CosmosSchoolOverview({ preview = false }: { preview?: bo
                   <div className="space-y-2 p-3">
                     <p className="truncate text-xs text-white/60" title={course.name}>{course.name}</p>
                     <div className="flex items-center justify-between gap-2 text-xs"><span className="font-semibold text-violet-100">{grade?.letter ? `Grade ${grade.letter}` : "Grade not entered"}</span><span className="text-white/50">{course.credits ?? "—"} cr</span></div>
-                    <div className="flex items-center justify-between gap-2 text-[11px] text-white/45"><span>{related} pending assignments</span><span className="truncate">{next ? formatDate(next.start) : "No meeting"}</span></div>
+                    <div className="flex items-center justify-between gap-2 text-[11px] text-white/45"><span>{related} pending assignments</span><span className="truncate">{next ? "Due " + formatDate(next.due) : "No upcoming deadline"}</span></div>
                   </div>
                 </Link>;
               })}
