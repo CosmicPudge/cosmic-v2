@@ -176,7 +176,7 @@ export default function GradeCsvImport({ courses, grades, saveGrade, scopeId }: 
     if (course && mapping.length) {
       const key = courseGradeKey(scopeId,course);
       try {
-        const current = JSON.parse(window.localStorage.getItem(key)||"null") as {groups?:Array<{id:string;name:string;weight:number|null}>;assignments?:Record<string,string>}|null;
+        const current = JSON.parse(window.localStorage.getItem(key)||"null") as {groups?:Array<{id:string;name:string;weight:number|null}>;assignments?:Record<string,string>;gradeScale?:Record<string,number>}|null;
         const groups = Array.isArray(current?.groups)?[...current.groups]:[];
         const assignments = {...(current?.assignments??{})};
         for(const entry of mapping) {
@@ -187,7 +187,7 @@ export default function GradeCsvImport({ courses, grades, saveGrade, scopeId }: 
           const id = existing?.id??entry.grade.id;
           if(id && !assignments[id])assignments[id]=group.id;
         }
-        window.localStorage.setItem(key,JSON.stringify({groups,assignments}));
+        window.localStorage.setItem(key,JSON.stringify({groups,assignments,...(current?.gradeScale?{gradeScale:current.gradeScale}:{})}));
         window.dispatchEvent(new Event(COURSE_GRADE_CHANGED));
       }catch{setMessage("Grades were not saved because the local grading structure could not be read.");return;}
     }
