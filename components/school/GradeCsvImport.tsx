@@ -30,6 +30,7 @@ const gradeIdentity = (title: string) => title.toLowerCase()
   .replace(/\b\d{1,2}:\d{2}\s*(?:am|pm)\b/gi, "")
   .replace(/\bweek in review quizzes,?\s*highest(?:\s+of\s+2\s+attempts)?\b/gi, "")
   .replace(/\bof\s+2\s+attempts\s*$/i, "")
+  .replace(/\s+11\s+59\s*pm\b/gi,"")
   .replace(/[^a-z0-9]+/g, " ").trim();
 const field = "w-full rounded-lg border border-violet-200/20 bg-[#160e30] px-3 py-2 text-sm text-white";
 const example = 'course,assignment,letter,earned,possible\nCHEM 1210,Course grade,B+,,\nMATH 1060,Quiz 1,,18,20';
@@ -112,7 +113,7 @@ export default function GradeCsvImport({ courses, grades, saveGrade, scopeId }: 
         // PDF.js returns score cells as separate "10", "/", "10" glyphs.
         // Group glyphs on the same visual baseline before parsing a score.
         const scoreLines = new Map<number, Fragment[]>();
-        for (const part of sorted.filter((part) => part.x >= scoreLimit && part.x < pageWidth * 0.92)) {
+        for (const part of sorted.filter((part) => part.x >= scoreLimit && part.x < pageWidth * 0.86)) {
           const y = Math.round(part.y / 3) * 3;
           scoreLines.set(y, [...(scoreLines.get(y) ?? []), part]);
         }
@@ -155,7 +156,7 @@ export default function GradeCsvImport({ courses, grades, saveGrade, scopeId }: 
           // A long assignment title can wrap below the score's numerator,
           // while its category subtitle appears even farther below. Canvas
           // PDFs frequently put the score denominator on a second line too.
-          const candidateLines = lines.filter((line) => Math.abs(line.y - score.y) <= 19 && isTitle(line.text) &&
+          const candidateLines = lines.filter((line) => Math.abs(line.y - score.y) <= 22 && isTitle(line.text) &&
             !/^(Proctored midterm exams|Out-of-class midterm exams|On line chapter quizzes|week in review quizzes|Midterms|Wooclap in-class polling)\\b/i.test(line.text));
           const selected = candidateLines.sort((a,b) => b.y - a.y);
           const label = selected.map((line) => line.text).join(" ").replace(/\\s+Out-of-class midterm exams for(?: extra credit)?$/i,"").replace(/\s+(?:Sep|Oct|Nov|Dec|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug)\s+\d{1,2}\s+by\b.*$/i, "").trim();
