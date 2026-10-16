@@ -149,15 +149,22 @@ export default function GradeCsvImport({ courses, grades, saveGrade, scopeId }: 
       if (!records.length) throw new Error("No reliably scored assignments found. This importer supports text-based Canvas Print Grades PDFs. Use CSV for scanned PDFs.");
       const seen=new Set<string>();
       const proposals:Candidate[]=records.map((record)=>{
-        const label=record.label.replace(/\s+/g," ").trim();
+        let label=record.label.replace(/\s+/g," ").trim();
+        let group=record.group;
+        // Canvas sometimes places the assignment-group subtitle on the same
+        // extracted text line as its title (especially Chemistry quizzes).
+        // Keep "high score" in the assignment title; detach only known
+        // category subtitles at the end.
+        const subtitle=label.match(/\s+(Week in Review Quizzes,\s*highest)\s*$/i);
+        if(subtitle){group=group??subtitle[1];label=label.slice(0,subtitle.index).trim();}
         const key=label.toLowerCase();
         const duplicate=seen.has(key)||grades.some((grade)=>grade.courseId===pdfCourseId&&(grade.label??"").toLowerCase()===key);
         // PDF text extraction can concatenate distinct visual rows. Treat titles
         // containing layout remnants as unsafe, even if the score is numeric.
-        const suspicious=/[\u2580-\u259f\u25a0-\u25ff\uE000-\uF8FF]|\b(?:Sep|Oct|Nov|Dec|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug)\s+\d{1,2}\b|\b(?:am|pm)\b|\b(?:Lecture Assignments|Math Primer Assignments|Weekly Progress Reports)\b|\b(?:by|Submitted|Status|Score)\b/i.test(label);
+        const suspicious=/[\u2580-\u259f\u25a0-\u25ff\uE000-\uF8FF]|\b(?:Sep|Oct|Nov|Dec|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug)\s+\d{1,2}\b|\b(?:am|pm)\b|\b(?:Lecture Assignments|Math Primer Assignments|Weekly Progress Reports)\b|\b(?:by|Submitted|Status)\b/i.test(label);
         seen.add(key);
         const issue=suspicious?"PDF row text appears merged; do not import":duplicate?"Already imported or duplicated":undefined;
-        return { courseId:pdfCourseId,courseCode:matchedCourse.code||matchedCourse.name, group:record.group,
+        return { courseId:pdfCourseId,courseCode:matchedCourse.code||matchedCourse.name, group,
           grade:{id:crypto.randomUUID(),courseId:pdfCourseId,label,earnedPoints:record.earned,possiblePoints:record.possible},
           valid:!issue,selected:!issue,...(issue?{issue}:{}) };
       });
