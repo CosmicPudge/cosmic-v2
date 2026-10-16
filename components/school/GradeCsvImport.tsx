@@ -25,6 +25,12 @@ function parseCsv(text: string): string[][] {
 const LETTERS = new Set(["A+","A","A-","B+","B","B-","C+","C","C-","D+","D","D-","F"]);
 const clean = (v: string) => v.toUpperCase().replace(/[^A-Z0-9]/g, "");
 const tokens = (v: string) => v.toUpperCase().match(/[A-Z]+|\d+/g)?.join(" ") ?? "";
+const gradeIdentity = (title: string) => title.toLowerCase()
+  .replace(/\b(?:sep|oct|nov|dec|jan|feb|mar|apr|may|jun|jul|aug)\s+\d{1,2}\s+by\b.*$/i, "")
+  .replace(/\b\d{1,2}:\d{2}\s*(?:am|pm)\b/gi, "")
+  .replace(/\bweek in review quizzes,?\s*highest(?:\s+of\s+2\s+attempts)?\b/gi, "")
+  .replace(/\bof\s+2\s+attempts\s*$/i, "")
+  .replace(/[^a-z0-9]+/g, " ").trim();
 const field = "w-full rounded-lg border border-violet-200/20 bg-[#160e30] px-3 py-2 text-sm text-white";
 const example = 'course,assignment,letter,earned,possible\nCHEM 1210,Course grade,B+,,\nMATH 1060,Quiz 1,,18,20';
 export default function GradeCsvImport({ courses, grades, saveGrade, scopeId }: { courses: Course[]; grades: Grade[]; saveGrade: (grade: Grade) => void; scopeId: string }) {
@@ -171,8 +177,8 @@ export default function GradeCsvImport({ courses, grades, saveGrade, scopeId }: 
         // category subtitles at the end.
         const subtitle=label.match(/\s+(Week in Review Quizzes,\s*highest)\s*$/i);
         if(subtitle){group=group??subtitle[1];label=label.slice(0,subtitle.index).trim();}
-        const key=label.toLowerCase();
-        const duplicate=seen.has(key)||grades.some((grade)=>grade.courseId===pdfCourseId&&(grade.label??"").toLowerCase()===key);
+        const key=gradeIdentity(label);
+        const duplicate=seen.has(key)||grades.some((grade)=>grade.courseId===pdfCourseId&&gradeIdentity(grade.label??"")===key);
         // PDF text extraction can concatenate distinct visual rows. Treat titles
         // containing layout remnants as unsafe, even if the score is numeric.
         const suspicious=/[\u2580-\u259f\u25a0-\u25ff\uE000-\uF8FF]|\b(?:Sep|Oct|Nov|Dec|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug)\s+\d{1,2}\b|\b(?:am|pm)\b|\b(?:Lecture Assignments|Math Primer Assignments|Weekly Progress Reports)\b|\b(?:by|Submitted|Status)\b/i.test(label);
@@ -204,7 +210,7 @@ export default function GradeCsvImport({ courses, grades, saveGrade, scopeId }: 
           const name = entry.group!;
           let group = groups.find((item)=>item.name.trim().toLowerCase()===name.trim().toLowerCase());
           if(!group){group={id:crypto.randomUUID(),name,weight:null};groups.push(group);}
-          const existing = grades.find((item)=>item.courseId===entry.courseId&&(item.label??"").trim().toLowerCase()===(entry.grade.label??"").trim().toLowerCase());
+          const existing = grades.find((item)=>item.courseId===entry.courseId&&gradeIdentity(item.label??"")===gradeIdentity(entry.grade.label??""));
           const id = existing?.id??entry.grade.id;
           if(id && !assignments[id])assignments[id]=group.id;
         }
