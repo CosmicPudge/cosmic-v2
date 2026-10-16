@@ -16,32 +16,15 @@ export function courseGradeSummary(scopeId:string,course:Course,grades:Grade[]) 
   // Overall grades are distinct from assignment letter grades.
   const overall=[...courseGrades].reverse().find((grade)=>grade.letter&&["course grade","current course grade","overall course grade"].includes((grade.label??"").trim().toLowerCase()));
   const localLetter=overall?.letter?.toUpperCase();
-  let estimate:number|undefined;
-  let incomplete=false;
-  let scale=DEFAULT_GRADE_SCALE;
   let canvasLetter: string|undefined;
   let canvasPercent: number|undefined;
   if(typeof window!=="undefined"){
     try{
       const data=JSON.parse(window.localStorage.getItem(courseGradeKey(scopeId,course))||"null") as Structure|null;
-      if(data?.gradeScale)scale={...DEFAULT_GRADE_SCALE,...data.gradeScale};
       if(data?.canvasLetter && GRADE_POINTS[data.canvasLetter]!==undefined)canvasLetter=data.canvasLetter;
-      if(typeof data?.canvasPercent==="number"&&Number.isFinite(data.canvasPercent))canvasPercent=data.canvasPercent;
-      if(data?.groups?.length&&data.assignments){
-        const weightedGroups=data.groups.map((group)=>{
-          const entries=courseGrades.filter((grade)=>grade.id&&data.assignments[grade.id]===group.id&&grade.earnedPoints!==undefined&&grade.possiblePoints!==undefined&&grade.possiblePoints>0);
-          const possible=entries.reduce((sum,g)=>sum+(g.possiblePoints??0),0);
-          const earned=entries.reduce((sum,g)=>sum+(g.earnedPoints??0),0);
-          return {weight:group.weight,percentage:possible>0?earned/possible*100:undefined};
-        }).filter((group)=>group.weight!==null&&group.weight>0&&group.percentage!==undefined);
-        const weight=weightedGroups.reduce((sum,g)=>sum+(g.weight??0),0);
-        if(weight>0&&weight<=100.001&&data.groups.every((g)=>g.weight!==null))estimate=weightedGroups.reduce((sum,g)=>sum+(g.weight??0)*g.percentage!,0)/weight;
-        incomplete=courseGrades.some((grade)=>grade.id&&grade.possiblePoints&&grade.earnedPoints!==undefined&&!data.groups.some((g)=>data.assignments[grade.id!]===g.id))||Math.abs(data.groups.reduce((sum,g)=>sum+(g.weight??0),0)-100)>0.01;
-      }
+      if(typeof data?.canvasPercent==="number" && Number.isFinite(data.canvasPercent))canvasPercent=data.canvasPercent;
     }catch{}
   }
-  // A recorded overall course grade is authoritative within Cosmos. If none
-  // exists, use a clearly provisional weighted course estimate, never an
-  // arbitrary individual assignment letter or unweighted points percentage.
-  return {letter:canvasLetter??(localLetter&&GRADE_POINTS[localLetter]!==undefined?localLetter:estimate!==undefined?gradeFromScale(estimate,scale):undefined),percentage:canvasPercent??estimate,weightedEstimate:estimate,incomplete,source:canvasLetter?"Canvas-reported grade":localLetter?"recorded course grade":estimate!==undefined?"weighted estimate":"ungraded"};
+  const letter=canvasLetter??(localLetter&&GRADE_POINTS[localLetter]!==undefined?localLetter:undefined);
+  return {letter,percentage:canvasPercent,weightedEstimate:undefined,incomplete:false,source:canvasLetter?"Canvas-reported grade":localLetter?"recorded course grade":canvasPercent!==undefined?"Canvas PDF total":"ungraded"};
 }
