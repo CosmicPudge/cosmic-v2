@@ -25,7 +25,7 @@ export default function CourseGradingStructure({ course, grades, scopeId }: { co
     setLoaded(true);
   },[key]);
   useEffect(()=>{if(loaded)try{window.localStorage.setItem(key,JSON.stringify(model));window.dispatchEvent(new Event(COURSE_GRADE_CHANGED));}catch{}},[key,loaded,model]);
-  useEffect(()=>{const reload=()=>{try{const data=JSON.parse(window.localStorage.getItem(key)||"null") as Structure|null;if(data?.groups&&data.assignments)setModel(data);}catch{}};window.addEventListener(COURSE_GRADE_CHANGED,reload);return()=>window.removeEventListener(COURSE_GRADE_CHANGED,reload);},[key]);
+  useEffect(()=>{const reload=()=>{try{const data=JSON.parse(window.localStorage.getItem(key)||"null") as Structure|null;if(data?.groups&&data.assignments)setModel((old)=>JSON.stringify(old)===JSON.stringify(data)?old:data);}catch{}};window.addEventListener(COURSE_GRADE_CHANGED,reload);return()=>window.removeEventListener(COURSE_GRADE_CHANGED,reload);},[key]);
   function addGroup(){
     const weight=newWeight.trim()===""?null:Number(newWeight);
     if(!newName.trim()||(weight!==null&&(!Number.isFinite(weight)||weight<0||weight>100))||model.groups.some((g)=>g.name.toLowerCase()===newName.trim().toLowerCase()))return;
