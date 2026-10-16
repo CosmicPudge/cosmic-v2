@@ -11,6 +11,7 @@ import { dedupeSchoolAssignments } from "@/services/school/assignmentIdentity";
 import { assignmentWorkloadLabel, buildAssignmentWorkload, type AssignmentWorkloadSource, type AssignmentWorkloadStatus } from "@/services/school/assignmentWorkload";
 import { assignmentDetailHref } from "@/services/school/assignmentDetail";
 import { canonicalCourseFilterSelection } from "@/services/school/courseExperience";
+import { resolveCanvasAssignment } from "@/services/school/courseResolution";
 import { isAssignmentActiveForPlanning, safeSchoolDate } from "@/services/school/planning";
 import { useSchool } from "./context/SchoolDataContext";
 import { AssignmentForm } from "./SchoolCrudViews";
@@ -53,7 +54,31 @@ export function AssignmentsWorkloadManager({ requestedCourseId }: { requestedCou
   const catalog = buildSchoolCourseCatalog(courses, local.data.terms, snapshot?.canvasCourses ?? []);
   const courseFilter = canonicalCourseFilterSelection(requestedCourseId, catalog, local.ready && !loading, manualCourseSelection);
   const invalidCourseRequest = Boolean(requestedCourseId && local.ready && !loading && courseFilter === "all" && manualCourseSelection === null);
-  const allAssignments = dedupeSchoolAssignments([...toLocalPlanning(local.data.assignments, courses), ...(snapshot?.planningAssignments ?? [])]);
+  // A personal iCal feed produces snapshot.assignments, not planningAssignments.
+  // Convert them into the workload model without requiring account-backed storage.
+  const calendarAssignments: SchoolPlanningAssignment[] = (snapshot?.assignments ?? []).map((item) => {
+    const match = resolveCanvasAssignment(item.title, courses, local.data.terms);
+    const stamp = item.due;
+    const event = snapshot?.events.find((candidate) => candidate.id === item.id);
+    return {
+      id: "canvas-calendar:" + item.id,
+      accountId: "local",
+      title: match?.displayTitle || item.title,
+      rawTitle: item.title,
+      sourceType: "canvas-calendar",
+      externalId: item.id,
+      ...(match?.course ? { courseId: match.course.id, courseName: match.course.name } : match?.descriptor ? { courseName: match.descriptor.courseCode } : item.course ? { courseName: item.course } : {}),
+      dueAt: item.allDay ? new Date(item.due.getFullYear(), item.due.getMonth(), item.due.getDate(), 23, 59, 59) : item.due,
+      completionStatus: item.completed ? "completed" : "upcoming",
+      planningStatus: "not_started",
+      priority: "normal",
+      ...(item.sourceUrl ? { canvasUrl: item.sourceUrl } : {}),
+      createdAt: stamp,
+      updatedAt: stamp,
+      ...(item.allDay || event?.allDay ? { description: "Calendar date only · exact submission time not provided." } : {}),
+    };
+  });
+  const allAssignments = dedupeSchoolAssignments([...toLocalPlanning(local.data.assignments, courses), ...(snapshot?.planningAssignments ?? []), ...calendarAssignments]).filter((item) => !item.dueAt || item.dueAt.getTime() >= now.getTime());
   const workload = buildAssignmentWorkload({ assignments: allAssignments, catalog, courses, filters: { courseId: courseFilter === "all" ? undefined : courseFilter, status: statusFilter, source: sourceFilter, search }, now });
   const localById = new Map(local.data.assignments.map((item) => [`manual:${item.id}`, item]));
   const activeCount = allAssignments.filter((item) => !done(item, completionOverrides)).length;
@@ -85,8 +110,8 @@ export function AssignmentsWorkloadManager({ requestedCourseId }: { requestedCou
           const unresolvedCourse = !identity && (item.courseId || item.courseName);
           return <article key={item.id} className="flex flex-wrap items-center gap-3 border-b border-white/[0.07] px-4 py-3 last:border-0">
             <button type="button" aria-label={done(item, completionOverrides) ? `Reopen ${item.title}` : `Mark ${item.title} complete`} onClick={() => { const next = !done(item, completionOverrides); if (localItem) local.saveAssignment({ ...localItem, status: next ? "completed" : "upcoming" }); else { setSchoolCompletionOverride(item.id, next); setCompletionOverrides(readSchoolCompletionOverrides()); } }} className={`grid size-8 shrink-0 place-items-center rounded-xl ${done(item, completionOverrides) ? "bg-emerald-300/10 text-emerald-200" : "bg-white/[0.04] text-white/35"}`}><CheckCircle2 className="size-4" /></button>
-            <div className="min-w-0 flex-1 basis-40"><Link href={assignmentDetailHref(item.id)} className={`block truncate text-sm hover:text-white ${done(item, completionOverrides) ? "text-white/45 line-through" : "text-white/85"}`}>{item.title}</Link><div className="mt-1 flex flex-wrap items-center gap-x-2 text-xs text-white/40"><span>{identity ? <Link href={`/school/courses/${encodeURIComponent(identity.id)}`} className="hover:text-sky-100">{identity.code ? `${identity.code} · ` : ""}{identity.name}</Link> : unresolvedCourse ? item.courseName ?? "Unmatched course" : "No course linked"}</span><span>· {sourceName(item)}</span><span>· {assignmentWorkloadLabel(item, now)}</span></div></div>
-            <div className="text-xs text-white/50 sm:ml-auto sm:text-right">{dueText(item.dueAt)}{item.priority !== "normal" && <span className="mt-1 block capitalize text-white/35">{item.priority} priority</span>}</div>
+            <div className="min-w-0 flex-1 basis-40"><Link href={assignmentDetailHref(item.id)} className={`block break-words text-sm hover:text-white ${done(item, completionOverrides) ? "text-white/45 line-through" : "text-white/85"}`}>{item.title}</Link><div className="mt-1 flex flex-wrap items-center gap-x-2 text-xs text-white/40"><span>{identity ? <Link href={`/school/courses/${encodeURIComponent(identity.id)}`} className="hover:text-sky-100">{identity.code ? `${identity.code} · ` : ""}{identity.name}</Link> : unresolvedCourse ? item.courseName ?? "Unmatched course" : "No course linked"}</span><span>· {sourceName(item)}</span><span>· {assignmentWorkloadLabel(item, now)}</span></div></div>
+            <div className="text-xs text-white/50 sm:ml-auto sm:text-right">{item.sourceType === "canvas-calendar" && item.description?.startsWith("Calendar date only") && item.dueAt ? `Due ${item.dueAt.toLocaleDateString("en-US", { month: "short", day: "numeric" })} · All day` : dueText(item.dueAt)}{item.priority !== "normal" && <span className="mt-1 block capitalize text-white/35">{item.priority} priority</span>}</div>
             {localItem && <div className="flex gap-1"><button type="button" onClick={() => setEditing(localItem)} className="rounded-lg px-2 py-1 text-xs text-white/50 transition hover:bg-white/[0.06] hover:text-white">Edit</button><button type="button" onClick={() => setDeleting(localItem)} className="rounded-lg px-2 py-1 text-xs text-rose-200/75 transition hover:bg-rose-300/10">Delete</button></div>}
           </article>;
         })}</div>

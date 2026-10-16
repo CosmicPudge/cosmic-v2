@@ -1,0 +1,9 @@
+/* M2 only: school wallpaper via existing M0 cinematic background layer. */
+.cosmic-site-shell[data-cosmic-app="school"] .cosmos-cinematic-image {
+  background-image: url("/wallpapers/school/nebula-horizon.svg");
+  background-position: center center;
+  background-size: cover;
+}
+.cosmic-site-shell[data-cosmic-app="school"] .cosmos-cinematic-overlay {
+  background: linear-gradient(90deg,rgba(4,2,20,.65),rgba(4,2,20,.18) 60%), linear-gradient(180deg,rgba(4,2,20,.06),rgba(3,2,18,.46));
+}

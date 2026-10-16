@@ -3,6 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "predev": "node scripts/prepare-pdf-worker.mjs",
+    "prebuild": "node scripts/prepare-pdf-worker.mjs",
     "dev": "next dev",
     "dev:lan": "next dev --hostname 0.0.0.0",
     "build": "next build --webpack",
@@ -44,6 +46,7 @@
     "react-draggable": "^4.7.0",
     "server-only": "0.0.1",
     "stripe": "^22.5.0",
+    "tesseract.js": "^6.0.1",
     "web-push": "^3.6.7",
     "zustand": "^5.0.14"
   },

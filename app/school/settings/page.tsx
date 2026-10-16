@@ -1,6 +1,7 @@
 import SchoolSection from "@/components/school/SchoolSection";
-import CanvasAcademicConnection from "@/components/school/CanvasAcademicConnection";
 
+// M2 is manual-first. The supported Canvas connection is the personal iCal
+// assignment feed inside SchoolSection Settings; no Canvas API token setup.
 export default function SchoolSettingsPage() {
-  return <><CanvasAcademicConnection /><SchoolSection section="Settings" /></>;
+  return <SchoolSection section="Settings" />;
 }

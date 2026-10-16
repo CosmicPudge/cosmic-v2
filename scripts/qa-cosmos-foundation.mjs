@@ -25,7 +25,7 @@ check("Cosmos brand is used in shared navigation", sidebar.includes(">COSMOS<") 
 check("Desktop sidebar breakpoint exists", sidebar.includes("hidden lg:flex"));
 check("Mobile navigation breakpoint exists", shell.includes("lg:hidden"));
 check("Global top bar is mounted by AppShell", shell.includes("<CosmosTopBar />"));
-check("Top bar uses live weather hook", topbar.includes("useWeather()") && topbar.includes("weather.temp"));
+check("Top bar uses live weather hook", topbar.includes("useWeather()") && topbar.includes("visibleWeather.temp"));
 check("Search remains globally accessible", topbar.includes("openSearch()"));
 check("Glass and solid setting persists", settingsRepo.includes("setSurfaceStyle") && settingsRepo.includes('"glass"') && settingsRepo.includes('"solid"'));
 check("Surface style is exposed on document root", settingsProvider.includes("dataset.cosmosSurface"));

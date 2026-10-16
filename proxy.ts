@@ -73,6 +73,17 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // M2: the localhost-only Canvas iCal importer performs its own same-origin,
+  // hostname, and Canvas URL validation. Exempt only this exact development
+  // endpoint from the personal School storage guard; all other APIs retain auth.
+  if (
+    pathname === "/api/school/canvas/local-feed" &&
+    process.env.NODE_ENV === "development" &&
+    ["localhost", "127.0.0.1"].includes(request.nextUrl.hostname)
+  ) {
+    return NextResponse.next();
+  }
+
   if (isApi && PUBLIC_API_ROUTES.has(pathname)) {
     return NextResponse.next();
   }

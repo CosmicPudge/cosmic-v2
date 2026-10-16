@@ -17,10 +17,14 @@ import AppHeader from "@/components/os/app/AppHeader";
 import CosmicCard from "@/design-system/components/CosmicCard";
 import StatusChip from "@/components/os/ui/StatusChip";
 import SchoolTabs from "@/components/school/SchoolTabs";
+import SchoolPersonalTracking from "@/components/school/SchoolPersonalTracking";
+import { courseGradeSummary, GRADE_POINTS, COURSE_GRADE_CHANGED } from "@/services/school/courseGradeSummary";
 import FoundationSurfaceToggle from "@/components/os/ui/FoundationSurfaceToggle";
 import FoundationViewportIndicator from "@/components/os/ui/FoundationViewportIndicator";
 import Skeleton from "@/components/os/ui/Skeleton";
 import { useSchool } from "@/components/school/context/SchoolDataContext";
+import { getWeeklySchedule } from "@/components/school/data/weeklySchedule";
+import { resolveCanvasAssignment, normalizeCourseCode } from "@/services/school/courseResolution";
 
 
 
@@ -43,15 +47,20 @@ function MetricCard({
   detail,
   icon: Icon,
   loading,
+  href,
+  children,
 }: {
   label: string;
   value: string;
   detail: string;
   icon: typeof GraduationCap;
   loading?: boolean;
+  href: string;
+  children?: React.ReactNode;
 }) {
   return (
-    <CosmicCard className="p-5">
+    <Link href={href} className="block h-full rounded-2xl focus-visible:outline-2 focus-visible:outline-violet-300">
+    <CosmicCard className="h-full p-5 transition-colors hover:border-violet-300/50">
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/35">{label}</p>
@@ -62,13 +71,17 @@ function MetricCard({
           <Icon size={20} />
         </div>
       </div>
+      {children}
     </CosmicCard>
+    </Link>
   );
 }
 
 export default function CosmosSchoolOverview({ preview = false }: { preview?: boolean }) {
   const { data, snapshot, local, loading, error } = useSchool();
   const [now, setNow] = useState(0);
+  const [gradeRevision, setGradeRevision] = useState(0);
+  useEffect(() => { const refresh = () => setGradeRevision((n) => n + 1); window.addEventListener(COURSE_GRADE_CHANGED, refresh); return () => window.removeEventListener(COURSE_GRADE_CHANGED, refresh); }, []);
 
   useEffect(() => {
     const update = () => setNow(Date.now());
@@ -83,9 +96,22 @@ export default function CosmosSchoolOverview({ preview = false }: { preview?: bo
     [local.data.courses, term],
   );
   const credits = courses.reduce((sum, course) => sum + (course.credits ?? 0), 0);
+  const recordedGrades = local.data.grades.filter((grade) => courses.some((course) => course.id === grade.courseId));
+  const courseSummaries = courses.map((course) => ({ course, summary: courseGradeSummary(local.scope.id, course, recordedGrades) }));
+  void gradeRevision;
+  const gradedCourses = courseSummaries.filter((item) => item.summary.letter && (item.course.credits ?? 0) > 0).map((item) => ({ credits: item.course.credits ?? 0, points: GRADE_POINTS[item.summary.letter!] }));
+  const gradedCredits = gradedCourses.reduce((sum, grade) => sum + grade.credits, 0);
+  const manualGpa = gradedCredits > 0 ? gradedCourses.reduce((sum, grade) => sum + grade.credits * grade.points, 0) / gradedCredits : undefined;
 
   const assignments = useMemo(() => {
-    const remote = data?.assignments ?? [];
+    const remote = (data?.assignments ?? []).map((item) => {
+      const event = data?.events.find((entry) => entry.id === item.id);
+      const resolved = resolveCanvasAssignment(item.title, courses, local.data.terms);
+      const byCode = courses.find((course) => normalizeCourseCode(course.code) === normalizeCourseCode(item.course));
+      const byId = courses.find((course) => course.id === item.courseId);
+      const course = resolved?.course ?? byId ?? byCode;
+      return { ...item, title: resolved?.displayTitle || item.title, course: course?.code || course?.name || resolved?.descriptor.courseCode || item.course, allDay: item.allDay || event?.allDay };
+    });
     const localAssignments = local.data.assignments.map((item) => ({
       id: item.id,
       title: item.title,
@@ -96,19 +122,17 @@ export default function CosmosSchoolOverview({ preview = false }: { preview?: bo
     }));
     const merged = [...remote, ...localAssignments];
     return [...new Map(merged.map((item) => [item.id, item])).values()];
-  }, [courses, data?.assignments, local.data.assignments]);
+  }, [courses, data?.assignments, data?.events, local.data.assignments, local.data.terms]);
 
   const openAssignments = assignments
-    .filter((item) => !item.completed)
+    .filter((item) => !item.completed && item.due.getTime() >= now)
     .sort((a, b) => a.due.getTime() - b.due.getTime());
   const dueSoon = openAssignments.filter((item) => dueWithin(item.due, 7, now)).length;
 
-  const todayClasses = (data?.classes ?? [])
-    .filter((item) => item.start.toDateString() === new Date(now).toDateString())
-    .sort((a, b) => a.start.getTime() - b.start.getTime());
-  const nextClass = (data?.classes ?? [])
-    .filter((item) => item.start.getTime() >= now)
-    .sort((a, b) => a.start.getTime() - b.start.getTime())[0];
+  const manualSchedule = getWeeklySchedule(courses, term, new Date(now));
+  const todayClasses = manualSchedule.filter((item) => item.start.toDateString() === new Date(now).toDateString()).map((item) => ({ id: `${item.course.id}-${item.start.toISOString()}`, name: item.course.code || item.course.name, start: item.start, end: item.end, location: item.location }));
+  const currentClass = manualSchedule.find((item) => item.start.getTime() <= now && item.end.getTime() > now);
+  const nextClass = manualSchedule.find((item) => item.start.getTime() > now);
 
   const workload = Array.from({ length: 7 }, (_, offset) => {
     const date = new Date(now);
@@ -121,27 +145,57 @@ export default function CosmosSchoolOverview({ preview = false }: { preview?: bo
   });
   const maxWorkload = Math.max(1, ...workload.map((item) => item.count));
 
-  const gpa = data?.stats.gpa;
+  const gpa = manualGpa;
+  const [gpaHistory, setGpaHistory] = useState<Array<{ date: string; value: number }>>([]);
+  const historyKey = "cosmos-school-gpa-" + local.scope.id + "-" + (term?.id ?? "none");
+  useEffect(() => {
+    if (!local.ready) return;
+    try {
+      const raw: unknown = JSON.parse(window.localStorage.getItem(historyKey) || "[]");
+      setGpaHistory(Array.isArray(raw) ? raw.filter((entry): entry is {date:string;value:number} =>
+        entry !== null && typeof entry === "object" && typeof entry.date === "string" &&
+        typeof entry.value === "number" && Number.isFinite(entry.value)).slice(-90) : []);
+    } catch { setGpaHistory([]); }
+  }, [historyKey, local.ready]);
+  useEffect(() => {
+    if (!local.ready || now === 0 || gpa === undefined || !term) return;
+    const date = new Date(now).toLocaleDateString("en-CA");
+    setGpaHistory((old) => {
+      const next = [...old.filter((point) => point.date !== date), {date, value:gpa}].sort((a,b) => a.date.localeCompare(b.date)).slice(-90);
+      if (JSON.stringify(old) === JSON.stringify(next)) return old;
+      try { window.localStorage.setItem(historyKey, JSON.stringify(next)); } catch {}
+      return next;
+    });
+  }, [gpa, historyKey, local.ready, now, term]);
   const providerHealthy = !error && snapshot?.sourceStatus?.canvas !== "error";
-  const sourceLabel = snapshot?.sourceStatus?.canvas === "healthy" ? "Canvas connected" : snapshot?.sourceStatus?.canvas === "error" ? "Canvas issue" : "Local + calendar data";
+  const sourceLabel = snapshot?.sourceStatus?.canvas === "healthy" ? "Canvas calendar active" : snapshot?.sourceStatus?.canvas === "error" ? "Canvas calendar unavailable" : "Manual data + optional Canvas calendar";
 
   return (
     <div className="mx-auto w-full max-w-[1500px] pb-10">
       <AppHeader
         eyebrow={term ? `School · ${term.name}` : "School"}
         title="School"
-        subtitle="Courses, assignments, schedule, progress, and feedback in one academic command center."
+        subtitle="Your classes, assignments, and academic tools."
         rightContent={
           <div className="flex flex-wrap items-center justify-end gap-2">
             {preview ? <FoundationViewportIndicator /> : null}
             {preview ? <FoundationSurfaceToggle /> : null}
             {preview ? <StatusChip variant="primary">Milestone 2 preview</StatusChip> : null}
+            <label className="flex items-center gap-2 text-sm text-white/70"><span className="sr-only">Academic term</span><select aria-label="Academic term" value={term?.id ?? ""} onChange={(event) => local.setActiveTerm(event.target.value)} className="rounded-xl border border-violet-300/30 bg-[#130b2d]/80 px-3 py-2 text-white"><option value="" disabled>{term ? "Select term" : "No term yet"}</option>{local.data.terms.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
             <StatusChip variant={providerHealthy ? "success" : "warning"}>{sourceLabel}</StatusChip>
           </div>
         }
       />
 
       <SchoolTabs />
+
+      {local.ready && !local.data.terms.length ? (
+        <div className="mb-4 flex flex-col gap-3 rounded-2xl border border-violet-300/30 bg-violet-900/20 p-4 text-sm text-white/80 sm:flex-row sm:items-center sm:justify-between">
+          <div><p className="font-semibold text-white">Set up your School workspace</p><p className="mt-1 text-white/60">Create an academic term first, then add courses, meeting times, and grades. Canvas Calendar can supply assignment deadlines separately.</p></div>
+          <Link href="/school/settings" className="shrink-0 rounded-xl border border-violet-300/40 px-4 py-2 text-center font-medium text-white hover:bg-violet-300/10">Create term</Link>
+        </div>
+      ) : null}
+
 
       {error ? (
         <div role="status" className="mb-5 rounded-xl border border-amber-300/15 bg-amber-400/[0.05] px-4 py-3 text-sm text-amber-50/75">
@@ -150,39 +204,66 @@ export default function CosmosSchoolOverview({ preview = false }: { preview?: bo
       ) : null}
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <MetricCard label="Current GPA" value={gpa !== undefined ? gpa.toFixed(2) : "—"} detail={gpa !== undefined ? "Current academic snapshot" : "Grade data not available"} icon={TrendingUp} loading={loading && !data} />
-        <MetricCard label="Next class" value={nextClass ? formatTime(nextClass.start) : "Clear"} detail={nextClass ? nextClass.name : "No upcoming class found"} icon={Clock3} loading={loading && !data} />
-        <MetricCard label="Due soon" value={String(dueSoon)} detail="Assignments due in the next 7 days" icon={CheckCircle2} loading={loading && !data} />
-        <MetricCard label="Credits" value={String(credits)} detail={term ? `Tracked for ${term.name}` : "Current tracked courses"} icon={GraduationCap} loading={!local.ready} />
+        <MetricCard label="Estimated semester GPA" value={gpa !== undefined ? gpa.toFixed(2) : "—"} detail={gpa !== undefined ? gradedCourses.length + "/" + courses.length + " courses · " + gradedCredits + " graded credits · semester estimate" : "Enter course letter grades to estimate GPA"} icon={TrendingUp} href="/school/grades" loading={!local.ready}>
+          {gpaHistory.length >= 2 ? <svg viewBox="0 0 200 44" className="mt-3 h-11 w-full" role="img" aria-label="Historical estimated semester GPA"><polyline fill="none" stroke="#a78bfa" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" points={gpaHistory.map((point, index) => `${2 + index / Math.max(1, gpaHistory.length - 1) * 196},${42 - Math.max(0, Math.min(4,point.value))/4*40}`).join(" ")} /></svg> : <p className="mt-3 text-[11px] text-white/45">Trend available after two days of GPA records.</p>}
+        </MetricCard>
+        <MetricCard label={currentClass ? "Current class" : "Next class"} value={currentClass ? (currentClass.course.code || currentClass.course.name) : nextClass ? (nextClass.course.code || nextClass.course.name) : "Clear"} detail={currentClass ? "In class until " + formatTime(currentClass.end) + (currentClass.location ? " · " + currentClass.location : "") : nextClass ? formatDate(nextClass.start) + " at " + formatTime(nextClass.start) + (nextClass.location ? " · " + nextClass.location : "") : "No upcoming class scheduled"} icon={Clock3} href="/school/schedule" loading={!local.ready}>
+          {nextClass ? <p className="mt-3 text-xs text-violet-100/75">{currentClass ? "Up next: " + (nextClass.course.code || nextClass.course.name) + " at " + formatTime(nextClass.start) : "Starts in " + (Math.max(1,Math.ceil((nextClass.start.getTime()-now)/60_000)) >= 60 ? Math.floor(Math.max(1,Math.ceil((nextClass.start.getTime()-now)/60_000))/60) + "h " + (Math.max(1,Math.ceil((nextClass.start.getTime()-now)/60_000))%60) + "m" : Math.max(1,Math.ceil((nextClass.start.getTime()-now)/60_000)) + "m")}</p> : null}
+        </MetricCard>
+        <MetricCard label="Due soon" value={String(dueSoon)} detail="Canvas calendar + manually entered assignments" icon={CheckCircle2} href="/school/assignments" loading={loading && !data} />
+        <MetricCard label="Credits" value={String(credits)} detail={term ? `Enrolled credits · ${term.name}` : "Add courses to track credits"} icon={GraduationCap} href="/school/courses" loading={!local.ready} />
       </div>
 
-      <div className="mt-6 grid gap-4 xl:grid-cols-[1.15fr_.85fr]">
-        <CosmicCard className="overflow-hidden">
+      <div className="mt-5 grid gap-4 xl:grid-cols-3">
+        <div className="min-w-0"><CosmicCard className="overflow-hidden h-full">
           <div className="flex items-end justify-between gap-4 p-5 sm:p-6">
             <div>
               <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-violet-200/55">Today</p>
               <h2 className="mt-1 text-xl font-semibold tracking-tight text-white">Today&apos;s classes</h2>
             </div>
-            <Link href="/school/calendar" className="text-sm text-cyan-100/65 hover:text-white">Open calendar</Link>
+            <Link href="/school/calendar" className="text-sm text-cyan-100/65 hover:text-white">Full schedule</Link>
           </div>
 
-          {loading && !data ? (
+          {!local.ready ? (
             <div className="space-y-2 px-5 pb-5 sm:px-6"><Skeleton className="h-16" /><Skeleton className="h-16" /></div>
           ) : todayClasses.length ? todayClasses.map((item) => (
-            <div key={item.id} className="flex items-center gap-3 border-t border-white/[0.07] px-5 py-4 sm:px-6">
+            <div key={item.id} className={`flex items-center gap-3 border-t px-5 py-4 sm:px-6 ${item.start.getTime() <= now && item.end.getTime() > now ? "border-violet-300/45 bg-violet-400/15" : item.start.getTime() > now && nextClass?.start.getTime() === item.start.getTime() ? "border-violet-300/20 bg-violet-400/[0.07]" : "border-white/[0.07]"}`}>
               <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-cyan-400/[0.07] text-cyan-100"><BookOpen size={17} /></div>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-white/85">{item.name}</p>
+                <p className="truncate text-sm font-medium text-white/85">{item.name} {item.start.getTime() <= now && item.end.getTime() > now ? <span className="ml-2 text-xs text-violet-200">Now</span> : item.start.getTime() > now && nextClass?.start.getTime() === item.start.getTime() ? <span className="ml-2 text-xs text-white/70">Next</span> : null}</p>
                 <p className="mt-1 truncate text-xs text-white/40">{item.location || "Location unavailable"}</p>
               </div>
               <span className="shrink-0 text-xs text-white/55">{formatTime(item.start)}–{formatTime(item.end)}</span>
             </div>
           )) : (
-            <p className="border-t border-white/[0.07] px-5 py-6 text-sm text-white/45 sm:px-6">No classes are scheduled for today.</p>
+            <p className="border-t border-white/[0.07] px-5 py-6 text-sm text-white/45 sm:px-6">No classes scheduled today. Add meeting times under Courses.</p>
           )}
-        </CosmicCard>
-
-        <CosmicCard className="p-5 sm:p-6">
+        </CosmicCard></div>
+        <div className="min-w-0"><CosmicCard className="overflow-hidden h-full">
+          <div className="flex items-end justify-between gap-4 p-5 sm:p-6">
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-cyan-200/50">Assignments</p>
+              <h2 className="mt-1 text-xl font-semibold tracking-tight text-white">Upcoming assignments</h2>
+            </div>
+            <Link href="/school/assignments" className="text-sm text-cyan-100/65 hover:text-white">View all</Link>
+          </div>
+          {openAssignments.slice(0, 6).map((item) => (
+            <Link key={item.id} href={`/school/assignments/${encodeURIComponent(item.id)}`} className="group flex items-center gap-3 border-t border-white/[0.07] px-5 py-4 transition hover:bg-white/[0.025] sm:px-6" title={item.title}>
+              <CheckCircle2 size={17} className="shrink-0 text-violet-100/65" />
+              <div className="min-w-0 flex-1">
+                <p className="line-clamp-2 text-sm font-medium text-white/85" title={item.title}>{item.title}</p>
+                <p className="mt-1 truncate text-xs text-white/40">{item.course || "Course"} · {item.priority} priority</p>
+              </div>
+              <div className="shrink-0 text-right">
+                <p className="text-xs text-white/60">{formatDate(item.due)}</p>
+                <p className="mt-1 text-[10px] text-white/35">{"allDay" in item && item.allDay ? "All day" : formatTime(item.due)}</p>
+              </div>
+              <ArrowUpRight size={15} className="text-white/20 transition group-hover:text-white/60" />
+            </Link>
+          ))}
+          {!openAssignments.length ? <p className="border-t border-white/[0.07] px-5 py-6 text-sm text-white/45 sm:px-6">No assignments yet. Connect your Canvas calendar or add assignments manually.</p> : null}
+        </CosmicCard></div>
+        <div className="min-w-0"><CosmicCard className="p-5 sm:p-6 h-full">
           <div className="flex items-center justify-between gap-3">
             <div>
               <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-fuchsia-200/50">Next 7 days</p>
@@ -190,6 +271,7 @@ export default function CosmosSchoolOverview({ preview = false }: { preview?: bo
             </div>
             <CalendarDays size={20} className="text-fuchsia-100/70" />
           </div>
+          <p className="mt-2 text-xs text-white/45">Assignment deadlines per day · not recorded study time</p>
           <div className="mt-6 grid grid-cols-7 gap-2">
             {workload.map((item) => (
               <div key={item.label} className="flex min-w-0 flex-col items-center gap-2">
@@ -201,36 +283,11 @@ export default function CosmosSchoolOverview({ preview = false }: { preview?: bo
               </div>
             ))}
           </div>
-        </CosmicCard>
+        </CosmicCard></div>
       </div>
 
-      <div className="mt-4 grid gap-4 xl:grid-cols-[1.2fr_.8fr]">
-        <CosmicCard className="overflow-hidden">
-          <div className="flex items-end justify-between gap-4 p-5 sm:p-6">
-            <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-cyan-200/50">Assignments</p>
-              <h2 className="mt-1 text-xl font-semibold tracking-tight text-white">Upcoming assignments</h2>
-            </div>
-            <Link href="/school/assignments" className="text-sm text-cyan-100/65 hover:text-white">View all</Link>
-          </div>
-          {openAssignments.slice(0, 6).map((item) => (
-            <Link key={item.id} href={`/school/assignments/${encodeURIComponent(item.id)}`} className="group flex items-center gap-3 border-t border-white/[0.07] px-5 py-4 transition hover:bg-white/[0.025] sm:px-6">
-              <CheckCircle2 size={17} className="shrink-0 text-violet-100/65" />
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-white/85">{item.title}</p>
-                <p className="mt-1 truncate text-xs text-white/40">{item.course || "Course"} · {item.priority} priority</p>
-              </div>
-              <div className="shrink-0 text-right">
-                <p className="text-xs text-white/60">{formatDate(item.due)}</p>
-                <p className="mt-1 text-[10px] text-white/35">{formatTime(item.due)}</p>
-              </div>
-              <ArrowUpRight size={15} className="text-white/20 transition group-hover:text-white/60" />
-            </Link>
-          ))}
-          {!openAssignments.length ? <p className="border-t border-white/[0.07] px-5 py-6 text-sm text-white/45 sm:px-6">No open assignments found.</p> : null}
-        </CosmicCard>
-
-        <CosmicCard className="overflow-hidden">
+      <div className="mt-4 grid gap-4 xl:grid-cols-[1.7fr_1fr]">
+        <div className="min-w-0"><CosmicCard className="overflow-hidden h-full">
           <div className="flex items-end justify-between gap-4 p-5 sm:p-6">
             <div>
               <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-200/50">Courses</p>
@@ -238,22 +295,29 @@ export default function CosmosSchoolOverview({ preview = false }: { preview?: bo
             </div>
             <Link href="/school/courses" className="text-sm text-cyan-100/65 hover:text-white">Courses</Link>
           </div>
-          {courses.slice(0, 6).map((course) => (
-            <Link key={course.id} href={`/school/courses/${encodeURIComponent(course.id)}`} className="group flex items-center gap-3 border-t border-white/[0.07] px-5 py-4 transition hover:bg-white/[0.025] sm:px-6">
-              <div className="h-8 w-1 rounded-full bg-gradient-to-b from-violet-400 to-cyan-300" />
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-white/85">{course.code || course.name}</p>
-                <p className="mt-1 truncate text-xs text-white/40">{course.code ? course.name : course.instructor || "Course details"}</p>
-              </div>
-              <span className="text-xs text-white/40">{course.credits ? `${course.credits} cr` : ""}</span>
-              <ArrowUpRight size={15} className="text-white/20 transition group-hover:text-white/60" />
-            </Link>
-          ))}
-          {!courses.length ? <p className="border-t border-white/[0.07] px-5 py-6 text-sm text-white/45 sm:px-6">No current courses are saved yet.</p> : null}
-        </CosmicCard>
-      </div>
-
-      <CosmicCard className="mt-4 overflow-hidden">
+          {courses.length ? (
+            <div className="grid gap-3 border-t border-white/[0.07] p-4 sm:grid-cols-2 lg:grid-cols-3">
+              {courses.map((course, index) => {
+                const related = openAssignments.filter((item) => item.course && (item.course === course.code || item.course === course.name)).length;
+                const grade = courseSummaries.find((item) => item.course.id === course.id)?.summary;
+                const next = openAssignments.find((item) => item.course && normalizeCourseCode(item.course) === normalizeCourseCode(course.code || course.name));
+                return <Link key={course.id} href={`/school/courses/${encodeURIComponent(course.id)}`} className="group min-w-0 overflow-hidden rounded-xl border border-violet-300/20 bg-violet-950/20 transition hover:border-violet-300/50">
+                  <div className="relative flex h-20 items-end overflow-hidden bg-gradient-to-br from-indigo-900/65 via-violet-700/30 to-fuchsia-950/40 p-3">
+                    <span className="absolute right-3 top-2 text-4xl font-black text-white/[0.06]">{String(index + 1).padStart(2, "0")}</span>
+                    <span className="relative truncate text-sm font-semibold text-white">{course.code || course.name}</span>
+                  </div>
+                  <div className="space-y-2 p-3">
+                    <p className="truncate text-xs text-white/60" title={course.name}>{course.name}</p>
+                    <div className="flex items-center justify-between gap-2 text-xs"><span className="font-semibold text-violet-100">{grade?.letter ? `Grade ${grade.letter}` : "Grade not entered"}</span><span className="text-white/50">{course.credits ?? "—"} cr</span></div>
+                    <div className="flex items-center justify-between gap-2 text-[11px] text-white/45"><span>{related} pending assignments</span><span className="truncate">{next ? "Due " + formatDate(next.due) : "No upcoming deadline"}</span></div>
+                  </div>
+                </Link>;
+              })}
+            </div>
+          ) : null}
+          {!courses.length ? <p className="border-t border-white/[0.07] px-5 py-6 text-sm text-white/45 sm:px-6">No courses saved yet. Add courses manually from the Courses tab.</p> : null}
+        </CosmicCard></div>
+        <div className="min-w-0"><CosmicCard className="overflow-hidden h-full">
         <div className="flex items-end justify-between gap-4 p-5 sm:p-6">
           <div>
             <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-200/50">Feedback & announcements</p>
@@ -270,8 +334,11 @@ export default function CosmosSchoolOverview({ preview = false }: { preview?: bo
             <p className="mt-2 line-clamp-2 text-sm leading-5 text-white/45">{announcement.body}</p>
           </div>
         ))}
-        {!data?.announcements?.length ? <p className="border-t border-white/[0.07] px-5 py-6 text-sm text-white/45 sm:px-6">No recent announcements are available.</p> : null}
-      </CosmicCard>
+        {!data?.announcements?.length ? <p className="border-t border-white/[0.07] px-5 py-6 text-sm text-white/45 sm:px-6">No recent announcements available. Feedback must be entered manually.</p> : null}
+      </CosmicCard></div>
+      </div>
+
+      <SchoolPersonalTracking scopeId={local.scope.id} termId={term?.id} courses={courses} />
     </div>
   );
 }

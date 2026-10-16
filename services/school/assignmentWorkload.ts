@@ -30,7 +30,7 @@ export function classifyAssignmentWorkload(assignment: SchoolPlanningAssignment,
   if (!hasValidDueDate(assignment)) return "undated";
   const dayBoundary = dayStart(now);
   if (isAssignmentOverdue(assignment, dayBoundary)) return "needsAttention";
-  if (dueSoon(assignment, dayBoundary)) return "dueSoon";
+  if (dueSoon(assignment, now)) return "dueSoon";
   return "later";
 }
 
@@ -42,9 +42,8 @@ export function assignmentWorkloadLabel(assignment: SchoolPlanningAssignment, no
 
 function dueSoon(assignment: SchoolPlanningAssignment, now: Date): boolean {
   if (!isAssignmentActiveForPlanning(assignment) || !hasValidDueDate(assignment) || isAssignmentOverdue(assignment, now)) return false;
-  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const end = new Date(start); end.setDate(end.getDate() + 4);
-  return assignment.dueAt! < end;
+  const end = new Date(now.getTime() + 7 * 86_400_000);
+  return assignment.dueAt! >= now && assignment.dueAt! <= end;
 }
 
 function dayStart(date: Date) { return new Date(date.getFullYear(), date.getMonth(), date.getDate()); }

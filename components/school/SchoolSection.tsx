@@ -22,8 +22,42 @@ export default function SchoolSection({ section, requestedCourseId, requestedRes
 function parseLocalDate(value: string) { const [year, month, day] = value.split("-").map(Number); return [year, month, day].every(Number.isInteger) ? new Date(year, month - 1, day) : null; }
 function CanvasConnection() {
   const { local } = useSchool();
-  if (!canUseAccountCanvasControls(local.scope.kind)) return <div className="rounded-2xl border border-sky-200/10 bg-sky-200/[0.04] p-5"><h2 className="font-semibold text-white">Canvas Calendar</h2><p className="mt-2 text-sm text-white/55">Canvas connection isn’t available in local-only mode.</p></div>;
-  return <CanvasAccountConnection />;
+  return canUseAccountCanvasControls(local.scope.kind) ? <CanvasAccountConnection /> : <LocalCanvasCalendarConnection />;
+}
+
+function LocalCanvasCalendarConnection() {
+  const [url, setUrl] = useState("");
+  const [saved, setSaved] = useState(false);
+  const [message, setMessage] = useState("");
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    const existing = window.localStorage.getItem("cosmos.school.canvas.ical.local");
+    setSaved(Boolean(existing));
+  }, []);
+  async function sync(feed: string) {
+    setBusy(true); setMessage("");
+    try {
+      const response = await fetch("/api/school/canvas/local-feed", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ feedUrl: feed }), cache: "no-store" });
+      const json = await response.json() as { error?: string; diagnostics?: { assignments?: number; parsedEvents?: number } };
+      if (!response.ok) throw new Error(json.error ?? "Unable to sync Canvas calendar.");
+      window.localStorage.setItem("cosmos.school.canvas.ical.local", feed);
+      setSaved(true); setUrl("");
+      window.dispatchEvent(new Event("cosmic:school-refresh"));
+      setMessage(`Imported ${json.diagnostics?.assignments ?? 0} assignments from ${json.diagnostics?.parsedEvents ?? 0} calendar events. The feed URL is saved in this browser only.`);
+    } catch (error) { setMessage(error instanceof Error ? error.message : "Canvas sync failed."); }
+    finally { setBusy(false); }
+  }
+  return <div className="rounded-2xl border border-violet-200/20 bg-violet-300/[0.04] p-5">
+    <h2 className="font-semibold text-white">Canvas Calendar · Localhost</h2>
+    <p className="mt-2 text-sm text-white/60">Paste your personal Canvas Calendar Feed URL from USU Canvas. Only assignment calendar data is imported; no grades, submissions, or API access. Treat this URL as private.</p>
+    <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+      <input type="password" autoComplete="off" value={url} onChange={(event) => setUrl(event.target.value)} placeholder="https://usu.instructure.com/feeds/calendars/..." aria-label="Private Canvas Calendar Feed URL" className={`${fieldClass} min-w-0 flex-1`} />
+      <button type="button" disabled={busy || !url.trim()} onClick={() => void sync(url.trim())} className={primaryClass}>{busy ? "Importing…" : "Connect & Sync"}</button>
+      {saved ? <button type="button" disabled={busy} onClick={() => { window.localStorage.removeItem("cosmos.school.canvas.ical.local"); setSaved(false); setMessage("Canvas calendar disconnected in this browser."); window.dispatchEvent(new Event("cosmic:school-refresh")); }} className={secondaryButton}>Disconnect</button> : null}
+    </div>
+    {saved ? <p className="mt-2 text-xs text-emerald-200/75">Local Canvas feed saved. Reload School to refresh assignments.</p> : null}
+    {message ? <p className="mt-3 text-sm text-white/75" role="status">{message}</p> : null}
+  </div>;
 }
 
 function CanvasAccountConnection() {
