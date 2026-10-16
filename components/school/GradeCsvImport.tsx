@@ -126,10 +126,14 @@ export default function GradeCsvImport({ courses, grades, saveGrade }: { courses
         const label=record.label.replace(/\\s+/g," ").trim();
         const key=label.toLowerCase();
         const duplicate=seen.has(key)||grades.some((grade)=>grade.courseId===pdfCourseId&&(grade.label??"").toLowerCase()===key);
+        // PDF text extraction can concatenate distinct visual rows. Treat titles
+        // containing layout remnants as unsafe, even if the score is numeric.
+        const suspicious=/[\u2580-\u259f\u25a0-\u25ff\uE000-\uF8FF]|\\b(?:Sep|Oct|Nov|Dec|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug)\\s+\\d{1,2}\\b|\\b(?:am|pm)\\b|\\b(?:Lecture Assignments|Math Primer Assignments|Weekly Progress Reports)\\b|\\b(?:by|Submitted|Status|Score)\\b/i.test(label);
         seen.add(key);
+        const issue=suspicious?"PDF row text appears merged; do not import":duplicate?"Already imported or duplicated":undefined;
         return { courseId:pdfCourseId,courseCode:matchedCourse.code||matchedCourse.name,
           grade:{id:crypto.randomUUID(),courseId:pdfCourseId,label,earnedPoints:record.earned,possiblePoints:record.possible},
-          valid:!duplicate,selected:!duplicate,...(duplicate?{issue:"Already imported or duplicated"}:{}) };
+          valid:!issue,selected:!issue,...(issue?{issue}:{}) };
       });
       setCandidates(proposals); setFileName(file.name);
       setMessage("Extracted "+proposals.length+" scored entries from Canvas PDF."+(canvasTotal?" Canvas reports "+canvasTotal+" overall; Cosmos does not replicate weighted categories.":"")+" Check every assignment name and score before saving. Ungraded entries are excluded.");
