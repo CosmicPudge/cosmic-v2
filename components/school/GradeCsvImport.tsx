@@ -92,20 +92,56 @@ export default function GradeCsvImport({ courses, grades, saveGrade, removeGrade
     try {
       const {createWorker}=await import("tesseract.js");
       const worker=await createWorker("eng");
-      let raw="";
-      try{raw=(await worker.recognize(file)).data.text;}
-      finally{await worker.terminate();}
-      const rows=raw.split(/\r?\n/).map(line=>line.trim()).filter(Boolean);
+      let raw="",tsv="";
+      try{
+        const result=await worker.recognize(file,{}, {text:true,tsv:true});
+        raw=result.data.text;
+        tsv=(result.data as typeof result.data & {tsv?:string}).tsv??"";
+      }finally{await worker.terminate();}
+      type OcrWord={text:string;x:number;y:number;width:number;height:number;line:string};
+      const words:OcrWord[]=tsv.split(/\r?\n/).slice(1).map(row=>{
+        const c=row.split("\t");
+        return {text:c.slice(11).join("\t").trim(),x:Number(c[6]),y:Number(c[7]),width:Number(c[8]),height:Number(c[9]),line:c.slice(1,5).join(":")};
+      }).filter(w=>w.text&&Number.isFinite(w.x)&&Number.isFinite(w.y));
+      const grouped=new Map<string,OcrWord[]>();
+      for(const word of words)grouped.set(word.line,[...(grouped.get(word.line)??[]),word]);
+      const lines=[...grouped.values()].map(parts=>{
+        const sorted=parts.sort((a,b)=>a.x-b.x);
+        return {text:sorted.map(w=>w.text).join(" ").trim(),x:Math.min(...parts.map(w=>w.x)),
+          y:Math.min(...parts.map(w=>w.y)),midY:parts.reduce((n,w)=>n+w.y+w.height/2,0)/parts.length,
+          right:Math.max(...parts.map(w=>w.x+w.width))};
+      }).sort((a,b)=>a.midY-b.midY);
+      const weights=lines.map(line=>{
+        const value=line.text.match(/(\d{1,3})\s*%/);
+        return value?{...line,weight:Number(value[1])}:null;
+      }).filter((v):v is NonNullable<typeof v>=>!!v&&v.weight>=0&&v.weight<=100&&!/^total\b/i.test(v.text));
       const parsed:Array<{name:string;weight:number}>=[];
-      let pending="";
-      for(const line of rows){
-        if(/^group\s+weight$/i.test(line)||/^total\b/i.test(line))continue;
-        const match=line.match(/^(.*?)\s+(\d{1,3})\s*%$/);
-        if(match){
-          const name=(pending+" "+match[1]).trim().replace(/\s+/g," ");
-          const weight=Number(match[2]);pending="";
-          if(name&&weight>=0&&weight<=100&&!parsed.some(row=>row.name.toLowerCase()===name.toLowerCase()))parsed.push({name,weight});
-        }else if(!/^\d+\s*%$/.test(line)){pending=(pending+" "+line).trim();}
+      // Anchor each name to the vertical band surrounding its weight cell.
+      // This keeps multi-line names together even when the right-hand
+      // percentages are on separate OCR lines.
+      for(let i=0;i<weights.length;i++){
+        const weight=weights[i];
+        const prev=i?weights[i-1].midY:weight.midY-70;
+        const next=i<weights.length-1?weights[i+1].midY:weight.midY+70;
+        const top=(prev+weight.midY)/2,bottom=(weight.midY+next)/2;
+        const candidates=lines.filter(line=>
+          line.midY>=top&&line.midY<bottom&&line.right<weight.x&&
+          !/^(Group|Weight|Total)\b/i.test(line.text)&&
+          !/^\d{1,3}\s*%$/.test(line.text));
+        const name=candidates.map(line=>line.text).join(" ").replace(/\s+/g," ").trim();
+        if(name&&!parsed.some(item=>item.name.toLowerCase()===name.toLowerCase()))
+          parsed.push({name,weight:weight.weight});
+      }
+      if(!parsed.length) {
+        // Conservative fallback: preserve names rather than saving blank groups.
+        const rows=raw.split(/\r?\n/).map(line=>line.trim()).filter(Boolean);
+        let pending="";
+        for(const line of rows){
+          if(/^(group|weight|total)\b/i.test(line))continue;
+          const match=line.match(/^(.*?)\s+(\d{1,3})\s*%$/);
+          if(match&&match[1].trim()){parsed.push({name:(pending+" "+match[1]).trim(),weight:Number(match[2])});pending="";}
+          else if(!/^\d{1,3}\s*%$/.test(line))pending=(pending+" "+line).trim();
+        }
       }
       setPhotoGroups(parsed);
       setMessage(parsed.length?"Detected "+parsed.length+" groups from screenshot. Review names and weights.":"Couldn't confidently read weights. Try a clearer screenshot.");
@@ -279,7 +315,7 @@ export default function GradeCsvImport({ courses, grades, saveGrade, removeGrade
         const current = JSON.parse(window.localStorage.getItem(key)||"null") as {groups?:Array<{id:string;name:string;weight:number|null}>;assignments?:Record<string,string>;gradeScale?:Record<string,number>;canvasLetter?:string;canvasPercent?:number}|null;
         const groups = Array.isArray(current?.groups)?[...current.groups]:[];
         const assignments = {...(current?.assignments??{})};
-        if(photoGroups.length&&Math.abs(photoGroups.reduce((sum,g)=>sum+g.weight,0)-100)>0.01){setMessage("Screenshot weights must total 100% before accepting.");return;}
+        if(photoGroups.some(g=>!g.name.trim())||(photoGroups.length&&Math.abs(photoGroups.reduce((sum,g)=>sum+g.weight,0)-100)>0.01)){setMessage("Screenshot weights must total 100% before accepting.");return;}
         for(const item of photoGroups){const name=item.name.trim();if(!name)continue;const existing=groups.find((g)=>g.name.trim().toLowerCase()===name.toLowerCase());if(existing)existing.weight=item.weight;else groups.push({id:crypto.randomUUID(),name,weight:item.weight});}
         for(const entry of mapping) {
           const name = entry.group!;
