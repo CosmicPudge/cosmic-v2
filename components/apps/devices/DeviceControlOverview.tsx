@@ -16,6 +16,13 @@ const initialModules = [
   { name: "Custom Messages", seconds: 10, enabled: false },
 ];
 type Module = (typeof initialModules)[number];
+type AdapterKind = "unassigned" | "future-kiosk" | "future-wearable" | "future-display";
+const adapterKinds: {value:AdapterKind;label:string;capabilities:string[]}[] = [
+ {value:"unassigned",label:"Unassigned",capabilities:[]},
+ {value:"future-kiosk",label:"Future kiosk adapter",capabilities:["display-content","power","telemetry"]},
+ {value:"future-wearable",label:"Future wearable adapter",capabilities:["hud-layout","battery","notifications"]},
+ {value:"future-display",label:"Future display adapter",capabilities:["brightness","display-content","power"]},
+];
 type DeviceProfile = { id:string; name:string; category:"Kiosk"|"Display"|"Wearable"|"Other"; location:string; notes:string; brightness:number; enabled:boolean };
 const starterProfiles:DeviceProfile[] = [
  {id:"kiosk",name:"Cosmic Kiosk",category:"Kiosk",location:"Lobby",notes:"Future Raspberry Pi control profile — not connected",brightness:80,enabled:true},
@@ -36,6 +43,7 @@ export default function DeviceControlOverview() {
   const [notice, setNotice] = useState("");
   const [profiles,setProfiles] = useState<DeviceProfile[]>(starterProfiles);
   const [editing,setEditing] = useState("kiosk");
+  const [adapterDrafts,setAdapterDrafts] = useState<Record<string,AdapterKind>>({});
   const [ready, setReady] = useState(false);
   useEffect(() => {
     try {
@@ -46,6 +54,7 @@ export default function DeviceControlOverview() {
       }));
     } catch {}
     try { const saved:unknown=JSON.parse(localStorage.getItem("cosmos.m3.profiles.v1")||"null"); if(Array.isArray(saved)){const cleaned=saved.filter((v):v is DeviceProfile=>!!v && typeof v==="object" && typeof v.id==="string" && typeof v.name==="string" && ["Kiosk","Display","Wearable","Other"].includes(v.category) && typeof v.location==="string" && typeof v.notes==="string" && typeof v.brightness==="number" && Number.isFinite(v.brightness) && typeof v.enabled==="boolean").slice(0,40);setProfiles(cleaned);if(cleaned[0])setEditing(cleaned[0].id);} } catch {}
+    try { const saved:unknown=JSON.parse(localStorage.getItem("cosmos.m3.adapters.v1")||"null"); if(saved && typeof saved==="object" && !Array.isArray(saved)){const pairs=Object.entries(saved).filter((entry):entry is [string,AdapterKind]=>adapterKinds.some(kind=>kind.value===entry[1]));setAdapterDrafts(Object.fromEntries(pairs));}} catch {}
     setReady(true);
   }, []);
   useEffect(() => {
@@ -53,6 +62,7 @@ export default function DeviceControlOverview() {
     try { localStorage.setItem("cosmos.m3.modules.v1", JSON.stringify(modules)); } catch {}
   }, [modules, ready]);
   useEffect(() => {if(!ready)return;try{localStorage.setItem("cosmos.m3.profiles.v1",JSON.stringify(profiles));}catch{}},[profiles,ready]);
+  useEffect(()=>{if(!ready)return;try{localStorage.setItem("cosmos.m3.adapters.v1",JSON.stringify(adapterDrafts));}catch{}},[adapterDrafts,ready]);
   const updateProfile=(id:string,patch:Partial<DeviceProfile>)=>setProfiles(prev=>prev.map(item=>item.id===id?{...item,...patch}:item));
   const addProfile=()=>{const id="local-"+Date.now();setProfiles(prev=>[...prev,{id,name:"New device",category:"Other",location:"",notes:"",brightness:75,enabled:true}]);setEditing(id);setActive("Displays");};
   const enabled = modules.filter((item) => item.enabled);
@@ -109,7 +119,11 @@ export default function DeviceControlOverview() {
       {active==="Kiosk" ? <div className="grid gap-4 lg:grid-cols-2">
         <div className="space-y-3 rounded-xl border border-white/10 p-4"><h3 className="font-semibold">Slideshow modules</h3>{modules.map((item)=> <div key={item.name} className="flex items-center gap-3"><label className="flex flex-1 items-center gap-2 text-sm"><input type="checkbox" checked={item.enabled} onChange={()=>toggle(item.name)} className="accent-violet-500"/>{item.name}</label><input aria-label={item.name+" seconds"} type="number" min={5} max={300} value={item.seconds} onChange={e=>{const n=Number(e.target.value);if(Number.isFinite(n)&&n>=5&&n<=300)setModules(old=>old.map(row=>row.name===item.name?{...row,seconds:n}:row));}} className="w-20 rounded-lg border border-white/15 bg-white/5 p-2 text-sm"/></div>)}</div>
         <div className="rounded-xl border border-white/10 p-4"><h3 className="font-semibold">Profile preview</h3><p className="mt-2 text-sm text-white/55">{enabled.length} enabled modules · {total} seconds per cycle</p><p className="mt-4 text-sm text-amber-200">Offline configuration only — no restart, power, or display commands.</p></div>
-      </div> : active==="Integrations" || active==="Automation" ? <div className="rounded-xl border border-dashed border-violet-300/25 bg-violet-500/5 p-6"><h3 className="font-medium">{active==="Integrations"?"Future integrations":"Future automation"}</h3><p className="mt-2 text-sm text-white/50">No providers or automation engines are connected in M3. All device actions remain unavailable.</p></div> : <div className="grid gap-4 lg:grid-cols-[minmax(210px,.75fr)_minmax(0,1.5fr)]">
+      </div> : active==="Integrations" ? <div className="space-y-4">
+        <div className="rounded-xl border border-amber-300/20 bg-amber-300/5 p-4"><h3 className="font-semibold text-amber-100">Adapter planning only</h3><p className="mt-2 text-sm text-white/55">Assign a future adapter type to a profile. These are saved labels, not network connections, registrations, device commands, or API credentials.</p></div>
+        <div className="grid gap-3 lg:grid-cols-2">{profiles.map(p=>{const adapter=adapterDrafts[p.id]||"unassigned";const specification=adapterKinds.find(kind=>kind.value===adapter)!;return <div key={p.id} className="rounded-xl border border-violet-300/15 bg-white/5 p-4"><div className="flex items-center justify-between gap-2"><div><h3 className="font-semibold">{p.name}</h3><p className="text-xs text-white/45">{p.category} · {p.location||"No location"}</p></div><span className="rounded-full bg-slate-400/15 px-2 py-1 text-xs text-slate-300">Unlinked</span></div><label className="mt-4 block text-xs text-white/60">Planned adapter<select aria-label={"Adapter for "+p.name} value={adapter} onChange={e=>setAdapterDrafts(old=>({...old,[p.id]:e.target.value as AdapterKind}))} className="mt-1 block w-full rounded-lg border border-white/15 bg-[#111329] p-2 text-sm text-white">{adapterKinds.map(kind=><option key={kind.value} value={kind.value}>{kind.label}</option>)}</select></label><p className="mt-3 text-xs text-white/45">Future capability contract: {specification.capabilities.length?specification.capabilities.join(", "):"None selected"}</p><p className="mt-2 text-xs text-amber-200/75">Connection state: unavailable · last contact: never</p></div>})}</div>
+        <div className="rounded-xl border border-violet-300/20 p-4"><h3 className="font-semibold">Integration safety model</h3><p className="mt-2 text-sm text-white/55">A future adapter must explicitly report supported capabilities and an authenticated connection before any control can become available. M3 provides no command transport, network probing, or device-side implementation.</p></div>
+      </div> : active==="Automation" ? <div className="rounded-xl border border-dashed border-violet-300/25 bg-violet-500/5 p-6"><h3 className="font-medium">Future automation</h3><p className="mt-2 text-sm text-white/50">No automation engines are connected in M3. All device actions remain unavailable.</p></div> : <div className="grid gap-4 lg:grid-cols-[minmax(210px,.75fr)_minmax(0,1.5fr)]">
         <div className="space-y-2"><div className="flex items-center justify-between gap-2"><h3 className="font-semibold">Device profiles</h3><button className={button} onClick={addProfile}>Add device</button></div>{profiles.filter(p=>active==="Even G2"?p.category==="Wearable":true).map(p=><button key={p.id} onClick={()=>setEditing(p.id)} className={`w-full rounded-xl border p-3 text-left ${editing===p.id?"border-violet-300/60 bg-violet-500/20":"border-white/10 bg-white/5"}`}><div className="text-sm font-medium">{p.name}</div><div className="mt-1 text-xs text-white/45">{p.category} · {p.location||"No location"} · Unlinked</div></button>)}</div>
         {profiles.find(p=>p.id===editing) && (active!=="Even G2"||profiles.find(p=>p.id===editing)?.category==="Wearable") ? (()=>{const p=profiles.find(x=>x.id===editing)!;return <form onSubmit={e=>{e.preventDefault();notify("Profile saved locally. No hardware changes were made.");}} className="grid gap-4 rounded-xl border border-white/10 p-4">
           <h3 className="font-semibold">Edit profile</h3>
