@@ -73,7 +73,8 @@ export default function GradeCsvImport({ courses, grades, saveGrade }: { courses
     if (!file) return;
     setMessage(""); setCandidates([]); setConfirmed(false);
     if (!pdfCourseId) { setMessage("Choose which Cosmos course this Canvas grade report belongs to."); return; }
-    if (!/\\.pdf$/i.test(file.name) || file.size > 8_000_000) { setMessage("Choose a PDF smaller than 8 MB."); return; }
+    if (!file.name.toLowerCase().endsWith(".pdf")) { setMessage("Unsupported file type. Choose a Canvas Print Grades PDF."); return; }
+    if (file.size > 25_000_000) { setMessage(`This PDF is ${(file.size / 1_000_000).toFixed(1)} MB. The local importer supports PDFs up to 25 MB.`); return; }
     setPdfBusy(true);
     try {
       const pdfjs = await import("pdfjs-dist/build/pdf.mjs");
