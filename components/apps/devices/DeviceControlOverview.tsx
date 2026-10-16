@@ -122,6 +122,6 @@ export default function DeviceControlOverview() {
           <div className="flex flex-wrap gap-2"><button type="submit" className={button}>Save profile</button><button type="button" className={button} onClick={()=>{setProfiles(old=>old.filter(x=>x.id!==p.id));setEditing(profiles.find(x=>x.id!==p.id)?.id||"");}}>Delete profile</button></div>
         </form>})() : <div className="rounded-xl border border-dashed border-white/15 p-6 text-sm text-white/50">Select a profile or add a device.</div>}
       </div>}
-    </section>}}
+    </section>}
   </div>;
 }
