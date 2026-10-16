@@ -111,12 +111,24 @@ export default function GradeCsvImport({ courses, grades, saveGrade, scopeId }: 
           scoreLines.set(y, [...(scoreLines.get(y) ?? []), part]);
         }
         const scoredRows: Array<{ y: number; earned: number; possible: number }> = [];
-        for (const [y, parts] of scoreLines) {
-          const value = parts.sort((a,b) => a.x - b.x).map((part) => part.text).join(" ").replace(/\s+/g," ").trim();
-          const match = value.match(/^(\d+(?:\.\d+)?)\s*\/\s*(\d+(?:\.\d+)?)$/);
-          if (!match) continue; // An ungraded "/ 10" must never become 0/10.
-          const earned = Number(match[1]), possible = Number(match[2]);
-          if (possible > 0 && earned >= 0) scoredRows.push({y, earned, possible});
+        const orderedScoreLines = [...scoreLines.entries()].map(([y, parts]) => ({
+          y, value: parts.sort((a,b) => a.x - b.x).map((part) => part.text).join(" ").replace(/\s+/g," ").trim(),
+        })).sort((a,b)=>b.y-a.y);
+        for (let i=0; i<orderedScoreLines.length; i++) {
+          const line = orderedScoreLines[i];
+          let match = line.value.match(/^(\d+(?:\.\d+)?)\s*\/\s*(\d+(?:\.\d+)?)$/);
+          // Canvas wraps wider numbers: "61.73 /" above "100".
+          // Reconstruct only when the denominator appears immediately below.
+          if (!match && /^(\d+(?:\.\d+)?)\s*\/$/.test(line.value)) {
+            const next = orderedScoreLines[i+1];
+            if (next && line.y-next.y>4 && line.y-next.y<23 && /^\d+(?:\.\d+)?$/.test(next.value)) {
+              match = (line.value+" "+next.value).match(/^(\d+(?:\.\d+)?)\s*\/\s*(\d+(?:\.\d+)?)$/);
+              if (match) i++;
+            }
+          }
+          if (!match) continue; // A missing "- / 100" remains ungraded.
+          const earned=Number(match[1]), possible=Number(match[2]);
+          if (possible>0&&earned>=0) scoredRows.push({y:line.y,earned,possible});
         }
         const leftLines = new Map<number, Fragment[]>();
         for (const part of sorted.filter((part) => part.x < leftLimit)) {
