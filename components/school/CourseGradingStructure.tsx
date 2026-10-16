@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { Course, Grade } from "@/core/contracts/School";
-import { COURSE_GRADE_CHANGED, DEFAULT_GRADE_SCALE, gradeFromScale } from "@/services/school/courseGradeSummary";
+import { COURSE_GRADE_CHANGED, DEFAULT_GRADE_SCALE } from "@/services/school/courseGradeSummary";
 
 type Group = { id: string; name: string; weight: number | null };
 type Structure = { groups: Group[]; assignments: Record<string,string>; gradeScale?: Record<string,number>; canvasLetter?: string; canvasPercent?: number };
@@ -42,10 +42,8 @@ export default function CourseGradingStructure({ course, grades, scopeId }: { co
     const possible=assigned.reduce((sum,g)=>sum+(g.possiblePoints??0),0);
     return {...group,earned,possible,percentage:possible>0?earned/possible*100:null};
   });
-  const active=aggregates.filter((g)=>g.percentage!==null&&g.weight!==null&&g.weight>0);
-  const activeWeight=active.reduce((sum,g)=>sum+g.weight,0);
-  const weighted=activeWeight>0&&model.groups.every((g)=>g.weight!==null)?active.reduce((sum,g)=>sum+(g.weight??0)*g.percentage!,0)/activeWeight:null;
-  const letter=weighted===null?null:gradeFromScale(weighted,{...DEFAULT_GRADE_SCALE,...model.gradeScale});
+
+
   const unassigned=gradeEntries.filter((g)=>!model.groups.some((group)=>group.id===model.assignments[g.id!]));
   return <div className="mt-4 rounded-xl border border-violet-300/20 bg-[#100b29]/30 p-4">
     <div className="flex flex-wrap items-center justify-between gap-3">
@@ -53,10 +51,7 @@ export default function CourseGradingStructure({ course, grades, scopeId }: { co
       <button type="button" className="rounded-lg border border-white/20 px-3 py-2 text-xs text-white" onClick={()=>setOpen((v)=>!v)}>{open?"Hide":"Configure"} groups</button>
     </div>
     {model.canvasPercent!==undefined&&<p className="mt-3 text-sm font-semibold text-emerald-200">Canvas-reported overall total: {pct(model.canvasPercent)}{model.canvasLetter?" · "+model.canvasLetter:" · Letter grade not recorded"}</p>}
-    {!!model.groups.length&&<div className="mt-3 text-sm text-white/75">
-      <span className="font-semibold">{weighted===null?"—":pct(weighted)}</span> · <span className="font-bold text-violet-100">{letter??"Letter not available"}</span> · calculated estimate {model.canvasLetter?"(Canvas-reported grade takes priority for GPA)":""}
-      <span className="ml-2 text-xs text-white/45">({pct(totalWeight)} configured · {pct(activeWeight)} graded weight)</span>
-    </div>}
+
     {model.groups.some((g)=>g.weight===null)&&<p className="mt-2 text-xs text-amber-200">Enter the missing group weights before calculating a course grade.</p>}
     {totalWeight>100.001&&<p className="mt-2 text-sm text-amber-200">Group weights exceed 100%. Correct them before relying on this estimate.</p>}
     {model.groups.length>0&&Math.abs(totalWeight-100)>0.01&&totalWeight<=100.001&&<p className="mt-2 text-xs text-amber-200">Group weights currently total {pct(totalWeight)}, not 100%.</p>}
@@ -74,7 +69,7 @@ export default function CourseGradingStructure({ course, grades, scopeId }: { co
         <input aria-label="New group weight" type="number" min="0" max="100" step="0.5" className={field+" w-20"} value={newWeight} onChange={(e)=>setNewWeight(e.target.value)}/>
         <button type="button" className="rounded-lg border border-violet-300/30 px-3 py-2 text-sm text-white" onClick={addGroup}>Add group</button>
       </div>
-      <div className="rounded-lg border border-white/10 p-3"><h4 className="text-sm font-semibold text-white">Course letter-grade scale</h4><p className="mt-1 text-xs text-white/45">Minimum percentage for each letter. Defaults are estimates; enter the cutoffs from this course’s syllabus or Canvas grading scheme.</p><div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">{Object.entries(DEFAULT_GRADE_SCALE).map(([letter,defaultCutoff])=><label key={letter} className="text-xs text-white/70">{letter} minimum %<input aria-label={letter+" minimum percentage"} className={field+" mt-1 w-full"} type="number" min="0" max="100" step="0.1" value={model.gradeScale?.[letter]??defaultCutoff} onChange={(e)=>{const number=Number(e.target.value);if(e.target.value!==""&&Number.isFinite(number)&&number>=0&&number<=100)setModel((current)=>({...current,gradeScale:{...DEFAULT_GRADE_SCALE,...current.gradeScale,[letter]:number}}));}}/></label>)}</div></div>
+      <div className="hidden"><h4 className="text-sm font-semibold text-white">Course letter-grade scale</h4><p className="mt-1 text-xs text-white/45">Minimum percentage for each letter. Defaults are estimates; enter the cutoffs from this course’s syllabus or Canvas grading scheme.</p><div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">{Object.entries(DEFAULT_GRADE_SCALE).map(([letter,defaultCutoff])=><label key={letter} className="text-xs text-white/70">{letter} minimum %<input aria-label={letter+" minimum percentage"} className={field+" mt-1 w-full"} type="number" min="0" max="100" step="0.1" value={model.gradeScale?.[letter]??defaultCutoff} onChange={(e)=>{const number=Number(e.target.value);if(e.target.value!==""&&Number.isFinite(number)&&number>=0&&number<=100)setModel((current)=>({...current,gradeScale:{...DEFAULT_GRADE_SCALE,...current.gradeScale,[letter]:number}}));}}/></label>)}</div></div>
       <h4 className="text-sm font-semibold text-white">Assign scored grades to groups</h4>
       <div className="max-h-80 space-y-2 overflow-auto">
         {gradeEntries.map((grade)=><label key={grade.id} className="flex flex-col gap-1 text-xs text-white/65 sm:flex-row sm:items-center">
