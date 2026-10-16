@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import "@/styles/cosmos-devices.css";
 import { Activity, Battery, Bell, CalendarDays, ChevronRight, Clock3, CloudSun, Gamepad2, Glasses, HeartPulse, Monitor, Music2, Play, Power, RotateCcw, Settings2, ShieldCheck, SlidersHorizontal, Smartphone, Sparkles, WifiOff, Zap } from "lucide-react";
 
 const tabs = ["Overview", "Kiosk", "Even G2", "Displays", "Integrations", "Automation"] as const;
@@ -33,7 +34,7 @@ const starterProfiles:DeviceProfile[] = [
 
 const icons = [Clock3, CloudSun, CalendarDays, Bell, Music2, Gamepad2, Activity, Sparkles];
 const actions = [{label:"Restart Kiosk", icon:RotateCcw},{label:"Change Content",icon:SlidersHorizontal},{label:"Toggle Display",icon:Monitor},{label:"Adjust Brightness",icon:CloudSun},{label:"Enter Demo Mode",icon:Gamepad2},{label:"Take Screenshot",icon:Smartphone}];
-const panel = "rounded-2xl border border-violet-300/20 bg-[#0b102d]/70 shadow-[inset_0_1px_0_rgba(255,255,255,.06)] backdrop-blur-xl";
+const panel = "cosmos-card cosmic-panel cosmos-devices-panel rounded-2xl";
 const button = "rounded-xl border border-violet-300/25 bg-violet-500/15 px-3 py-2 text-sm text-violet-100 transition hover:bg-violet-500/25 focus-visible:outline-2 focus-visible:outline-violet-300";
 
 export default function DeviceControlOverview() {
@@ -70,7 +71,7 @@ export default function DeviceControlOverview() {
   const notify = (message: string) => setNotice(message);
   const toggle = (name: string) => setModules((old) => old.map((item) => item.name === name ? {...item, enabled: !item.enabled} : item));
 
-  return <div className="mx-auto w-full max-w-[1600px] space-y-4 pb-12 text-white">
+  return <div className="cosmos-devices-root mx-auto w-full max-w-[1600px] space-y-4 pb-12 text-white">
     <div className="relative overflow-hidden rounded-2xl border border-violet-400/20 bg-gradient-to-r from-[#0c1031]/95 via-[#161346]/85 to-[#321052]/55 p-6 sm:p-8">
       <div className="pointer-events-none absolute -right-14 -top-32 h-72 w-72 rounded-full bg-violet-600/25 blur-3xl" />
       <p className="text-[10px] font-semibold uppercase tracking-[.25em] text-violet-200/55">Cosmos · Milestone 3</p>
