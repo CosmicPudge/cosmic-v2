@@ -25,6 +25,6 @@ export function courseGradeSummary(scopeId:string,course:Course,grades:Grade[]) 
       if(typeof data?.canvasPercent==="number" && Number.isFinite(data.canvasPercent))canvasPercent=data.canvasPercent;
     }catch{}
   }
-  const letter=canvasLetter??(localLetter&&GRADE_POINTS[localLetter]!==undefined?localLetter:undefined);
+  const letter=canvasLetter??(canvasPercent!==undefined?gradeFromScale(canvasPercent):localLetter&&GRADE_POINTS[localLetter]!==undefined?localLetter:undefined);
   return {letter,percentage:canvasPercent,weightedEstimate:undefined,incomplete:false,source:canvasLetter?"Canvas-reported grade":localLetter?"recorded course grade":canvasPercent!==undefined?"Canvas PDF total":"ungraded"};
 }
