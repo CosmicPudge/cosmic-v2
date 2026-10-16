@@ -152,7 +152,7 @@ export default function GradeCsvImport({ courses, grades, saveGrade, removeGrade
         const lines = [...leftLines.entries()].map(([y, parts]) => ({
           y, text: parts.sort((a,b) => a.x - b.x).map((part) => part.text).join(" ").replace(/\s+/g," ").trim(),
         })).sort((a,b) => b.y - a.y);
-        const groupLabel = /^(Lecture Assignments|Math Primer Assignments|Weekly Progress Reports|Mini-Project(?: \(Playground Project\))?|Mars Mission Project(?: \(Final Project\))?|Attendance|Imported Assignments|Additional Surveys|Midterms|Proctored midterm exams|Out-of-class midterm exams for(?: extra credit)?|On line chapter quizzes|week in review quizzes|Week in Review Quizzes, highest(?: of 2 attempts)?|Final exam|Wooclap in-class polling)$/i;
+        const groupLabel = /^(Lecture Assignments|Math Primer Assignments|Weekly Progress Reports|Mini-Project(?: \(Playground Project\))?|Mars Mission Project(?: \(Final Project\))?|Attendance|Imported Assignments|Additional Surveys|Midterms|Proctored midterm exams|Out-of-class midterm exams for(?: extra credit)?|On line chapter quizzes|week in review quizzes|Week in Review Quizzes, highest(?: of 2 attempts)?|Final exam|Wooclap in-class polling|Assignments in MyOpenMath|Quiz|Competency Based Exams)$/i;
         const otherLabel = /^(Name|Due|Submitted|Status|Score|Course|Arrange By|Apply|Print Grades|Grades for|Total)\b/i;
         const dateLine = /^(Sep|Oct|Nov|Dec|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug)\s+\d+\b/i;
         const isTitle = (text: string) => text.length > 1 && !groupLabel.test(text) && !otherLabel.test(text) &&
@@ -170,6 +170,19 @@ export default function GradeCsvImport({ courses, grades, saveGrade, removeGrade
           const below = lines.filter((line) => line.y < score.y - 5 && line.y > score.y - 32).sort((a,b) => b.y - a.y);
           const group = below.map((line)=>line.text).find((text)=>groupLabel.test(text));
           if (label && !/^\\d/.test(label) && label.length <= 180) records.push({ label, earned: score.earned, possible: score.possible, ...(group?{group}:{}) });
+        }
+        // Some Canvas assignments are scored as a percentage instead of
+        // points. Treat them as a score out of 100, but only when a distinct
+        // assignment row can be identified to the left of the percent glyph.
+        // Group-summary percentages never have an assignment title above them.
+        const percentageCells=fragments.filter((part)=>part.x>=scoreLimit&&part.x<pageWidth*0.86&&/^\d+(?:\.\d+)?%$/.test(part.text));
+        for(const cell of percentageCells){
+          const nameLine=lines.find((line)=>Math.abs(line.y-cell.y)<=6&&
+            /^(Roll Call Attendance)$/i.test(line.text));
+          if(nameLine){
+            const pctValue=Number(cell.text.replace("%",""));
+            records.push({label:nameLine.text,earned:pctValue,possible:100,group:"Attendance"});
+          }
         }
         // Canvas renders complete/incomplete Wooclap scores as private-use
         // icons rather than "1 / 1". In this Canvas print layout the score
@@ -200,7 +213,7 @@ export default function GradeCsvImport({ courses, grades, saveGrade, removeGrade
         // extracted text line as its title (especially Chemistry quizzes).
         // Keep "high score" in the assignment title; detach only known
         // category subtitles at the end.
-        const subtitle=label.match(/\s+(Week in Review Quizzes,\s*highest)\s*$/i);
+        const subtitle=label.match(/\s+(Week in Review Quizzes,\s*highest|Assignments in MyOpenMath|Competency Based Exams|Quiz)\s*$/i);
         if(subtitle){group=group??subtitle[1];label=label.slice(0,subtitle.index).trim();}
         const key=gradeIdentity(label);
         const existing=grades.find((grade)=>grade.courseId===detectedCourseId&&gradeIdentity(grade.label??"")===key);
