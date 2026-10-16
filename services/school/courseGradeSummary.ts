@@ -1,7 +1,7 @@
 import type { Course, Grade } from "@/core/contracts/School";
 
 type Group={id:string;name:string;weight:number|null};
-type Structure={groups:Group[];assignments:Record<string,string>;gradeScale?:Record<string,number>};
+type Structure={groups:Group[];assignments:Record<string,string>;gradeScale?:Record<string,number>;canvasLetter?:string;canvasPercent?:number};
 export const DEFAULT_GRADE_SCALE:Record<string,number>={A:93,"A-":90,"B+":87,B:83,"B-":80,"C+":77,C:73,"C-":70,"D+":67,D:63,"D-":60,F:0};
 export function gradeFromScale(percentage:number,scale:Record<string,number>=DEFAULT_GRADE_SCALE){return Object.entries(scale).filter(([letter,cutoff])=>GRADE_POINTS[letter]!==undefined&&Number.isFinite(cutoff)&&percentage>=cutoff).sort((a,b)=>b[1]-a[1])[0]?.[0]??"F";}
 export const COURSE_GRADE_CHANGED="cosmos:school-course-grade-changed";
@@ -19,10 +19,14 @@ export function courseGradeSummary(scopeId:string,course:Course,grades:Grade[]) 
   let estimate:number|undefined;
   let incomplete=false;
   let scale=DEFAULT_GRADE_SCALE;
+  let canvasLetter: string|undefined;
+  let canvasPercent: number|undefined;
   if(typeof window!=="undefined"){
     try{
       const data=JSON.parse(window.localStorage.getItem(courseGradeKey(scopeId,course))||"null") as Structure|null;
       if(data?.gradeScale)scale={...DEFAULT_GRADE_SCALE,...data.gradeScale};
+      if(data?.canvasLetter && GRADE_POINTS[data.canvasLetter]!==undefined)canvasLetter=data.canvasLetter;
+      if(typeof data?.canvasPercent==="number"&&Number.isFinite(data.canvasPercent))canvasPercent=data.canvasPercent;
       if(data?.groups?.length&&data.assignments){
         const weightedGroups=data.groups.map((group)=>{
           const entries=courseGrades.filter((grade)=>grade.id&&data.assignments[grade.id]===group.id&&grade.earnedPoints!==undefined&&grade.possiblePoints!==undefined&&grade.possiblePoints>0);
@@ -39,5 +43,5 @@ export function courseGradeSummary(scopeId:string,course:Course,grades:Grade[]) 
   // A recorded overall course grade is authoritative within Cosmos. If none
   // exists, use a clearly provisional weighted course estimate, never an
   // arbitrary individual assignment letter or unweighted points percentage.
-  return {letter:localLetter&&GRADE_POINTS[localLetter]!==undefined?localLetter:estimate!==undefined?gradeFromScale(estimate,scale):undefined,percentage:estimate,incomplete,source:localLetter?"recorded course grade":estimate!==undefined?"weighted estimate":"ungraded"};
+  return {letter:canvasLetter??(localLetter&&GRADE_POINTS[localLetter]!==undefined?localLetter:estimate!==undefined?gradeFromScale(estimate,scale):undefined),percentage:canvasPercent??estimate,weightedEstimate:estimate,incomplete,source:canvasLetter?"Canvas-reported grade":localLetter?"recorded course grade":estimate!==undefined?"weighted estimate":"ungraded"};
 }
