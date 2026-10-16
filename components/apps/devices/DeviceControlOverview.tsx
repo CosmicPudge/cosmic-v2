@@ -72,12 +72,12 @@ export default function DeviceControlOverview() {
   const toggle = (name: string) => setModules((old) => old.map((item) => item.name === name ? {...item, enabled: !item.enabled} : item));
 
   return <div className="cosmos-devices-root mx-auto w-full max-w-[1600px] space-y-4 pb-12 text-white">
-    <div className="relative overflow-hidden rounded-2xl border border-violet-400/20 bg-gradient-to-r from-[#0c1031]/95 via-[#161346]/85 to-[#321052]/55 p-6 sm:p-8">
-      <div className="pointer-events-none absolute -right-14 -top-32 h-72 w-72 rounded-full bg-violet-600/25 blur-3xl" />
+    <div className="cosmos-devices-heading relative overflow-hidden rounded-2xl border border-violet-400/15 px-4 py-4 sm:px-6 sm:py-5">
+      <div className="pointer-events-none absolute -right-14 -top-32 h-48 w-48 rounded-full bg-violet-600/10 blur-3xl" />
       <p className="text-[10px] font-semibold uppercase tracking-[.25em] text-violet-200/55">Cosmos · Milestone 3</p>
-      <div className="mt-2 flex items-center gap-3"><Monitor className="h-8 w-8 text-violet-300" /><h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">Devices</h1></div>
+      <div className="mt-1 flex items-center gap-3"><Monitor className="h-8 w-8 text-violet-300" /><h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Devices</h1></div>
       <p className="mt-2 max-w-2xl text-sm text-white/60">Your future control center for displays, kiosks, and connected hardware.</p>
-      <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-amber-300/20 bg-amber-200/10 px-3 py-1 text-xs text-amber-100"><ShieldCheck size={14}/> Control-side preview · no hardware commands</div>
+      <div className="mt-2 inline-flex items-center gap-2 rounded-full border border-amber-300/20 bg-amber-200/10 px-3 py-1 text-xs text-amber-100"><ShieldCheck size={14}/> Control-side preview · no hardware commands</div>
     </div>
 
     <nav aria-label="Device sections" className="flex gap-2 overflow-x-auto rounded-2xl border border-violet-300/15 bg-[#0a0b23]/65 p-2">
