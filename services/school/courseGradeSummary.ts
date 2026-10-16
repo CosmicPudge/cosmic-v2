@@ -1,7 +1,9 @@
 import type { Course, Grade } from "@/core/contracts/School";
 
 type Group={id:string;name:string;weight:number|null};
-type Structure={groups:Group[];assignments:Record<string,string>};
+type Structure={groups:Group[];assignments:Record<string,string>;gradeScale?:Record<string,number>};
+export const DEFAULT_GRADE_SCALE:Record<string,number>={A:93,"A-":90,"B+":87,B:83,"B-":80,"C+":77,C:73,"C-":70,"D+":67,D:63,"D-":60,F:0};
+export function gradeFromScale(percentage:number,scale:Record<string,number>=DEFAULT_GRADE_SCALE){return Object.entries(scale).filter(([letter,cutoff])=>GRADE_POINTS[letter]!==undefined&&Number.isFinite(cutoff)&&percentage>=cutoff).sort((a,b)=>b[1]-a[1])[0]?.[0]??"F";}
 export const COURSE_GRADE_CHANGED="cosmos:school-course-grade-changed";
 export const courseGradeKey=(scopeId:string,course:Course)=>"cosmos.school.grading.v1."+scopeId+"."+course.termId+"."+course.id;
 export const GRADE_POINTS:Record<string,number>={"A+":4,A:4,"A-":3.7,"B+":3.3,B:3,"B-":2.7,"C+":2.3,C:2,"C-":1.7,"D+":1.3,D:1,"D-":0.7,F:0};
@@ -16,9 +18,11 @@ export function courseGradeSummary(scopeId:string,course:Course,grades:Grade[]) 
   const localLetter=overall?.letter?.toUpperCase();
   let estimate:number|undefined;
   let incomplete=false;
+  let scale=DEFAULT_GRADE_SCALE;
   if(typeof window!=="undefined"){
     try{
       const data=JSON.parse(window.localStorage.getItem(courseGradeKey(scopeId,course))||"null") as Structure|null;
+      if(data?.gradeScale)scale={...DEFAULT_GRADE_SCALE,...data.gradeScale};
       if(data?.groups?.length&&data.assignments){
         const weightedGroups=data.groups.map((group)=>{
           const entries=courseGrades.filter((grade)=>grade.id&&data.assignments[grade.id]===group.id&&grade.earnedPoints!==undefined&&grade.possiblePoints!==undefined&&grade.possiblePoints>0);
@@ -28,12 +32,12 @@ export function courseGradeSummary(scopeId:string,course:Course,grades:Grade[]) 
         }).filter((group)=>group.weight!==null&&group.weight>0&&group.percentage!==undefined);
         const weight=weightedGroups.reduce((sum,g)=>sum+(g.weight??0),0);
         if(weight>0&&weight<=100.001&&data.groups.every((g)=>g.weight!==null))estimate=weightedGroups.reduce((sum,g)=>sum+(g.weight??0)*g.percentage!,0)/weight;
-        incomplete=courseGrades.some((grade)=>grade.id&&grade.possiblePoints&&grade.earnedPoints!==undefined&&!data.groups.some((g)=>data.assignments[grade.id!]===g.id))||Math.abs(data.groups.reduce((sum,g)=>sum+g.weight,0)-100)>0.01;
+        incomplete=courseGrades.some((grade)=>grade.id&&grade.possiblePoints&&grade.earnedPoints!==undefined&&!data.groups.some((g)=>data.assignments[grade.id!]===g.id))||Math.abs(data.groups.reduce((sum,g)=>sum+(g.weight??0),0)-100)>0.01;
       }
     }catch{}
   }
   // A recorded overall course grade is authoritative within Cosmos. If none
   // exists, use a clearly provisional weighted course estimate, never an
   // arbitrary individual assignment letter or unweighted points percentage.
-  return {letter:localLetter&&GRADE_POINTS[localLetter]!==undefined?localLetter:estimate!==undefined?percentageLetter(estimate):undefined,percentage:estimate,incomplete,source:localLetter?"recorded course grade":estimate!==undefined?"weighted estimate":"ungraded"};
+  return {letter:localLetter&&GRADE_POINTS[localLetter]!==undefined?localLetter:estimate!==undefined?gradeFromScale(estimate,scale):undefined,percentage:estimate,incomplete,source:localLetter?"recorded course grade":estimate!==undefined?"weighted estimate":"ungraded"};
 }
