@@ -98,23 +98,23 @@ export default function GradeCsvImport({ courses, grades, saveGrade }: { courses
         let pending = "";
         let inRows = false;
         for (const cells of sorted) {
-          const line = cells.map((cell)=>cell.text).join(" ").replace(/\\s+/g," ").trim();
-          if (/^Name\\b.*\\bDue\\b/i.test(line)) { inRows=true; pending=""; continue; }
-          if (/^Total\\s+(\\d+(?:\\.\\d+)?)%/.test(line)) { canvasTotal=line.match(/\\d+(?:\\.\\d+)?%/)?.[0]; inRows=false; continue; }
-          if (/^(Lecture Assignments|Attendance|Math Primer Assignments|Weekly Progress Reports|Mini-Project \\(Playground Project\\)|Imported Assignments|Additional Surveys)/i.test(line) && !/\\d+\\s*\\/\\s*\\d+/.test(line)) continue;
-          if (/^Total\\b|^Course\\s+Arrange By|^Grades for |^Print Grades|^Name\\s+Due/i.test(line)) { pending=""; continue; }
+          const line = cells.map((cell)=>cell.text).join(" ").replace(/\s+/g," ").trim();
+          if (/^Name\b.*\bDue\b/i.test(line)) { inRows=true; pending=""; continue; }
+          if (/^Total\s+(\d+(?:\.\d+)?)%/.test(line)) { canvasTotal=line.match(/\d+(?:\.\d+)?%/)?.[0]; inRows=false; continue; }
+          if (/^(Lecture Assignments|Attendance|Math Primer Assignments|Weekly Progress Reports|Mini-Project \(Playground Project\)|Imported Assignments|Additional Surveys)/i.test(line) && !/\d+\s*\/\s*\d+/.test(line)) continue;
+          if (/^Total\b|^Course\s+Arrange By|^Grades for |^Print Grades|^Name\s+Due/i.test(line)) { pending=""; continue; }
           if (!inRows) continue;
-          const scores = [...line.matchAll(/(?:^|\\s)(\\d+(?:\\.\\d+)?)\\s*\\/\\s*(\\d+(?:\\.\\d+)?)(?=\\s|$)/g)];
+          const scores = [...line.matchAll(/(?:^|\s)(\d+(?:\.\d+)?)\s*\/\s*(\d+(?:\.\d+)?)(?=\s|$)/g)];
           if (scores.length) {
             const score = scores[scores.length - 1];
             const earned=Number(score[1]), possible=Number(score[2]);
-            const textBefore=line.slice(0,score.index).replace(/(?:Sep|Oct|Nov|Dec|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug)\\s+\\d+.*$/i,"").trim();
-            const candidate=(pending+" "+textBefore).replace(/\\s+/g," ").trim();
-            if (candidate && possible > 0 && earned >= 0 && !/^(Lecture Assignments|Attendance|Math Primer Assignments|Weekly Progress Reports|Mini-Project|Total|Seminar Attendance W\\d+\\s+\\d+)/i.test(candidate)) records.push({label:candidate,earned,possible});
+            const textBefore=line.slice(0,score.index).replace(/(?:Sep|Oct|Nov|Dec|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug)\s+\d+.*$/i,"").trim();
+            const candidate=(pending+" "+textBefore).replace(/\s+/g," ").trim();
+            if (candidate && possible > 0 && earned >= 0 && !/^(Lecture Assignments|Attendance|Math Primer Assignments|Weekly Progress Reports|Mini-Project|Total|Seminar Attendance W\d+\s+\d+)/i.test(candidate)) records.push({label:candidate,earned,possible});
             pending="";
-          } else if (/\\/\\s*\\d+/.test(line) || /\\d+\\.\\d+%/.test(line)) {
+          } else if (/\/\s*\d+/.test(line) || /\d+\.\d+%/.test(line)) {
             pending="";
-          } else if (!/^(Sep|Oct|Nov|Dec|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug)\\s+\\d+\\b|^\\d+:\\d+|^by |^am$|^pm$|^Submitted|^Status|^Score|^Assignment/i.test(line) && !/\\b\\d+\\s*\\/\\s*$/.test(line)) {
+          } else if (!/^(Sep|Oct|Nov|Dec|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug)\s+\d+\b|^\d+:\d+|^by |^am$|^pm$|^Submitted|^Status|^Score|^Assignment/i.test(line) && !/\b\d+\s*\/\s*$/.test(line)) {
             pending=(pending+" "+line).trim().slice(-200);
           }
         }
