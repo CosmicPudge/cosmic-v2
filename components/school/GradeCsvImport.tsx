@@ -138,7 +138,7 @@ export default function GradeCsvImport({ courses, grades, saveGrade, scopeId }: 
         const lines = [...leftLines.entries()].map(([y, parts]) => ({
           y, text: parts.sort((a,b) => a.x - b.x).map((part) => part.text).join(" ").replace(/\s+/g," ").trim(),
         })).sort((a,b) => b.y - a.y);
-        const groupLabel = /^(Lecture Assignments|Math Primer Assignments|Weekly Progress Reports|Mini-Project(?: \(Playground Project\))?|Mars Mission Project(?: \(Final Project\))?|Attendance|Imported Assignments|Additional Surveys)$/i;
+        const groupLabel = /^(Lecture Assignments|Math Primer Assignments|Weekly Progress Reports|Mini-Project(?: \(Playground Project\))?|Mars Mission Project(?: \(Final Project\))?|Attendance|Imported Assignments|Additional Surveys|Midterms|Proctored midterm exams|Out-of-class midterm exams for(?: extra credit)?|On line chapter quizzes|week in review quizzes|Week in Review Quizzes, highest(?: of 2 attempts)?|Final exam|Wooclap in-class polling)$/i;
         const otherLabel = /^(Name|Due|Submitted|Status|Score|Course|Arrange By|Apply|Print Grades|Grades for|Total)\b/i;
         const dateLine = /^(Sep|Oct|Nov|Dec|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug)\s+\d+\b/i;
         const isTitle = (text: string) => text.length > 1 && !groupLabel.test(text) && !otherLabel.test(text) &&
@@ -146,11 +146,13 @@ export default function GradeCsvImport({ courses, grades, saveGrade, scopeId }: 
         // Locate each score's assignment title immediately to its left.
         // Multi-line names occupy the same or preceding line; stop at 2 lines.
         for (const score of scoredRows) {
-          const candidateLines = lines.filter((line) => line.y >= score.y - 5 && line.y <= score.y + 30 && isTitle(line.text));
-          const sameLine = candidateLines.filter((line) => Math.abs(line.y - score.y) <= 6);
-          const preceding = candidateLines.filter((line) => line.y > score.y + 6);
-          const selected = [...preceding.slice(-2), ...sameLine].sort((a,b) => b.y - a.y);
-          const label = selected.map((line) => line.text).join(" ").replace(/\s+(?:Sep|Oct|Nov|Dec|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug)\s+\d{1,2}\s+by\b.*$/i, "").trim();
+          // A long assignment title can wrap below the score's numerator,
+          // while its category subtitle appears even farther below. Canvas
+          // PDFs frequently put the score denominator on a second line too.
+          const candidateLines = lines.filter((line) => Math.abs(line.y - score.y) <= 19 && isTitle(line.text) &&
+            !/^(Proctored midterm exams|Out-of-class midterm exams|On line chapter quizzes|week in review quizzes|Midterms|Wooclap in-class polling)\\b/i.test(line.text));
+          const selected = candidateLines.sort((a,b) => b.y - a.y);
+          const label = selected.map((line) => line.text).join(" ").replace(/\\s+Out-of-class midterm exams for(?: extra credit)?$/i,"").replace(/\s+(?:Sep|Oct|Nov|Dec|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug)\s+\d{1,2}\s+by\b.*$/i, "").trim();
           const below = lines.filter((line) => line.y < score.y - 5 && line.y > score.y - 32).sort((a,b) => b.y - a.y);
           const group = below.map((line)=>line.text).find((text)=>groupLabel.test(text));
           if (label && !/^\\d/.test(label) && label.length <= 180) records.push({ label, earned: score.earned, possible: score.possible, ...(group?{group}:{}) });
