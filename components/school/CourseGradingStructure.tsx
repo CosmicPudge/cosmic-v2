@@ -52,6 +52,7 @@ export default function CourseGradingStructure({ course, grades, scopeId }: { co
       <div><h3 className="font-semibold text-white">Grading structure</h3><p className="mt-1 text-xs text-white/50">Specific to {course.code||course.name} · this term · saved in this browser</p></div>
       <button type="button" className="rounded-lg border border-white/20 px-3 py-2 text-xs text-white" onClick={()=>setOpen((v)=>!v)}>{open?"Hide":"Configure"} groups</button>
     </div>
+    {model.canvasPercent!==undefined&&<p className="mt-3 text-sm font-semibold text-emerald-200">Canvas-reported overall total: {pct(model.canvasPercent)}{model.canvasLetter?" · "+model.canvasLetter:" · Letter grade not recorded"}</p>}
     {!!model.groups.length&&<div className="mt-3 text-sm text-white/75">
       <span className="font-semibold">{weighted===null?"—":pct(weighted)}</span> · <span className="font-bold text-violet-100">{letter??"Letter not available"}</span> · calculated estimate {model.canvasLetter?"(Canvas-reported grade takes priority for GPA)":""}
       <span className="ml-2 text-xs text-white/45">({pct(totalWeight)} configured · {pct(activeWeight)} graded weight)</span>
