@@ -77,7 +77,7 @@ export default function GradeCsvImport({ courses, grades, saveGrade }: { courses
     setPdfBusy(true);
     try {
       const pdfjs = await import("pdfjs-dist/build/pdf.mjs");
-      pdfjs.GlobalWorkerOptions.workerSrc = new URL("pdfjs-dist/build/pdf.worker.min.mjs", import.meta.url).toString();
+      pdfjs.GlobalWorkerOptions.workerSrc = "/pdfjs/pdf.worker.min.mjs";
       const pdf = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
       if (pdf.numPages > 30) throw new Error("PDF must have 30 pages or fewer.");
       const matchedCourse = courses.find((course) => course.id === pdfCourseId);
