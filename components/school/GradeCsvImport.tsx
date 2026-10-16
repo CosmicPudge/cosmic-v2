@@ -99,7 +99,7 @@ export default function GradeCsvImport({ courses, grades, saveGrade }: { courses
         // column, dates in the middle, and scores on the far right.
         // Never combine text across those columns or across score rows.
         const pageWidth = page.getViewport({ scale: 1 }).width;
-        const leftLimit = pageWidth * 0.47;
+        const leftLimit = pageWidth * 0.36;
         const scoreLimit = pageWidth * 0.73;
         const sorted = [...fragments].sort((a, b) => b.y - a.y || a.x - b.x);
         // PDF.js returns score cells as separate "10", "/", "10" glyphs.
@@ -137,7 +137,7 @@ export default function GradeCsvImport({ courses, grades, saveGrade }: { courses
           const sameLine = candidateLines.filter((line) => Math.abs(line.y - score.y) <= 6);
           const preceding = candidateLines.filter((line) => line.y > score.y + 6);
           const selected = [...preceding.slice(-2), ...sameLine].sort((a,b) => b.y - a.y);
-          const label = selected.map((line) => line.text).join(" ").trim();
+          const label = selected.map((line) => line.text).join(" ").replace(/\s+(?:Sep|Oct|Nov|Dec|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug)\s+\d{1,2}\s+by\b.*$/i, "").trim();
           if (label && !/^\d/.test(label) && label.length <= 180) records.push({ label, earned: score.earned, possible: score.possible });
         }
         const totals = fragments.map((part) => part.text).filter((t) => /^\d+(?:\.\d+)?%$/.test(t));
