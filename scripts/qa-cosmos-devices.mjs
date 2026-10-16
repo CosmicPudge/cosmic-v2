@@ -5,6 +5,7 @@ const check = (name, condition) => checks.push({name, pass: Boolean(condition)})
 const page = read("app/devices/page.tsx");
 const view = read("components/apps/devices/DeviceControlOverview.tsx");
 const shell = read("components/os/app/AppShell.tsx");
+const devicesCss = read("styles/cosmos-devices.css");
 check("Devices route mounts shared Cosmos shell", page.includes("<AppShell") && page.includes("<DeviceControlOverview"));
 check("Device overview is client rendered", view.startsWith('"use client"'));
 check("All six reference sections exist", ["Overview","Kiosk","Even G2","Displays","Integrations","Automation"].every(x=>view.includes('"'+x+'"')));
@@ -17,6 +18,9 @@ check("Hardware commands are not wired into Devices overview", !/fetch\s*\(|XMLH
 check("Quick controls explicitly describe unavailable actions", view.includes("unavailable until a compatible device is connected"));
 check("Dynamic device inputs expose accessible labels", view.includes('aria-label={"Adapter for "+p.name}') && view.includes('aria-label="Future display brightness"'));
 check("Responsive grids are present", view.includes("lg:grid-cols-2") && view.includes("xl:grid-cols"));
+check("M3 widgets inherit M0 card styling", view.includes("cosmos-card cosmic-panel cosmos-devices-panel"));
+check("M3 has scoped custom wallpaper", devicesCss.includes("cosmos-devices-root") && devicesCss.includes("cosmos-cinematic-image"));
+check("Solid mode remains opaque on device panels", devicesCss.includes('html[data-cosmos-surface="solid"]') && devicesCss.includes("var(--cosmos-surface-solid)"));
 check("Shared top bar is preserved", shell.includes("<CosmosTopBar />"));
 check("No device backend is imported by M3 overview", !/from\s+["']@\/services\/devices/.test(view) && !/from\s+["']@\/app\/api\/devices/.test(view));
 for(const item of checks) console.log((item.pass?"PASS":"FAIL")+"  "+item.name);
