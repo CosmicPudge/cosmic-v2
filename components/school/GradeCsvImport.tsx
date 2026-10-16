@@ -41,6 +41,8 @@ export default function GradeCsvImport({ courses, grades, saveGrade, removeGrade
   const [confirmed, setConfirmed] = useState(false);
   const [pdfCourseId, setPdfCourseId] = useState("");
   const [groupPhotoName,setGroupPhotoName] = useState("");
+  const [photoBusy,setPhotoBusy] = useState(false);
+  const [photoGroups,setPhotoGroups] = useState<Array<{name:string;weight:number}>>([]);
   const [groupPhotoUrl,setGroupPhotoUrl] = useState<string|null>(null);
   const [pdfBusy, setPdfBusy] = useState(false);
   const [pdfCanvasPercent,setPdfCanvasPercent] = useState<number | null>(null);
@@ -80,6 +82,35 @@ export default function GradeCsvImport({ courses, grades, saveGrade, removeGrade
       });
       setCandidates(parsed); setFileName(file.name); setMessage("Review the proposed imports below. Existing grades are never overwritten.");
     } catch (error) { setMessage(error instanceof Error ? error.message : "Unable to read grades file."); }
+  }
+  async function readWeightPhoto(file?:File){
+    if(groupPhotoUrl)URL.revokeObjectURL(groupPhotoUrl);
+    setGroupPhotoName(file?.name??"");setGroupPhotoUrl(file?URL.createObjectURL(file):null);setPhotoGroups([]);
+    if(!file)return;
+    if(!/^image\/(png|jpeg|webp)$/.test(file.type)||file.size>8_000_000){setMessage("Choose a PNG, JPG, or WebP screenshot under 8 MB.");return;}
+    setPhotoBusy(true);
+    try {
+      const {createWorker}=await import("tesseract.js");
+      const worker=await createWorker("eng");
+      let raw="";
+      try{raw=(await worker.recognize(file)).data.text;}
+      finally{await worker.terminate();}
+      const rows=raw.split(/\r?\n/).map(line=>line.trim()).filter(Boolean);
+      const parsed:Array<{name:string;weight:number}>=[];
+      let pending="";
+      for(const line of rows){
+        if(/^group\s+weight$/i.test(line)||/^total\b/i.test(line))continue;
+        const match=line.match(/^(.*?)\s+(\d{1,3})\s*%$/);
+        if(match){
+          const name=(pending+" "+match[1]).trim().replace(/\s+/g," ");
+          const weight=Number(match[2]);pending="";
+          if(name&&weight>=0&&weight<=100&&!parsed.some(row=>row.name.toLowerCase()===name.toLowerCase()))parsed.push({name,weight});
+        }else if(!/^\d+\s*%$/.test(line)){pending=(pending+" "+line).trim();}
+      }
+      setPhotoGroups(parsed);
+      setMessage(parsed.length?"Detected "+parsed.length+" groups from screenshot. Review names and weights.":"Couldn't confidently read weights. Try a clearer screenshot.");
+    }catch(error){setMessage(error instanceof Error?"Screenshot recognition failed: "+error.message:"Screenshot recognition failed.");}
+    finally{setPhotoBusy(false);}
   }
   async function readPdf(file?: File) {
     if (!file) return;
@@ -177,7 +208,7 @@ export default function GradeCsvImport({ courses, grades, saveGrade, removeGrade
         // Group-summary percentages never have an assignment title above them.
         const percentageCells=fragments.filter((part)=>part.x>=scoreLimit&&part.x<pageWidth*0.86&&/^\d+(?:\.\d+)?%$/.test(part.text));
         for(const cell of percentageCells){
-          const nameLine=lines.find((line)=>Math.abs(line.y-cell.y)<=6&&
+          const nameLine=lines.find((line)=>Math.abs(line.y-cell.y)<=14&&
             /^(Roll Call Attendance)$/i.test(line.text));
           if(nameLine){
             const pctValue=Number(cell.text.replace("%",""));
@@ -242,12 +273,14 @@ export default function GradeCsvImport({ courses, grades, saveGrade, removeGrade
     // Their IDs remain stable; their scores must never be overwritten.
     const mapping = candidates.filter((item) => item.group && ((item.valid && item.selected) || item.action === "unchanged"));
     const course = courses.find((item) => item.id === pdfCourseId);
-    if (course && (mapping.length || pdfCanvasPercent !== null)) {
+    if (course && (mapping.length || pdfCanvasPercent !== null || photoGroups.length>0)) {
       const key = courseGradeKey(scopeId,course);
       try {
         const current = JSON.parse(window.localStorage.getItem(key)||"null") as {groups?:Array<{id:string;name:string;weight:number|null}>;assignments?:Record<string,string>;gradeScale?:Record<string,number>;canvasLetter?:string;canvasPercent?:number}|null;
         const groups = Array.isArray(current?.groups)?[...current.groups]:[];
         const assignments = {...(current?.assignments??{})};
+        if(photoGroups.length&&Math.abs(photoGroups.reduce((sum,g)=>sum+g.weight,0)-100)>0.01){setMessage("Screenshot weights must total 100% before accepting.");return;}
+        for(const item of photoGroups){const name=item.name.trim();if(!name)continue;const existing=groups.find((g)=>g.name.trim().toLowerCase()===name.toLowerCase());if(existing)existing.weight=item.weight;else groups.push({id:crypto.randomUUID(),name,weight:item.weight});}
         for(const entry of mapping) {
           const name = entry.group!;
           let group = groups.find((item)=>item.name.trim().toLowerCase()===name.trim().toLowerCase());
@@ -262,7 +295,7 @@ export default function GradeCsvImport({ courses, grades, saveGrade, removeGrade
     }
     selected.forEach((item) => saveGrade(item.grade));
     setMessage("Saved "+selected.length+" new grade records and recognized "+new Set(mapping.map((item)=>item.group)).size+" grading groups."+(pdfCanvasPercent!==null?" Canvas-reported overall percentage: "+pdfCanvasPercent+"%.":"")+" Enter the course letter grade separately if Canvas shows one.");
-    setCandidates([]); setConfirmed(false); setPdfCanvasPercent(null);
+    setCandidates([]); setConfirmed(false); setPdfCanvasPercent(null);setPhotoGroups([]);
   }
   function downloadTemplate() {
     const blob = new Blob([example+"\n"],{type:"text/csv;charset=utf-8"});
@@ -288,8 +321,10 @@ export default function GradeCsvImport({ courses, grades, saveGrade, removeGrade
         <select aria-label="Course for PDF grade import" className={field} value={pdfCourseId} onChange={(e)=>setPdfCourseId(e.target.value)}><option value="">Auto-detect course from PDF filename</option>{courses.map((course)=><option key={course.id} value={course.id}>{course.code||course.name} · {course.name}</option>)}</select>
         <input aria-label="Choose Canvas grade PDF" type="file" accept=".pdf,application/pdf" className={field} disabled={pdfBusy} onChange={(e)=>void readPdf(e.target.files?.[0])}/>
       </div>
-      <label className="mt-3 block text-xs text-white/65">Grading groups/weights screenshot (optional reference for review)<input className={field+" mt-1"} type="file" accept="image/png,image/jpeg,image/webp" onChange={(event)=>{const file=event.target.files?.[0];if(groupPhotoUrl)URL.revokeObjectURL(groupPhotoUrl);if(file){setGroupPhotoName(file.name);setGroupPhotoUrl(URL.createObjectURL(file));}else{setGroupPhotoName("");setGroupPhotoUrl(null);}}}/></label>
-      {groupPhotoUrl&&<div className="mt-2"><p className="text-xs text-white/60">{groupPhotoName} · Reference only; weights are not yet extracted from the photo</p><img src={groupPhotoUrl} alt="Uploaded grading groups and weights reference" className="mt-2 max-h-60 w-auto rounded-lg border border-white/15"/></div>}
+      <label className="mt-3 block text-xs text-white/65">Grading groups/weights screenshot (automatically read weights)<input className={field+" mt-1"} type="file" accept="image/png,image/jpeg,image/webp" onChange={(event)=>void readWeightPhoto(event.target.files?.[0])}/></label>
+      {groupPhotoUrl&&<div className="mt-2"><p className="text-xs text-white/60">{groupPhotoName} · Detected weights below</p><img src={groupPhotoUrl} alt="Uploaded grading groups and weights reference" className="mt-2 max-h-60 w-auto rounded-lg border border-white/15"/></div>}
+      {photoBusy&&<p className="mt-2 text-xs text-white/70">Reading group names and weights from the screenshot…</p>}
+      {photoGroups.length>0&&<div className="mt-3 rounded-xl border border-violet-300/20 p-3"><p className="mb-2 text-sm font-semibold text-white">Detected groups — check before accepting</p>{photoGroups.map((group,i)=><div key={i} className="mb-2 flex gap-2"><input aria-label={"Group name "+(i+1)} className={field+" flex-1"} value={group.name} onChange={(e)=>setPhotoGroups((old)=>old.map((v,j)=>i===j?{...v,name:e.target.value}:v))}/><input aria-label={"Weight for "+group.name} className={field+" w-24"} type="number" min="0" max="100" value={group.weight} onChange={(e)=>setPhotoGroups((old)=>old.map((v,j)=>i===j?{...v,weight:Number(e.target.value)}:v))}/></div>)}<p className="text-xs text-white/60">Total {photoGroups.reduce((sum,g)=>sum+g.weight,0)}% — fix recognition errors before accepting.</p></div>}
       {pdfBusy&&<p role="status" className="mt-2 text-xs text-white/60">Reading the PDF locally…</p>}
     </div>
     <p className="mt-2 text-xs text-white/45">Columns: course, assignment, letter, earned, possible. Use a course code such as CHEM 1210. Points and letter may be left blank individually, not both. Grade rows with unrecognized courses or duplicate labels are skipped.</p>
