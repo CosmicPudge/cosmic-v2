@@ -77,7 +77,7 @@ export default function GradeCsvImport({ courses, grades, saveGrade }: { courses
     if (file.size > 25_000_000) { setMessage(`This PDF is ${(file.size / 1_000_000).toFixed(1)} MB. The local importer supports PDFs up to 25 MB.`); return; }
     setPdfBusy(true);
     try {
-      const pdfjs = await import("pdfjs-dist/build/pdf.mjs");
+      const pdfjs = await import("pdfjs-dist");
       pdfjs.GlobalWorkerOptions.workerSrc = "/pdfjs/pdf.worker.min.mjs";
       const pdf = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
       if (pdf.numPages > 30) throw new Error("PDF must have 30 pages or fewer.");
