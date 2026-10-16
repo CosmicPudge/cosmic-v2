@@ -4,7 +4,7 @@ import { useState } from "react";
 import type { Course, Grade } from "@/core/contracts/School";
 import { courseGradeKey, COURSE_GRADE_CHANGED } from "@/services/school/courseGradeSummary";
 
-type Candidate = { courseId: string; courseCode: string; grade: Grade; valid: boolean; issue?: string; selected: boolean; group?: string };
+type Candidate = { courseId: string; courseCode: string; grade: Grade; valid: boolean; issue?: string; selected: boolean; group?: string; action?: "add"|"update"|"unchanged" };
 function parseCsv(text: string): string[][] {
   const rows: string[][] = []; let row: string[] = [], cell = "", quoted = false;
   for (let i = 0; i < text.length; i++) {
@@ -40,6 +40,8 @@ export default function GradeCsvImport({ courses, grades, saveGrade, removeGrade
   const [fileName, setFileName] = useState("");
   const [confirmed, setConfirmed] = useState(false);
   const [pdfCourseId, setPdfCourseId] = useState("");
+  const [groupPhotoName,setGroupPhotoName] = useState("");
+  const [groupPhotoUrl,setGroupPhotoUrl] = useState<string|null>(null);
   const [pdfBusy, setPdfBusy] = useState(false);
   const [pdfCanvasPercent,setPdfCanvasPercent] = useState<number | null>(null);
   const [cleanupIds,setCleanupIds] = useState<string[]>([]);
@@ -82,7 +84,7 @@ export default function GradeCsvImport({ courses, grades, saveGrade, removeGrade
   async function readPdf(file?: File) {
     if (!file) return;
     setMessage(""); setCandidates([]); setConfirmed(false); setPdfCanvasPercent(null);
-    if (!pdfCourseId) { setMessage("Choose which Cosmos course this Canvas grade report belongs to."); return; }
+
     if (!file.name.toLowerCase().endsWith(".pdf")) { setMessage("Unsupported file type. Choose a Canvas Print Grades PDF."); return; }
     if (file.size > 25_000_000) { setMessage(`This PDF is ${(file.size / 1_000_000).toFixed(1)} MB. The local importer supports PDFs up to 25 MB.`); return; }
     setPdfBusy(true);
@@ -91,8 +93,11 @@ export default function GradeCsvImport({ courses, grades, saveGrade, removeGrade
       pdfjs.GlobalWorkerOptions.workerSrc = "/pdfjs/pdf.worker.min.mjs";
       const pdf = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
       if (pdf.numPages > 30) throw new Error("PDF must have 30 pages or fewer.");
-      const matchedCourse = courses.find((course) => course.id === pdfCourseId);
+      const pdfName=file.name.toUpperCase();
+      const matchingCourses=courses.filter((course)=>{const code=(course.code||"").replace(/[^A-Z0-9]/gi,"").toUpperCase();return code.length>=5&&pdfName.replace(/[^A-Z0-9]/g,"").includes(code);});
+      const matchedCourse = courses.find((course) => course.id === pdfCourseId)??(matchingCourses.length===1?matchingCourses[0]:undefined);
       if (!matchedCourse) throw new Error("Choose a valid course.");
+      const detectedCourseId=matchedCourse.id;
       const records: Array<{label:string;earned:number;possible:number;group?:string}> = [];
       let canvasTotal: string | undefined;
       for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber++) {
@@ -198,17 +203,20 @@ export default function GradeCsvImport({ courses, grades, saveGrade, removeGrade
         const subtitle=label.match(/\s+(Week in Review Quizzes,\s*highest)\s*$/i);
         if(subtitle){group=group??subtitle[1];label=label.slice(0,subtitle.index).trim();}
         const key=gradeIdentity(label);
-        const duplicate=seen.has(key)||grades.some((grade)=>grade.courseId===pdfCourseId&&gradeIdentity(grade.label??"")===key);
+        const existing=grades.find((grade)=>grade.courseId===detectedCourseId&&gradeIdentity(grade.label??"")===key);
+        const repeated=seen.has(key);
+        const action:Candidate["action"]=existing?(existing.earnedPoints===record.earned&&existing.possiblePoints===record.possible?"unchanged":"update"):"add";
         // PDF text extraction can concatenate distinct visual rows. Treat titles
         // containing layout remnants as unsafe, even if the score is numeric.
         const suspicious=/[\u2580-\u259f\u25a0-\u25ff\uE000-\uF8FF]|\b(?:Sep|Oct|Nov|Dec|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug)\s+\d{1,2}\b|\b(?:am|pm)\b|\b(?:Lecture Assignments|Math Primer Assignments|Weekly Progress Reports)\b|\b(?:by|Submitted|Status)\b/i.test(label);
         seen.add(key);
-        const issue=suspicious?"PDF row text appears merged; do not import":duplicate?"Already imported or duplicated":undefined;
-        return { courseId:pdfCourseId,courseCode:matchedCourse.code||matchedCourse.name, group,
-          grade:{id:crypto.randomUUID(),courseId:pdfCourseId,label,earnedPoints:record.earned,possiblePoints:record.possible},
+        const issue=suspicious?"PDF row text appears merged; do not import":repeated?"Repeated row in PDF":action==="unchanged"?"Already up to date":undefined;
+        return { courseId:detectedCourseId,courseCode:matchedCourse.code||matchedCourse.name, group, action,
+          grade:{id:existing?.id??crypto.randomUUID(),courseId:detectedCourseId,label,earnedPoints:record.earned,possiblePoints:record.possible},
           valid:!issue,selected:!issue,...(issue?{issue}:{}) };
       });
       setPdfCanvasPercent(canvasTotal && Number.isFinite(Number.parseFloat(canvasTotal)) ? Number.parseFloat(canvasTotal) : null);
+      setPdfCourseId(detectedCourseId);
       setCandidates(proposals); setFileName(file.name);
       setMessage("Extracted "+proposals.length+" scored entries from Canvas PDF."+(canvasTotal?" Canvas reports "+canvasTotal+" overall; Cosmos does not replicate weighted categories.":"")+" Check every assignment name and score before saving. Ungraded entries are excluded.");
     } catch (error) { setMessage(error instanceof Error?error.message:"Could not read PDF."); }
@@ -219,7 +227,7 @@ export default function GradeCsvImport({ courses, grades, saveGrade, removeGrade
     const selected = candidates.filter((item) => item.valid && item.selected);
     // Use existing records for mapping when a PDF is re-imported.
     // Their IDs remain stable; their scores must never be overwritten.
-    const mapping = candidates.filter((item) => item.group && (item.valid && item.selected || item.issue === "Already imported or duplicated"));
+    const mapping = candidates.filter((item) => item.group && ((item.valid && item.selected) || item.action === "unchanged"));
     const course = courses.find((item) => item.id === pdfCourseId);
     if (course && (mapping.length || pdfCanvasPercent !== null)) {
       const key = courseGradeKey(scopeId,course);
@@ -248,7 +256,9 @@ export default function GradeCsvImport({ courses, grades, saveGrade, removeGrade
     const href = URL.createObjectURL(blob); const a=document.createElement("a"); a.href=href; a.download="cosmos-grade-import-template.csv"; a.click(); URL.revokeObjectURL(href);
   }
   const selectedCount=candidates.filter((c)=>c.valid&&c.selected).length;
-  const mappedCount=candidates.filter((c)=>c.group && (c.selected || c.issue==="Already imported or duplicated")).length;
+  const newCount=candidates.filter((c)=>c.valid&&c.selected&&c.action!=="update").length;
+  const updatedCount=candidates.filter((c)=>c.valid&&c.selected&&c.action==="update").length;
+  const mappedCount=candidates.filter((c)=>c.group && (c.selected || c.action==="unchanged")).length;
   const duplicates = grades.filter((item)=>item.id&&courses.some((course)=>course.id===item.courseId)).filter((item,index,all)=>all.findIndex((other)=>other.courseId===item.courseId&&gradeIdentity(other.label??"")===gradeIdentity(item.label??"")&&other.earnedPoints===item.earnedPoints&&other.possiblePoints===item.possiblePoints)<index);
   const removable = duplicates.filter((grade)=>grade.id&&cleanupIds.includes(grade.id));
   return <section className="rounded-2xl border border-violet-200/20 bg-violet-950/15 p-5">
@@ -262,9 +272,11 @@ export default function GradeCsvImport({ courses, grades, saveGrade, removeGrade
       <p className="text-sm font-semibold text-white">Canvas Print Grades PDF</p>
       <p className="mt-1 text-xs text-white/55">Choose the matching course, then upload a text-based Canvas Print Grades PDF. Only scored assignments are proposed, and all results need your approval.</p>
       <div className="mt-2 grid gap-2 sm:grid-cols-2">
-        <select aria-label="Course for PDF grade import" className={field} value={pdfCourseId} onChange={(e)=>setPdfCourseId(e.target.value)}><option value="">Select the course in this PDF</option>{courses.map((course)=><option key={course.id} value={course.id}>{course.code||course.name} · {course.name}</option>)}</select>
+        <select aria-label="Course for PDF grade import" className={field} value={pdfCourseId} onChange={(e)=>setPdfCourseId(e.target.value)}><option value="">Auto-detect course from PDF filename</option>{courses.map((course)=><option key={course.id} value={course.id}>{course.code||course.name} · {course.name}</option>)}</select>
         <input aria-label="Choose Canvas grade PDF" type="file" accept=".pdf,application/pdf" className={field} disabled={pdfBusy} onChange={(e)=>void readPdf(e.target.files?.[0])}/>
       </div>
+      <label className="mt-3 block text-xs text-white/65">Grading groups/weights screenshot (optional reference for review)<input className={field+" mt-1"} type="file" accept="image/png,image/jpeg,image/webp" onChange={(event)=>{const file=event.target.files?.[0];if(groupPhotoUrl)URL.revokeObjectURL(groupPhotoUrl);if(file){setGroupPhotoName(file.name);setGroupPhotoUrl(URL.createObjectURL(file));}else{setGroupPhotoName("");setGroupPhotoUrl(null);}}}/></label>
+      {groupPhotoUrl&&<div className="mt-2"><p className="text-xs text-white/60">{groupPhotoName} · Reference only; weights are not yet extracted from the photo</p><img src={groupPhotoUrl} alt="Uploaded grading groups and weights reference" className="mt-2 max-h-60 w-auto rounded-lg border border-white/15"/></div>}
       {pdfBusy&&<p role="status" className="mt-2 text-xs text-white/60">Reading the PDF locally…</p>}
     </div>
     <p className="mt-2 text-xs text-white/45">Columns: course, assignment, letter, earned, possible. Use a course code such as CHEM 1210. Points and letter may be left blank individually, not both. Grade rows with unrecognized courses or duplicate labels are skipped.</p>
@@ -277,15 +289,15 @@ export default function GradeCsvImport({ courses, grades, saveGrade, removeGrade
     </div>}
 
     {candidates.length > 0 && <div className="mt-4 space-y-3">
-      <p className="text-sm text-white/70">{fileName} · {candidates.length} rows · {selectedCount} selected</p>
+      <p className="text-sm text-white/70">{fileName} · {newCount} new · {updatedCount} changed · {candidates.filter((c)=>c.action==="unchanged").length} unchanged</p>
       <div className="max-h-80 space-y-2 overflow-auto">
       {candidates.map((candidate,i)=><label key={i} className="flex items-start gap-3 rounded-lg border border-white/10 p-3 text-sm text-white/75">
         <input type="checkbox" className="mt-1" disabled={!candidate.valid} checked={candidate.selected} onChange={(e)=>setCandidates((old)=>old.map((v,j)=>i===j?{...v,selected:e.target.checked}:v))}/>
-        <span className="min-w-0 break-words"><span className="font-semibold">{candidate.courseCode}</span> · {candidate.grade.label}{candidate.group ? " · Group: "+candidate.group : ""} · {candidate.grade.letter ?? (candidate.grade.earnedPoints ?? "—")+"/"+(candidate.grade.possiblePoints??"—")}{candidate.issue && <span className="block text-amber-200">Skipped: {candidate.issue}</span>}</span>
+        <span className="min-w-0 break-words"><span className="font-semibold">{candidate.courseCode}</span> · {candidate.action==="update"?"Updated score · ":candidate.action==="unchanged"?"Unchanged · ":"New · "}{candidate.grade.label}{candidate.group ? " · Group: "+candidate.group : ""} · {candidate.grade.letter ?? (candidate.grade.earnedPoints ?? "—")+"/"+(candidate.grade.possiblePoints??"—")}{candidate.issue && <span className="block text-amber-200">Skipped: {candidate.issue}</span>}</span>
       </label>)}
       </div>
       <label className="flex items-start gap-2 text-sm text-white/70"><input type="checkbox" className="mt-1" checked={confirmed} onChange={(e)=>setConfirmed(e.target.checked)}/> I reviewed the selected grades and want to save them to Cosmos.</label>
-      <button type="button" disabled={!confirmed||(selectedCount===0&&mappedCount===0&&pdfCanvasPercent===null)} onClick={importSelected} className="rounded-lg border border-violet-300/40 px-4 py-2 text-sm text-white disabled:opacity-40">Save {selectedCount} grades, groups and Canvas total</button>
+      <button type="button" disabled={!confirmed||(selectedCount===0&&mappedCount===0&&pdfCanvasPercent===null)} onClick={importSelected} className="rounded-lg border border-violet-300/40 px-4 py-2 text-sm text-white disabled:opacity-40">Accept {newCount} new, {updatedCount} updated grades</button>
     </div>}
   </section>;
 }
