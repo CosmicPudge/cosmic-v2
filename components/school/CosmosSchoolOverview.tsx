@@ -18,6 +18,7 @@ import CosmicCard from "@/design-system/components/CosmicCard";
 import StatusChip from "@/components/os/ui/StatusChip";
 import SchoolTabs from "@/components/school/SchoolTabs";
 import SchoolPersonalTracking from "@/components/school/SchoolPersonalTracking";
+import { courseGradeSummary, GRADE_POINTS, COURSE_GRADE_CHANGED } from "@/services/school/courseGradeSummary";
 import FoundationSurfaceToggle from "@/components/os/ui/FoundationSurfaceToggle";
 import FoundationViewportIndicator from "@/components/os/ui/FoundationViewportIndicator";
 import Skeleton from "@/components/os/ui/Skeleton";
@@ -79,6 +80,8 @@ function MetricCard({
 export default function CosmosSchoolOverview({ preview = false }: { preview?: boolean }) {
   const { data, snapshot, local, loading, error } = useSchool();
   const [now, setNow] = useState(0);
+  const [gradeRevision, setGradeRevision] = useState(0);
+  useEffect(() => { const refresh = () => setGradeRevision((n) => n + 1); window.addEventListener(COURSE_GRADE_CHANGED, refresh); return () => window.removeEventListener(COURSE_GRADE_CHANGED, refresh); }, []);
 
   useEffect(() => {
     const update = () => setNow(Date.now());
@@ -94,8 +97,9 @@ export default function CosmosSchoolOverview({ preview = false }: { preview?: bo
   );
   const credits = courses.reduce((sum, course) => sum + (course.credits ?? 0), 0);
   const recordedGrades = local.data.grades.filter((grade) => courses.some((course) => course.id === grade.courseId));
-  const gradePoints: Record<string, number> = { "A+":4, A:4, "A-":3.7, "B+":3.3, B:3, "B-":2.7, "C+":2.3, C:2, "C-":1.7, "D+":1.3, D:1, "D-":0.7, F:0 };
-  const gradedCourses = courses.flatMap((course) => { const grade = [...recordedGrades].reverse().find((item) => item.courseId === course.id && item.letter && gradePoints[item.letter.toUpperCase()] !== undefined); return grade ? [{ credits: course.credits ?? 0, points: gradePoints[grade.letter!.toUpperCase()] }] : []; });
+  const courseSummaries = courses.map((course) => ({ course, summary: courseGradeSummary(local.scope.id, course, recordedGrades) }));
+  void gradeRevision;
+  const gradedCourses = courseSummaries.filter((item) => item.summary.letter && (item.course.credits ?? 0) > 0).map((item) => ({ credits: item.course.credits ?? 0, points: GRADE_POINTS[item.summary.letter!] }));
   const gradedCredits = gradedCourses.reduce((sum, grade) => sum + grade.credits, 0);
   const manualGpa = gradedCredits > 0 ? gradedCourses.reduce((sum, grade) => sum + grade.credits * grade.points, 0) / gradedCredits : undefined;
 
@@ -295,7 +299,7 @@ export default function CosmosSchoolOverview({ preview = false }: { preview?: bo
             <div className="grid gap-3 border-t border-white/[0.07] p-4 sm:grid-cols-2 lg:grid-cols-3">
               {courses.slice(0, 6).map((course, index) => {
                 const related = openAssignments.filter((item) => item.course && (item.course === course.code || item.course === course.name)).length;
-                const grade = [...recordedGrades].reverse().find((item) => item.courseId === course.id && item.letter);
+                const grade = courseSummaries.find((item) => item.course.id === course.id)?.summary;
                 const next = manualSchedule.find((item) => item.course.id === course.id && item.end.getTime() > now);
                 return <Link key={course.id} href={`/school/courses/${encodeURIComponent(course.id)}`} className="group min-w-0 overflow-hidden rounded-xl border border-violet-300/20 bg-violet-950/20 transition hover:border-violet-300/50">
                   <div className="relative flex h-20 items-end overflow-hidden bg-gradient-to-br from-indigo-900/65 via-violet-700/30 to-fuchsia-950/40 p-3">
