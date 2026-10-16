@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import type { Course, Grade } from "@/core/contracts/School";
 import { COURSE_GRADE_CHANGED } from "@/services/school/courseGradeSummary";
 
-type Group = { id: string; name: string; weight: number };
+type Group = { id: string; name: string; weight: number | null };
 type Structure = { groups: Group[]; assignments: Record<string,string> };
 const field = "rounded-lg border border-violet-300/20 bg-[#101a32] p-2 text-sm text-white";
 const defaultStructure: Structure = {groups:[],assignments:{}};
@@ -25,15 +25,16 @@ export default function CourseGradingStructure({ course, grades, scopeId }: { co
     setLoaded(true);
   },[key]);
   useEffect(()=>{if(loaded)try{window.localStorage.setItem(key,JSON.stringify(model));window.dispatchEvent(new Event(COURSE_GRADE_CHANGED));}catch{}},[key,loaded,model]);
+  useEffect(()=>{const reload=()=>{try{const data=JSON.parse(window.localStorage.getItem(key)||"null") as Structure|null;if(data?.groups&&data.assignments)setModel(data);}catch{}};window.addEventListener(COURSE_GRADE_CHANGED,reload);return()=>window.removeEventListener(COURSE_GRADE_CHANGED,reload);},[key]);
   function addGroup(){
-    const weight=Number(newWeight);
-    if(!newName.trim()||!Number.isFinite(weight)||weight<0||weight>100||model.groups.some((g)=>g.name.toLowerCase()===newName.trim().toLowerCase()))return;
+    const weight=newWeight.trim()===""?null:Number(newWeight);
+    if(!newName.trim()||(weight!==null&&(!Number.isFinite(weight)||weight<0||weight>100))||model.groups.some((g)=>g.name.toLowerCase()===newName.trim().toLowerCase()))return;
     setModel((current)=>({...current,groups:[...current.groups,{id:crypto.randomUUID(),name:newName.trim(),weight}]}));
-    setNewName("");setNewWeight("0");
+    setNewName("");setNewWeight("");
   }
   function updateGroup(id:string,patch:Partial<Group>){setModel((current)=>({...current,groups:current.groups.map((g)=>g.id===id?{...g,...patch}:g)}));}
   function deleteGroup(id:string){setModel((current)=>({groups:current.groups.filter((g)=>g.id!==id),assignments:Object.fromEntries(Object.entries(current.assignments).filter(([,value])=>value!==id))}));}
-  const totalWeight=model.groups.reduce((sum,g)=>sum+g.weight,0);
+  const totalWeight=model.groups.reduce((sum,g)=>sum+(g.weight??0),0);
   const gradeEntries=grades.filter((g)=>g.id && g.earnedPoints!==undefined && g.possiblePoints!==undefined && g.possiblePoints>0);
   const aggregates=model.groups.map((group)=>{
     const assigned=gradeEntries.filter((g)=>model.assignments[g.id!]===group.id);
@@ -41,9 +42,9 @@ export default function CourseGradingStructure({ course, grades, scopeId }: { co
     const possible=assigned.reduce((sum,g)=>sum+(g.possiblePoints??0),0);
     return {...group,earned,possible,percentage:possible>0?earned/possible*100:null};
   });
-  const active=aggregates.filter((g)=>g.percentage!==null&&g.weight>0);
+  const active=aggregates.filter((g)=>g.percentage!==null&&g.weight!==null&&g.weight>0);
   const activeWeight=active.reduce((sum,g)=>sum+g.weight,0);
-  const weighted=activeWeight>0?active.reduce((sum,g)=>sum+g.weight*g.percentage!,0)/activeWeight:null;
+  const weighted=activeWeight>0&&model.groups.every((g)=>g.weight!==null)?active.reduce((sum,g)=>sum+(g.weight??0)*g.percentage!,0)/activeWeight:null;
   const unassigned=gradeEntries.filter((g)=>!model.groups.some((group)=>group.id===model.assignments[g.id!]));
   return <div className="mt-4 rounded-xl border border-violet-300/20 bg-[#100b29]/30 p-4">
     <div className="flex flex-wrap items-center justify-between gap-3">
@@ -54,13 +55,14 @@ export default function CourseGradingStructure({ course, grades, scopeId }: { co
       <span className="font-semibold">{weighted===null?"—":pct(weighted)}</span> · weighted estimate from graded groups
       <span className="ml-2 text-xs text-white/45">({pct(totalWeight)} configured · {pct(activeWeight)} graded weight)</span>
     </div>}
+    {model.groups.some((g)=>g.weight===null)&&<p className="mt-2 text-xs text-amber-200">Enter the missing group weights before calculating a course grade.</p>}
     {totalWeight>100.001&&<p className="mt-2 text-sm text-amber-200">Group weights exceed 100%. Correct them before relying on this estimate.</p>}
     {model.groups.length>0&&Math.abs(totalWeight-100)>0.01&&totalWeight<=100.001&&<p className="mt-2 text-xs text-amber-200">Group weights currently total {pct(totalWeight)}, not 100%.</p>}
     {unassigned.length>0&&model.groups.length>0&&<p className="mt-2 text-xs text-amber-200">{unassigned.length} scored assignments need a grading group. The weighted estimate is incomplete until they are categorized.</p>}
     {open&&<div className="mt-4 space-y-4">
       <div className="space-y-2">{aggregates.map((g)=><div key={g.id} className="flex flex-wrap items-center gap-2 text-sm">
         <input aria-label={"Group name "+g.name} className={field+" min-w-0 flex-1"} value={g.name} maxLength={100} onChange={(e)=>updateGroup(g.id,{name:e.target.value})}/>
-        <input aria-label={"Weight for "+g.name} className={field+" w-20"} type="number" min="0" max="100" step="0.5" value={g.weight} onChange={(e)=>{const w=Number(e.target.value);if(Number.isFinite(w)&&w>=0&&w<=100)updateGroup(g.id,{weight:w});}}/>
+        <input aria-label={"Weight for "+g.name} className={field+" w-20"} type="number" min="0" max="100" step="0.5" value={g.weight??""} onChange={(e)=>{const w=e.target.value===""?null:Number(e.target.value);if(w===null||(Number.isFinite(w)&&w>=0&&w<=100))updateGroup(g.id,{weight:w});}}/>
         <span className="text-xs text-white/50">%</span><span className="text-xs text-white/55">{g.percentage===null?"Not graded":pct(g.percentage)}</span>
         <button type="button" className="text-xs text-red-200" onClick={()=>deleteGroup(g.id)}>Remove</button>
       </div>)}</div>
@@ -74,7 +76,7 @@ export default function CourseGradingStructure({ course, grades, scopeId }: { co
         {gradeEntries.map((grade)=><label key={grade.id} className="flex flex-col gap-1 text-xs text-white/65 sm:flex-row sm:items-center">
           <span className="min-w-0 flex-1 break-words">{grade.label||"Grade"} · {grade.earnedPoints}/{grade.possiblePoints}</span>
           <select aria-label={"Grading group for "+(grade.label||"grade")} className={field+" w-full sm:w-60"} value={model.assignments[grade.id!]??""} onChange={(e)=>setModel((current)=>({...current,assignments:{...current.assignments,[grade.id!]:e.target.value}}))}>
-            <option value="">Unassigned</option>{model.groups.map((g)=><option key={g.id} value={g.id}>{g.name} ({g.weight}%)</option>)}
+            <option value="">Unassigned</option>{model.groups.map((g)=><option key={g.id} value={g.id}>{g.name} ({g.weight===null?"Weight not set":g.weight+"%"})</option>)}
           </select>
         </label>)}
       </div>
