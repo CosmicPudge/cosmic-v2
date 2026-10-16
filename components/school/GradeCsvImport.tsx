@@ -31,6 +31,8 @@ export default function GradeCsvImport({ courses, grades, saveGrade }: { courses
   const [message, setMessage] = useState("");
   const [fileName, setFileName] = useState("");
   const [confirmed, setConfirmed] = useState(false);
+  const [pdfCourseId, setPdfCourseId] = useState("");
+  const [pdfBusy, setPdfBusy] = useState(false);
   async function readFile(file?: File) {
     if (!file) return;
     setMessage(""); setCandidates([]); setConfirmed(false);
@@ -67,6 +69,72 @@ export default function GradeCsvImport({ courses, grades, saveGrade }: { courses
       setCandidates(parsed); setFileName(file.name); setMessage("Review the proposed imports below. Existing grades are never overwritten.");
     } catch (error) { setMessage(error instanceof Error ? error.message : "Unable to read grades file."); }
   }
+  async function readPdf(file?: File) {
+    if (!file) return;
+    setMessage(""); setCandidates([]); setConfirmed(false);
+    if (!pdfCourseId) { setMessage("Choose which Cosmos course this Canvas grade report belongs to."); return; }
+    if (!/\\.pdf$/i.test(file.name) || file.size > 8_000_000) { setMessage("Choose a PDF smaller than 8 MB."); return; }
+    setPdfBusy(true);
+    try {
+      const pdfjs = await import("pdfjs-dist/build/pdf.mjs");
+      pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
+      const pdf = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
+      if (pdf.numPages > 30) throw new Error("PDF must have 30 pages or fewer.");
+      const matchedCourse = courses.find((course) => course.id === pdfCourseId);
+      if (!matchedCourse) throw new Error("Choose a valid course.");
+      const records: Array<{label:string;earned:number;possible:number}> = [];
+      let canvasTotal: string | undefined;
+      for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber++) {
+        const page = await pdf.getPage(pageNumber);
+        const content = await page.getTextContent();
+        const lines = new Map<number, Array<{x:number;text:string}>>();
+        for (const element of content.items) {
+          if (!("str" in element) || !element.str.trim()) continue;
+          const item = element as {str:string;transform:number[]};
+          const y = Math.round(item.transform[5] / 4) * 4;
+          const line = lines.get(y) ?? []; line.push({ x:item.transform[4], text:item.str.trim() }); lines.set(y,line);
+        }
+        const sorted = [...lines.entries()].sort((a,b)=>b[0]-a[0]).map(([,cells])=>cells.sort((a,b)=>a.x-b.x));
+        let pending = "";
+        let inRows = false;
+        for (const cells of sorted) {
+          const line = cells.map((cell)=>cell.text).join(" ").replace(/\\s+/g," ").trim();
+          if (/^Name\\b.*\\bDue\\b/i.test(line)) { inRows=true; pending=""; continue; }
+          if (/^Total\\s+(\\d+(?:\\.\\d+)?)%/.test(line)) { canvasTotal=line.match(/\\d+(?:\\.\\d+)?%/)?.[0]; inRows=false; continue; }
+          if (/^(Lecture Assignments|Attendance|Math Primer Assignments|Weekly Progress Reports|Mini-Project \\(Playground Project\\)|Imported Assignments|Additional Surveys)/i.test(line) && !/\\d+\\s*\\/\\s*\\d+/.test(line)) continue;
+          if (/^Total\\b|^Course\\s+Arrange By|^Grades for |^Print Grades|^Name\\s+Due/i.test(line)) { pending=""; continue; }
+          if (!inRows) continue;
+          const scores = [...line.matchAll(/(?:^|\\s)(\\d+(?:\\.\\d+)?)\\s*\\/\\s*(\\d+(?:\\.\\d+)?)(?=\\s|$)/g)];
+          if (scores.length) {
+            const score = scores[scores.length - 1];
+            const earned=Number(score[1]), possible=Number(score[2]);
+            const textBefore=line.slice(0,score.index).replace(/(?:Sep|Oct|Nov|Dec|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug)\\s+\\d+.*$/i,"").trim();
+            const candidate=(pending+" "+textBefore).replace(/\\s+/g," ").trim();
+            if (candidate && possible > 0 && earned >= 0 && !/^(Lecture Assignments|Attendance|Math Primer Assignments|Weekly Progress Reports|Mini-Project|Total|Seminar Attendance W\\d+\\s+\\d+)/i.test(candidate)) records.push({label:candidate,earned,possible});
+            pending="";
+          } else if (/\\/\\s*\\d+/.test(line) || /\\d+\\.\\d+%/.test(line)) {
+            pending="";
+          } else if (!/^(Sep|Oct|Nov|Dec|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug)\\s+\\d+\\b|^\\d+:\\d+|^by |^am$|^pm$|^Submitted|^Status|^Score|^Assignment/i.test(line) && !/\\b\\d+\\s*\\/\\s*$/.test(line)) {
+            pending=(pending+" "+line).trim().slice(-200);
+          }
+        }
+      }
+      if (!records.length) throw new Error("No reliably scored assignments found. This importer supports text-based Canvas Print Grades PDFs. Use CSV for scanned PDFs.");
+      const seen=new Set<string>();
+      const proposals:Candidate[]=records.map((record)=>{
+        const label=record.label.replace(/\\s+/g," ").trim();
+        const key=label.toLowerCase();
+        const duplicate=seen.has(key)||grades.some((grade)=>grade.courseId===pdfCourseId&&(grade.label??"").toLowerCase()===key);
+        seen.add(key);
+        return { courseId:pdfCourseId,courseCode:matchedCourse.code||matchedCourse.name,
+          grade:{id:crypto.randomUUID(),courseId:pdfCourseId,label,earnedPoints:record.earned,possiblePoints:record.possible},
+          valid:!duplicate,selected:!duplicate,...(duplicate?{issue:"Already imported or duplicated"}:{}) };
+      });
+      setCandidates(proposals); setFileName(file.name);
+      setMessage("Extracted "+proposals.length+" scored entries from Canvas PDF."+(canvasTotal?" Canvas reports "+canvasTotal+" overall; Cosmos does not replicate weighted categories.":"")+" Check every assignment name and score before saving. Ungraded entries are excluded.");
+    } catch (error) { setMessage(error instanceof Error?error.message:"Could not read PDF."); }
+    finally { setPdfBusy(false); }
+  }
   function importSelected() {
     if (!confirmed) return;
     const selected = candidates.filter((item) => item.valid && item.selected);
@@ -81,10 +149,19 @@ export default function GradeCsvImport({ courses, grades, saveGrade }: { courses
   const selectedCount=candidates.filter((c)=>c.valid&&c.selected).length;
   return <section className="rounded-2xl border border-violet-200/20 bg-violet-950/15 p-5">
     <h2 className="text-lg font-semibold text-white">Import grades from a file</h2>
-    <p className="mt-2 text-sm text-white/60">Offline CSV import for your own course grades and assignment scores. No Canvas account access required. This runs locally in your browser; review each matched grade before saving. This is not an official transcript import.</p>
+    <p className="mt-2 text-sm text-white/60">Offline PDF or CSV import for your own course grades and assignment scores. No Canvas account access required. This runs locally in your browser; review each matched grade before saving. This is not an official transcript import.</p>
     <div className="mt-3 flex flex-wrap items-center gap-3">
       <button type="button" className="rounded-lg border border-violet-300/30 px-3 py-2 text-sm text-white hover:bg-violet-300/10" onClick={downloadTemplate}>Download CSV template</button>
       <label className="min-w-0 text-sm text-white/70">Choose CSV file<input aria-label="Choose grade CSV file" className={field+" mt-1 block max-w-full"} type="file" accept=".csv,.txt,text/csv,text/plain" onChange={(event)=>void readFile(event.target.files?.[0])}/></label>
+    </div>
+    <div className="mt-4 rounded-lg border border-white/10 p-3">
+      <p className="text-sm font-semibold text-white">Canvas Print Grades PDF</p>
+      <p className="mt-1 text-xs text-white/55">Choose the matching course, then upload a text-based Canvas Print Grades PDF. Only scored assignments are proposed, and all results need your approval.</p>
+      <div className="mt-2 grid gap-2 sm:grid-cols-2">
+        <select aria-label="Course for PDF grade import" className={field} value={pdfCourseId} onChange={(e)=>setPdfCourseId(e.target.value)}><option value="">Select the course in this PDF</option>{courses.map((course)=><option key={course.id} value={course.id}>{course.code||course.name} · {course.name}</option>)}</select>
+        <input aria-label="Choose Canvas grade PDF" type="file" accept=".pdf,application/pdf" className={field} disabled={pdfBusy} onChange={(e)=>void readPdf(e.target.files?.[0])}/>
+      </div>
+      {pdfBusy&&<p role="status" className="mt-2 text-xs text-white/60">Reading the PDF locally…</p>}
     </div>
     <p className="mt-2 text-xs text-white/45">Columns: course, assignment, letter, earned, possible. Use a course code such as CHEM 1210. Points and letter may be left blank individually, not both. Grade rows with unrecognized courses or duplicate labels are skipped.</p>
     {message && <p role="status" className="mt-3 text-sm text-violet-100/80">{message}</p>}
