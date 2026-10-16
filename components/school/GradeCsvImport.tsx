@@ -41,6 +41,7 @@ export default function GradeCsvImport({ courses, grades, saveGrade, removeGrade
   const [confirmed, setConfirmed] = useState(false);
   const [pdfCourseId, setPdfCourseId] = useState("");
   const [pdfBusy, setPdfBusy] = useState(false);
+  const [pdfCanvasPercent,setPdfCanvasPercent] = useState<number | null>(null);
   const [cleanupIds,setCleanupIds] = useState<string[]>([]);
   async function readFile(file?: File) {
     if (!file) return;
@@ -80,7 +81,7 @@ export default function GradeCsvImport({ courses, grades, saveGrade, removeGrade
   }
   async function readPdf(file?: File) {
     if (!file) return;
-    setMessage(""); setCandidates([]); setConfirmed(false);
+    setMessage(""); setCandidates([]); setConfirmed(false); setPdfCanvasPercent(null);
     if (!pdfCourseId) { setMessage("Choose which Cosmos course this Canvas grade report belongs to."); return; }
     if (!file.name.toLowerCase().endsWith(".pdf")) { setMessage("Unsupported file type. Choose a Canvas Print Grades PDF."); return; }
     if (file.size > 25_000_000) { setMessage(`This PDF is ${(file.size / 1_000_000).toFixed(1)} MB. The local importer supports PDFs up to 25 MB.`); return; }
@@ -190,6 +191,7 @@ export default function GradeCsvImport({ courses, grades, saveGrade, removeGrade
           grade:{id:crypto.randomUUID(),courseId:pdfCourseId,label,earnedPoints:record.earned,possiblePoints:record.possible},
           valid:!issue,selected:!issue,...(issue?{issue}:{}) };
       });
+      setPdfCanvasPercent(canvasTotal && Number.isFinite(Number.parseFloat(canvasTotal)) ? Number.parseFloat(canvasTotal) : null);
       setCandidates(proposals); setFileName(file.name);
       setMessage("Extracted "+proposals.length+" scored entries from Canvas PDF."+(canvasTotal?" Canvas reports "+canvasTotal+" overall; Cosmos does not replicate weighted categories.":"")+" Check every assignment name and score before saving. Ungraded entries are excluded.");
     } catch (error) { setMessage(error instanceof Error?error.message:"Could not read PDF."); }
@@ -202,7 +204,7 @@ export default function GradeCsvImport({ courses, grades, saveGrade, removeGrade
     // Their IDs remain stable; their scores must never be overwritten.
     const mapping = candidates.filter((item) => item.group && (item.valid && item.selected || item.issue === "Already imported or duplicated"));
     const course = courses.find((item) => item.id === pdfCourseId);
-    if (course && mapping.length) {
+    if (course && (mapping.length || pdfCanvasPercent !== null)) {
       const key = courseGradeKey(scopeId,course);
       try {
         const current = JSON.parse(window.localStorage.getItem(key)||"null") as {groups?:Array<{id:string;name:string;weight:number|null}>;assignments?:Record<string,string>;gradeScale?:Record<string,number>;canvasLetter?:string;canvasPercent?:number}|null;
@@ -216,13 +218,13 @@ export default function GradeCsvImport({ courses, grades, saveGrade, removeGrade
           const id = existing?.id??entry.grade.id;
           if(id && !assignments[id])assignments[id]=group.id;
         }
-        window.localStorage.setItem(key,JSON.stringify({groups,assignments,...(current?.gradeScale?{gradeScale:current.gradeScale}:{}),...(current?.canvasLetter?{canvasLetter:current.canvasLetter}:{}),...(current?.canvasPercent!==undefined?{canvasPercent:current.canvasPercent}:{})}));
+        window.localStorage.setItem(key,JSON.stringify({groups,assignments,...(current?.gradeScale?{gradeScale:current.gradeScale}:{}),...(current?.canvasLetter?{canvasLetter:current.canvasLetter}:{}),...(pdfCanvasPercent!==null?{canvasPercent:pdfCanvasPercent}:current?.canvasPercent!==undefined?{canvasPercent:current.canvasPercent}:{})}));
         window.dispatchEvent(new Event(COURSE_GRADE_CHANGED));
       }catch{setMessage("Grades were not saved because the local grading structure could not be read.");return;}
     }
     selected.forEach((item) => saveGrade(item.grade));
-    setMessage("Saved "+selected.length+" new grade records and recognized "+new Set(mapping.map((item)=>item.group)).size+" grading groups. New groups have unknown weights until you enter them.");
-    setCandidates([]); setConfirmed(false);
+    setMessage("Saved "+selected.length+" new grade records and recognized "+new Set(mapping.map((item)=>item.group)).size+" grading groups."+(pdfCanvasPercent!==null?" Canvas-reported overall percentage: "+pdfCanvasPercent+"%.":"")+" Enter the course letter grade separately if Canvas shows one.");
+    setCandidates([]); setConfirmed(false); setPdfCanvasPercent(null);
   }
   function downloadTemplate() {
     const blob = new Blob([example+"\n"],{type:"text/csv;charset=utf-8"});
@@ -266,7 +268,7 @@ export default function GradeCsvImport({ courses, grades, saveGrade, removeGrade
       </label>)}
       </div>
       <label className="flex items-start gap-2 text-sm text-white/70"><input type="checkbox" className="mt-1" checked={confirmed} onChange={(e)=>setConfirmed(e.target.checked)}/> I reviewed the selected grades and want to save them to Cosmos.</label>
-      <button type="button" disabled={!confirmed||(selectedCount===0&&mappedCount===0)} onClick={importSelected} className="rounded-lg border border-violet-300/40 px-4 py-2 text-sm text-white disabled:opacity-40">Save {selectedCount} grades and recognized groups</button>
+      <button type="button" disabled={!confirmed||(selectedCount===0&&mappedCount===0&&pdfCanvasPercent===null)} onClick={importSelected} className="rounded-lg border border-violet-300/40 px-4 py-2 text-sm text-white disabled:opacity-40">Save {selectedCount} grades, groups and Canvas total</button>
     </div>}
   </section>;
 }
