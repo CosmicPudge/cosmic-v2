@@ -1,0 +1,25 @@
+/* M3-specific wallpaper and surfaces. M0's global appearance settings remain authoritative. */
+.cosmos-app-shell:has(.cosmos-devices-root) .cosmos-cinematic-image {
+  background-image:
+    radial-gradient(ellipse at 76% 24%, rgba(104, 86, 238, .36), transparent 36%),
+    radial-gradient(ellipse at 20% 78%, rgba(8, 155, 195, .22), transparent 40%),
+    url("/cosmos/cinematic/violet-planet-over-alien-mountains.png");
+  background-position: center, center, center 32%;
+  background-size: cover, cover, cover;
+}
+.cosmos-app-shell:has(.cosmos-devices-root) .cosmos-cinematic-overlay {
+  background: linear-gradient(110deg, rgba(2,4,20,.33), rgba(3,6,28,.12) 48%, rgba(8,2,28,.30)), linear-gradient(180deg, rgba(2,4,20,.08), rgba(2,4,20,.43));
+}
+.cosmos-devices-root .cosmos-devices-panel { overflow: hidden; }
+html[data-cosmos-surface="solid"] .cosmos-devices-root .cosmos-devices-panel {
+  background: var(--cosmos-surface-solid) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+@media (prefers-reduced-transparency: reduce) {
+  .cosmos-devices-root .cosmos-devices-panel {
+    background: #140c2e !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+}
