@@ -88,47 +88,64 @@ export default function GradeCsvImport({ courses, grades, saveGrade }: { courses
       for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber++) {
         const page = await pdf.getPage(pageNumber);
         const content = await page.getTextContent();
-        const lines = new Map<number, Array<{x:number;text:string}>>();
+        type Fragment = { x: number; y: number; text: string };
+        const fragments: Fragment[] = [];
         for (const element of content.items) {
           if (!("str" in element) || !element.str.trim()) continue;
-          const item = element as {str:string;transform:number[]};
-          const y = Math.round(item.transform[5] / 4) * 4;
-          const line = lines.get(y) ?? []; line.push({ x:item.transform[4], text:item.str.trim() }); lines.set(y,line);
+          const item = element as { str: string; transform: number[] };
+          fragments.push({ x: item.transform[4], y: item.transform[5], text: item.str.trim() });
         }
-        const sorted = [...lines.entries()].sort((a,b)=>b[0]-a[0]).map(([,cells])=>cells.sort((a,b)=>a.x-b.x));
-        let pending = "";
-        let inRows = false;
-        for (const cells of sorted) {
-          const line = cells.map((cell)=>cell.text).join(" ").replace(/\s+/g," ").trim();
-          if (/^Name\b.*\bDue\b/i.test(line)) { inRows=true; pending=""; continue; }
-          if (/^Total\s+(\d+(?:\.\d+)?)%/.test(line)) { canvasTotal=line.match(/\d+(?:\.\d+)?%/)?.[0]; inRows=false; continue; }
-          if (/^(Lecture Assignments|Attendance|Math Primer Assignments|Weekly Progress Reports|Mini-Project \(Playground Project\)|Imported Assignments|Additional Surveys)/i.test(line) && !/\d+\s*\/\s*\d+/.test(line)) continue;
-          if (/^Total\b|^Course\s+Arrange By|^Grades for |^Print Grades|^Name\s+Due/i.test(line)) { pending=""; continue; }
-          if (!inRows) continue;
-          const scores = [...line.matchAll(/(?:^|\s)(\d+(?:\.\d+)?)\s*\/\s*(\d+(?:\.\d+)?)(?=\s|$)/g)];
-          if (scores.length) {
-            const score = scores[scores.length - 1];
-            const earned=Number(score[1]), possible=Number(score[2]);
-            const textBefore=line.slice(0,score.index).replace(/(?:Sep|Oct|Nov|Dec|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug)\s+\d+.*$/i,"").trim();
-            const candidate=(pending+" "+textBefore).replace(/\s+/g," ").trim();
-            if (candidate && possible > 0 && earned >= 0 && !/^(Lecture Assignments|Attendance|Math Primer Assignments|Weekly Progress Reports|Mini-Project|Total|Seminar Attendance W\d+\s+\d+)/i.test(candidate)) records.push({label:candidate,earned,possible});
-            pending="";
-          } else if (/\/\s*\d+/.test(line) || /\d+\.\d+%/.test(line)) {
-            pending="";
-          } else if (!/^(Sep|Oct|Nov|Dec|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug)\s+\d+\b|^\d+:\d+|^by |^am$|^pm$|^Submitted|^Status|^Score|^Assignment/i.test(line) && !/\b\d+\s*\/\s*$/.test(line)) {
-            pending=(pending+" "+line).trim().slice(-200);
-          }
+        // Canvas Print Grades uses a table: assignment titles in the left
+        // column, dates in the middle, and scores on the far right.
+        // Never combine text across those columns or across score rows.
+        const pageWidth = page.getViewport({ scale: 1 }).width;
+        const leftLimit = pageWidth * 0.47;
+        const scoreLimit = pageWidth * 0.73;
+        const sorted = [...fragments].sort((a, b) => b.y - a.y || a.x - b.x);
+        const scoreFragments = sorted.filter((part) => part.x >= scoreLimit);
+        const scoredRows: Array<{ y: number; earned: number; possible: number }> = [];
+        for (const part of scoreFragments) {
+          const match = part.text.match(/^(\d+(?:\.\d+)?)\s*\/\s*(\d+(?:\.\d+)?)$/);
+          if (!match) continue; // A blank "/ 10" is ungraded, not zero.
+          const earned = Number(match[1]), possible = Number(match[2]);
+          if (!(possible > 0 && earned >= 0)) continue;
+          if (!scoredRows.some((row) => Math.abs(row.y - part.y) < 5)) scoredRows.push({ y: part.y, earned, possible });
         }
+        const leftLines = new Map<number, Fragment[]>();
+        for (const part of sorted.filter((part) => part.x < leftLimit)) {
+          const y = Math.round(part.y / 3) * 3;
+          leftLines.set(y, [...(leftLines.get(y) ?? []), part]);
+        }
+        const lines = [...leftLines.entries()].map(([y, parts]) => ({
+          y, text: parts.sort((a,b) => a.x - b.x).map((part) => part.text).join(" ").replace(/\s+/g," ").trim(),
+        })).sort((a,b) => b.y - a.y);
+        const groupLabel = /^(Lecture Assignments|Math Primer Assignments|Weekly Progress Reports|Mini-Project(?: \(Playground Project\))?|Mars Mission Project(?: \(Final Project\))?|Attendance|Imported Assignments|Additional Surveys)$/i;
+        const otherLabel = /^(Name|Due|Submitted|Status|Score|Course|Arrange By|Apply|Print Grades|Grades for|Total)\b/i;
+        const dateLine = /^(Sep|Oct|Nov|Dec|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug)\s+\d+\b/i;
+        const isTitle = (text: string) => text.length > 1 && !groupLabel.test(text) && !otherLabel.test(text) &&
+          !dateLine.test(text) && !/^\d+(?:\.\d+)?\s*\/\s*\d+(?:\.\d+)?$/.test(text);
+        // Locate each score's assignment title immediately to its left.
+        // Multi-line names occupy the same or preceding line; stop at 2 lines.
+        for (const score of scoredRows) {
+          const candidateLines = lines.filter((line) => Math.abs(line.y - score.y) <= 19 && isTitle(line.text));
+          const sameLine = candidateLines.filter((line) => Math.abs(line.y - score.y) <= 6);
+          const preceding = candidateLines.filter((line) => line.y > score.y + 6);
+          const selected = [...preceding.slice(-2), ...sameLine].sort((a,b) => b.y - a.y);
+          const label = selected.map((line) => line.text).join(" ").trim();
+          if (label && !/^\d/.test(label) && label.length <= 180) records.push({ label, earned: score.earned, possible: score.possible });
+        }
+        const totals = fragments.map((part) => part.text).filter((t) => /^\d+(?:\.\d+)?%$/.test(t));
+        if (totals.length) canvasTotal = totals[totals.length - 1];
       }
       if (!records.length) throw new Error("No reliably scored assignments found. This importer supports text-based Canvas Print Grades PDFs. Use CSV for scanned PDFs.");
       const seen=new Set<string>();
       const proposals:Candidate[]=records.map((record)=>{
-        const label=record.label.replace(/\\s+/g," ").trim();
+        const label=record.label.replace(/\s+/g," ").trim();
         const key=label.toLowerCase();
         const duplicate=seen.has(key)||grades.some((grade)=>grade.courseId===pdfCourseId&&(grade.label??"").toLowerCase()===key);
         // PDF text extraction can concatenate distinct visual rows. Treat titles
         // containing layout remnants as unsafe, even if the score is numeric.
-        const suspicious=/[\u2580-\u259f\u25a0-\u25ff\uE000-\uF8FF]|\\b(?:Sep|Oct|Nov|Dec|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug)\\s+\\d{1,2}\\b|\\b(?:am|pm)\\b|\\b(?:Lecture Assignments|Math Primer Assignments|Weekly Progress Reports)\\b|\\b(?:by|Submitted|Status|Score)\\b/i.test(label);
+        const suspicious=/[\u2580-\u259f\u25a0-\u25ff\uE000-\uF8FF]|\b(?:Sep|Oct|Nov|Dec|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug)\s+\d{1,2}\b|\b(?:am|pm)\b|\b(?:Lecture Assignments|Math Primer Assignments|Weekly Progress Reports)\b|\b(?:by|Submitted|Status|Score)\b/i.test(label);
         seen.add(key);
         const issue=suspicious?"PDF row text appears merged; do not import":duplicate?"Already imported or duplicated":undefined;
         return { courseId:pdfCourseId,courseCode:matchedCourse.code||matchedCourse.name,
