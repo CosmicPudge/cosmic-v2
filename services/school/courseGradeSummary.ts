@@ -1,6 +1,6 @@
 import type { Course, Grade } from "@/core/contracts/School";
 
-type Group={id:string;name:string;weight:number};
+type Group={id:string;name:string;weight:number|null};
 type Structure={groups:Group[];assignments:Record<string,string>};
 export const COURSE_GRADE_CHANGED="cosmos:school-course-grade-changed";
 export const courseGradeKey=(scopeId:string,course:Course)=>"cosmos.school.grading.v1."+scopeId+"."+course.termId+"."+course.id;
@@ -25,9 +25,9 @@ export function courseGradeSummary(scopeId:string,course:Course,grades:Grade[]) 
           const possible=entries.reduce((sum,g)=>sum+(g.possiblePoints??0),0);
           const earned=entries.reduce((sum,g)=>sum+(g.earnedPoints??0),0);
           return {weight:group.weight,percentage:possible>0?earned/possible*100:undefined};
-        }).filter((group)=>group.weight>0&&group.percentage!==undefined);
-        const weight=weightedGroups.reduce((sum,g)=>sum+g.weight,0);
-        if(weight>0&&weight<=100.001)estimate=weightedGroups.reduce((sum,g)=>sum+g.weight*g.percentage!,0)/weight;
+        }).filter((group)=>group.weight!==null&&group.weight>0&&group.percentage!==undefined);
+        const weight=weightedGroups.reduce((sum,g)=>sum+(g.weight??0),0);
+        if(weight>0&&weight<=100.001&&data.groups.every((g)=>g.weight!==null))estimate=weightedGroups.reduce((sum,g)=>sum+(g.weight??0)*g.percentage!,0)/weight;
         incomplete=courseGrades.some((grade)=>grade.id&&grade.possiblePoints&&grade.earnedPoints!==undefined&&!data.groups.some((g)=>data.assignments[grade.id!]===g.id))||Math.abs(data.groups.reduce((sum,g)=>sum+g.weight,0)-100)>0.01;
       }
     }catch{}
