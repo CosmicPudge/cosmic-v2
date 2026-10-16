@@ -102,14 +102,20 @@ export default function GradeCsvImport({ courses, grades, saveGrade }: { courses
         const leftLimit = pageWidth * 0.47;
         const scoreLimit = pageWidth * 0.73;
         const sorted = [...fragments].sort((a, b) => b.y - a.y || a.x - b.x);
-        const scoreFragments = sorted.filter((part) => part.x >= scoreLimit);
+        // PDF.js returns score cells as separate "10", "/", "10" glyphs.
+        // Group glyphs on the same visual baseline before parsing a score.
+        const scoreLines = new Map<number, Fragment[]>();
+        for (const part of sorted.filter((part) => part.x >= scoreLimit && part.x < pageWidth * 0.92)) {
+          const y = Math.round(part.y / 3) * 3;
+          scoreLines.set(y, [...(scoreLines.get(y) ?? []), part]);
+        }
         const scoredRows: Array<{ y: number; earned: number; possible: number }> = [];
-        for (const part of scoreFragments) {
-          const match = part.text.match(/^(\d+(?:\.\d+)?)\s*\/\s*(\d+(?:\.\d+)?)$/);
-          if (!match) continue; // A blank "/ 10" is ungraded, not zero.
+        for (const [y, parts] of scoreLines) {
+          const value = parts.sort((a,b) => a.x - b.x).map((part) => part.text).join(" ").replace(/\s+/g," ").trim();
+          const match = value.match(/^(\d+(?:\.\d+)?)\s*\/\s*(\d+(?:\.\d+)?)$/);
+          if (!match) continue; // An ungraded "/ 10" must never become 0/10.
           const earned = Number(match[1]), possible = Number(match[2]);
-          if (!(possible > 0 && earned >= 0)) continue;
-          if (!scoredRows.some((row) => Math.abs(row.y - part.y) < 5)) scoredRows.push({ y: part.y, earned, possible });
+          if (possible > 0 && earned >= 0) scoredRows.push({y, earned, possible});
         }
         const leftLines = new Map<number, Fragment[]>();
         for (const part of sorted.filter((part) => part.x < leftLimit)) {
@@ -127,7 +133,7 @@ export default function GradeCsvImport({ courses, grades, saveGrade }: { courses
         // Locate each score's assignment title immediately to its left.
         // Multi-line names occupy the same or preceding line; stop at 2 lines.
         for (const score of scoredRows) {
-          const candidateLines = lines.filter((line) => Math.abs(line.y - score.y) <= 19 && isTitle(line.text));
+          const candidateLines = lines.filter((line) => line.y >= score.y - 5 && line.y <= score.y + 30 && isTitle(line.text));
           const sameLine = candidateLines.filter((line) => Math.abs(line.y - score.y) <= 6);
           const preceding = candidateLines.filter((line) => line.y > score.y + 6);
           const selected = [...preceding.slice(-2), ...sameLine].sort((a,b) => b.y - a.y);
