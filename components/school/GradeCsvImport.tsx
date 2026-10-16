@@ -166,6 +166,23 @@ export default function GradeCsvImport({ courses, grades, saveGrade, removeGrade
           const group = below.map((line)=>line.text).find((text)=>groupLabel.test(text));
           if (label && !/^\\d/.test(label) && label.length <= 180) records.push({ label, earned: score.earned, possible: score.possible, ...(group?{group}:{}) });
         }
+        // Canvas renders complete/incomplete Wooclap scores as private-use
+        // icons rather than "1 / 1". In this Canvas print layout the score
+        // checkmark is U+EA43 in the Score column, while U+EA42 in the
+        // far-right Status column means feedback and must NOT count.
+        // This course's Wooclap activities are worth 1 point each.
+        const wooclapChecks = fragments.filter((part) =>
+          part.text.includes("\uEA43") && part.x>=scoreLimit && part.x<pageWidth*0.86);
+        for(const check of wooclapChecks){
+          const nearby=lines.filter((line)=>line.y>=check.y-5&&line.y<=check.y+34).sort((a,b)=>b.y-a.y);
+          const name=nearby.filter((line)=>/^wooclap\b/i.test(line.text)&&!/^Wooclap in-class polling$/i.test(line.text))
+            .map((line)=>line.text).join(" ").replace(/\s+/g," ").trim();
+          // Don't infer completion from icons without a matching assignment
+          // and group. Leave ordinary ungraded / dash marks untouched.
+          const groupFound=lines.some((line)=>/^Wooclap in-class polling$/i.test(line.text)&&
+            line.y<=check.y+3&&line.y>=check.y-25);
+          if(name&&groupFound&&name.length<=180)records.push({label:name,earned:1,possible:1,group:"Wooclap in-class polling"});
+        }
         const totals = fragments.map((part) => part.text).filter((t) => /^\d+(?:\.\d+)?%$/.test(t));
         if (totals.length) canvasTotal = totals[totals.length - 1];
       }
