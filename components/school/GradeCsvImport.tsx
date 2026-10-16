@@ -34,13 +34,14 @@ const gradeIdentity = (title: string) => title.toLowerCase()
   .replace(/[^a-z0-9]+/g, " ").trim();
 const field = "w-full rounded-lg border border-violet-200/20 bg-[#160e30] px-3 py-2 text-sm text-white";
 const example = 'course,assignment,letter,earned,possible\nCHEM 1210,Course grade,B+,,\nMATH 1060,Quiz 1,,18,20';
-export default function GradeCsvImport({ courses, grades, saveGrade, scopeId }: { courses: Course[]; grades: Grade[]; saveGrade: (grade: Grade) => void; scopeId: string }) {
+export default function GradeCsvImport({ courses, grades, saveGrade, removeGrade, scopeId }: { courses: Course[]; grades: Grade[]; saveGrade: (grade: Grade) => void; removeGrade: (id: string) => void; scopeId: string }) {
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [message, setMessage] = useState("");
   const [fileName, setFileName] = useState("");
   const [confirmed, setConfirmed] = useState(false);
   const [pdfCourseId, setPdfCourseId] = useState("");
   const [pdfBusy, setPdfBusy] = useState(false);
+  const [cleanupIds,setCleanupIds] = useState<string[]>([]);
   async function readFile(file?: File) {
     if (!file) return;
     setMessage(""); setCandidates([]); setConfirmed(false);
@@ -229,6 +230,8 @@ export default function GradeCsvImport({ courses, grades, saveGrade, scopeId }: 
   }
   const selectedCount=candidates.filter((c)=>c.valid&&c.selected).length;
   const mappedCount=candidates.filter((c)=>c.group && (c.selected || c.issue==="Already imported or duplicated")).length;
+  const duplicates = grades.filter((item)=>item.id&&courses.some((course)=>course.id===item.courseId)).filter((item,index,all)=>all.findIndex((other)=>other.courseId===item.courseId&&gradeIdentity(other.label??"")===gradeIdentity(item.label??"")&&other.earnedPoints===item.earnedPoints&&other.possiblePoints===item.possiblePoints)<index);
+  const removable = duplicates.filter((grade)=>grade.id&&cleanupIds.includes(grade.id));
   return <section className="rounded-2xl border border-violet-200/20 bg-violet-950/15 p-5">
     <h2 className="text-lg font-semibold text-white">Import grades from a file</h2>
     <p className="mt-2 text-sm text-white/60">Offline PDF or CSV import for your own course grades and assignment scores. No Canvas account access required. This runs locally in your browser; review each matched grade before saving. This is not an official transcript import.</p>
@@ -247,6 +250,13 @@ export default function GradeCsvImport({ courses, grades, saveGrade, scopeId }: 
     </div>
     <p className="mt-2 text-xs text-white/45">Columns: course, assignment, letter, earned, possible. Use a course code such as CHEM 1210. Points and letter may be left blank individually, not both. Grade rows with unrecognized courses or duplicate labels are skipped.</p>
     {message && <p role="status" className="mt-3 text-sm text-violet-100/80">{message}</p>}
+    {duplicates.length>0&&<div className="mt-4 rounded-lg border border-amber-200/20 p-3">
+      <h3 className="text-sm font-semibold text-amber-100">Review existing duplicate grade records ({duplicates.length})</h3>
+      <p className="mt-1 text-xs text-white/55">Same course, normalized title, and exact score. Review each duplicate before removal. The first matching record is always kept.</p>
+      <div className="mt-2 max-h-48 space-y-2 overflow-auto">{duplicates.map((grade)=><label key={grade.id} className="flex items-start gap-2 text-xs text-white/70"><input type="checkbox" checked={cleanupIds.includes(grade.id!)} onChange={(event)=>setCleanupIds((previous)=>event.target.checked?[...previous,grade.id!]:previous.filter((id)=>id!==grade.id))}/><span>{courses.find((course)=>course.id===grade.courseId)?.code} · {grade.label} · {grade.earnedPoints}/{grade.possiblePoints}</span></label>)}</div>
+      <button type="button" className="mt-3 rounded-lg border border-amber-300/30 px-3 py-2 text-xs text-amber-100 disabled:opacity-40" disabled={removable.length===0} onClick={()=>{if(!window.confirm("Remove "+removable.length+" selected duplicate grade records? Original matching records will remain."))return;removable.forEach((grade)=>removeGrade(grade.id!));setCleanupIds([]);}}>Remove {removable.length} selected duplicates</button>
+    </div>}
+
     {candidates.length > 0 && <div className="mt-4 space-y-3">
       <p className="text-sm text-white/70">{fileName} · {candidates.length} rows · {selectedCount} selected</p>
       <div className="max-h-80 space-y-2 overflow-auto">
