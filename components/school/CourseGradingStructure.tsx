@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { Course, Grade } from "@/core/contracts/School";
+import { COURSE_GRADE_CHANGED } from "@/services/school/courseGradeSummary";
 
 type Group = { id: string; name: string; weight: number };
 type Structure = { groups: Group[]; assignments: Record<string,string> };
@@ -23,7 +24,7 @@ export default function CourseGradingStructure({ course, grades, scopeId }: { co
     } catch {setModel(defaultStructure);}
     setLoaded(true);
   },[key]);
-  useEffect(()=>{if(loaded)try{window.localStorage.setItem(key,JSON.stringify(model));}catch{}},[key,loaded,model]);
+  useEffect(()=>{if(loaded)try{window.localStorage.setItem(key,JSON.stringify(model));window.dispatchEvent(new Event(COURSE_GRADE_CHANGED));}catch{}},[key,loaded,model]);
   function addGroup(){
     const weight=Number(newWeight);
     if(!newName.trim()||!Number.isFinite(weight)||weight<0||weight>100||model.groups.some((g)=>g.name.toLowerCase()===newName.trim().toLowerCase()))return;
