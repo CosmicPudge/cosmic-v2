@@ -204,11 +204,11 @@ export default function CosmosSchoolOverview({ preview = false }: { preview?: bo
       ) : null}
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <MetricCard label="Estimated semester GPA" value={gpa !== undefined ? gpa.toFixed(2) : "—"} detail={gpa !== undefined ? gradedCredits + " graded credits · not official cumulative GPA" : "Enter course letter grades to estimate GPA"} icon={TrendingUp} href="/school/grades" loading={!local.ready}>
+        <MetricCard label="Estimated semester GPA" value={gpa !== undefined ? gpa.toFixed(2) : "—"} detail={gpa !== undefined ? gradedCourses.length + "/" + courses.length + " courses · " + gradedCredits + " graded credits · semester estimate" : "Enter course letter grades to estimate GPA"} icon={TrendingUp} href="/school/grades" loading={!local.ready}>
           {gpaHistory.length >= 2 ? <svg viewBox="0 0 200 44" className="mt-3 h-11 w-full" role="img" aria-label="Historical estimated semester GPA"><polyline fill="none" stroke="#a78bfa" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" points={gpaHistory.map((point, index) => `${2 + index / Math.max(1, gpaHistory.length - 1) * 196},${42 - Math.max(0, Math.min(4,point.value))/4*40}`).join(" ")} /></svg> : <p className="mt-3 text-[11px] text-white/45">Trend available after two days of GPA records.</p>}
         </MetricCard>
-        <MetricCard label={currentClass ? "Current class" : "Next class"} value={currentClass ? "In class" : nextClass ? formatTime(nextClass.start) : "Clear"} detail={currentClass ? (currentClass.course.code || currentClass.course.name) + " · until " + formatTime(currentClass.end) : nextClass ? (nextClass.course.code || nextClass.course.name) + " · " + formatDate(nextClass.start) : "No upcoming class scheduled"} icon={Clock3} href="/school/schedule" loading={!local.ready}>
-          {currentClass && nextClass ? <p className="mt-3 text-xs text-violet-100/75">Up next: {nextClass.course.code || nextClass.course.name} at {formatTime(nextClass.start)}</p> : null}
+        <MetricCard label={currentClass ? "Current class" : "Next class"} value={currentClass ? (currentClass.course.code || currentClass.course.name) : nextClass ? (nextClass.course.code || nextClass.course.name) : "Clear"} detail={currentClass ? "In class until " + formatTime(currentClass.end) + (currentClass.location ? " · " + currentClass.location : "") : nextClass ? formatDate(nextClass.start) + " at " + formatTime(nextClass.start) + (nextClass.location ? " · " + nextClass.location : "") : "No upcoming class scheduled"} icon={Clock3} href="/school/schedule" loading={!local.ready}>
+          {nextClass ? <p className="mt-3 text-xs text-violet-100/75">{currentClass ? "Up next: " + (nextClass.course.code || nextClass.course.name) + " at " + formatTime(nextClass.start) : "Starts in " + (Math.max(1,Math.ceil((nextClass.start.getTime()-now)/60_000)) >= 60 ? Math.floor(Math.max(1,Math.ceil((nextClass.start.getTime()-now)/60_000))/60) + "h " + (Math.max(1,Math.ceil((nextClass.start.getTime()-now)/60_000))%60) + "m" : Math.max(1,Math.ceil((nextClass.start.getTime()-now)/60_000)) + "m")}</p> : null}
         </MetricCard>
         <MetricCard label="Due soon" value={String(dueSoon)} detail="Canvas calendar + manually entered assignments" icon={CheckCircle2} href="/school/assignments" loading={loading && !data} />
         <MetricCard label="Credits" value={String(credits)} detail={term ? `Enrolled credits · ${term.name}` : "Add courses to track credits"} icon={GraduationCap} href="/school/courses" loading={!local.ready} />
@@ -297,7 +297,7 @@ export default function CosmosSchoolOverview({ preview = false }: { preview?: bo
           </div>
           {courses.length ? (
             <div className="grid gap-3 border-t border-white/[0.07] p-4 sm:grid-cols-2 lg:grid-cols-3">
-              {courses.slice(0, 6).map((course, index) => {
+              {courses.map((course, index) => {
                 const related = openAssignments.filter((item) => item.course && (item.course === course.code || item.course === course.name)).length;
                 const grade = courseSummaries.find((item) => item.course.id === course.id)?.summary;
                 const next = manualSchedule.find((item) => item.course.id === course.id && item.end.getTime() > now);
